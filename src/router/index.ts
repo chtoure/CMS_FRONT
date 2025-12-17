@@ -1,9 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DefaultLayout from '@/layout/DefaultLayout.vue'
 import NotFoundPage from '@/views/error/NotFoundPage.vue'
-import LoginPage from '@/views/auth/LoginPage.vue'
+import LoginView from '@/views/auth/LoginView.vue'
 import MainLayout from '@/layout/MainLayout.vue'
-import Test2 from '@/views/variable/Test2.vue'
+import DashboardView from '@/views/DashboardView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -12,12 +12,12 @@ const router = createRouter({
         path: '/site/admin',
         children:[
             {
-                path: 'login', 
+                path: 'login',
                 component: DefaultLayout,
                 children: [
                     {
                         path: '',
-                        component: LoginPage
+                        component: LoginView
                     }
                 ]
             },
@@ -25,14 +25,14 @@ const router = createRouter({
                 path: 'dashboard',
                 component: MainLayout,
                 children: [
-                    {path: '', component: Test2}
+                    {path: '', component: DashboardView}
                 ]
             }
         ]
     },
 
-    {path: '/:pathMatch(.*)*', 
-        component: DefaultLayout, 
+    {path: '/:pathMatch(.*)*',
+        component: DefaultLayout,
         children: [
             {path: '', component: NotFoundPage}
         ]

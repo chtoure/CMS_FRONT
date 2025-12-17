@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import CompositionSidebar from '@/components/composition/CompositionSidebar.vue'; 
+import CompositionSidebar from '@/components/composition/CompositionSidebar.vue';
 import CompositionHeader from '@/components/composition/CompositionHeader.vue';
 
-const isSidebarCollapsed = ref(false); 
+const isSidebarCollapsed = ref(false);
 
 const toggleSidebar = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value;
@@ -11,19 +11,26 @@ const toggleSidebar = () => {
 
 </script>
 
-<template>
-  <div class="flex min-h-screen ">
-    
-    <CompositionSidebar :is-collapsed="isSidebarCollapsed"  /> 
 
-    <div class="flex-grow flex flex-col transition-all duration-300 ">
-      
-      <CompositionHeader :onToggleSidebar="toggleSidebar" headerClass="bg-background" :isSidebarCollapsed="isSidebarCollapsed" />
-      
-      <main class="flex-grow p-6 overflow-y-auto rounded-6 m-1 bg-background">
+<template>
+  <div class="flex h-screen overflow-hidden">
+    <CompositionSidebar :is-collapsed="isSidebarCollapsed" />
+
+    <div class="flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300">
+      <CompositionHeader
+        :onToggleSidebar="toggleSidebar"
+        headerClass="bg-background"
+        :isSidebarCollapsed="isSidebarCollapsed"
+      />
+
+      <main class="flex-1 overflow-y-auto p-6 bg-background custom-scrollbar">
         <RouterView/>
       </main>
     </div>
   </div>
 </template>
+
+<style>
+
+</style>
 
