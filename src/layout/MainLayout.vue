@@ -13,7 +13,7 @@ const toggleSidebar = () => {
 
 
 <template>
-  <div class="flex h-screen overflow-hidden">
+  <div class="flex h-screen overflow-hidden p13">
     <CompositionSidebar :is-collapsed="isSidebarCollapsed" />
 
     <div class="flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300">

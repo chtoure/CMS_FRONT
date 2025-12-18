@@ -6,7 +6,7 @@ export default {
     "./index.html",
     "./src/**/*.{vue,js,ts,jsx,tsx}"
   ],
-  darkMode: 'class', 
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -15,6 +15,8 @@ export default {
         border: 'var(--border)',
         input: 'var(--input)',
         ring: 'var(--ring)',
+        text: 'var(--text)',
+        'border-width': 'var(--border-width)',
         primary: {
           DEFAULT: 'var(--primary)',
           foreground: 'var(--primary-foreground)',

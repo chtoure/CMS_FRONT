@@ -10,11 +10,12 @@ import router from './router'
 import { VueQueryPlugin } from '@tanstack/vue-query'
 import Vue3Toastify from 'vue3-toastify'
 
+
+
 const app = createApp(App)
-
 const pinia = createPinia()
-pinia.use(piniaPluginPersistedstate)
 
+pinia.use(piniaPluginPersistedstate)
 app.use(pinia)
 app.use(router)
 app.use(VueQueryPlugin);
