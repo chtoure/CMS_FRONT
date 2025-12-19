@@ -1,35 +1,40 @@
 <script setup lang="ts">
-import { ref, watchEffect } from "vue"
+  import { ref, watchEffect } from "vue"
 
-import { Plus, Pencil, X } from "lucide-vue-next"
-import Button from "@/components/ui/button/Button.vue"
-import Select from "@/components/ui/select/Select.vue"
-import SelectTrigger from "@/components/ui/select/SelectTrigger.vue"
-import SelectValue from "@/components/ui/select/SelectValue.vue"
-import SelectContent from "@/components/ui/select/SelectContent.vue"
-import SelectItem from "@/components/ui/select/SelectItem.vue"
+  import { Plus, Pencil, X } from "lucide-vue-next"
+  import Button from "@/components/ui/button/Button.vue"
+  import Select from "@/components/ui/select/Select.vue"
+  import SelectTrigger from "@/components/ui/select/SelectTrigger.vue"
+  import SelectValue from "@/components/ui/select/SelectValue.vue"
+  import SelectContent from "@/components/ui/select/SelectContent.vue"
+  import SelectItem from "@/components/ui/select/SelectItem.vue"
 
-import BaseCheckbox from "@/components/base/BaseCheckbox.vue"
-import CompositionConfirmDialog from "@/components/composition/CompositionConfirmDialog.vue"
-import { showToast } from "../../lib/toast"
-import type { Media } from "../../type/media"
+  import BaseCheckbox from "@/components/base/BaseCheckbox.vue"
+  import CompositionConfirmDialog from "@/components/composition/CompositionConfirmDialog.vue"
+  import { showToast } from "../../lib/toast"
+  import { useCreateMedia, useGetMediaList } from "../../hook/media"
+  import CompositionLoading from "@/components/composition/CompositionLoading.vue"
 
-const mockMediaItems: Media[] = [
-  { id: 1, file_path: "https://picsum.photos/400/300?random=1", type: "image", alt: null },
-  { id: 2, file_path: "https://picsum.photos/400/300?random=2", type: "image", alt: null },
-  { id: 3, file_path: "https://picsum.photos/400/300?random=3", type: "image", alt: null },
-  { id: 4, file_path: "https://picsum.photos/400/300?random=4", type: "image", alt: null },
-  { id: 5, file_path: "https://picsum.photos/400/300?random=5", type: "image", alt: null },
-  { id: 6, file_path: "https://picsum.photos/400/300?random=6", type: "image", alt: null },
-  { id: 7, file_path: "https://picsum.photos/400/300?random=7", type: "image", alt: null },
-  { id: 8, file_path: "https://picsum.photos/400/300?random=8", type: "image", alt: null },
-  { id: 9, file_path: "https://picsum.photos/400/300?random=9", type: "image", alt: null },
-  { id: 10, file_path: "https://picsum.photos/400/300?random=10", type: "image", alt: null },
-  { id: 11, file_path: "https://picsum.photos/400/300?random=11", type: "image", alt: null },
-  { id: 12, file_path: "https://picsum.photos/400/300?random=12", type: "image", alt: null },
-]
 
-const selectedItems = ref<Set<number>>(new Set());
+  const {
+    mutate: createMedia,
+    isError: isCreateMediaError,
+    isPending: isCreateMediaLoading,
+    error: createMediaError
+  } = useCreateMedia();
+
+  const {
+    data: mediaList,
+    isLoading: isMediaListLoading,
+    isError: isMediaListError,
+    error: mediaListError,
+    refresh: refreshMediaList
+  } = useGetMediaList();
+
+  console.log(mediaList.value);
+  
+
+  const selectedItems = ref<Set<number>>(new Set());
 
   const showRemoveButton = ref(false);
   const fileInput=ref<HTMLElement | null>(null);
@@ -45,6 +50,8 @@ const selectedItems = ref<Set<number>>(new Set());
     }else{
       console.log("Deleting items:", Array.from(selectedItems.value));
     }
+    refreshMediaList();
+
     showToast('success', 'Données supprimées avec succès!')
   }
 
@@ -85,16 +92,24 @@ const selectedItems = ref<Set<number>>(new Set());
       formData.append('file', file);
       formData.append('type', type);
       formData.append('alt', file.name);
+      createMedia(formData);
     }
+    refreshMediaList();
 
-    console.log("Uploaded files:", files);
+    if (isCreateMediaError) {
+      showToast('error', `Erreur lors du téléchargement: ${createMediaError.value}`);
+      return;
+    }
     showToast('success', 'Fichiers téléchargés avec succès!')
   }
 
 </script>
 
 <template>
-  <div class="min-h-screen ">
+
+  <CompositionLoading v-if="isCreateMediaLoading || isMediaListLoading" />
+
+  <div v-else class="min-h-screen ">
     <div class=" pb-6">
       <div class="flex items-center justify-end">
         <input
@@ -150,18 +165,20 @@ const selectedItems = ref<Set<number>>(new Set());
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          <div v-for="item in mockMediaItems" :key="item.id" class="group relative">
+          <div v-for="item in mediaList" :key="item.id" class="group relative">
+            
             <div class="aspect-[4/3] overflow-hidden relative card">
               <div class="absolute bottom-2 left-2 z-10 text-text">
                 <BaseCheckbox
                   :checked="selectedItems.has(item.id)"
                   @update:checked="(val:boolean) => toggleSelection(item.id, val)"
                 />
-
               </div>
 
               <div class="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button class="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors">
+                <button
+                  class="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors"
+                  @click="$router.push({ name: 'admin.media.update', params: { id: item.id } })">
                   <Pencil class="w-4 h-4 text-gray-700" />
                 </button>
                 <CompositionConfirmDialog
