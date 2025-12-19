@@ -8,7 +8,7 @@ import   {User,
 </script>
 
 <template>
-    <div class="p-2">
+    <div class="p-4 bg-background border-border">
         <div class="flex items-center gap-3 p-2">
             <div class="h-10 w-10 rounded-full overflow-hidden">
             <img src="/userIcon.png" alt="John Smilga" class="object-cover w-full h-full" />

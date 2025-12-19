@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+import tailwindAnimate from "tailwindcss-animate"
+
 export default {
   content: [
     "./index.html",
@@ -10,11 +12,11 @@ export default {
       colors: {
         background: 'var(--background)',
         foreground: 'var(--foreground)',
-
         border: 'var(--border)',
         input: 'var(--input)',
         ring: 'var(--ring)',
-
+        text: 'var(--text)',
+        'border-width': 'var(--border-width)',
         primary: {
           DEFAULT: 'var(--primary)',
           foreground: 'var(--primary-foreground)',
@@ -35,9 +37,21 @@ export default {
           DEFAULT: 'var(--accent)',
           foreground: 'var(--accent-foreground)',
         },
+        card: {
+          DEFAULT: 'var(--card)',
+          foreground: 'var(--card-foreground)',
+        },
+        popover: {
+          DEFAULT: 'var(--popover)',
+          foreground: 'var(--popover-foreground)',
+        },
+      },
+      borderRadius: {
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
       },
     },
   },
-  plugins: [],
+  plugins: [tailwindAnimate],
 }
-
