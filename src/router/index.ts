@@ -5,6 +5,7 @@ import LoginView from '@/views/auth/LoginView.vue'
 import MainLayout from '@/layout/MainLayout.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import MediaListView from '@/views/media/MediaListView.vue'
+import MediaUpdateView from '@/views/media/MediaUpdateView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -36,6 +37,11 @@ const router = createRouter({
                       path: 'media',
                       name: 'admin.media',
                       component: MediaListView
+                    },
+                    {
+                      path: 'media/update/:id',
+                      name: 'admin.media.update',
+                      component: MediaUpdateView
                     }
                 ]
             },
