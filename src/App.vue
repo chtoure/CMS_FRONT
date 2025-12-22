@@ -16,13 +16,13 @@ const applyThemeClass = (isDark:boolean) => {
 };
 
 onMounted(() => {
-    applyThemeClass(themeStore.isDark);
+    applyThemeClass(!!themeStore.isDark);
 });
 
 watch(
     () => themeStore.isDark,
     (newVal) => {
-        applyThemeClass(newVal);
+        applyThemeClass(!!newVal);
     }
 );
 </script>
