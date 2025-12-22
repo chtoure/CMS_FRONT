@@ -1,17 +1,22 @@
 <template>
-  <header>
-    <nav>Barre de Navigation Standard</nav>
-  </header>
+
+  <div class="flex justify-end">
+    <div class=" items-end p-4">
+    <CompositionDarkMode/>
+
+    </div>
+  </div>
   
+  
+ 
   <main class="p-4">
     <RouterView/>
   </main>
-  
-  <footer>
-    <p>© 2025 Mon Application</p>
-  </footer>
+ 
 </template>
 
 <script setup>
+import CompositionDarkMode from '@/components/composition/CompositionDarkMode.vue';
+
 
 </script>
