@@ -5,7 +5,7 @@ import { EyeOff , Eye } from 'lucide-vue-next';
 
 const emit = defineEmits(['update:modelValue']);
 
-const props = defineProps({
+const { modelValue, placeholder, label, id } = defineProps({
     modelValue: { type: String, default: '' },
     placeholder: { type: String, default: '••••••••' },
     label: { type: String, default: 'Password' },

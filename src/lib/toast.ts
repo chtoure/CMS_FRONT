@@ -7,7 +7,7 @@ import {
 } from "lucide-vue-next";
 import { h } from "vue";
 
-type ToastType = "success" | "error" | "info" | "warning";
+export type ToastType = "success" | "error" | "info" | "warning";
 
 export function showToast(type: ToastType, message: string) {
   const typeStyles: Record<ToastType, string> = {

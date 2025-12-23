@@ -3,7 +3,34 @@ import { ref } from 'vue';
 import CompositionSidebar from '@/components/composition/CompositionSidebar.vue';
 import CompositionHeader from '@/components/composition/CompositionHeader.vue';
 
+import { onMounted, onBeforeUnmount, watch } from 'vue';
+import { useRoute } from 'vue-router';
+
 const isSidebarCollapsed = ref(false);
+const route = useRoute();
+
+const setCollapsedByViewport = () => {
+  isSidebarCollapsed.value = window.innerWidth < 1024; // auto-close on small screens
+};
+
+const handleResize = () => {
+  setCollapsedByViewport();
+};
+
+onMounted(() => {
+  setCollapsedByViewport();
+  window.addEventListener('resize', handleResize);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize);
+});
+
+watch(() => route.fullPath, () => {
+  if (window.innerWidth < 1024) {
+    isSidebarCollapsed.value = true;
+  }
+});
 
 const toggleSidebar = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value;
@@ -33,4 +60,3 @@ const toggleSidebar = () => {
 <style>
 
 </style>
-

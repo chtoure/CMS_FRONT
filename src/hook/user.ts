@@ -1,0 +1,32 @@
+
+
+import { useMutation } from "@tanstack/vue-query";
+import { AxiosError } from "axios";
+import api from "../api/axiosConfig";
+import type { LoginCredentials, AuthResponse } from "../type/user";
+
+
+// Hook personnalisé pour la mutation de connexion
+export const useLogin = () => {
+  return useMutation({
+    mutationFn: async (credentials: LoginCredentials) => {
+      // On envoie email et password
+      const response = await api.post<AuthResponse>("/login", credentials);
+      return response.data;
+    }
+  });
+};
+
+
+//Hook personnalisé pour la mutation de déconnexion
+export const useLogout = () => {
+  return useMutation({
+    mutationFn: async () => {
+      await api.post("/logout");
+
+      // Avec un statut 204, response.data sera vide.
+      // On retourne simplement true pour indiquer le succès.
+      return true;
+    }
+  });
+}
