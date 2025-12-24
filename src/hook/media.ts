@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/vue-query";
+import { type Ref, unref } from "vue";
 import axios from "axios";
 import type { Media } from "../type/media";
 
@@ -27,15 +28,32 @@ const useGetMedia = (id : number) => {
 }
 
 
-const useGetMediaList = () =>{
+const useGetMediaList = (filter : Ref<{type : 'image' | 'video' | null | undefined}> | {type : 'image' | 'video' | null | undefined}) =>{
   return useQuery({
-    queryKey: ['medias'],
+    queryKey: ['medias', filter],
     queryFn: async () => {
-      const response = await axios.get<Media[]>(`${BASE_URL}/medias`);
+      const type = unref(filter).type;
+      const response = await axios.get<Media[]>(`${BASE_URL}/medias`, {
+        params: type ? { type } : {}
+      });
       return response.data;
     }
   })
 }
 
+const useDeleteMedia = () => {
+  return useMutation({
+    mutationFn: async (payload: number | number[]) => {
+      if (Array.isArray(payload)) {
+        const response = await axios.delete(`${BASE_URL}/media`, {
+          data: { ids: payload }
+        });
+        return response.data;
+      } 
+      const response = await axios.delete(`${BASE_URL}/media/${payload}`);
+      return response.data;
+    },
+  });
+};
 
-export { useCreateMedia, useGetMedia, useGetMediaList }
+export { useCreateMedia, useGetMedia, useGetMediaList, useDeleteMedia }

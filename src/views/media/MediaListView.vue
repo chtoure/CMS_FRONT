@@ -1,112 +1,139 @@
 <script setup lang="ts">
-import { ref, watchEffect } from "vue"
+  import { ref, computed } from "vue"
 
-import { Plus, Pencil, X } from "lucide-vue-next"
-import Button from "@/components/ui/button/Button.vue"
-import Select from "@/components/ui/select/Select.vue"
-import SelectTrigger from "@/components/ui/select/SelectTrigger.vue"
-import SelectValue from "@/components/ui/select/SelectValue.vue"
-import SelectContent from "@/components/ui/select/SelectContent.vue"
-import SelectItem from "@/components/ui/select/SelectItem.vue"
+  import { Plus, Pencil, X, Eye } from "lucide-vue-next"
+  import Button from "@/components/ui/button/Button.vue"
+  import Select from "@/components/ui/select/Select.vue"
+  import SelectTrigger from "@/components/ui/select/SelectTrigger.vue"
+  import SelectValue from "@/components/ui/select/SelectValue.vue"
+  import SelectContent from "@/components/ui/select/SelectContent.vue"
+  import SelectItem from "@/components/ui/select/SelectItem.vue"
 
-import BaseCheckbox from "@/components/base/BaseCheckbox.vue"
-import CompositionConfirmDialog from "@/components/composition/CompositionConfirmDialog.vue"
-import { showToast } from "../../lib/toast"
-import { useCreateMedia, useGetMediaList } from "../../hook/media"
-import CompositionLoading from "@/components/composition/CompositionLoading.vue"
-import CompositionError from "../../components/composition/CompositionError.vue"
+  import BaseCheckbox from "@/components/base/BaseCheckbox.vue"
+  import CompositionConfirmDialog from "@/components/composition/CompositionConfirmDialog.vue"
+  import { showToast } from "../../lib/toast"
+  import { useCreateMedia, useDeleteMedia, useGetMediaList } from "../../hook/media"
+  import CompositionLoading from "@/components/composition/CompositionLoading.vue"
+  import CompositionError from "@/components/composition/CompositionError.vue"
+  import CompositionVideoImageModal from "@/components/composition/CompositionVideoImageModal.vue"
+import CompositionListEmpty from "../../components/composition/CompositionListEmpty.vue"
 
-const {
-  mutate: createMedia,
-  isError: isCreateMediaError,
-  isPending: isCreateMediaLoading,
-  error: createMediaError
-} = useCreateMedia();
+  const filterType = ref("all");
 
-const {
-  data: mediaList,
-  isLoading: isMediaListLoading,
-  isError: isMediaListError,
-  error: mediaListError,
-  refetch: refreshMediaList
-} = useGetMediaList();
+  const {
+    mutateAsync: createMediaAsync,
+    isError: isCreateMediaError,
+    isPending: isCreateMediaLoading,
+    error: createMediaError
+  } = useCreateMedia();
 
+  const {
+    mutate: deleteMedia,
+    isPending: isDeleteMediaLoading,
+  } = useDeleteMedia();
 
+  const filterParams = computed(() => ({
+    type: filterType.value === "all" ? undefined : filterType.value as "image" | "video"
+  }));
 
-const selectedItems = ref<Set<number>>(new Set());
-const showRemoveButton = ref(false);
-const fileInput = ref<HTMLElement | null>(null);
+  const {
+    data: mediaList,
+    isLoading: isMediaListLoading,
+    isError: isMediaListError,
+    error: mediaListError,
+    refetch: refreshMediaList
+  } = useGetMediaList(filterParams);
 
-watchEffect(() => {
-  console.log("Selected items:", Array.from(selectedItems.value));
-});
-
-const deleteSelectedItems = (id?: number) => {
-  if (id) {
-    console.log("Deleting item:", id);
-  } else {
-    console.log("Deleting items:", Array.from(selectedItems.value));
-  }
-  refreshMediaList();
-
-  showToast('success', 'Données supprimées avec succès!');
-}
-
-const toggleSelection = (id: number, checked: boolean) => {
-  console.log("Clicked:", id, checked);
-
-  const next = new Set(selectedItems.value);
-
-  if (checked) {
-    next.add(id);
-  } else {
-    next.delete(id);
+  const filterChange = (val: string) => {
+    filterType.value = val;
   }
 
-  selectedItems.value = next;
+  const selectedItems = ref<Set<number>>(new Set());
+  const showRemoveButton = ref(false);
+  const fileInput = ref<HTMLElement | null>(null);
 
-  if (selectedItems.value.size > 0) {
-    showRemoveButton.value = true;
-  } else {
-    showRemoveButton.value = false;
+
+
+  const deleteSelectedItems = (id?: number) => {
+    const payload = id ? id : Array.from(selectedItems.value);
+
+    deleteMedia(payload, {
+      onSuccess: async () => {
+        await refreshMediaList();
+        
+        if (!id) {
+          selectedItems.value.clear();
+          showRemoveButton.value = false;
+        }
+        
+        showToast('success', 'Données supprimées avec succès!');
+      },
+      onError: (error: Error) => {
+        showToast('error', `Erreur lors de la suppression: ${error.message}`);
+      }
+    });
   }
-}
 
-const triggerFileInput = () => {
-  fileInput.value?.click();
-}
+  const toggleSelection = (id: number, checked: boolean) => {
+    console.log("Clicked:", id, checked);
 
-const handleFileUpload = async (event: Event) => {
-  const input = event.target as HTMLInputElement;
+    const next = new Set(selectedItems.value);
 
-  if (!input.files) return;
+    if (checked) {
+      next.add(id);
+    } else {
+      next.delete(id);
+    }
 
-  const files = Array.from(input.files);
+    selectedItems.value = next;
 
-  for (const file of files) {
-    const formData = new FormData();
-    const type = file.type.startsWith('image/*') ? 'image' : 'video';
-    formData.append('file', file);
-    formData.append('type', type);
-    formData.append('alt', file.name);
-    await createMedia(formData);
+    if (selectedItems.value.size > 0) {
+      showRemoveButton.value = true;
+    } else {
+      showRemoveButton.value = false;
+    }
   }
-  await refreshMediaList();
 
-  if (isCreateMediaError.value) {
-    showToast('error', `Erreur lors du téléchargement: ${createMediaError.value}`);
-    return;
+  const triggerFileInput = () => {
+    fileInput.value?.click();
   }
-  showToast('success', 'Fichiers téléchargés avec succès!');
-}
 
+  const handleFileUpload = async (event: Event) => {
+    const input = event.target as HTMLInputElement;
+
+    if (!input.files) return;
+
+    const files = Array.from(input.files);
+
+    try {
+
+      const uploadFile= files.map((file)=>{
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('alt', file.name);
+        return createMediaAsync(formData);
+      })
+
+      await Promise.all(uploadFile);
+
+      await refreshMediaList();
+      showToast('success', 'Données supprimées avec succès!');
+      
+    } catch (error) {
+      showToast('error', `Erreur lors de la suppression: ${error}`);
+    }
+
+  }
 
 </script>
 
 <template>
-  <CompositionLoading v-if="isCreateMediaLoading || isMediaListLoading" />
+  <CompositionLoading v-if="isCreateMediaLoading || isMediaListLoading || isDeleteMediaLoading" />
 
-  <CompositionError v-else-if="isCreateMediaError || isMediaListError" :error="isCreateMediaError ? createMediaError?.message : mediaListError?.message"/>
+  <CompositionError 
+    v-else-if="isCreateMediaError || isMediaListError" 
+    :error="isCreateMediaError ? createMediaError?.message : mediaListError?.message"
+  />
 
   <div v-else class="p-6">
     <div class="mb-6">
@@ -139,14 +166,14 @@ const handleFileUpload = async (event: Event) => {
         <label class="text-[11px] font-semibold text-text uppercase tracking-wide mb-2 block">Filtrer</label>
         <div class="flex gap-2">
           <div class="w-40">
-            <Select default-value="newest" >
+            <Select :default-value="filterType" @update:modelValue="filterChange">
               <SelectTrigger class="h-8 text-[13px] !border-border bg-input">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="newest">Tous</SelectItem>
-                <SelectItem value="oldest">Images</SelectItem>
-                <SelectItem value="name">Videos</SelectItem>
+                <SelectItem value="all">Tous</SelectItem>
+                <SelectItem value="image">Images</SelectItem>
+                <SelectItem value="video">Videos</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -167,7 +194,9 @@ const handleFileUpload = async (event: Event) => {
         </div>
       </div>
 
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+      <CompositionListEmpty v-if="!mediaList?.length" label="Aucune donnée trouvée" />
+
+      <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
         <div v-for="item in mediaList" :key="item.id" class="group relative">
           <div class="aspect-square overflow-hidden relative rounded-lg border border-border bg-muted hover:border-primary/50 transition-all">
             <div class="absolute bottom-2 left-2 z-10">
@@ -178,7 +207,20 @@ const handleFileUpload = async (event: Event) => {
             </div>
 
             <div class="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <CompositionVideoImageModal :type="item.type" :href="item.file_path" :alt="item.alt">
+                <template #trigger>
+
+                  <button
+                    class="group/btn w-7 h-7 bg-background rounded-md flex items-center justify-center shadow-sm hover:bg-muted transition-colors border border-border">
+                    <Eye class="w-3.5 h-3.5 text-muted-foreground group-hover/btn:text-foreground" />
+                  </button>
+
+                </template>
+
+              </CompositionVideoImageModal>
+
               <button
+                v-if="item.type === 'image'"
                 class="group/btn w-7 h-7 bg-background rounded-md flex items-center justify-center shadow-sm hover:bg-muted transition-colors border border-border"
                 @click="$router.push({ name: 'admin.media.update', params: { id: item.id } })">
                 <Pencil class="w-3.5 h-3.5 text-muted-foreground group-hover/btn:text-foreground" />
@@ -201,6 +243,13 @@ const handleFileUpload = async (event: Event) => {
             </div>
 
             <img
+              v-if="item.type === 'image'"
+              :src="item.file_path || '/placeholder.svg'"
+              :alt="item.alt || 'Media Image'"
+              class="w-full h-full object-cover"
+            />
+            <video
+              v-else
               :src="item.file_path || '/placeholder.svg'"
               :alt="item.alt || 'Media Image'"
               class="w-full h-full object-cover"
