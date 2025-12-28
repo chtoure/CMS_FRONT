@@ -23,7 +23,6 @@ const imageObj = new Image()
 const brushSize = ref(50)
 const hardness = ref(60)
 const opacity = ref(100)
-const rotation = ref(0)
 const zoom = ref(100)
 const aspectRatio = ref('Free')
 
@@ -31,6 +30,13 @@ const filters = reactive({
   blur: 0,
   grayscale: false,
   brightness: 1,
+})
+
+// À ajouter dans les états existants
+const transform = reactive({
+  rotate: 0, // 0, 90, 180, 270
+  flipH: false,
+  flipV: false
 })
 
 const cropState = reactive({
@@ -46,36 +52,49 @@ const renderCanvas = () => {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
-  // 1. Déterminer les dimensions du canvas
-  if (currentTab.value === 'crop') {
-    canvas.width = imageObj.width
-    canvas.height = imageObj.height
+  const angleRad = (transform.rotate * Math.PI) / 180
+  const absCos = Math.abs(Math.cos(angleRad))
+  const absSin = Math.abs(Math.sin(angleRad))
+  
+  // Dimensions de l'image pivotée totale
+  const rotatedW = Math.floor(imageObj.width * absCos + imageObj.height * absSin)
+  const rotatedH = Math.floor(imageObj.width * absSin + imageObj.height * absCos)
+
+  // FIX: On garde toujours le canvas à la taille pivotée pour l'édition
+  // On ne réduit la taille que si on veut réellement un aperçu "final" rogné
+  const isPreview = currentTab.value !== 'crop' && cropState.realW > 0
+
+  if (isPreview) {
+    canvas.width = cropState.realW
+    canvas.height = cropState.realH
   } else {
-    canvas.width = cropState.realW || imageObj.width
-    canvas.height = cropState.realH || imageObj.height
+    canvas.width = rotatedW
+    canvas.height = rotatedH
   }
 
-  // 2. Nettoyer
   ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-  // 3. Appliquer les filtres AVANT de dessiner
+  // Filtres
   let s = ''
   if (filters.grayscale) s += 'grayscale(100%) '
   if (filters.blur > 0) s += `blur(${filters.blur}px) `
   ctx.filter = s.trim() || 'none'
 
-  // 4. Dessiner l'image
-  if (currentTab.value === 'crop') {
-    ctx.drawImage(imageObj, 0, 0)
-  } else {
-    ctx.drawImage(
-      imageObj,
-      cropState.realX, cropState.realY, cropState.realW, cropState.realH,
-      0, 0, canvas.width, canvas.height
-    )
+  ctx.save()
+  
+  if (isPreview) {
+    // Mode APERÇU : On décale le dessin pour que la zone rognée remplisse le canvas
+    ctx.translate(-cropState.realX, -cropState.realY)
   }
-}
 
+  // Dessin de l'image (Pivotée par le centre du canvas de base)
+  ctx.translate(rotatedW / 2, rotatedH / 2)
+  ctx.rotate(angleRad)
+  ctx.scale(transform.flipH ? -1 : 1, transform.flipV ? -1 : 1)
+  ctx.drawImage(imageObj, -imageObj.width / 2, -imageObj.height / 2)
+  
+  ctx.restore()
+}
 // --- CALCULS COORDINATION ---
 
 const getDisplayData = () => {
@@ -90,24 +109,41 @@ const getDisplayData = () => {
 
 const syncCropToDisplay = () => {
   const data = getDisplayData()
-  if (!data) return
+  const canvas = canvasRef.value
+  if (!data || !canvas) return
 
-  // Calculer la position et taille écran à partir du "réel"
-  // au lieu de forcer à 0, 0
-  cropState.x = cropState.realX * data.scale
-  cropState.y = cropState.realY * data.scale
-  cropState.width = cropState.realW * data.scale
-  cropState.height = cropState.realH * data.scale
+  // Si c'est la première fois ou si on veut reset :
+  // On adapte le cadre à la taille actuelle du canvas
+  cropState.x = 0
+  cropState.y = 0
+  cropState.width = data.rect.width
+  cropState.height = data.rect.height
+  
+  updateRealCoords()
 }
+
+watch(() => transform.rotate, () => {
+  renderCanvas()
+  if (currentTab.value === 'crop') {
+    nextTick(() => {
+      syncCropToDisplay() // Réaligne le cadre sur la nouvelle forme de l'image
+    })
+  }
+})
 
 const updateRealCoords = () => {
   const data = getDisplayData()
-  if (!data) return
-  const internalScale = 1 / data.scale
-  cropState.realX = Math.max(0, cropState.x * internalScale)
-  cropState.realY = Math.max(0, cropState.y * internalScale)
-  cropState.realW = Math.min(imageObj.width - cropState.realX, cropState.width * internalScale)
-  cropState.realH = Math.min(imageObj.height - cropState.realY, cropState.height * internalScale)
+  const canvas = canvasRef.value
+  if (!data || !canvas) return
+
+  // Le ratio entre la résolution interne du canvas et sa taille affichée
+  const internalScale = canvas.width / data.rect.width
+
+  // Coordonnées relatives à la zone de dessin réelle du canvas
+  cropState.realX = cropState.x * internalScale
+  cropState.realY = cropState.y * internalScale
+  cropState.realW = cropState.width * internalScale
+  cropState.realH = cropState.height * internalScale
 }
 
 // --- MOUSE EVENTS ---
@@ -215,11 +251,16 @@ watch(media, (newVal) => {
   }
 }, { immediate: true })
 
-// 2. Quand on change d'onglet (Refresh auto du crop)
-watch(currentTab, async (tab) => {
+// Remplacez votre watcher currentTab par celui-ci :
+watch(currentTab, async () => {
+  // 1. D'abord on redessine (change la taille du canvas si besoin)
   renderCanvas()
-  if (tab === 'crop') {
-    await nextTick()
+  
+  // 2. On attend que le navigateur applique les styles CSS (important pour getBoundingClientRect)
+  await nextTick()
+  
+  if (currentTab.value === 'crop') {
+    // On laisse une frame de battement pour que le layout soit stable
     requestAnimationFrame(() => {
       syncCropToDisplay()
     })
@@ -260,14 +301,66 @@ watch(aspectRatio, () => {
   }
 })
 
+const rotateLeft = () => {
+  transform.rotate = (transform.rotate - 90) // Permet des valeurs négatives pour le slider
+  renderCanvas()
+}
+
+const rotateRight = () => {
+  transform.rotate = (transform.rotate + 90)
+  renderCanvas()
+}
+
+// Ajoutez ce watcher pour que le slider mette à jour le canvas en temps réel
+watch(() => transform.rotate, () => {
+  renderCanvas()
+})
+
+const toggleFlipH = () => {
+  transform.flipH = !transform.flipH
+  renderCanvas()
+}
+
+const toggleFlipV = () => {
+  transform.flipV = !transform.flipV
+  renderCanvas()
+}
+
 const handleApply = () => {
-  console.log('Données Sharp pour le backend:', {
-    left: Math.round(cropState.realX),
-    top: Math.round(cropState.realY),
-    width: Math.round(cropState.realW),
-    height: Math.round(cropState.realH),
-    filters: filters
-  })
+  // On s'assure que les coordonnées sont bien à jour avant l'envoi
+  updateRealCoords()
+
+  const payload = {
+    // 1. Rotation & Flip (Opérations de transformation)
+    transformation: {
+      rotate: transform.rotate, // Angle précis (ex: 45, 92, etc.)
+      flipH: transform.flipH,
+      flipV: transform.flipV,
+      // Note: Le background par défaut de Sharp est noir lors d'une rotation, 
+      // on peut préciser un fond transparent ou blanc si besoin.
+      background: { r: 0, g: 0, b: 0, alpha: 0 } 
+    },
+    
+    // 2. Crop (appliqué sur l'image APRÈS transformation)
+    // On arrondit car Sharp n'accepte que des entiers pour les pixels
+    crop: {
+      left: Math.max(0, Math.round(cropState.realX)),
+      top: Math.max(0, Math.round(cropState.realY)),
+      width: Math.round(cropState.realW),
+      height: Math.round(cropState.realH)
+    },
+    
+    // 3. Autres filtres
+    filters: {
+      blur: filters.blur,
+      grayscale: filters.grayscale
+    }
+  }
+
+  console.log('Données envoyées au backend (format Sharp) :', payload)
+  
+  // Exemple d'appel API :
+  // await api.post(`/media/${id}/edit`, payload)
 }
 </script>
 
@@ -449,10 +542,10 @@ const handleApply = () => {
           <div>
             <h3 class="p13 font-semibold text-text mb-3">Rotate</h3>
             <div class="flex gap-2">
-              <Button variant="secondary" class="flex-1 px-3 py-2 h-8">
+              <Button @click="rotateLeft" variant="secondary" class="flex-1 px-3 py-2 h-8">
                 <RotateCcw class="size-16" />
               </Button>
-              <Button variant="secondary" class="flex-1 px-3 py-2 h-8">
+              <Button @click="rotateRight" variant="secondary" class="flex-1 px-3 py-2 h-8">
                 <RotateCw class="size-16" />
               </Button>
             </div>
@@ -461,10 +554,10 @@ const handleApply = () => {
           <div>
             <h3 class="p13 font-semibold text-text mb-3">Flip</h3>
             <div class="flex gap-2">
-              <Button variant="secondary" class="flex-1 px-3 py-2 h-8">
+              <Button @click="toggleFlipH" variant="secondary" class="flex-1 px-3 py-2 h-8">
                 <FlipHorizontal2 class="size-16" />
               </Button>
-              <Button variant="secondary" class="flex-1 px-3 py-2 h-8">⊣</Button>
+              <Button @click="toggleFlipV" variant="secondary" class="flex-1 px-3 py-2 h-8">⊣</Button>
             </div>
           </div>
         </div>
@@ -479,13 +572,13 @@ const handleApply = () => {
           <div>
             <label class="p13 font-medium text-text block mb-2">Rotation angle</label>
             <input
-              v-model.number="rotation"
+              v-model.number="transform.rotate"
               type="range"
               min="0"
               max="360"
               class="w-full h-2 bg-border rounded appearance-none cursor-pointer accent-accent"
             />
-            <span class="p13 text-muted-foreground">{{ rotation }}°</span>
+            <span class="p13 text-muted-foreground">{{ transform.rotate }}°</span>
           </div>
         </div>
 

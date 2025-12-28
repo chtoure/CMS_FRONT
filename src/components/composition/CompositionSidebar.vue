@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// All imports
 import { reactive, computed, type Component } from 'vue'
 import { useRoute } from 'vue-router'
 import {
@@ -15,6 +14,10 @@ import DropdownMenuLabel from '../ui/dropdown-menu/DropdownMenuLabel.vue'
 import DropdownMenuSeparator from '../ui/dropdown-menu/DropdownMenuSeparator.vue'
 import DropdownMenuItem from '../ui/dropdown-menu/DropdownMenuItem.vue'
 
+const route = useRoute()
+const props = defineProps<{
+  isCollapsed: boolean
+}>()
 
 interface SubMenu {
   label: string,
@@ -29,12 +32,6 @@ interface NavItems  {
   menuKey: string,
   submenu: SubMenu[] | null
 }
-
-
-const route = useRoute()
-const props = defineProps<{
-  isCollapsed: boolean
-}>()
 
 const openMenus = reactive<{ [key: string]: boolean }>({
   dashboard: true,
@@ -58,6 +55,13 @@ const navItems: NavItems[] = [
       href: 'admin.media',
       menuKey: 'media',
       submenu: null
+    },
+    {
+      label: 'Variable',
+      icon: Package,
+      href: 'admin.variable',
+      menuKey: 'variable',
+      submenu: null
     }
 ]
 
@@ -66,33 +70,39 @@ const isChildActive = (submenu: SubMenu[]) => {
 }
 
 const sidebarClasses = computed(() => [
-  'bg-background border-r border-sidebar-border flex flex-col h-screen transition-all duration-300',
-  props.isCollapsed ? 'w-16' : 'w-60'
+  'bg-sidebar border-r border-sidebar-border/40 flex flex-col h-screen transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-2xl z-30',
+  props.isCollapsed ? 'w-20' : 'w-64'
 ])
 
 const linkClasses = (isActive: boolean) => [
-  'w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md transition-all duration-150 mb-0.5 text-[13px]',
+  'w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 mb-1.5 text-[13px] group relative overflow-hidden',
   isActive
-    ? 'bg-active text-sidebar-foreground font-medium'
-    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground'
+    ? 'bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 scale-[1.02]'
+    : 'text-sidebar-foreground hover:bg-secondary/80 hover:text-foreground'
 ];
 </script>
 
 <template>
   <aside :class="sidebarClasses">
-    <div class="p-4 border-b border-sidebar-border flex items-center gap-2.5 text-sidebar-foreground" :class="{ 'justify-center': props.isCollapsed }">
-      <div class="w-8 h-8 bg-primary rounded-md flex items-center justify-center flex-shrink-0">
-        <span class="text-primary-foreground font-bold text-lg">E</span>
+    <!-- Section Logo avec animation Eldorado -->
+    <div class="p-6 mb-4 flex items-center gap-3" :class="{ 'justify-center': props.isCollapsed }">
+      <div class="relative group">
+        <div class="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+        <div class="relative w-10 h-10 bg-card rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm border border-border/50">
+          <span class="text-primary font-black text-xl tracking-tighter">E</span>
+        </div>
       </div>
-      <div v-if="!props.isCollapsed">
-        <h1 class="font-semibold text-base text-foreground leading-none">Enerlog</h1>
-        <span class="text-[11px] text-primary font-font tracking-tight">POS</span>
+      <div v-if="!props.isCollapsed" class="animate-in fade-in slide-in-from-left-4 duration-700">
+        <h1 class="font-black text-xl text-foreground tracking-tighter leading-none">Enerlog</h1>
+        <div class="flex items-center gap-1.5 mt-0.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span>
+          <span class="text-[9px] text-muted-foreground font-bold tracking-[0.3em] uppercase">Connecté</span>
+        </div>
       </div>
     </div>
 
-    <nav class="flex-1 overflow-y-auto p-3 custom-scrollbar">
+    <nav class="flex-1 overflow-y-auto p-4 custom-scrollbar">
         <div v-for="item in navItems" :key="item.label" class="mb-1">
-
           <DropdownMenu v-if="item.submenu && props.isCollapsed">
             <DropdownMenuTrigger as-child>
               <button :class="linkClasses(isChildActive(item.submenu))">
@@ -156,10 +166,10 @@ const linkClasses = (isActive: boolean) => [
                   {{ item.label }}
                 </span>
                 <span v-if="props.isCollapsed" class="sr-only">{{ item.label }}</span>
+                <div v-if="isActive && !props.isCollapsed" class="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-white rounded-l-full"></div>
               </button>
             </RouterLink>
           </template>
-
         </div>
     </nav>
   </aside>

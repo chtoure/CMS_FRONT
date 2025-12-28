@@ -49,7 +49,7 @@ const useDeleteMedia = () => {
           data: { ids: payload }
         });
         return response.data;
-      } 
+      }
       const response = await axios.delete(`${BASE_URL}/media/${payload}`);
       return response.data;
     },
