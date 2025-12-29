@@ -15,3 +15,15 @@ export interface AuthResponse {
   message: string;
   user: UserProfile;
 }
+
+
+export interface UpdateProfileData {
+  full_name?: string;
+  email?: string;
+  password?: string;
+}
+
+export interface UpdateProfileResponse {
+  message: string;
+  user: UserProfile;
+}

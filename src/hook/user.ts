@@ -4,6 +4,8 @@ import { useMutation } from "@tanstack/vue-query";
 import { AxiosError } from "axios";
 import api from "../api/axiosConfig";
 import type { LoginCredentials, AuthResponse } from "../type/user";
+import type { UpdateProfileData, UpdateProfileResponse } from "../type/user";
+
 
 
 // Hook personnalisé pour la mutation de connexion
@@ -27,6 +29,22 @@ export const useLogout = () => {
       // Avec un statut 204, response.data sera vide.
       // On retourne simplement true pour indiquer le succès.
       return true;
+    }
+  });
+}
+
+
+// Hook update profil utilisateur
+export const useUpdateProfile = () => {
+  return useMutation({
+    mutationFn: async (userData:
+      {
+        profileData : UpdateProfileData;
+        id: number
+      }
+    ) => {
+      const response = await api.put<UpdateProfileResponse>(`/users/${userData.id}`, userData.profileData);
+      return response.data;
     }
   });
 }

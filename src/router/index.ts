@@ -7,6 +7,8 @@ import DashboardView from '@/views/DashboardView.vue'
 import MediaListView from '@/views/media/MediaListView.vue'
 import MediaUpdateView from '@/views/media/MediaUpdateView.vue'
 import { setupAuthGuard } from './authGuard'
+import SettingsView from '../views/user/SettingsView.vue'
+import AdminVue from '../views/user/adminVue.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -47,6 +49,16 @@ const router = createRouter({
                       path: 'media/update/:id',
                       name: 'admin.media.update',
                       component: MediaUpdateView
+                    },
+                    {
+                      path: 'settings',
+                      name: 'admin.settings',
+                      component: SettingsView
+                    },
+                    {
+                      path: '',
+                      name: 'admin.users',
+                      component: AdminVue
                     }
                 ]
             },
