@@ -50,7 +50,7 @@ const toggleSidebar = () => {
         :isSidebarCollapsed="isSidebarCollapsed"
       />
 
-      <main class="flex-1 overflow-y-auto p-6 bg-background custom-scrollbar">
+      <main class="flex-1 overflow-y-auto p-2 md:p-6 bg-background custom-scrollbar">
         <RouterView/>
       </main>
     </div>

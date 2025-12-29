@@ -21,7 +21,7 @@ app.use(router)
 app.use(VueQueryPlugin);
 app.use(Vue3Toastify, {
   autoClose: 3000,
-  position: "top-right",
+  position: "bottom-right",
 } );
 
 app.mount('#app')
