@@ -4,15 +4,20 @@ import {
   Search, Plus, Menu, Palette, Hash, Type,
   ToggleLeft, Loader2, Trash2, X, Copy, Edit3
 } from "lucide-vue-next"
-import type { VariableType } from "../../type/Variable"
+import type { Variable, VariableType } from "../../type/Variable"
 
+import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue"
+import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue"
+import DropdownMenuContent from "@/components/ui/dropdown-menu/DropdownMenuContent.vue"
+import DropdownMenuItem from "@/components/ui/dropdown-menu/DropdownMenuItem.vue"
+import ContextMenu from "@/components/ui/context-menu/ContextMenu.vue"
+import ContextMenuTrigger from "@/components/ui/context-menu/ContextMenuTrigger.vue"
+import ContextMenuContent from "@/components/ui/context-menu/ContextMenuContent.vue"
+import ContextMenuItem from "@/components/ui/context-menu/ContextMenuItem.vue"
+import ContextMenuSeparator from "@/components/ui/context-menu/ContextMenuSeparator.vue"
 
-
-import DropdownMenu from "../../components/ui/dropdown-menu/DropdownMenu.vue"
-import DropdownMenuTrigger from "../../components/ui/dropdown-menu/DropdownMenuTrigger.vue"
-import DropdownMenuContent from "../../components/ui/dropdown-menu/DropdownMenuContent.vue"
-import DropdownMenuItem from "../../components/ui/dropdown-menu/DropdownMenuItem.vue"
-import CompositionColorPicker from "../../components/composition/CompositionColorPicker.vue"
+import CompositionColorPicker from "@/components/composition/CompositionColorPicker.vue"
+import CompositionError from "@/components/composition/CompositionError.vue"
 
 import {
   useCreateCollection,
@@ -22,19 +27,47 @@ import {
   useGetCollections,
   useUpdateVariable
 } from "../../hook/variable"
-import ContextMenu from "../../components/ui/context-menu/ContextMenu.vue"
-import ContextMenuTrigger from "../../components/ui/context-menu/ContextMenuTrigger.vue"
-import ContextMenuContent from "../../components/ui/context-menu/ContextMenuContent.vue"
-import ContextMenuItem from "../../components/ui/context-menu/ContextMenuItem.vue"
-import ContextMenuSeparator from "../../components/ui/context-menu/ContextMenuSeparator.vue"
+import { showToast } from "../../lib/toast"
+import { validateValueByType } from "../../lib/validateType"
 
-// ... (Le reste de votre logique script reste identique) ...
-const { data: collections, isLoading } = useGetCollections()
-const createCol = useCreateCollection()
-const deleteCol = useDeleteCollection()
-const createVar = useCreateVariable()
-const updateVar = useUpdateVariable()
-const deleteVar = useDeleteVariable()
+const {
+  data: collections,
+  isLoading: isCollectionsLoading,
+  isError: isCollectionsError,
+  error: collectionsError,
+  refetch: refetchCollections,
+} = useGetCollections()
+const {
+  mutate: createCol,
+  isPending: isCreateColLoading,
+  isError: isCreateColError,
+  error: createColError,
+
+} = useCreateCollection()
+const {
+  mutate: deleteCol,
+  isPending: isDeleteColLoading,
+  isError: isDeleteColError,
+  error: deleteColError,
+} = useDeleteCollection()
+const {
+  mutate: createVar,
+  isPending: isCreateVarLoading,
+  isError: isCreateVarError,
+  error: createVarError,
+} = useCreateVariable()
+const {
+  mutate: updateVar,
+  isPending: isUpdateVarLoading,
+  isError: isUpdateVarError,
+  error: updateVarError,
+} = useUpdateVariable()
+const {
+  mutate: deleteVar,
+  isPending: isDeleteVarLoading,
+  isError: isDeleteVarError,
+  error: deleteVarError,
+} = useDeleteVariable()
 
 const sidebarOpen = ref(true)
 const selectedCollectionId = ref<number | null>(null)
@@ -44,9 +77,20 @@ const editingCell = ref<{ id: number; field: "name" | "value" } | null>(null)
 const isCreatingCollection = ref<VariableType | null>(null)
 const newCollectionName = ref("")
 
-watch(collections, (newCols) => {
-  if (newCols?.length && !selectedCollectionId.value) {
-    selectedCollectionId.value = newCols[0].id
+const tempEditValue = ref("");
+
+const startEditing = (v: Variable, field: "name" | "value") => {
+  editingCell.value = { id: v.id, field };
+  tempEditValue.value = v[field];
+};
+
+const copyToClipboard = (text: string) => {
+  navigator.clipboard.writeText(text)
+}
+
+watch(() => collections.value, (newCols) => {
+  if (newCols && newCols.length > 0 && !selectedCollectionId.value) {
+    selectedCollectionId.value = newCols[0]?.id || null
   }
 }, { immediate: true })
 
@@ -62,13 +106,34 @@ const filteredVariables = computed(() => {
   )
 })
 
-const handleUpdate = (id: number, field: "name" | "value", newValue: string) => {
-  if (!newValue.trim()) {
-    editingCell.value = null
-    return
+const handleUpdate = async (id: number, field: "name" | "value", newValue: string | number | boolean) => {
+  const stringValue = String(newValue);
+  const cleanValue = stringValue.trim();
+
+  if (cleanValue === "" && field === "name") {
+    editingCell.value = null;
+    return;
   }
-  updateVar.mutate({ id, [field]: newValue })
-  editingCell.value = null
+
+  if (field === "value" && selectedCollection.value) {
+    if (!validateValueByType(selectedCollection.value.type, cleanValue)) {
+      showToast("error", `Format invalide pour le type ${selectedCollection.value.type}`);
+      return;
+    }
+  }
+
+  editingCell.value = null;
+
+  updateVar({ id, data: { [field]: cleanValue } }, {
+    onSuccess: () => {
+      refetchCollections();
+      showToast("success", "Variable mise à jour");
+    },
+    onError: (error: any) => {
+      showToast("error", `Erreur: ${error.message}`);
+      refetchCollections();
+    }
+  });
 }
 
 const handleColorChange = (newColor: string) => {
@@ -83,9 +148,20 @@ const prepareNewCollection = (type: VariableType) => {
   newCollectionName.value = ""
 }
 
-const submitNewCollection = () => {
+const submitNewCollection = async () => {
   if (newCollectionName.value.trim() && isCreatingCollection.value) {
-    createCol.mutate({ name: newCollectionName.value, type: isCreatingCollection.value })
+    await createCol(
+      { name: newCollectionName.value, type: isCreatingCollection.value },
+      {
+        onSuccess: () => {
+          refetchCollections()
+          showToast("success", "Collection créée avec succès")
+        },
+        onError: (error) => {
+          showToast("error", `Echec de création de la collection: ${error.message}`)
+        }
+      }
+    )
     cancelCollectionCreation()
   }
 }
@@ -95,150 +171,216 @@ const cancelCollectionCreation = () => {
   newCollectionName.value = ""
 }
 
-const addNewVariable = () => {
+const addNewVariable = async () => {
   if (!selectedCollectionId.value) return
   const type = selectedCollection.value?.type
   const defaultValue = type === 'COLOR' ? '000000' : type === 'BOOLEAN' ? 'false' : '0'
-  createVar.mutate({ name: "new-variable", value: defaultValue, collectionId: selectedCollectionId.value })
+  await createVar(
+    { name: "new-variable", value: defaultValue, collectionId: selectedCollectionId.value },
+    {
+      onSuccess: () => {
+        refetchCollections()
+        showToast("success", "Variable créée avec succès")
+      },
+      onError: (error) => {
+        showToast("error", `Echec de création de la variable: ${error.message}`)
+      }
+    }
+  )
+}
+
+const deleteVariable = async (id: number) => {
+  await deleteVar(id, {
+    onSuccess: () => {
+      refetchCollections()
+      showToast("success", "Variable supprimée avec succès")
+    },
+    onError: (error) => {
+      showToast("error", `Echec de suppression de la variable: ${error.message}`)
+    }
+  })
+}
+
+const deleteCollection = async (id: number) => {
+  await deleteCol(id, {
+    onSuccess: () => {
+      refetchCollections()
+      showToast("success", "Collection supprimée avec succès")
+    },
+    onError: (error) => {
+      showToast("error", `Echec de suppression de la collection: ${error.message}`)
+    }
+  })
 }
 
 const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 bg-background text-foreground overflow-hidden font-light">
+  <div class="flex flex-row  bg-background text-foreground overflow-hidden antialiased">
 
-    <aside v-if="sidebarOpen" class="w-72 border-r border-border bg-background overflow-y-auto h-full flex-shrink-0">
+    <aside v-if="sidebarOpen" class="w-72 overflow-y-auto h-full flex-shrink-0">
       <div class="p-6 space-y-6">
         <div class="flex items-center justify-between">
-          <h2 class="p12 font-light uppercase tracking-wider text-muted-foreground mb-1">Collections</h2>
+          <h2 class="p11 uppercase tracking-widest text-muted-foreground">Collections</h2>
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
-              <button>
-                <Plus :size="18" :stroke-width="0.8" />
+              <button class="hover:bg-muted p-1 rounded transition-colors">
+                <Plus :size="16" :stroke-width="1.2" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent class="border-border font-light p12">
-              <DropdownMenuItem @click="prepareNewCollection('COLOR')" ><Palette :size="16" class="mr-2 text-orange-500 " :stroke-width="0.8"/> Color</DropdownMenuItem>
-              <DropdownMenuItem @click="prepareNewCollection('NUMBER')"><Hash :size="16" class="mr-2 text-blue-500" :stroke-width="0.8" /> Number</DropdownMenuItem>
-              <DropdownMenuItem @click="prepareNewCollection('STRING')"><Type :size="16" class="mr-2 text-green-500" :stroke-width="0.8" /> String</DropdownMenuItem>
-              <DropdownMenuItem @click="prepareNewCollection('BOOLEAN')"><ToggleLeft :size="16" class="mr-2 text-purple-500" :stroke-width="0.8" /> Boolean</DropdownMenuItem>
+            <DropdownMenuContent class="border-border p14">
+              <DropdownMenuItem @click="prepareNewCollection('COLOR')"><Palette :size="14" class="mr-2 text-orange-500" :stroke-width="1.2"/> Color</DropdownMenuItem>
+              <DropdownMenuItem @click="prepareNewCollection('NUMBER')"><Hash :size="14" class="mr-2 text-blue-500" :stroke-width="1.2" /> Number</DropdownMenuItem>
+              <DropdownMenuItem @click="prepareNewCollection('STRING')"><Type :size="14" class="mr-2 text-green-500" :stroke-width="1.2" /> String</DropdownMenuItem>
+              <DropdownMenuItem @click="prepareNewCollection('BOOLEAN')"><ToggleLeft :size="14" class="mr-2 text-purple-500" :stroke-width="1.2" /> Boolean</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
         </div>
 
-        <div v-if="isLoading" class="flex justify-center p-8">
-          <Loader2 class="animate-spin text-primary" :size="24" />
-        </div>
-
-        <div v-else class="space-y-4">
-
+        <div class="space-y-4">
           <div v-if="isCreatingCollection" class="relative">
-             <input v-model="newCollectionName" v-focus type="text" @keydown.enter="submitNewCollection" @keydown.esc="cancelCollectionCreation" class="w-full pl-10 pr-8 py-1 rounded border border-border bg-transparent p12 font-light outline-none" />
-             <X @click="cancelCollectionCreation" class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground cursor-pointer" :size="16" />
+             <input v-model="newCollectionName" v-focus type="text"
+                    @keydown.enter="submitNewCollection"
+                    @keydown.esc="cancelCollectionCreation"
+                    class="w-full pl-3 pr-8 py-1 rounded border border-primary/30 bg-transparent p14 outline-none"
+                    placeholder="Collection name..."/>
+             <X @click="cancelCollectionCreation" class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer" :size="14" />
           </div>
 
           <div class="space-y-1">
-            <ContextMenu v-for="collection in collections" :key="collection.id">
+            <ContextMenu v-for="collection in (collections ?? [])" :key="collection.id">
               <ContextMenuTrigger>
                 <div
                   @click="selectedCollectionId = collection.id"
-                  :class="['flex items-center justify-between px-3 py-1 mt-1 mb-1 rounded cursor-pointer transition-all',
-                    selectedCollectionId === collection.id ? 'bg-primary' : 'hover:bg-muted']"
+                  :class="['flex items-center justify-between px-3 py-1.5 rounded cursor-pointer transition-all',
+                    selectedCollectionId === collection.id ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-foreground/80']"
                 >
-                  <div class="flex items-center gap-3 truncate">
-                    <span class="p12 font-light truncate">{{ collection.name }}</span>
-                  </div>
-                  <span class="p12 font-light opacity-60">{{ collection.variables.length }}</span>
+                  <span class="p14 truncate">{{ collection.name }}</span>
+                  <span class="p11 opacity-60">{{ collection.variables.length }} ({{ collection.type }})</span>
                 </div>
               </ContextMenuTrigger>
               <ContextMenuContent class="w-48 border-border">
-                <ContextMenuItem @click="selectedCollectionId = collection.id"><Edit3 class="mr-2 h-4 w-4" :stroke-width="0.8" /> Open</ContextMenuItem>
-                <ContextMenuItem @click="deleteCol.mutate(collection.id)" class="text-destructive focus:text-destructive">
-                  <Trash2 class="mr-2 h-4 w-4" :stroke-width="0.8" /> Delete Collection
+                <ContextMenuItem @click="selectedCollectionId = collection.id"><Edit3 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Open</ContextMenuItem>
+                <ContextMenuItem @click="deleteCollection(collection.id)" class="text-destructive">
+                  <Trash2 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Delete Collection
                 </ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>
           </div>
         </div>
+
+        <div v-if="isCollectionsLoading || isCreateColLoading || isUpdateVarLoading || isDeleteVarLoading || isCreateVarLoading || isDeleteColLoading" class="flex justify-center p-8">
+          <Loader2 class="animate-spin text-primary/60" :size="20" />
+        </div>
       </div>
     </aside>
 
-    <main class="flex-1 flex flex-col min-h-0 overflow-hidden">
+    <main class="flex-1 flex flex-col min-h-0 overflow-hidden  border-l border-border">
       <div class="border-b border-border px-8 py-6 bg-background/50">
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-4">
-            <button @click="sidebarOpen = !sidebarOpen" class="text-muted-foreground hover:text-foreground transition-colors p-1 hover:bg-muted rounded-lg">
-              <Menu :size="20" />
+            <button @click="sidebarOpen = !sidebarOpen" class="text-muted-foreground hover:text-foreground p-1 hover:bg-muted rounded transition-colors">
+              <Menu :size="18" :stroke-width="1.2" />
             </button>
-            <h1 class="p12 font-light">{{ selectedCollection?.name || 'Select Collection' }}</h1>
+            <h1 class="p13 tracking-tight">{{ selectedCollection?.name || 'Select Collection' }}</h1>
           </div>
-          <button v-if="selectedCollection" @click="addNewVariable" class="hover:opacity-90">
-            <Plus :size="18" :stroke-width="0.8" />
+          <button v-if="selectedCollection" @click="addNewVariable" class="text-muted-foreground hover:text-primary transition-colors">
+            <Plus :size="20" :stroke-width="1.2" />
           </button>
         </div>
 
         <div class="relative">
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" :size="18" />
-          <input v-model="searchQuery" type="text" placeholder="Search variables..." class="w-full bg-transparent border border-border rounded-lg px-3 py-2 pl-10 p12 font-light focus:outline-none  focus:ring-border" />
+          <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50" :size="16" />
+          <input v-model="searchQuery" type="text" placeholder="Search variables..."
+            class="w-full bg-transparent border border-border/60 rounded-lg px-3 py-2 pl-10 p14 focus:outline-none focus:border-primary/50 transition-colors" />
         </div>
       </div>
 
       <div class="flex-1 overflow-y-auto">
-        <table v-if="selectedCollection" class="w-full border-collapse">
-          <thead class="sticky top-0 z-10 bg-background/95 border-b border-border text-muted-foreground p12 font-light uppercase">
+        <div v-if="isCollectionsError" class="flex justify-center p-8">
+          <CompositionError :error="collectionsError" />
+        </div>
+
+        <table v-else-if="selectedCollection" class="w-full border-collapse">
+          <thead class="sticky top-0 z-10 bg-background/95 border-b border-border text-muted-foreground p11 uppercase tracking-widest">
             <tr>
-              <th class="px-8 py-3 text-left font-semibold">Name</th>
-              <th class="px-8 py-3 text-left font-semibold">Value</th>
+              <th class="px-8 py-3 text-left">Name</th>
+              <th class="px-8 py-3 text-left">Value</th>
               <th class="px-8 py-3 w-12"></th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-border">
+          <tbody class="divide-y divide-border/50">
             <ContextMenu v-for="v in filteredVariables" :key="v.id">
-              <ContextMenuTrigger asChild>
-                <tr class="hover:bg-muted/50 transition-colors group cursor-default">
-                  <td class="px-8 py-4 p12 font-light" @dblclick="editingCell = { id: v.id, field: 'name' }">
-                    <div class="flex items-center gap-3">
-                      <input v-if="editingCell?.id === v.id && editingCell?.field === 'name'"
-                        v-focus v-model="v.name" @blur="handleUpdate(v.id, 'name', v.name)" @keydown.enter="handleUpdate(v.id, 'name', v.name)"
-                        class="bg-background border border-primary rounded px-2 py-1 outline-none w-full" />
-                      <span v-else class="font-medium">{{ v.name }}</span>
-                    </div>
+              <ContextMenuTrigger as-child>
+                <tr class="hover:bg-muted/30 transition-colors group">
+                  <td class="px-8 py-4 p14" @dblclick="startEditing(v, 'name')">
+                    <input v-if="editingCell?.id === v.id && editingCell?.field === 'name'"
+                      v-focus
+                      v-model="tempEditValue"
+                      @blur="handleUpdate(v.id, 'name', tempEditValue)"
+                      @keydown.enter="($event.target as HTMLInputElement).blur()"
+                      @keydown.esc="editingCell = null"
+                      class="bg-background border border-primary/50 rounded px-2 py-0.5 outline-none "
+                    />
+                    <span v-else class="text-foreground/90">{{ v.name }}</span>
                   </td>
 
-                  <td class="px-8 py-4 p12 font-light">
+                  <td class="px-8 py-4 p14" @dblclick="startEditing(v, 'value')">
                     <template v-if="selectedCollection.type === 'COLOR'">
-                      <CompositionColorPicker :is-open="colorPickerOpen && editingCell?.id === v.id" :initial-color="v.value" @close="colorPickerOpen = false; editingCell = null" @color-change="handleColorChange">
+                      <CompositionColorPicker
+                        :is-open="colorPickerOpen && editingCell?.id === v.id"
+                        :initial-color="v.value"
+                        @close="colorPickerOpen = false; editingCell = null"
+                        @color-change="handleColorChange">
                         <template #trigger>
-                          <div class="flex items-center gap-3 cursor-pointer" @click="editingCell = { id: v.id, field: 'value' }; colorPickerOpen = true">
+                          <div class="flex items-center gap-3 cursor-pointer" @click="startEditing(v, 'value'); colorPickerOpen = true">
                             <div class="w-6 h-6 rounded border border-border" :style="{ backgroundColor: `#${v.value}` }" />
-                            <span class="font-mono p12 font-light uppercase">#{{ v.value }}</span>
+                            <span class="font-mono text-muted-foreground uppercase">#{{ v.value }}</span>
                           </div>
                         </template>
                       </CompositionColorPicker>
                     </template>
+
+                    <template v-else-if="selectedCollection.type === 'BOOLEAN'">
+                      <button
+                        @click="handleUpdate(v.id, 'value', v.value === 'true' ? 'false' : 'true')"
+                        :class="[
+                          'px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-colors',
+                          v.value === 'true' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
+                        ]"
+                      >
+                        {{ v.value }}
+                      </button>
+                    </template>
+
                     <template v-else>
-                      <div class="flex items-center gap-3 cursor-pointer" @click="editingCell = { id: v.id, field: 'value' }">
+                      <div class="flex items-center gap-3 cursor-pointer" @click="startEditing(v, 'value')">
                         <input v-if="editingCell?.id === v.id && editingCell?.field === 'value'"
-                          v-focus v-model="v.value" @blur="handleUpdate(v.id, 'value', v.value)" @keydown.enter="handleUpdate(v.id, 'value', v.value)"
-                          class="bg-background border border-primary rounded px-2 py-1 outline-none w-full font-mono" />
+                          v-focus
+                          v-model="tempEditValue"
+                          :type="selectedCollection.type === 'NUMBER' ? 'number' : 'text'"
+                          @blur="handleUpdate(v.id, 'value', tempEditValue)"
+                          @keydown.enter="($event.target as HTMLInputElement).blur()"
+                          class="bg-background border border-primary/50 rounded px-2 py-0.5 outline-none font-mono"
+                        />
                         <span v-else class="text-muted-foreground font-mono">{{ v.value }}</span>
                       </div>
                     </template>
                   </td>
                 </tr>
               </ContextMenuTrigger>
+
               <ContextMenuContent class="w-48 border-border">
                 <ContextMenuItem @click="editingCell = { id: v.id, field: 'name' }">
-                  <Edit3 class="mr-2 h-4 w-4" :stroke-width="0.8"/> Rename
+                  <Edit3 class="mr-2 h-4 w-4" :stroke-width="1.2"/> Rename
                 </ContextMenuItem>
-                <ContextMenuItem @click="window.navigator.clipboard.writeText(v.value)">
-                  <Copy class="mr-2 h-4 w-4" :stroke-width="0.8" /> Copy Value
+                <ContextMenuItem @click="copyToClipboard(v.value)">
+                  <Copy class="mr-2 h-4 w-4" :stroke-width="1.2" /> Copy Value
                 </ContextMenuItem>
                 <ContextMenuSeparator />
-                <ContextMenuItem @click="deleteVar.mutate(v.id)" class="text-destructive focus:text-destructive">
-                  <Trash2 class="mr-2 h-4 w-4" :stroke-width="0.8" /> Delete Variable
+                <ContextMenuItem @click="deleteVariable(v.id)" class="text-destructive">
+                  <Trash2 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Delete Variable
                 </ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>
@@ -246,5 +388,6 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
         </table>
       </div>
     </main>
+
   </div>
 </template>
