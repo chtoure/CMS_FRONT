@@ -18,9 +18,9 @@
     </DialogTrigger>
 
     <DialogContent
-      class="fixed inset-6 z-50 flex flex-col p-0 overflow-hidden border-none shadow-2xl bg-background
-             w-auto h-auto max-w-none max-h-none
-             left-6 top-6 right-6 bottom-6 translate-x-0 translate-y-0 gap-0"
+      class="fixed left-1/2 top-1/2 z-50 flex flex-col -translate-x-1/2 -translate-y-1/2
+             border border-border shadow-2xl bg-background rounded-lg
+             w-auto h-auto max-w-[90vw] max-h-[90vh] overflow-hidden gap-0 p-0"
     >
       <DialogHeader class="p-6 pb-4 flex-shrink-0 border-b border-border">
         <DialogTitle>{{ title }}</DialogTitle>
@@ -29,7 +29,7 @@
         </DialogDescription>
       </DialogHeader>
 
-      <div class="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <div class="flex-1 min-h-0 overflow-y-auto p-6">
         <slot name="content"></slot>
       </div>
     </DialogContent>

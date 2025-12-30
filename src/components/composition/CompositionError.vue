@@ -2,7 +2,7 @@
 import { CloudAlert } from 'lucide-vue-next';
 
 defineProps<{
-  error: string | undefined;
+  error: string | undefined | null;
 }>();
 </script>
 
