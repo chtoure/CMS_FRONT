@@ -37,36 +37,30 @@ const {
   error: collectionsError,
   refetch: refetchCollections,
 } = useGetCollections()
+
 const {
   mutate: createCol,
   isPending: isCreateColLoading,
-  isError: isCreateColError,
-  error: createColError,
-
 } = useCreateCollection()
+
 const {
   mutate: deleteCol,
   isPending: isDeleteColLoading,
-  isError: isDeleteColError,
-  error: deleteColError,
 } = useDeleteCollection()
+
 const {
   mutate: createVar,
   isPending: isCreateVarLoading,
-  isError: isCreateVarError,
-  error: createVarError,
 } = useCreateVariable()
+
 const {
   mutate: updateVar,
   isPending: isUpdateVarLoading,
-  isError: isUpdateVarError,
-  error: updateVarError,
 } = useUpdateVariable()
+
 const {
   mutate: deleteVar,
   isPending: isDeleteVarLoading,
-  isError: isDeleteVarError,
-  error: deleteVarError,
 } = useDeleteVariable()
 
 const sidebarOpen = ref(true)
@@ -129,7 +123,7 @@ const handleUpdate = async (id: number, field: "name" | "value", newValue: strin
       refetchCollections();
       showToast("success", "Variable mise à jour");
     },
-    onError: (error: any) => {
+    onError: (error) => {
       showToast("error", `Erreur: ${error.message}`);
       refetchCollections();
     }
@@ -217,19 +211,19 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
 </script>
 
 <template>
-  <div class="flex flex-row  bg-background text-foreground overflow-hidden antialiased">
+  <div class="flex flex-row  bg-background text-foreground overflow-hidden antialiased font-mono">
 
     <aside v-if="sidebarOpen" class="w-72 overflow-y-auto h-full flex-shrink-0">
       <div class="p-6 space-y-6">
         <div class="flex items-center justify-between">
-          <h2 class="p11 uppercase tracking-widest text-muted-foreground">Collections</h2>
+          <h2 class="p12 font-bold uppercase tracking-widest text-muted-foreground">Collections</h2>
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
               <button class="hover:bg-muted p-1 rounded transition-colors">
                 <Plus :size="16" :stroke-width="1.2" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent class="border-border p14">
+            <DropdownMenuContent class="border-border p14 font-mono">
               <DropdownMenuItem @click="prepareNewCollection('COLOR')"><Palette :size="14" class="mr-2 text-orange-500" :stroke-width="1.2"/> Color</DropdownMenuItem>
               <DropdownMenuItem @click="prepareNewCollection('NUMBER')"><Hash :size="14" class="mr-2 text-blue-500" :stroke-width="1.2" /> Number</DropdownMenuItem>
               <DropdownMenuItem @click="prepareNewCollection('STRING')"><Type :size="14" class="mr-2 text-green-500" :stroke-width="1.2" /> String</DropdownMenuItem>
@@ -238,7 +232,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
           </DropdownMenu>
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-4 font-mono">
           <div v-if="isCreatingCollection" class="relative">
              <input v-model="newCollectionName" v-focus type="text"
                     @keydown.enter="submitNewCollection"
@@ -253,7 +247,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
               <ContextMenuTrigger>
                 <div
                   @click="selectedCollectionId = collection.id"
-                  :class="['flex items-center justify-between px-3 py-1.5 rounded cursor-pointer transition-all',
+                  :class="['flex items-center justify-between px-3 py-1.5 rounded cursor-pointer transition-all font-mono',
                     selectedCollectionId === collection.id ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-foreground/80']"
                 >
                   <span class="p14 truncate">{{ collection.name }}</span>
@@ -310,7 +304,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
               <th class="px-8 py-3 w-12"></th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-border/50">
+          <tbody class="divide-y divide-border">
             <ContextMenu v-for="v in filteredVariables" :key="v.id">
               <ContextMenuTrigger as-child>
                 <tr class="hover:bg-muted/30 transition-colors group">
@@ -346,7 +340,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
                       <button
                         @click="handleUpdate(v.id, 'value', v.value === 'true' ? 'false' : 'true')"
                         :class="[
-                          'px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-colors',
+                          'px-3 py-1 rounded-full text-[10px] uppercase transition-colors',
                           v.value === 'true' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
                         ]"
                       >
