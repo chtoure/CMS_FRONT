@@ -4,8 +4,8 @@
   import { Pencil } from 'lucide-vue-next';
   import CompositionLoading from '@/components/composition/CompositionLoading.vue';
   import CompositionError from '@/components/composition/CompositionError.vue';
-  import { showToast } from "../../lib/toast";
-  import { ref } from 'vue';
+  import CompositionModal from '@/components/composition/CompositionModal.vue';
+  import Button from '@/components/ui/button/Button.vue';
   import { useGetUsers } from '../../hook/user';
 
 
@@ -19,16 +19,6 @@
     refetch: refetchUsers
   } = useGetUsers();
 
-
-console.log(usersData);
-
-
-interface User {
-  name: string
-  title: string
-  email: string
-  role: string
-}
 
 </script>
 
@@ -49,12 +39,38 @@ interface User {
           </p>
         </div>
         <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-          <button
-            type="button"
-            class="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-          >
-            Add user
-          </button>
+          <CompositionModal title="Ajouter un utilisateur">
+            <template #trigger>
+              <Button>Ajouter</Button>
+            </template>
+            <template #content>
+              <div class="p-4">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">Ajouter un utilisateur</h2>
+                <!-- Formulaire d'ajout d'utilisateur -->
+                <form class="space-y-4">
+                  <div>
+                    <label for="full_name" class="block text-sm font-medium text-gray-700">Nom complet</label>
+                    <input type="text" name="full_name" id="    full_name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+                  </div>
+                  <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" name="email" id="email" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+                  </div>
+                  <div>
+                    <label for="role" class="block text-sm font-medium text-gray-700">Rôle</label>
+                    <select id="role" name="role" class="mt-1 block                                     w-full border border-gray-300 rounded-md shadow-sm p-2">
+                      <option>Administrateur</option>
+                      <option>Éditeur</option>
+                      <option>Utilisateur</option>
+                    </select>
+                  </div>
+                  <div class="flex justify-end">
+                    <Button type="submit" class="bg-indigo-600 text-white hover:bg-indigo-  700">Ajouter</Button>
+                  </div>
+                </form>
+              </div>
+            </template>
+          </CompositionModal>
         </div>
       </div>
 
