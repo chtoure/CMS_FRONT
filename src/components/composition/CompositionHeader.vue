@@ -52,20 +52,20 @@
 
 <template>
     <header :class="cn(
-        'h-14 border-b border-border bg-background flex items-center justify-between px-4 gap-3',
+        'h-16 sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl flex items-center justify-between px-6 gap-4', // Effet de verre (glassmorphism) et hauteur augmentée
         headerClass
     )" >
 
-        <div class="flex items-center gap-3 flex-1">
+        <div class="flex items-center gap-4 flex-1">
             <button
                 @click="props.onToggleSidebar"
-                class="flex items-center justify-center p-1.5 rounded-md transition-all duration-150 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none"
+                class="flex items-center justify-center p-2 rounded-xl transition-all duration-200 text-muted-foreground hover:bg-secondary hover:text-foreground hover:scale-110 active:scale-95"
             >
-                <PanelLeftOpen v-if="props.isSidebarCollapsed" class="w-4 h-4" />
-                <PanelLeftClose v-else class="w-4 h-4" />
+                <PanelLeftOpen v-if="props.isSidebarCollapsed" class="w-5 h-5" />
+                <PanelLeftClose v-else class="w-5 h-5" />
             </button>
 
-            <BaseSearchInput v-model="searchTerm" placeholder="Search..." containerClass="max-w-sm">
+            <BaseSearchInput v-model="searchTerm" placeholder="Rechercher partout..." containerClass="max-w-md hidden md:flex">
                 <template v-slot:iconLeft>
                     <SearchIcon class="w-3.5 h-3.5" />
                 </template>

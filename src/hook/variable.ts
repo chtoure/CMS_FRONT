@@ -1,0 +1,96 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
+import axios from "axios";
+import type { Collection, Variable, VariableType } from "../type/Variable";
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+
+const useGetCollections = () => {
+  return useQuery({
+    queryKey: ['collections'],
+    queryFn: async () => {
+      const response = await axios.get<Collection[]>(`${BASE_URL}/collections`);
+      return response.data;
+    },
+    staleTime: 1000 * 60,
+  });
+};
+
+const useCreateCollection = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { name: string; type: VariableType }) => {
+      const response = await axios.post<Collection>(`${BASE_URL}/collections`, payload);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collections'] });
+    }
+  });
+};
+
+const useDeleteCollection = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const response = await axios.delete(`${BASE_URL}/collections/${id}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collections'] });
+    }
+  });
+};
+
+const useCreateVariable = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (newVar: { name: string; value: string; collectionId: number }) => {
+      const response = await axios.post<Variable>(`${BASE_URL}/variables`, newVar);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collections'] });
+    },
+  });
+};
+
+const useUpdateVariable = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...data }: Partial<Variable> & { id: number }) => {
+      const response = await axios.put<Variable>(`${BASE_URL}/variables/${id}`, data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collections'] });
+    }
+  });
+};
+
+const useDeleteVariable = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: number | number[]) => {
+      if (Array.isArray(payload)) {
+        const response = await axios.delete(`${BASE_URL}/variables`, {
+          data: { ids: payload }
+        });
+        return response.data;
+      }
+      const response = await axios.delete(`${BASE_URL}/variables/${payload}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collections'] });
+    }
+  });
+};
+
+export {
+  useGetCollections,
+  useCreateCollection,
+  useDeleteCollection,
+  useCreateVariable,
+  useUpdateVariable,
+  useDeleteVariable
+};
