@@ -10,7 +10,7 @@ const isSidebarCollapsed = ref(false);
 const route = useRoute();
 
 const setCollapsedByViewport = () => {
-  isSidebarCollapsed.value = window.innerWidth < 1024; // auto-close on small screens
+  isSidebarCollapsed.value = window.innerWidth < 1024; 
 };
 
 const handleResize = () => {

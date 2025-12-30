@@ -15,7 +15,7 @@ import DropdownMenuLabel from '../ui/dropdown-menu/DropdownMenuLabel.vue'
 import DropdownMenuSeparator from '../ui/dropdown-menu/DropdownMenuSeparator.vue'
 import DropdownMenuItem from '../ui/dropdown-menu/DropdownMenuItem.vue'
 
-// Interfaces first
+
 interface SubMenu {
   label: string,
   icon: Component,
@@ -30,7 +30,7 @@ interface NavItems  {
   submenu: SubMenu[] | null
 }
 
-// All hooks at top level
+
 const route = useRoute()
 const props = defineProps<{
   isCollapsed: boolean
