@@ -1,5 +1,28 @@
 
 <script setup lang="ts">
+  import { Trash2 } from 'lucide-vue-next';
+  import { Pencil } from 'lucide-vue-next';
+  import CompositionLoading from '@/components/composition/CompositionLoading.vue';
+  import CompositionError from '@/components/composition/CompositionError.vue';
+  import { showToast } from "../../lib/toast";
+  import { ref } from 'vue';
+  import { useGetUsers } from '../../hook/user';
+
+
+
+
+  const {
+    data: usersData,
+    isPending: isLoadingListUsers,
+    isError: isErroUsers,
+    error: fetchError,
+    refetch: refetchUsers
+  } = useGetUsers();
+
+
+console.log(usersData);
+
+
 interface User {
   name: string
   title: string
@@ -7,47 +30,14 @@ interface User {
   role: string
 }
 
-const users: User[] = [
-  {
-    name: 'Lindsay Walton',
-    title: 'Front-end Developer',
-    email: 'lindsay.walton@example.com',
-    role: 'Member'
-  },
-  {
-    name: 'Courtney Henry',
-    title: 'Designer',
-    email: 'courtney.henry@example.com',
-    role: 'Admin'
-  },
-  {
-    name: 'Tom Cook',
-    title: 'Director of Product',
-    email: 'tom.cook@example.com',
-    role: 'Member'
-  },
-  {
-    name: 'Whitney Francis',
-    title: 'Copywriter',
-    email: 'whitney.francis@example.com',
-    role: 'Admin'
-  },
-  {
-    name: 'Leonard Krasner',
-    title: 'Senior Designer',
-    email: 'leonard.krasner@example.com',
-    role: 'Owner'
-  },
-  {
-    name: 'Floyd Miles',
-    title: 'Principal Designer',
-    email: 'floyd.miles@example.com',
-    role: 'Member'
-  }
-]
 </script>
 
 <template>
+
+  <CompositionLoading v-if="isLoadingListUsers" />
+
+  <CompositionError v-else-if="isErroUsers" :error="fetchError?.message"/>
+
   <div class="p-6">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
@@ -95,9 +85,9 @@ const users: User[] = [
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-200">
-                <tr v-for="user in users" :key="user.email" class="hover:bg-gray-50 transition-colors">
+                <tr v-for="user in usersData" :key="user.id" class="hover:bg-gray-50 transition-colors">
                   <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">
-                    {{ user.name }}
+                    {{ user.full_name }}
                   </td>
                   <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                     {{ user.email }}
@@ -109,17 +99,17 @@ const users: User[] = [
                   </td>
                   <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                     <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
-                      {{ user.title }}
+                      Active
                     </span>
                   </td>
                   <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                    <a href="#" class="text-indigo-600 hover:text-indigo-900 font-semibold">
-                      Edit
+                    <a href="#">
+                      <Pencil class="w-5 h-5 text-indigo-600 hover:text-indigo-900"/>
                     </a>
                   </td>
                   <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                    <a href="#" class="text-red-600 hover:text-red-900 font-semibold">
-                      Delete
+                    <a href="#" >
+                      <Trash2 class="w-5 h-5 text-red-600 hover:text-red-900"/>
                     </a>
                   </td>
                 </tr>

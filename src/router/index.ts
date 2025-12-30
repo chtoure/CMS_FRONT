@@ -7,8 +7,8 @@ import DashboardView from '@/views/DashboardView.vue'
 import MediaListView from '@/views/media/MediaListView.vue'
 import MediaUpdateView from '@/views/media/MediaUpdateView.vue'
 import { setupAuthGuard } from './authGuard'
-import SettingsView from '../views/user/SettingsView.vue'
-import AdminVue from '../views/user/adminVue.vue'
+import SettingsView from '@/views/user/SettingsView.vue'
+import AdminVue from '@/views/user/adminVue.vue'
 
 const router = createRouter({
   history: createWebHistory(),

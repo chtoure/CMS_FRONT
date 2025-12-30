@@ -1,9 +1,9 @@
 
 
-import { useMutation } from "@tanstack/vue-query";
+import { useMutation, useQuery } from "@tanstack/vue-query";
 import { AxiosError } from "axios";
 import api from "../api/axiosConfig";
-import type { LoginCredentials, AuthResponse } from "../type/user";
+import type { LoginCredentials, AuthResponse, UserProfile } from "../type/user";
 import type { UpdateProfileData, UpdateProfileResponse } from "../type/user";
 
 
@@ -44,6 +44,18 @@ export const useUpdateProfile = () => {
       }
     ) => {
       const response = await api.put<UpdateProfileResponse>(`/users/${userData.id}`, userData.profileData);
+      return response.data;
+    }
+  });
+}
+
+
+// Hook get users list
+export const useGetUsers = () => {
+  return useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const response = await api.get<UserProfile[]>("/users");
       return response.data;
     }
   });
