@@ -1,9 +1,8 @@
 
 
 import { useMutation, useQuery } from "@tanstack/vue-query";
-import { AxiosError } from "axios";
 import api from "../api/axiosConfig";
-import type { LoginCredentials, AuthResponse, UserProfile } from "../type/user";
+import type { LoginCredentials, AuthResponse, UserProfile, AddUserData, AddUserResponse, ChangePasswordData, ChangePasswordResponse } from "../type/user";
 import type { UpdateProfileData, UpdateProfileResponse } from "../type/user";
 
 
@@ -60,3 +59,27 @@ export const useGetUsers = () => {
     }
   });
 }
+
+
+
+// Hook addUser
+export const useAddUser = () => {
+  return useMutation({
+    mutationFn: async (newUser: AddUserData) => {
+      const response = await api.post<AddUserResponse>("/register", newUser);
+      return response.data;
+    }
+  });
+}
+
+
+// Hook change password
+export const useChangePassword = () => {
+  return useMutation({
+    mutationFn: async (data: { passwordData: ChangePasswordData; id: number }) => {
+      const response = await api.put<ChangePasswordResponse>(`/users/${data.id}/change-password`, data.passwordData);
+      return response.data;
+    }
+  });
+}
+

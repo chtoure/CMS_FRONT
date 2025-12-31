@@ -24,20 +24,22 @@ const initials = computed(() => {
     .toUpperCase()
     .slice(0, 2) || '?';
 });
+
+
 </script>
 
 <template>
   <div
-    class="group flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-white rounded-lg border shadow-sm hover:shadow-md transition-all duration-300"
+    class="group flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-white  border border-border shadow-sm hover:shadow-md transition-all duration-300"
     :style="{ animationDelay: `${index * 50}ms` }"
   >
     <div class="flex items-center gap-4 flex-1 min-w-0">
-      <div class="h-12 w-12 rounded-full ring-2 ring-gray-100 bg-indigo-50 text-indigo-600 font-semibold flex items-center justify-center">
+      <div class="h-12 w-12 rounded-full ring-2 ring-gray-100 bg-indigo-50 text-indigo-600  flex items-center justify-center">
         {{ initials }}
       </div>
 
       <div class="min-w-0 flex-1">
-        <h3 class="font-semibold text-gray-900 truncate">{{ user.full_name }}</h3>
+        <h3 class=" text-gray-900 truncate">{{ user.full_name }}</h3>
         <div class="flex items-center gap-2 text-gray-500 text-sm">
           <Mail class="h-3.5 w-3.5 flex-shrink-0" />
           <span class="truncate">{{ user.email }}</span>
@@ -47,7 +49,7 @@ const initials = computed(() => {
 
     <div class="flex items-center justify-between sm:justify-end gap-3">
       <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
-        {{ user.role || 'Aucun rôle' }}
+        {{ user.role ? user.role.name : 'Aucun rôle' }}
       </span>
 
        <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">

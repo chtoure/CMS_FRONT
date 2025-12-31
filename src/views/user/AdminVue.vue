@@ -100,11 +100,11 @@ const closeForm = () => {
 
       <template v-else>
 
-        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        <div class="bg-white border border-gray-200  shadow-sm overflow-hidden">
           <div class="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
             <h3 class="font-bold text-gray-900">Liste des utilisateurs</h3>
             <div class="w-full sm:w-72">
-               <SearchBar v-model="search" placeholder="Rechercher..." />
+               <!-- <SearchBar v-model="search" placeholder="Rechercher..." /> -->
             </div>
           </div>
 
