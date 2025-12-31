@@ -1,7 +1,7 @@
-import { useMutation, useQuery } from "@tanstack/vue-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { type Ref, unref } from "vue";
 import axios from "axios";
-import type { Media } from "../type/media";
+import type { Media, SaveMediaPayload } from "../type/media";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
@@ -56,4 +56,32 @@ const useDeleteMedia = () => {
   });
 };
 
-export { useCreateMedia, useGetMedia, useGetMediaList, useDeleteMedia }
+const useUpdateMedia = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({payload, mediaId}: {payload: SaveMediaPayload, mediaId: number}) => {
+
+      console.log('data', mediaId, payload);
+
+      const { data } = await axios.put(`${BASE_URL}/media/${mediaId}`, payload.operations);
+      return data;
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['media', variables] });
+    },
+    onError: (error) => {
+      console.error("Erreur lors de la sauvegarde :", error);
+    }
+  });
+}
+
+
+
+export {
+  useCreateMedia,
+  useGetMedia,
+  useGetMediaList,
+  useDeleteMedia,
+  useUpdateMedia
+}

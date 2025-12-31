@@ -106,7 +106,7 @@ const linkClasses = (isActive: boolean) => [
           <DropdownMenu v-if="item.submenu && props.isCollapsed">
             <DropdownMenuTrigger as-child>
               <button :class="linkClasses(isChildActive(item.submenu))">
-                <component :is="item.icon" class="w-4 h-4" />
+                <component :is="item.icon" class="w-4 h-4" :stroke-width="3" />
                 <span class="sr-only">{{ item.label }}</span>
               </button>
             </DropdownMenuTrigger>
@@ -115,7 +115,7 @@ const linkClasses = (isActive: boolean) => [
               <DropdownMenuSeparator />
               <DropdownMenuItem v-for="subItem in item.submenu" :key="subItem.label" as-child>
                 <RouterLink :to="{ name: subItem.href }" class="cursor-pointer w-full flex text-[13px]">
-                  <component :is="subItem.icon" class="w-4 h-4 mr-2" />
+                  <component :is="subItem.icon" class="w-4 h-4 mr-2" :stroke-width="3" />
                   {{ subItem.label }}
                 </RouterLink>
               </DropdownMenuItem>
@@ -127,7 +127,7 @@ const linkClasses = (isActive: boolean) => [
               @click="toggleMenu(item.menuKey)"
               :class="linkClasses(!!openMenus[item.menuKey] && !props.isCollapsed)"
             >
-              <component :is="item.icon" class="w-4 h-4 flex-shrink-0" />
+              <component :is="item.icon" class="w-4 h-4 flex-shrink-0" :stroke-width="3" />
               <span v-if="!props.isCollapsed" class="font-medium flex-1 text-left">
                 {{ item.label }}
               </span>
@@ -148,7 +148,7 @@ const linkClasses = (isActive: boolean) => [
                   'flex items-center gap-2 px-2.5 py-1.5 text-[13px] rounded-md transition-all duration-150 cursor-pointer',
                   isActive ? 'text-primary font-medium bg-primary/10' : 'text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent'
                 ]">
-                  <component :is="subItem.icon" class="w-3.5 h-3.5" />
+                  <component :is="subItem.icon" class="w-3.5 h-3.5" :stroke-width="3"/>
                   {{ subItem.label }}
                 </div>
               </RouterLink>
@@ -161,7 +161,7 @@ const linkClasses = (isActive: boolean) => [
               v-slot="{ isActive }"
             >
               <button :class="linkClasses(isActive)">
-                <component :is="item.icon" class="w-4 h-4 flex-shrink-0" />
+                <component :is="item.icon" class="w-4 h-4 flex-shrink-0" :stroke-width="3"/>
                 <span v-if="!props.isCollapsed" class="font-medium flex-1 text-left">
                   {{ item.label }}
                 </span>
