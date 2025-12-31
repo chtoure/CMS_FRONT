@@ -67,7 +67,6 @@ type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se' | 'n' | 's' | 'e' | 'w';
 
 
 interface SaveMediaPayload {
-  mediaId: number;
   operations: {
     geometry: {
       rotation: number; // angle total final

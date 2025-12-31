@@ -287,7 +287,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
         <div class="relative">
           <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50" :size="16" />
           <input v-model="searchQuery" type="text" placeholder="Search variables..."
-            class="w-full bg-transparent border border-border/60 rounded-lg px-3 py-2 pl-10 p14 focus:outline-none focus:border-primary/50 transition-colors" />
+            class="w-full pl-10 input-custom bg-transparent" />
         </div>
       </div>
 

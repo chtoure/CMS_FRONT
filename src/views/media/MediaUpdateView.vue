@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted, nextTick, withDefaults, defineProps } from 'vue';
+import { ref, reactive, watch, onMounted, nextTick } from 'vue';
 import {
   Scissors,
   RotateCw,
@@ -10,9 +10,9 @@ import {
   FlipHorizontal,
   FlipVertical,
   RotateCcw,
-  X,
   Check,
   Undo2,
+  ArrowLeft,
 } from 'lucide-vue-next';
 import type {
   Tool,
@@ -26,12 +26,26 @@ import type {
   AppliedModifications,
   SaveMediaPayload,
 } from '../../type/media';
-import { useGetMedia } from '../../hook/media';
+import { useGetMedia, useUpdateMedia } from '../../hook/media';
 import { useRoute } from 'vue-router';
+import Tabs from '@/components/ui/tabs/Tabs.vue';
+import TabsList from '@/components/ui/tabs/TabsList.vue';
+import TabsTrigger from '@/components/ui/tabs/TabsTrigger.vue';
+import TabsContent from '@/components/ui/tabs/TabsContent.vue';
+import Select from '@/components/ui/select/Select.vue';
+import SelectTrigger from '@/components/ui/select/SelectTrigger.vue';
+import SelectValue from '@/components/ui/select/SelectValue.vue';
+import SelectContent from '@/components/ui/select/SelectContent.vue';
+import SelectItem from '@/components/ui/select/SelectItem.vue';
+import CompositionPageHeader from '@/components/composition/CompositionPageHeader.vue';
+import Button from '@/components/ui/button/Button.vue';
+import router from '../../router';
+import { showToast } from '../../lib/toast';
 
 const route = useRoute()
 const id = Number(route.params.id)
 const { data: mediaData } = useGetMedia(id)
+const { mutate: updateMedia, isPending: isSaving } = useUpdateMedia();
 
 watch(mediaData, (newData) => {
   if (newData) {
@@ -140,6 +154,11 @@ onMounted(() => {
 });
 
 function loadMediaImage(media: Media) {
+  if (!media || !media.file_path) {
+    console.error('Media ou file_path invalide:', media);
+    return;
+  }
+
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.src = media.file_path;
@@ -149,18 +168,27 @@ function loadMediaImage(media: Media) {
   };
 
   img.onerror = () => {
-    console.error('Failed to load image from media:', media);
-    loadSampleImage();
+    console.error('Échec du chargement de l\'image depuis le média:', media);
   };
 }
 
 async function loadSampleImage() {
+  const filePath = mediaData.value?.file_path;
+  if (!filePath) {
+    console.error('Aucun chemin de fichier disponible pour le média');
+    return;
+  }
+
   const img = new Image();
   img.crossOrigin = 'anonymous';
-  img.src = mediaData.value?.file_path;
+  img.src = filePath;
 
   img.onload = () => {
     initializeImage(img, img.src);
+  };
+
+  img.onerror = () => {
+    console.error('Échec du chargement de l\'image');
   };
 }
 
@@ -247,9 +275,13 @@ function renderCanvas() {
 
     const allRemovedPixels = new Set([...appliedRemovedPixels, ...removedPixels]);
     allRemovedPixels.forEach((key) => {
-      const [x, y] = key.split(',').map(Number);
-      const idx = (y * canvasWidth.value + x) * 4;
-      data[idx + 3] = 0;
+      const parts = key.split(',').map(Number);
+      const x = parts[0];
+      const y = parts[1];
+      if (x !== undefined && y !== undefined) {
+        const idx = (y * canvasWidth.value + x) * 4;
+        data[idx + 3] = 0;
+      }
     });
 
     ctx.putImageData(imageData, 0, 0);
@@ -370,9 +402,16 @@ function applyCrop() {
 }
 
 function colorDistance(c1: number[], c2: number[]): number {
-  const dr = c1[0] - c2[0];
-  const dg = c1[1] - c2[1];
-  const db = c1[2] - c2[2];
+  const r1 = c1[0] ?? 0;
+  const g1 = c1[1] ?? 0;
+  const b1 = c1[2] ?? 0;
+  const r2 = c2[0] ?? 0;
+  const g2 = c2[1] ?? 0;
+  const b2 = c2[2] ?? 0;
+
+  const dr = r1 - r2;
+  const dg = g1 - g2;
+  const db = b1 - b2;
   return Math.sqrt(dr * dr + dg * dg + db * db);
 }
 
@@ -391,7 +430,11 @@ function floodFillBG(x: number, y: number) {
   const data = imageData.data;
 
   const pixelIndex = (y * canvasWidth.value + x) * 4;
-  const targetColor = [data[pixelIndex], data[pixelIndex + 1], data[pixelIndex + 2]];
+  const targetColor: number[] = [
+    data[pixelIndex] ?? 0,
+    data[pixelIndex + 1] ?? 0,
+    data[pixelIndex + 2] ?? 0
+  ];
 
   const queue: [number, number][] = [[x, y]];
   const visited = new Set<string>();
@@ -406,7 +449,11 @@ function floodFillBG(x: number, y: number) {
     if (cx < 0 || cx >= canvasWidth.value || cy < 0 || cy >= canvasHeight.value) continue;
 
     const idx = (cy * canvasWidth.value + cx) * 4;
-    const pixelColor = [data[idx], data[idx + 1], data[idx + 2]];
+    const pixelColor: number[] = [
+      data[idx] ?? 0,
+      data[idx + 1] ?? 0,
+      data[idx + 2] ?? 0
+    ];
 
     if (colorDistance(pixelColor, targetColor) <= tolerance.value) {
       removedPixels.add(key);
@@ -642,16 +689,10 @@ onMounted(() => {
 });
 
 const saveModifications = async () => {
-  // On récupère le media soit depuis les props, soit depuis le hook mediaData
-  const currentMedia = props.media || mediaData.value;
-
-  if (!currentMedia) {
-    console.error("Aucun média chargé");
-    return;
-  }
+  const currentMedia = mediaData.value;
+  if (!currentMedia?.id) return;
 
   const payload: SaveMediaPayload = {
-    mediaId: currentMedia.id, // Utilise l'ID correct
     operations: {
       geometry: {
         rotation: (appliedModifications.transform.rotate + transform.rotate) % 360,
@@ -675,455 +716,535 @@ const saveModifications = async () => {
     }
   };
 
-  console.log('Envoi au backend:', payload);
-  // Appel API de mise à jour ici...
+
+  updateMedia({payload, mediaId: currentMedia.id}, {
+    onSuccess: () => {
+      showToast('success', 'Image mise à jour avec succès');
+      router.back();
+    },
+    onError: () => {
+      showToast('error', 'Une erreur est survenue lors de la mise à jour de l\'image');
+    }
+  });
 };
 </script>
 
-<template>
-  <div class="flex h-screen bg-gray-50">
-    <div class="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-4 space-y-2">
-      <button
-        v-for="tool in tools"
-        :key="tool.id"
-        @click="activeTool = tool.id"
-        :class="[
-          'w-12 h-12 rounded-lg flex items-center justify-center transition-colors',
-          activeTool === tool.id
-            ? 'bg-orange-500 text-white'
-            : 'text-gray-600 hover:bg-gray-100'
-        ]"
-        :title="tool.label"
-      >
-        <component :is="tool.icon" :size="20" />
-      </button>
-    </div>
+<template >
+  <div class="space-y-8 w-fit min-w-full">
 
-    <div class="w-72 bg-white border-r border-gray-200 p-6 overflow-y-auto">
-      <div v-if="activeTool === 'remove-bg'" class="space-y-6">
-        <h2 class="text-xl font-semibold text-gray-900">Remove BG</h2>
-
-        <div>
-          <h3 class="text-sm font-medium text-gray-700 mb-3">Tools</h3>
-          <div class="grid grid-cols-3 gap-2">
-            <button
-              @click="bgRemovalMode = 'select'"
-              :class="[
-                'px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                bgRemovalMode === 'select'
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              ]"
+    <CompositionPageHeader>
+      <template #content>
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+          <div class="flex gap-4 items-center">
+            <Button
+              class="rounded-md h-7 px-2 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95"
+              @click="$router.back()"
             >
-              Select
-            </button>
-            <button
-              @click="bgRemovalMode = 'erase'"
-              :class="[
-                'px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                bgRemovalMode === 'erase'
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              ]"
-            >
-              Erase
-            </button>
-            <button
-              @click="bgRemovalMode = 'restore'"
-              :class="[
-                'px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                bgRemovalMode === 'restore'
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              ]"
-            >
-              Restore
-            </button>
+              <ArrowLeft />
+            </Button>
+            <div class="space-y-2">
+              <h1 class="text-huge font-black tracking-tighter leading-none"> <span class="text-primary italic">Médiathèque Galerie</span></h1>
+              <p class="text-background opacity-80 text-lg font-medium">Gérez vos contenus visuels avec une précision chirurgicale.</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
           </div>
         </div>
+      </template>
+    </CompositionPageHeader>
 
-        <div v-if="bgRemovalMode === 'select'">
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Tolerance: {{ tolerance }}
-          </label>
-          <input
-            type="range"
-            v-model.number="tolerance"
-            min="0"
-            max="100"
-            class="w-full"
-          />
-          <p class="text-xs text-gray-500 mt-2">Click on the background to remove it</p>
-        </div>
-
-        <div v-if="bgRemovalMode === 'erase' || bgRemovalMode === 'restore'">
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Brush size: {{ brushSize }}px
-          </label>
-          <input
-            type="range"
-            v-model.number="brushSize"
-            min="5"
-            max="100"
-            class="w-full"
-          />
-
-          <label class="block text-sm font-medium text-gray-700 mb-2 mt-4">
-            Hardness: {{ hardness }}%
-          </label>
-          <input
-            type="range"
-            v-model.number="hardness"
-            min="10"
-            max="100"
-            class="w-full"
-          />
-        </div>
-
-        <div class="flex gap-2 pt-4">
-          <button
-            @click="undoBGRemoval"
-            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
-          >
-            <Undo2 :size="18" />
-          </button>
-          <button
-            @click="resetBGRemoval"
-            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            Reset
-          </button>
-        </div>
-
-        <button
-          @click="applyModifications"
-          class="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-        >
-          Apply
-        </button>
-      </div>
-
-      <div v-if="activeTool === 'crop'" class="space-y-6">
-        <h2 class="text-xl font-semibold text-gray-900">Crop</h2>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Aspect ratio</label>
-          <select
-            v-model="aspectRatio"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-          >
-            <option v-for="ratio in aspectRatios" :key="ratio.value" :value="ratio.value">
-              {{ ratio.label }}
-            </option>
-          </select>
-        </div>
-
-        <div>
-          <h3 class="text-sm font-medium text-gray-700 mb-3">Rotate</h3>
-          <div class="flex gap-2">
-            <button
-              @click="rotate90(-1)"
-              class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
-            >
-              <RotateCcw :size="18" />
-            </button>
-            <button
-              @click="rotate90(1)"
-              class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
-            >
-              <RotateCw :size="18" />
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <h3 class="text-sm font-medium text-gray-700 mb-3">Flip</h3>
-          <div class="flex gap-2">
-            <button
-              @click="flipHorizontal"
-              :class="[
-                'flex-1 px-4 py-2 border rounded-lg flex items-center justify-center gap-2',
-                transform.flipH ? 'bg-orange-50 border-orange-500' : 'border-gray-300 hover:bg-gray-50'
-              ]"
-            >
-              <FlipHorizontal :size="18" />
-            </button>
-            <button
-              @click="flipVertical"
-              :class="[
-                'flex-1 px-4 py-2 border rounded-lg flex items-center justify-center gap-2',
-                transform.flipV ? 'bg-orange-50 border-orange-500' : 'border-gray-300 hover:bg-gray-50'
-              ]"
-            >
-              <FlipVertical :size="18" />
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Rotation: {{ transform.rotate }}°
-          </label>
-          <input
-            type="range"
-            v-model.number="transform.rotate"
-            min="0"
-            max="360"
-            class="w-full"
-          />
-        </div>
-
-        <button
-          @click="applyCrop"
-          class="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-        >
-          Apply Crop
-        </button>
-      </div>
-
-      <div v-if="activeTool === 'refine'" class="space-y-6">
-        <h2 class="text-xl font-semibold text-gray-900">Refine</h2>
-        <p class="text-sm text-gray-600">Refinement tools (demo)</p>
-      </div>
-
-      <div v-if="activeTool === 'rotate'" class="space-y-6">
-        <h2 class="text-xl font-semibold text-gray-900">Rotate</h2>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Angle: {{ transform.rotate }}°
-          </label>
-          <input
-            type="range"
-            v-model.number="transform.rotate"
-            min="0"
-            max="360"
-            class="w-full"
-          />
-        </div>
-
-        <div class="flex gap-2">
-          <button
-            @click="rotate90(-1)"
-            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            -90°
-          </button>
-          <button
-            @click="rotate90(1)"
-            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            +90°
-          </button>
-        </div>
-
-        <div class="space-y-2">
-          <button
-            @click="flipHorizontal"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
-          >
-            <FlipHorizontal :size="18" />
-            Flip Horizontal
-          </button>
-          <button
-            @click="flipVertical"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
-          >
-            <FlipVertical :size="18" />
-            Flip Vertical
-          </button>
-        </div>
-
-        <button
-          @click="applyModifications"
-          class="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-        >
-          Apply
-        </button>
-      </div>
-
-      <div v-if="activeTool === 'adjust'" class="space-y-6">
-        <h2 class="text-xl font-semibold text-gray-900">Adjust</h2>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Brightness: {{ filters.brightness }}%
-          </label>
-          <input
-            type="range"
-            v-model.number="filters.brightness"
-            min="0"
-            max="200"
-            class="w-full"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Contrast: {{ filters.contrast }}%
-          </label>
-          <input
-            type="range"
-            v-model.number="filters.contrast"
-            min="0"
-            max="200"
-            class="w-full"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Saturation: {{ filters.saturation }}%
-          </label>
-          <input
-            type="range"
-            v-model.number="filters.saturation"
-            min="0"
-            max="200"
-            class="w-full"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Zoom: {{ transform.zoom.toFixed(2) }}x
-          </label>
-          <input
-            type="range"
-            v-model.number="transform.zoom"
-            min="0.5"
-            max="3"
-            step="0.1"
-            class="w-full"
-          />
-        </div>
-
-        <button
-          @click="applyModifications"
-          class="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-        >
-          Apply
-        </button>
-      </div>
-
-      <div v-if="activeTool === 'filters'" class="space-y-6">
-        <h2 class="text-xl font-semibold text-gray-900">Filters</h2>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Blur: {{ filters.blur }}px
-          </label>
-          <input
-            type="range"
-            v-model.number="filters.blur"
-            min="0"
-            max="20"
-            class="w-full"
-          />
-        </div>
-
+    <div class="card rounded-none w-fit min-w-full overflow-x-auto custom-scrollbar">
+      <div class="border-b border-border px-6 py-4 flex items-center justify-between">
+        <h1 class="h2 font-semibold text-text">Edit Image</h1>
         <div class="flex items-center gap-3">
-          <input
-            type="checkbox"
-            id="grayscale"
-            v-model="filters.grayscale"
-            class="w-4 h-4 text-orange-500 rounded focus:ring-orange-500"
-          />
-          <label for="grayscale" class="text-sm font-medium text-gray-700">
-            Grayscale
-          </label>
-        </div>
-
-        <button
-          @click="applyModifications"
-          class="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-        >
-          Apply
-        </button>
+            <button @click="$router.back()" class="px-4 py-2 text-text hover:bg-background rounded-lg transition-colors">
+              Cancel
+            </button>
+            <button
+              @click="saveModifications"
+              :disabled="isSaving"
+              class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <component
+                :is="isSaving ? 'Loader2' : Check"
+                :class="['w-4 h-4', isSaving ? 'animate-spin' : '']"
+                :stroke-width="3"
+              />
+              {{ isSaving ? 'Saving...' : 'Save Changes' }}
+            </button>
+                    </div>
       </div>
-    </div>
+      <Tabs :default-value="tools[0]?.id">
 
-    <div class="flex-1 flex flex-col">
-      <div class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <h1 class="text-xl font-semibold text-gray-900">Edit Image</h1>
-        <button class="text-gray-400 hover:text-gray-600">
-          <X :size="24" />
-        </button>
-      </div>
+        <div class="flex">
 
-      <div class="flex-1 flex items-center justify-center p-8 bg-gray-50">
-        <div
-          ref="containerRef"
-          class="relative"
-          :style="{
-            width: `${canvasWidth}px`,
-            height: `${canvasHeight}px`
-          }"
-        >
-          <canvas
-            ref="canvasRef"
-            class="border border-gray-300 rounded-lg bg-white shadow-lg"
-            @mousedown="handleCanvasMouseDown"
-            @mousemove="handleCanvasMouseMove"
-            :class="activeTool === 'remove-bg' && bgRemovalMode === 'select' ? 'cursor-crosshair' : 'cursor-default'"
-          />
+          <TabsList class="h-full ">
 
-          <div
-            v-if="activeTool === 'crop'"
-            ref="cropOverlayRef"
-            @mousedown="startDrag"
-            class="absolute border-2 border-orange-500 cursor-move"
-            :style="{
-              left: `${cropState.x}px`,
-              top: `${cropState.y}px`,
-              width: `${cropState.width}px`,
-              height: `${cropState.height}px`
-            }"
-          >
-            <div class="absolute inset-0 bg-orange-500 bg-opacity-10"></div>
+            <div class="h-full w-16  border-r border-border flex flex-col items-center py-4 space-y-2">
 
-            <div
-              v-for="handle in ['nw', 'ne', 'sw', 'se']"
-              :key="handle"
-              @mousedown="startResize($event, handle as ResizeHandle)"
-              class="resize-handle absolute w-4 h-4 bg-orange-500 rounded-full border-2 border-white shadow-lg cursor-pointer z-10"
-              :class="{
-                'top-0 left-0 -translate-x-1/2 -translate-y-1/2': handle === 'nw',
-                'top-0 right-0 translate-x-1/2 -translate-y-1/2': handle === 'ne',
-                'bottom-0 left-0 -translate-x-1/2 translate-y-1/2': handle === 'sw',
-                'bottom-0 right-0 translate-x-1/2 translate-y-1/2': handle === 'se',
-              }"
-            ></div>
+              <TabsTrigger
+                v-for="tool in tools"
+                :key="tool.id"
+                :value="tool.id"
+                :class="[
+                  'w-12 h-12 rounded-lg flex items-center justify-center transition-colors',
+                  'text-text hover:bg-background',
+                  'data-[state=active]:bg-primary data-[state=active]text-white'
+                ]"
+              >
+                <component :is="tool.icon" :size="20" />
+              </TabsTrigger>
+            </div>
+          </TabsList>
 
-            <div class="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none">
-              <div v-for="i in 9" :key="i" class="border border-white border-opacity-50"></div>
+
+
+          <div class="col-span-3 min-w-[280px] border-r border-border p-6 overflow-y-auto">
+            <TabsContent value="remove-bg">
+              <div class="space-y-6">
+                <h2 class="text-xl font-semibold text-text">Remove BG</h2>
+
+                <div>
+                  <h3 class="text-sm font-medium text-text mb-3">Tools</h3>
+                  <div class="grid grid-cols-3 gap-2">
+                    <button
+                      @click="bgRemovalMode = 'select'"
+                      :class="[
+                        'px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                        bgRemovalMode === 'select'
+                          ? 'bg-primary text-white'
+                          : 'bg-background text-text hover:bg-gray-200'
+                      ]"
+                    >
+                      Select
+                    </button>
+                    <button
+                      @click="bgRemovalMode = 'erase'"
+                      :class="[
+                        'px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                        bgRemovalMode === 'erase'
+                          ? 'bg-primary text-white'
+                          : 'bg-background text-text hover:bg-gray-200'
+                      ]"
+                    >
+                      Erase
+                    </button>
+                    <button
+                      @click="bgRemovalMode = 'restore'"
+                      :class="[
+                        'px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                        bgRemovalMode === 'restore'
+                          ? 'bg-primary text-white'
+                          : 'bg-background text-text hover:bg-gray-200'
+                      ]"
+                    >
+                      Restore
+                    </button>
+                  </div>
+                </div>
+
+                <div v-if="bgRemovalMode === 'select'">
+                  <label class="block text-sm italic text-text mb-2">
+                    Tolerance: {{ tolerance }}
+                  </label>
+                  <input
+                    type="range"
+                    v-model.number="tolerance"
+                    min="0"
+                    max="100"
+                    class="w-full"
+                  />
+                  <p class="text-xs text-text-muted mt-2">Click on the background to remove it</p>
+                </div>
+
+                <div v-if="bgRemovalMode === 'erase' || bgRemovalMode === 'restore'">
+                  <label class="block text-sm italic text-text mb-2">
+                    Brush size: {{ brushSize }}px
+                  </label>
+                  <input
+                    type="range"
+                    v-model.number="brushSize"
+                    min="5"
+                    max="100"
+                    class="w-full"
+                  />
+
+                  <label class="block text-sm italic text-text mb-2 mt-4">
+                    Hardness: {{ hardness }}%
+                  </label>
+                  <input
+                    type="range"
+                    v-model.number="hardness"
+                    min="10"
+                    max="100"
+                    class="w-full"
+                  />
+                </div>
+
+                <div class="flex gap-2 pt-4">
+                  <button
+                    @click="undoBGRemoval"
+                    class="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-background flex items-center justify-center gap-2"
+                  >
+                    <Undo2 :size="18" />
+                  </button>
+                  <button
+                    @click="resetBGRemoval"
+                    class="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-background"
+                  >
+                    Reset
+                  </button>
+                </div>
+
+                <button
+                  @click="applyModifications"
+                  class="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition-colors"
+                >
+                  Apply
+                </button>
+              </div>
+
+            </TabsContent>
+
+            <TabsContent value="crop">
+
+              <div class="space-y-6">
+                <h2 class="text-xl font-semibold text-text">Crop</h2>
+
+                <div>
+                  <label class="block text-sm italic text-text mb-2">Aspect ratio</label>
+                  <Select v-model="aspectRatio">
+                    <SelectTrigger class="h-8 text-p13 border border-border input-custom">
+                      <SelectValue placeholder="Aspect ratio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem
+                        v-for="ratio in aspectRatios"
+                        :key="ratio.value"
+                        :value="ratio.value"
+                        class="select-item-custom"
+                      >
+                        {{ ratio.label }}
+                      </SelectItem>
+
+                    </SelectContent>
+                  </Select>
+                  <!-- <select
+                    v-model="aspectRatio"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option v-for="ratio in aspectRatios" :key="ratio.value" :value="ratio.value">
+                      {{ ratio.label }}
+                    </option>
+                  </select> -->
+                </div>
+
+                <div>
+                  <h3 class="text-sm italic text-text mb-3">Rotate</h3>
+                  <div class="flex gap-2">
+                    <button
+                      @click="rotate90(-1)"
+                      class="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-background flex items-center justify-center gap-2"
+                    >
+                      <RotateCcw :size="18" />
+                    </button>
+                    <button
+                      @click="rotate90(1)"
+                      class="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-background flex items-center justify-center gap-2"
+                    >
+                      <RotateCw :size="18" />
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 class="text-sm italic text-text mb-3">Flip</h3>
+                  <div class="flex gap-2">
+                    <button
+                      @click="flipHorizontal"
+                      :class="[
+                        'flex-1 px-4 py-2 border rounded-lg flex items-center justify-center gap-2',
+                        transform.flipH ? 'bg-background border-border' : 'border-border hover:bg-background'
+                      ]"
+                    >
+                      <FlipHorizontal :size="18" />
+                    </button>
+                    <button
+                      @click="flipVertical"
+                      :class="[
+                        'flex-1 px-4 py-2 border rounded-lg flex items-center justify-center gap-2',
+                        transform.flipV ? 'bg-background border-border' : 'border-border hover:bg-background'
+                      ]"
+                    >
+                      <FlipVertical :size="18" />
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-sm italic text-text mb-2">
+                    Rotation: {{ transform.rotate }}°
+                  </label>
+                  <input
+                    type="range"
+                    v-model.number="transform.rotate"
+                    min="0"
+                    max="360"
+                    class="w-full"
+                  />
+                </div>
+
+                <button
+                  @click="applyCrop"
+                  class="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition-colors"
+                >
+                  Apply Crop
+                </button>
+              </div>
+
+            </TabsContent>
+            <TabsContent value="refine">
+              <div class="space-y-6">
+                <h2 class="text-xl font-semibold text-text">Refine</h2>
+                <p class="text-sm text-text">Refinement tools (demo)</p>
+              </div>
+            </TabsContent>
+            <TabsContent value="rotate">
+              <div class="space-y-6">
+                <h2 class="text-xl font-semibold text-text">Rotate</h2>
+
+                <div>
+                  <label class="block text-sm italic text-text mb-2">
+                    Angle: {{ transform.rotate }}°
+                  </label>
+                  <input
+                    type="range"
+                    v-model.number="transform.rotate"
+                    min="0"
+                    max="360"
+                    class="w-full"
+                  />
+                </div>
+
+                <div class="flex gap-2">
+                  <button
+                    @click="rotate90(-1)"
+                    class="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-background"
+                  >
+                    -90°
+                  </button>
+                  <button
+                    @click="rotate90(1)"
+                    class="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-background"
+                  >
+                    +90°
+                  </button>
+                </div>
+
+                <div class="space-y-2">
+                  <button
+                    @click="flipHorizontal"
+                    class="w-full px-4 py-2 border border-border rounded-lg hover:bg-background flex items-center justify-center gap-2"
+                  >
+                    <FlipHorizontal :size="18" />
+                    Flip Horizontal
+                  </button>
+                  <button
+                    @click="flipVertical"
+                    class="w-full px-4 py-2 border border-border rounded-lg hover:bg-background flex items-center justify-center gap-2"
+                  >
+                    <FlipVertical :size="18" />
+                    Flip Vertical
+                  </button>
+                </div>
+
+                <button
+                  @click="applyModifications"
+                  class="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition-colors"
+                >
+                  Apply
+                </button>
+              </div>
+            </TabsContent>
+            <TabsContent value="adjust">
+              <div class="space-y-6">
+                <h2 class="text-xl font-semibold text-text">Adjust</h2>
+
+                <div>
+                  <label class="block text-sm italic text-text mb-2">
+                    Brightness: {{ filters.brightness }}%
+                  </label>
+                  <input
+                    type="range"
+                    v-model.number="filters.brightness"
+                    min="0"
+                    max="200"
+                    class="w-full"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm italic text-text mb-2">
+                    Contrast: {{ filters.contrast }}%
+                  </label>
+                  <input
+                    type="range"
+                    v-model.number="filters.contrast"
+                    min="0"
+                    max="200"
+                    class="w-full"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm italic text-text mb-2">
+                    Saturation: {{ filters.saturation }}%
+                  </label>
+                  <input
+                    type="range"
+                    v-model.number="filters.saturation"
+                    min="0"
+                    max="200"
+                    class="w-full"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm italic text-text mb-2">
+                    Zoom: {{ transform.zoom.toFixed(2) }}x
+                  </label>
+                  <input
+                    type="range"
+                    v-model.number="transform.zoom"
+                    min="0.5"
+                    max="3"
+                    step="0.1"
+                    class="w-full"
+                  />
+                </div>
+
+                <button
+                  @click="applyModifications"
+                  class="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition-colors"
+                >
+                  Apply
+                </button>
+              </div>
+            </TabsContent>
+            <TabsContent value="filters">
+              <div class="space-y-6">
+                <h2 class="text-xl font-semibold text-text">Filters</h2>
+
+                <div>
+                  <label class="block text-sm italic text-text mb-2">
+                    Blur: {{ filters.blur }}px
+                  </label>
+                  <input
+                    type="range"
+                    v-model.number="filters.blur"
+                    min="0"
+                    max="20"
+                    class="w-full"
+                  />
+                </div>
+
+                <div class="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="grayscale"
+                    v-model="filters.grayscale"
+                    class="w-4 h-4 text-primary rounded focus:ring-primary"
+                  />
+                  <label for="grayscale" class="text-sm italic text-text">
+                    Grayscale
+                  </label>
+                </div>
+
+                <button
+                  @click="applyModifications"
+                  class="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition-colors"
+                >
+                  Apply
+                </button>
+              </div>
+            </TabsContent>
+
+
+
+
+          </div>
+
+          <div class="flex-1 flex flex-col ">
+            <div class="flex-1 flex items-center justify-center p-8 bg-background">
+              <div
+                ref="containerRef"
+                class="relative"
+                :style="{
+                  width: `${canvasWidth}px`,
+                  height: `${canvasHeight}px`
+                }"
+              >
+                <canvas
+                  ref="canvasRef"
+                  class="border border-border bg-white shadow-sm"
+                  @mousedown="handleCanvasMouseDown"
+                  @mousemove="handleCanvasMouseMove"
+                  :class="activeTool === 'remove-bg' && bgRemovalMode === 'select' ? 'cursor-crosshair' : 'cursor-default'"
+                />
+
+                <div
+                  v-if="activeTool === 'crop'"
+                  ref="cropOverlayRef"
+                  @mousedown="startDrag"
+                  class="absolute border-2 border-orange-500 cursor-move"
+                  :style="{
+                    left: `${cropState.x}px`,
+                    top: `${cropState.y}px`,
+                    width: `${cropState.width}px`,
+                    height: `${cropState.height}px`
+                  }"
+                >
+                  <div class="absolute inset-0 bg-orange-500 bg-opacity-10"></div>
+
+                  <div
+                    v-for="handle in ['nw', 'ne', 'sw', 'se']"
+                    :key="handle"
+                    @mousedown="startResize($event, handle as ResizeHandle)"
+                    class="resize-handle absolute w-4 h-4 bg-orange-500 rounded-full border-2 border-white shadow-lg cursor-pointer z-10"
+                    :class="{
+                      'top-0 left-0 -translate-x-1/2 -translate-y-1/2': handle === 'nw',
+                      'top-0 right-0 translate-x-1/2 -translate-y-1/2': handle === 'ne',
+                      'bottom-0 left-0 -translate-x-1/2 translate-y-1/2': handle === 'sw',
+                      'bottom-0 right-0 translate-x-1/2 translate-y-1/2': handle === 'se',
+                    }"
+                  ></div>
+
+                  <div class="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none">
+                    <div v-for="i in 9" :key="i" class="border border-white border-opacity-50"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-t border-border px-6 py-4 flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <div v-if="activeTool === 'crop'" class="text-sm text-gray-600">
+                  {{ cropState.realWidth }} × {{ cropState.realHeight }} px
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div class="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div v-if="activeTool === 'crop'" class="text-sm text-gray-600">
-            {{ cropState.realWidth }} × {{ cropState.realHeight }} px
-          </div>
-        </div>
+      </Tabs>
 
-        <div class="flex items-center gap-3">
-          <button @click="$router.back()" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-            Cancel
-          </button>
-          <button
-            @click="saveModifications"
-            class="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2"
-          >
-            <Check :size="18" />
-            Save Changes
-          </button>
-        </div>
-      </div>
+
     </div>
+
   </div>
+
+
+
 </template>
 
 <style scoped>

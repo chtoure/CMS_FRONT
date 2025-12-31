@@ -7,9 +7,9 @@ import {
 } from "lucide-vue-next";
 import { h } from "vue";
 
-export type ToastType = "success" | "error" | "info" | "warning";
+type ToastType = "success" | "error" | "info" | "warning";
 
-export function showToast(type: ToastType, message: string) {
+function showToast(type: ToastType, message: string) {
   const typeStyles: Record<ToastType, string> = {
     success: "border-l-4 border-l-green-600 !bg-background !text-text",
     error: "border-l-4 border-l-destructive !bg-background !text-text",
@@ -39,4 +39,10 @@ export function showToast(type: ToastType, message: string) {
   };
 
   toast[type](message, options);
+}
+
+
+export {
+  showToast,
+  type ToastType
 }
