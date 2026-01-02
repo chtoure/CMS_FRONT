@@ -14,6 +14,8 @@ export interface UserProfile {
   full_name: string;
   email: string;
   role: Role | null;
+  isLoggedIn: boolean;
+  initials?: string;
 }
 
 export interface AuthResponse {
@@ -55,9 +57,10 @@ export interface AddUserResponse {
 
 // Interface for change password
 export interface ChangePasswordData {
-  new_password: string;
+  newPassword: string;
 }
 
 export interface ChangePasswordResponse {
   message: string;
+  user: UserProfile;
 }

@@ -77,7 +77,7 @@ export const useAddUser = () => {
 export const useChangePassword = () => {
   return useMutation({
     mutationFn: async (data: { passwordData: ChangePasswordData; id: number }) => {
-      const response = await api.put<ChangePasswordResponse>(`/users/${data.id}/change-password`, data.passwordData);
+      const response = await api.put<ChangePasswordResponse>(`/change-password/${data.id}`, data.passwordData);
       return response.data;
     }
   });

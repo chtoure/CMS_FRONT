@@ -86,6 +86,17 @@
   } = useLogin();
 
 
+  // Calcul des initiales sur 'full_name'
+const initials = ((full_name:string) => {
+  return full_name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || '?';
+});
+
+
 
   const onSubmit = () => {
     login(
@@ -97,8 +108,11 @@
         onSuccess(data) {
           console.log(data);
           // On stocke les infos reçues du backend dans Pinia
-          storeUser.setUserInfo(data.user);
-          router.push({ name: 'admin.dashboard' }); // Redirige après succès
+          storeUser.setUserInfo({...data.user, initials:initials(data.user.full_name) });
+          if (data.user.isLoggedIn === true) {
+             router.push({ name: 'admin.dashboard' }); // Redirige sur dashboard
+          }
+          router.push({ name: 'auth.change-password' }); // Redirige sur changement de mot de passe
         },
         onError(err) {
           console.error('Erreur de connexion :', err);

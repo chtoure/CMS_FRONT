@@ -30,8 +30,8 @@
               placeholder="Répéter le mot de passe"
               :show-strength="false"
             />
-            <p v-if="password_non_confirmed" class="mt-2 text-xs text-red-600 font-medium italic">
-              {{ messageError }}
+            <p v-if="password_non_confirmed || isError" class="mt-2 text-xs text-red-600 font-medium italic">
+              {{ (error as any)?.response?.data?.message || messageError }}
             </p>
           </div>
 
@@ -40,7 +40,7 @@
             type="submit"
             class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-           Enregistrer
+          {{ isLoading ? 'Changement...' : 'Enregistrer' }}
           </button>
         </div>
       </form>
@@ -97,6 +97,18 @@
 
 
 
+    // Calcul des initiales sur 'full_name'
+  const initials = ((full_name:string) => {
+    return full_name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || '?';
+  });
+
+
+  // Soumission du formulaire genérale
   const handleSubmit = () => {
 
     if (!new_password.value || !confirm_new_password.value ) {
@@ -129,17 +141,19 @@
 
     updatePassword(
       {
-        passwordData: { new_password: new_password.value },
+        passwordData: { newPassword: new_password.value },
         id: store.userInfo.id
       },
       {
-        onSuccess() {
+        onSuccess(data) {
+          // On stocke les infos reçues du backend dans Pinia
+          store.setUserInfo({...data.user, initials:initials(data.user.full_name) });
           router.push({ name: 'admin.dashboard' }); // Redirige après succès
         },
-        onError(err) {
-          messageError.value = "Erreur lors de la mise à jour du mot de passe. ressayer.";
+        onError(error) {
+          messageError.value ="Erreur lors de la mise à jour du mot de passe. ressayer.";
           password_non_confirmed.value = true;
-          console.error('Erreur de mise à jour du mot de passe :', err);
+          console.error('Erreur de mise à jour du mot de passe :', error);
         }
       }
     );

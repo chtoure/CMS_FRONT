@@ -98,7 +98,7 @@
                 <Button class="relative h-8 w-8 rounded-full overflow-hidden hover:opacity-80 transition-all duration-150 hover:ring-2 hover:ring-primary/30">
                   <Avatar>
                     <AvatarImage src="userIcon.png"/>
-                    <AvatarFallback>{{ storeUser.userInfo?.full_name.slice(0,2).toUpperCase() }}</AvatarFallback>
+                    <AvatarFallback>{{ storeUser.userInfo?.initials }}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>

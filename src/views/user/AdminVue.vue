@@ -70,7 +70,7 @@ const closeForm = () => {
     <header class="border-b bg-white sticky top-0 z-10">
       <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <div class="p-2 rounded-lg bg-indigo-600 text-white">
+          <div class="p-2 rounded-lg bg-primary text-white">
             <Users class="h-6 w-6" />
           </div>
           <h1 class="text-xl font-bold text-gray-900">Gestion des utilisateurs</h1>
@@ -78,7 +78,7 @@ const closeForm = () => {
         <Button
           v-if="!isEditing"
           @click="openAddPage"
-          class="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-all font-medium"
+          class="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-all font-medium"
         >
           <UserPlus class="size-4" /> Ajouter
         </Button>

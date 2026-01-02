@@ -10,8 +10,8 @@ import VariableListView from '../views/variable/VariableListView.vue'
 import TestView from '../views/variable/TestView.vue'
 import { setupAuthGuard } from './authGuard'
 import SettingsView from '@/views/user/SettingsView.vue'
-import AdminVue from '@/views/user/adminVue.vue'
 import ChangePasswordView from '../views/auth/ChangePasswordView.vue'
+import AdminVue from '../views/user/AdminVue.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -23,18 +23,20 @@ const router = createRouter({
                 path: 'auth',
                 component: DefaultLayout,
                 // Empeche l'accès à la page de login si l'utilisateur est déjà authentifié
-                meta: { requiresGuest: true },
+
 
                 children: [
                     {
                         path: 'login',
                         name: 'auth.login',
                         component: LoginView,
+                        meta: { requiresGuest: true },
                     },
                     {
                       path: 'change-password',
                       name: 'auth.change-password',
                       component: ChangePasswordView,
+                      meta: { requiresAuth: true },
                     }
                 ]
             },

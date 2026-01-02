@@ -1,47 +1,54 @@
 import { userStore } from '../stores/user';
-import type {Router} from 'vue-router';
+import type { Router } from 'vue-router';
 
-export function setupAuthGuard(router : Router) {
+export function setupAuthGuard(router: Router) {
+  // Navigation Guards Globaux
+  router.beforeEach((to, from, next) => {
+    // Récupère le store utilisateur
+    const store = userStore();
 
-    // Navigation Guards Globaux
-    router.beforeEach((to, from, next) => {
+    // Vérifie les méta-données de la route
+    const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
+    const requiresGuest = to.matched.some(record => record.meta.requiresGuest);
 
-      // Récupère le store utilisateur
-      const store = userStore();
+    // État de l'utilisateur
+    const isAuthenticated = !!store.userInfo;
 
-      // Vérifie si l'url demandé (C'est a dire la route ou l'utilisateur vas )  ou l'un de ses parents a "requiresAuth"
-      const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
+    // VERIFICATION : Doit-il changer son mot de passe ?
+    // On vérifie s'il est connecté ET que isLoggedIn est false (première connexion)
+    const needsPasswordChange = isAuthenticated && store.userInfo?.isLoggedIn === false;
 
-      // Vérifie si l'url demandé (C'est a dire la route ou l'utilisateur vas )  ou l'un de ses parents a "requiresGuest"
-      const requiresGuest = to.matched.some(record => record.meta.requiresGuest);
+    // 1. Si la page demande d'être connecté et que l'utilisateur ne l'est pas
+    if (requiresAuth && !isAuthenticated) {
+      return next({ name: 'auth.login' });
+    }
 
-      // si user existe isAuthenticated sera true, sinon false
-      const isAuthenticated = !!store.userInfo;
-
-      //Si la page demande d'être connecté (requiresAuth) ET que l'utilisateur ne l'est pas (!isAuthenticated),
-      // on le bloque et on le renvoie de force vers la page de Login.
-      if (requiresAuth && !isAuthenticated) {
-
-        // Redirige vers login si on tente d'accéder à l'admin sans être connecté
-        next({ name: 'auth.login' });
-
+    // 2. LOGIQUE FORCÉE : Première connexion (Changement de mot de passe obligatoire)
+    if (isAuthenticated && needsPasswordChange) {
+      // Si l'utilisateur tente d'aller ailleurs que sur la page de changement de mot de passe
+      if (to.name !== 'auth.change-password') {
+        return next({ name: 'auth.change-password' });
       }
-      // si user est connecté il n'a rien a faire dans la page de login (requiresGuest)
-      else if (requiresGuest && isAuthenticated) {
+      // S'il va sur 'auth.change-password', on laisse passer
+      return next();
+    }
 
-        // Si la page d'où il vient (from) a un nom (donc il était déjà sur le site)
-        if (from.name) {
-          // On annule la navigation : il reste sur sa page actuelle
-          next(false);
-        } else {
-          // S'il n'y a pas de page précédente (ex: il vient de taper l'URL direct dans le navigateur)
-          // On le renvoie vers le dashboard par défaut
-          next({ name: 'admin.dashboard' });
-        }
+    // 3. CONNECTÉ ET MDP DÉJÀ CHANGÉ (islogin === true)
+    // S'il essaie d'aller sur 'change-password' alors qu'il n'en a plus besoin
+    if (isAuthenticated && !needsPasswordChange && to.name === 'auth.change-password') {
+      return next({ name: 'admin.dashboard' });
+    }
 
+    // 4. Si l'utilisateur est connecté, il n'a rien à faire sur les pages "Guest" (Login/Register)
+    if (requiresGuest && isAuthenticated) {
+      if (from.name) {
+        return next(false);
       } else {
-        // Dans tous les autres cas (ex: 404), on laisse passer
-        next();
+        return next({ name: 'admin.dashboard' });
       }
-    });
+    }
+
+    // Dans tous les autres cas, on laisse passer
+    next();
+  });
 }
