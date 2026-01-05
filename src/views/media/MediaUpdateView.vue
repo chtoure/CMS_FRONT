@@ -38,7 +38,6 @@ import SelectValue from '@/components/ui/select/SelectValue.vue';
 import SelectContent from '@/components/ui/select/SelectContent.vue';
 import SelectItem from '@/components/ui/select/SelectItem.vue';
 import CompositionPageHeader from '@/components/composition/CompositionPageHeader.vue';
-import Button from '@/components/ui/button/Button.vue';
 import router from '../../router';
 import { showToast } from '../../lib/toast';
 
@@ -844,12 +843,12 @@ const saveModifications = async () => {
       <template #content>
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
           <div class="flex gap-4 items-center">
-            <Button
-              class="rounded-md h-7 px-2 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95"
+            <div
+              class="hover:cursor-pointer hover:text-primary"
               @click="$router.back()"
             >
               <ArrowLeft />
-            </Button>
+          </div>
             <div class="space-y-2">
               <h1 class="text-huge font-black tracking-tighter leading-none"> <span class="text-primary italic">Médiathèque Galerie</span></h1>
               <p class="text-background opacity-80 text-lg font-medium">Gérez vos contenus visuels avec une précision chirurgicale.</p>

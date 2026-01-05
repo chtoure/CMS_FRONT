@@ -301,7 +301,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
                 </div>
               </ContextMenuTrigger>
 
-              <ContextMenuContent class="w-48 border-border">
+              <ContextMenuContent class="w-auto border-border font-mono">
                 <ContextMenuItem @click="selectedCollectionId = collection.id"><Edit3 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Open</ContextMenuItem>
                 <ContextMenuItem @click="deleteCollection(collection.id)" class="text-destructive">
                   <Trash2 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Delete
@@ -427,16 +427,16 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
                 </tr>
               </ContextMenuTrigger>
 
-              <ContextMenuContent class="w-48 border-border">
+              <ContextMenuContent class="w-auto border-border font-mono">
                 <ContextMenuItem @click="editingCell = { id: v.id, field: 'name' }">
                   <Edit3 class="mr-2 h-4 w-4" :stroke-width="1.2"/> Rename
                 </ContextMenuItem>
                 <ContextMenuItem @click="copyToClipboard(v.value)">
-                  <Copy class="mr-2 h-4 w-4" :stroke-width="1.2" /> Copy Value
+                  <Copy class="mr-2 h-4 w-4" :stroke-width="1.2" /> Copier
                 </ContextMenuItem>
                 <ContextMenuSeparator />
                 <ContextMenuItem @click="deleteVariable(v.id)" class="text-destructive">
-                  <Trash2 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Delete Variable
+                  <Trash2 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Delete
                 </ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>

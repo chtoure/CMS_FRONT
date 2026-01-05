@@ -21,6 +21,7 @@
     import AvatarFallback from '@/components/ui/avatar/AvatarFallback.vue';
     import DropdownMenuContent  from '@/components/ui/dropdown-menu/DropdownMenuContent.vue';
     import { userStore } from '../../stores/user';
+    import { useRouter } from 'vue-router';
 
 
     const props = defineProps<{
@@ -28,6 +29,8 @@
         headerClass?: string,
         isSidebarCollapsed?: boolean
     }>()
+
+    const router = useRouter();
 
     const isFullscreen = ref(false)
 
@@ -52,7 +55,7 @@
 
 <template>
     <header :class="cn(
-        'h-16 sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl flex items-center justify-between px-6 gap-4', // Effet de verre (glassmorphism) et hauteur augmentée
+        'h-16 sticky top-0 z-40 border-b border-border bg-background backdrop-blur-xl flex items-center justify-between px-6 gap-4', // Effet de verre (glassmorphism) et hauteur augmentée
         headerClass
     )" >
 
@@ -86,6 +89,7 @@
             </Button>
 
             <Button
+              @click="router.push({ name: 'admin.parameter' })"
               variant="ghost"
               :class="cn('text-muted-foreground hover:text-foreground p-1.5 h-8 w-8')">
                 <Settings class="w-4 h-4" />

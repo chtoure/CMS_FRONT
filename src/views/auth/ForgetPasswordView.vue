@@ -7,13 +7,13 @@
   <div v-else class="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
     <div class="sm:mx-auto sm:w-full sm:max-w-sm">
       <img class="mx-auto h-10 w-auto" src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=600" alt="Your Company" />
-      <h2 class="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900">Mot de passe oublié</h2>
+      <h2 class="mt-10 text-center text-huge font-bold tracking-tight text-text">Mot de passe oublié</h2>
     </div>
 
     <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
       <form @submit.prevent="onSubmit" class="space-y-4">
         <div v-if="!sendEmail && !reset_password">
-          <label for="email" class="block text-sm/6 font-medium text-gray-900">Email address</label>
+          <label for="email" class="block font-bold text-text">Email address</label>
           <div class="mt-2">
             <input
               v-model="email"
@@ -22,13 +22,13 @@
               placeholder="Entrez votre email"
               autocomplete="email"
               required
-              class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+              class="input-custom"
             />
           </div>
         </div>
 
         <div v-if="sendEmail">
-            <label for="code" class="block text-sm/6 font-medium text-gray-900">Code</label>
+            <label for="code" class="block font-bold text-text">Code</label>
             <div class="mt-2">
               <input
                 v-model="code"
@@ -37,7 +37,7 @@
                 placeholder="Entrez le code reçu par email"
                 autocomplete="code"
                 required
-                class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+                class="input-custom"
               />
             </div>
 
@@ -51,7 +51,7 @@
         </div>
 
          <div v-if="reset_password">
-          <p class="text-xs text-gray-600">Veuillez entrer votre nouveau mot de passe.</p>
+          <p class="text-xs text-text">Veuillez entrer votre nouveau mot de passe.</p>
 
            <div class="sm:col-span-3">
             <BasePasswordForceInput
@@ -68,21 +68,21 @@
               :show-strength="false"
             />
           </div>
-          <p v-if="password_non_confirmed" class="mt-2 text-xs text-red-600 font-medium italic">
+          <p v-if="password_non_confirmed" class="mt-2 text-xs text-destructive font-medium italic">
               {{  messageError }}
           </p>
 
          </div>
 
 
-        <p v-if="isError" class="text-xs text-red-600 font-medium">
+        <p v-if="isError" class="text-xs text-destructive font-medium">
           {{ (error as any)?.response?.data?.message || 'Erreur lors de l\'envoi du code' }}
         </p>
 
-        <p v-if="isErrorVerify" class="text-xs text-red-600 font-medium">
+        <p v-if="isErrorVerify" class="text-xs text-destructive font-medium">
           {{ (errorVerify as any)?.response?.data?.message || 'Code invalide' }}
         </p>
-        <p v-if="isErrorReset" class="text-xs text-red-600 font-medium">
+        <p v-if="isErrorReset" class="text-xs text-destructive font-medium">
           {{ (errorReset as any)?.response?.data?.message || 'Erreur lors du changement de mot de passe' }}
         </p>
 
@@ -100,13 +100,13 @@
         </div>
       </form>
 
-      <div class="flex items-center justify-between mt-10 text-center text-sm/6 text-gray-500">
-        <div class="text-sm">
-          <router-link :to="{ name: 'auth.login' }" class=" text-primary  hover:text-active-foreground">Connexion</router-link>
+      <div class="flex items-center justify-between mt-10 text-center text-sm/6 text-text">
+        <div class="">
+          <router-link :to="{ name: 'auth.login' }" class=" text-accent  hover:text-accent-foreground">Connexion</router-link>
         </div>
-         <div class="text-sm">
+         <div class="">
           <button v-if="sendEmail" @click="onSubmitSendCode" type="button"
-          :disabled="timeLeft > 0 && !isErrorVerify" class=" text-primary hover:text-active-foreground">Renvoyer le code</button>
+          :disabled="timeLeft > 0 && !isErrorVerify" class=" text-accent hover:text-accent-foreground">Renvoyer le code</button>
         </div>
       </div>
     </div>
