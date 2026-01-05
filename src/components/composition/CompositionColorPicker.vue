@@ -173,7 +173,7 @@ const handleHueChange = (e: Event) => {
       </div>
 
       <div v-else class="text-center py-6 text-[11px] text-muted-foreground">
-        <p>Libraries coming soon</p>
+        <p>A voir plus tard</p>
       </div>
     </DropdownMenuContent>
   </DropdownMenu>

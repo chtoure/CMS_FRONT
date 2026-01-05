@@ -98,7 +98,15 @@ const imageElement = ref<HTMLImageElement | null>(null);
 const isDragging = ref(false);
 const isResizing = ref(false);
 const activeHandle = ref<ResizeHandle | null>(null);
-const dragStart = reactive({ x: 0, y: 0, cropX: 0, cropY: 0 });
+// MediaUpdateView.vue
+const dragStart = reactive({
+  x: 0,
+  y: 0,
+  cropX: 0,
+  cropY: 0,
+  cropWidth: 0,  // Ajoutez ceci
+  cropHeight: 0  // Ajoutez ceci
+});
 
 const tools = [
   { id: 'remove-bg' as Tool, icon: Wand2, label: 'Remove BG' },
@@ -259,12 +267,18 @@ function renderCanvas() {
 
   ctx.filter = filterString.trim() || 'none';
 
+  // Calculer les dimensions de dessin basées sur la rotation totale
+  // Si la rotation est impaire (90, 270), on doit inverser W et H pour le drawImage
+  const isOddRotation = Math.round(totalRotation / 90) % 2 !== 0;
+  const drawWidth = isOddRotation ? canvas.height : canvas.width;
+  const drawHeight = isOddRotation ? canvas.width : canvas.height;
+
   ctx.drawImage(
     imageElement.value,
-    -canvas.width / 2,
-    -canvas.height / 2,
-    canvas.width,
-    canvas.height
+    -drawWidth / 2,
+    -drawHeight / 2,
+    drawWidth,
+    drawHeight
   );
 
   ctx.restore();
@@ -290,21 +304,113 @@ function renderCanvas() {
   updateRealCropCoordinates();
 }
 
+// function updateRealCropCoordinates() {
+//   if (!imageElement.value) return;
+
+//   const scaleX = imageState.originalWidth / canvasWidth.value;
+//   const scaleY = imageState.originalHeight / canvasHeight.value;
+
+//   cropState.realX = Math.round(cropState.x * scaleX);
+//   cropState.realY = Math.round(cropState.y * scaleY);
 function updateRealCropCoordinates() {
-  if (!imageElement.value) return;
+  if (!imageElement.value || !canvasRef.value) return;
 
-  const scaleX = imageState.originalWidth / canvasWidth.value;
-  const scaleY = imageState.originalHeight / canvasHeight.value;
+  const totalRotation = (appliedModifications.transform.rotate + transform.rotate) % 360;
+  const isOddRotation = Math.round(totalRotation / 90) % 2 !== 0;
+  const totalZoom = appliedModifications.transform.zoom * transform.zoom;
 
-  cropState.realX = Math.round(cropState.x * scaleX);
-  cropState.realY = Math.round(cropState.y * scaleY);
-  cropState.realWidth = Math.round(cropState.width * scaleX);
-  cropState.realHeight = Math.round(cropState.height * scaleY);
+  // 1. Calculer les dimensions de l'image "logique" (originale mais potentiellement pivotée)
+  // pour faire le lien avec ce que l'utilisateur voit sur le canvas
+  const origW = imageState.originalWidth;
+  const origH = imageState.originalHeight;
+
+  // 2. Facteurs d'échelle entre le canvas et l'image originale (centrée et zoomée)
+  // Dans renderCanvas, drawWidth est soit canvasWidth soit canvasHeight selon la rotation
+  const drawW = isOddRotation ? canvasHeight.value : canvasWidth.value;
+  const drawH = isOddRotation ? canvasWidth.value : canvasHeight.value;
+
+  // 3. Transformation inverse : Point sur Canvas -> Point sur Image Originale
+  // On commence par le centre du canvas
+  const centerX = canvasWidth.value / 2;
+  const centerY = canvasHeight.value / 2;
+
+  const mapPoint = (cx: number, cy: number) => {
+    // Relatif au centre
+    const tx = cx - centerX;
+    const ty = cy - centerY;
+
+    // Inverse Rotation
+    const rad = (-totalRotation * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    const x1 = tx * cos - ty * sin;
+    const y1 = tx * sin + ty * cos;
+
+    // Inverse Flip (note: flips are applied relative to center in renderCanvas)
+    const totalFlipH = appliedModifications.transform.flipH !== transform.flipH;
+    const totalFlipV = appliedModifications.transform.flipV !== transform.flipV;
+    const x2 = totalFlipH ? -x1 : x1;
+    const y2 = totalFlipV ? -y1 : y1;
+
+    // Inverse Scale (Zoom + Fit)
+    // fitScale est le ratio de réduction appliqué pour l'affichage
+    const fitScaleX = drawW / origW;
+    const fitScaleY = drawH / origH;
+    const x3 = x2 / (totalZoom * fitScaleX);
+    const y3 = y2 / (totalZoom * fitScaleY);
+
+    // Retour aux coordonnées image (0,0 au top-left)
+    return {
+      x: x3 + origW / 2,
+      y: y3 + origH / 2
+    };
+  };
+
+  const topLeft = mapPoint(cropState.x, cropState.y);
+  const bottomRight = mapPoint(cropState.x + cropState.width, cropState.y + cropState.height);
+
+  // Pour le crop simple (rectangulaire), on prend les min/max car la rotation peut incliner le cadre
+  // Note: Si l'utilisateur a tourné de 45°, le cadre de crop sur le canvas ne sera plus aligné avec les axes de l'image.
+  // Mais ici la rotation est généralement par pas de 90°.
+  cropState.realX = Math.round(Math.min(topLeft.x, bottomRight.x));
+  cropState.realY = Math.round(Math.min(topLeft.y, bottomRight.y));
+  cropState.realWidth = Math.round(Math.abs(bottomRight.x - topLeft.x));
+  cropState.realHeight = Math.round(Math.abs(bottomRight.y - topLeft.y));
+
+  // Sécurité limites
+  cropState.realX = Math.max(0, Math.min(cropState.realX, origW));
+  cropState.realY = Math.max(0, Math.min(cropState.realY, origH));
+  if (cropState.realX + cropState.realWidth > origW) cropState.realWidth = origW - cropState.realX;
+  if (cropState.realY + cropState.realHeight > origH) cropState.realHeight = origH - cropState.realY;
+
+  cropState.realWidth = Math.max(1, cropState.realWidth);
+  cropState.realHeight = Math.max(1, cropState.realHeight);
 }
+
 
 function rotate90(direction: 1 | -1) {
   transform.rotate = (transform.rotate + direction * 90) % 360;
   if (transform.rotate < 0) transform.rotate += 360;
+
+  // Recalculer le fit optimal basé sur la rotation TOTALE
+  const totalRotation = (appliedModifications.transform.rotate + transform.rotate) % 360;
+  const isOddRotation = Math.round(totalRotation / 90) % 2 !== 0;
+
+  const visualW = isOddRotation ? imageState.originalHeight : imageState.originalWidth;
+  const visualH = isOddRotation ? imageState.originalWidth : imageState.originalHeight;
+
+  const maxWidth = 800;
+  const maxHeight = 600;
+  const ratio = Math.min(maxWidth / visualW, maxHeight / visualH);
+
+  canvasWidth.value = visualW * ratio;
+  canvasHeight.value = visualH * ratio;
+
+  // Réinitialiser le cadre de crop pour l'adapter aux nouvelles dimensions
+  cropState.width = canvasWidth.value * 0.6;
+  cropState.height = canvasHeight.value * 0.6;
+  cropState.x = (canvasWidth.value - cropState.width) / 2;
+  cropState.y = (canvasHeight.value - cropState.height) / 2;
 }
 
 function flipHorizontal() {
@@ -349,6 +455,8 @@ function applyModifications() {
 
   removedPixels.clear();
 
+  // Si on a appliqué une rotation impaire, les dimensions du canvas sont déjà permutées
+  // Rien de plus à faire ici car rotate90 s'en est chargé visuellement
   renderCanvas();
 }
 
@@ -584,6 +692,8 @@ function startResize(e: MouseEvent, handle: ResizeHandle) {
   dragStart.y = e.clientY;
   dragStart.cropX = cropState.x;
   dragStart.cropY = cropState.y;
+  dragStart.cropWidth = cropState.width;  // Capturer la largeur initiale
+  dragStart.cropHeight = cropState.height; // Capturer la hauteur initiale
 }
 
 function onMouseMove(e: MouseEvent) {
@@ -600,43 +710,38 @@ function onMouseMove(e: MouseEvent) {
     const dy = e.clientY - dragStart.y;
 
     const handle = activeHandle.value;
-    let newX = cropState.x;
-    let newY = cropState.y;
+    let newX = dragStart.cropX;
+    let newY = dragStart.cropY;
+    // On part des dimensions au moment du clic (stockées dans dragStart si besoin,
+    // ou on utilise des variables temporaires stables)
     let newWidth = cropState.width;
     let newHeight = cropState.height;
 
+    // Calcul plus stable basé sur le déplacement initial
     if (handle.includes('w')) {
       newX = dragStart.cropX + dx;
-      newWidth = cropState.width - dx;
+      newWidth = dragStart.cropWidth - dx;
     } else if (handle.includes('e')) {
-      newWidth = cropState.width + dx;
+      newWidth = Math.max(50, dragStart.cropWidth + dx);
     }
 
     if (handle.includes('n')) {
       newY = dragStart.cropY + dy;
-      newHeight = cropState.height - dy;
+      newHeight = dragStart.cropHeight - dy;
     } else if (handle.includes('s')) {
-      newHeight = cropState.height + dy;
+      newHeight = Math.max(50, dragStart.cropHeight + dy);
     }
 
-    if (aspectRatio.value !== 'free') {
-      const ratio = getAspectRatioValue(aspectRatio.value);
-      if (Math.abs(dx) > Math.abs(dy)) {
-        newHeight = newWidth / ratio;
-      } else {
-        newWidth = newHeight * ratio;
-      }
-    }
+    // Contraintes de bordures du Canvas
+    if (newX < 0) { newWidth += newX; newX = 0; }
+    if (newY < 0) { newHeight += newY; newY = 0; }
+    if (newX + newWidth > canvasWidth.value) newWidth = canvasWidth.value - newX;
+    if (newY + newHeight > canvasHeight.value) newHeight = canvasHeight.value - newY;
 
-    if (newWidth >= 50 && newX >= 0 && newX + newWidth <= canvasWidth.value) {
-      cropState.x = newX;
-      cropState.width = newWidth;
-    }
-
-    if (newHeight >= 50 && newY >= 0 && newY + newHeight <= canvasHeight.value) {
-      cropState.y = newY;
-      cropState.height = newHeight;
-    }
+    cropState.x = newX;
+    cropState.y = newY;
+    cropState.width = newWidth;
+    cropState.height = newHeight;
 
     updateRealCropCoordinates();
   }
@@ -698,6 +803,9 @@ const saveModifications = async () => {
         rotation: (appliedModifications.transform.rotate + transform.rotate) % 360,
         flipH: appliedModifications.transform.flipH !== transform.flipH,
         flipV: appliedModifications.transform.flipV !== transform.flipV,
+        // Les coordonnées de crop sont en pixels de l'image originale
+        // Elles sont calculées par updateRealCropCoordinates() qui convertit
+        // les coordonnées du canvas affiché vers l'image originale
         crop: {
           x: cropState.realX,
           y: cropState.realY,
