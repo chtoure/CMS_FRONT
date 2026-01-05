@@ -6,16 +6,16 @@
 
     </div>
   </div>
-  
-  
- 
+
+
+
   <main class="p-4">
     <RouterView/>
   </main>
- 
+
 </template>
 
-<script setup>
+<script setup lang="ts">
 import CompositionDarkMode from '@/components/composition/CompositionDarkMode.vue';
 
 

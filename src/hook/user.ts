@@ -1,7 +1,7 @@
 
 
 import { useMutation, useQuery } from "@tanstack/vue-query";
-import api from "../api/axiosConfig";
+import api from "../api/fetchConfig";
 import type { LoginCredentials, AuthResponse, UserProfile, AddUserData, AddUserResponse, ChangePasswordData, ChangePasswordResponse } from "../type/user";
 import type { UpdateProfileData, UpdateProfileResponse } from "../type/user";
 
