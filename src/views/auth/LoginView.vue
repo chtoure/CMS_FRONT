@@ -1,7 +1,8 @@
 
 
 <template>
-  <CompositionLoading v-if="isLoggingIn" />
+  <div class="min-h-screen">
+    <CompositionLoading v-if="isLoggingIn" />
 
   <div v-else class="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
     <div class="sm:mx-auto sm:w-full sm:max-w-sm">
@@ -36,7 +37,7 @@
           </div>
         </div>
 
-        <p v-if="isError" class="text-xs text-red-600 font-medium">
+        <p v-if="isError" class="text-xs text-destructive">
           {{ (error as any)?.response?.data?.message || 'Identifiants incorrects' }}
         </p>
 
@@ -53,11 +54,13 @@
 
       <div class="mt-10 text-center text-sm/6 text-text opacity-80">
         <div class="text-sm">
-          <router-link :to="{ name: 'auth.forgot-password' }" class="font-semibold text-accent hover:text-accent-foreground">Mot de passe oublié ?</router-link>
+          <router-link :to="{ name: 'auth.forgot-password' }" class="font-semibold text-primary">Mot de passe oublié ?</router-link>
         </div>
       </div>
     </div>
   </div>
+  </div>
+
 </template>
 
 

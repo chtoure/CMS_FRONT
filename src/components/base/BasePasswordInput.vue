@@ -33,7 +33,7 @@ const showPassword = ref(false);
             <button
                 type="button"
                 @click="showPassword = !showPassword"
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-text hover:text-text transition-colors focus:outline-none"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-text opacity-50 transition-colors focus:outline-none"
             >
                 <span v-if="showPassword" title="Masquer"><Eye /></span>
                 <span v-else title="Afficher"><EyeOff /></span>

@@ -9,7 +9,7 @@
   <div v-else class="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
     <div class="sm:mx-auto sm:w-full sm:max-w-sm">
       <img class="mx-auto h-10 w-auto" src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=600" alt="Your Company" />
-      <h2 class="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900">Changer le mot de passe</h2>
+      <h2 class="mt-10 text-center text-2xl/9 font-bold tracking-tight text-text">Changer le mot de passe</h2>
     </div>
 
     <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
@@ -30,7 +30,7 @@
               placeholder="Répéter le mot de passe"
               :show-strength="false"
             />
-            <p v-if="password_non_confirmed || isError" class="mt-2 text-xs text-red-600 font-medium italic">
+            <p v-if="password_non_confirmed || isError" class="mt-2 text-xs text-destructive font-medium italic">
               {{ (error as any)?.response?.data?.message || messageError }}
             </p>
           </div>
@@ -38,7 +38,7 @@
         <div>
           <button
             type="submit"
-            class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="flex w-full justify-center rounded-md bg-primary px-3 py-1.5 text-sm/6 font-semibold text-primary shadow-sm hover:bg-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
           {{ isLoading ? 'Changement...' : 'Enregistrer' }}
           </button>

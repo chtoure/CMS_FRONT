@@ -29,10 +29,10 @@ const strengthScore = computed(() => requirements.value.filter(r => r.met).lengt
 const strengthConfig = computed(() => {
     const configs = [
         { width: '0%', color: 'bg-gray-200' },
-        { width: '25%', color: 'bg-red-500' },
-        { width: '50%', color: 'bg-orange-500' },
+        { width: '25%', color: 'bg-destructive' },
+        { width: '50%', color: 'bg-accent' },
         { width: '75%', color: 'bg-yellow-500' },
-        { width: '100%', color: 'bg-green-600' },
+        { width: '100%', color: 'bg-success' },
     ];
     return configs[strengthScore.value];
 });
@@ -40,7 +40,7 @@ const strengthConfig = computed(() => {
 
 <template>
     <div class="w-full">
-        <label :for="id" class="block text-sm/6 font-medium text-gray-900">{{ label }}</label>
+        <label :for="id" class="block text-sm/6 font-medium text-text">{{ label }}</label>
 
         <div class="mt-2 relative">
             <input
@@ -49,13 +49,13 @@ const strengthConfig = computed(() => {
                 :value="modelValue"
                 @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
                 :placeholder="placeholder"
-                class="block w-full rounded-md bg-white px-3 py-1.5 pr-10 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+                class="input-custom"
             />
 
             <button
                 type="button"
                 @click="showPassword = !showPassword"
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-text opacity-50 transition-colors"
             >
                 <span v-if="showPassword" title="Masquer"><Eye class="size-4" /></span>
                 <span v-else title="Afficher"><EyeOff class="size-4" /></span>
@@ -63,7 +63,7 @@ const strengthConfig = computed(() => {
         </div>
 
         <div v-if="props.showStrength && modelValue && strengthConfig" class="mt-3 space-y-3">
-            <div class="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+            <div class="h-1.5 w-full bg-background rounded-full overflow-hidden">
                 <div
                     :class="cn('h-full transition-all duration-500', strengthConfig.color)"
                     :style="{ width: strengthConfig.width }"
@@ -75,7 +75,7 @@ const strengthConfig = computed(() => {
                     v-for="req in requirements"
                     :key="req.label"
                     class="text-[11px] flex items-center gap-1.5"
-                    :class="req.met ? 'text-green-600' : 'text-gray-400'"
+                    :class="req.met ? 'text-accent' : 'text-text'"
                 >
                     <span class="text-[10px]">{{ req.met ? '●' : '○' }}</span>
                     {{ req.label }}
