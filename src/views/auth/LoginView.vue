@@ -53,7 +53,7 @@
 
       <div class="mt-10 text-center text-sm/6 text-gray-500">
         <div class="text-sm">
-          <a href="#" class="font-semibold text-indigo-600 hover:text-indigo-500">Forgot password?</a>
+          <router-link :to="{ name: 'auth.forgot-password' }" class="font-semibold text-indigo-600 hover:text-indigo-500">Forgot password?</router-link>
         </div>
       </div>
     </div>

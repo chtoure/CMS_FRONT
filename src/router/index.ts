@@ -12,6 +12,8 @@ import { setupAuthGuard } from './authGuard'
 import SettingsView from '@/views/user/SettingsView.vue'
 import ChangePasswordView from '../views/auth/ChangePasswordView.vue'
 import AdminVue from '../views/user/AdminVue.vue'
+import ForgetPasswordView from '../views/auth/ForgetPasswordView.vue'
+import RolesPermissionsView from '../views/user/Roles&PermissionsView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -37,7 +39,13 @@ const router = createRouter({
                       name: 'auth.change-password',
                       component: ChangePasswordView,
                       meta: { requiresAuth: true },
-                    }
+                    },
+                    {
+                        path: 'forgot-password',
+                        name: 'auth.forgot-password',
+                        component: ForgetPasswordView,
+                        meta: { requiresGuest: true },
+                    },
                 ]
             },
             {
@@ -75,6 +83,11 @@ const router = createRouter({
                       path: '',
                       name: 'admin.users',
                       component: AdminVue
+                    },
+                    {
+                      path: 'roles-permissions',
+                      name: 'admin.roles-permissions',
+                      component: RolesPermissionsView
                     }
                 ]
             },

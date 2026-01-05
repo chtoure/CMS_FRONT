@@ -83,3 +83,35 @@ export const useChangePassword = () => {
   });
 }
 
+
+// Hook forgot password(Send code to email)
+export const useForgotPassword = () => {
+  return useMutation({
+    mutationFn: async (toEmail: string) => {
+      const response = await api.post("/send-verification-code", { toEmail });
+      return response.data;
+    }
+  });
+}
+
+
+// Hook verify code of forgot password
+export const useVerifyCode = () => {
+  return useMutation({
+    mutationFn: async (data:{id: number, code: string}) => {
+      const response = await api.post(`/verify-code/${data.id}`, { code: data.code });
+      return response.data;
+    }
+  });
+}
+
+
+// Hook reset password && login
+export const useResetPassword = () => {
+  return useMutation({
+    mutationFn: async (data: { resetData: LoginCredentials, id: number }) => {
+      const response = await api.post<AuthResponse>(`/reset-password/${data.id}`, data.resetData);
+      return response.data;
+    }
+  });
+}
