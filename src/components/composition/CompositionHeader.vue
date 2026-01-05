@@ -20,6 +20,7 @@
     import AvatarImage from '@/components/ui/avatar/AvatarImage.vue';
     import AvatarFallback from '@/components/ui/avatar/AvatarFallback.vue';
     import DropdownMenuContent  from '@/components/ui/dropdown-menu/DropdownMenuContent.vue';
+    import { userStore } from '../../stores/user';
 
 
     const props = defineProps<{
@@ -44,6 +45,7 @@
     const CommandIcon = { template: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0 3 3 3 3 0 0 0 3-3z"/></svg>' };
 
     const searchTerm = ref('');
+    const storeUser = userStore();
 
 
 </script>
@@ -96,7 +98,7 @@
                 <Button class="relative h-8 w-8 rounded-full overflow-hidden hover:opacity-80 transition-all duration-150 hover:ring-2 hover:ring-primary/30">
                   <Avatar>
                     <AvatarImage src="userIcon.png"/>
-                    <AvatarFallback>JS</AvatarFallback>
+                    <AvatarFallback>{{ storeUser.userInfo?.initials }}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>

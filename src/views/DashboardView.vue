@@ -4,6 +4,8 @@ import { useTodoList } from "../hook/todo";
 import Button from "@/components/ui/button/Button.vue";
 import { showToast, type ToastType } from "../lib/toast";
 
+
+// Todo list hook
 const {
   isPending,
   isError,
@@ -12,10 +14,15 @@ const {
   isFetched
 } = useTodoList();
 
+
+
 // Function to handle button clicks
 const handleButtonClick = (type: ToastType, message: string) => {
   showToast(type, message);
 };
+
+console.log(document.cookie);
+
 </script>
 
 <template>

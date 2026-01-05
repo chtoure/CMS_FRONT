@@ -6,6 +6,7 @@ import {
   Package,
   ChevronDown,
   ChevronRight,
+  UserStar,
 } from 'lucide-vue-next'
 import DropdownMenu from '@/components/ui/dropdown-menu/DropdownMenu.vue'
 import DropdownMenuTrigger from '@/components/ui/dropdown-menu/DropdownMenuTrigger.vue'
@@ -61,6 +62,13 @@ const navItems: NavItems[] = [
       icon: Package,
       href: 'admin.variable',
       menuKey: 'variable',
+      submenu: null
+    },
+    {
+      label: 'Admin',
+      icon: UserStar,
+      href: 'admin.users',
+      menuKey: 'admhin',
       submenu: null
     }
 ]

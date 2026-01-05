@@ -6,6 +6,7 @@ import CompositionHeader from '@/components/composition/CompositionHeader.vue';
 import { onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
+
 const isSidebarCollapsed = ref(false);
 const route = useRoute();
 

@@ -8,6 +8,12 @@ import MediaListView from '@/views/media/MediaListView.vue'
 import MediaUpdateView from '@/views/media/MediaUpdateView.vue'
 import VariableListView from '../views/variable/VariableListView.vue'
 import TestView from '../views/variable/TestView.vue'
+import { setupAuthGuard } from './authGuard'
+import SettingsView from '@/views/user/SettingsView.vue'
+import ChangePasswordView from '../views/auth/ChangePasswordView.vue'
+import AdminVue from '../views/user/AdminVue.vue'
+import ForgetPasswordView from '../views/auth/ForgetPasswordView.vue'
+import RolesPermissionsView from '../views/user/Roles&PermissionsView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -18,17 +24,35 @@ const router = createRouter({
             {
                 path: 'auth',
                 component: DefaultLayout,
+                // Empeche l'accès à la page de login si l'utilisateur est déjà authentifié
+
+
                 children: [
                     {
                         path: 'login',
                         name: 'auth.login',
-                        component: LoginView
-                    }
+                        component: LoginView,
+                        meta: { requiresGuest: true },
+                    },
+                    {
+                      path: 'change-password',
+                      name: 'auth.change-password',
+                      component: ChangePasswordView,
+                      meta: { requiresAuth: true },
+                    },
+                    {
+                        path: 'forgot-password',
+                        name: 'auth.forgot-password',
+                        component: ForgetPasswordView,
+                        meta: { requiresGuest: true },
+                    },
                 ]
             },
             {
                 path: '',
                 component: MainLayout,
+                // Permet de proteger les urls (Ici toutes les routes enfants)
+                meta: { requiresAuth: true },
                 children: [
                     {
                       path: 'dashboard',
@@ -49,6 +73,21 @@ const router = createRouter({
                       path: 'variable',
                       name: 'admin.variable',
                       component: TestView
+                    },
+                    {
+                      path: 'settings',
+                      name: 'admin.settings',
+                      component: SettingsView
+                    },
+                    {
+                      path: '',
+                      name: 'admin.users',
+                      component: AdminVue
+                    },
+                    {
+                      path: 'roles-permissions',
+                      name: 'admin.roles-permissions',
+                      component: RolesPermissionsView
                     }
                 ]
             },
@@ -68,5 +107,13 @@ const router = createRouter({
     }
   ],
 })
+
+
+
+
+// Guard global pour la gestion de l'authentification
+setupAuthGuard(router);
+
+
 
 export default router

@@ -1,7 +1,7 @@
 <script setup lang="ts">
     import { ref, onMounted, onUnmounted } from 'vue';
     import CompositionFilterPanel from '@/components/composition/CompositionFilterPanel.vue';
-import { cn } from '../../lib/utils';
+    import { cn } from '../../lib/utils';
 
     defineEmits(['update:modelValue']);
 
