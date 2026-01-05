@@ -252,7 +252,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
   <div class="flex flex-row  bg-background text-foreground h-screen w-fit overflow-x-auto overflow-hidden antialiased font-mono">
 
     <aside v-if="sidebarOpen" class="w-72 h-full sticky top-0 flex-shrink-0 border-r border-border flex flex-col bg-background">
-      <div class="p-6 space-y-6">
+      <div class="p-6 space-y-6 pl-0">
         <div class="flex items-center justify-between">
           <h2 class="p12 font-bold uppercase tracking-widest text-muted-foreground">Collections</h2>
           <DropdownMenu>
