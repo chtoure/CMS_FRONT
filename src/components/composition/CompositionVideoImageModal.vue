@@ -27,7 +27,7 @@ import DialogTrigger from '../ui/dialog/DialogTrigger.vue';
              left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
              w-auto h-auto
              max-w-[90vw] max-h-[90vh]
-             rounded-lg gap-0"
+             gap-0"
     >
       <DialogHeader class="p-3 border-b border-border hidden">
         <DialogTitle class="text-sm font-medium">

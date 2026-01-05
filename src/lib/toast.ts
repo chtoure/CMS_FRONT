@@ -7,9 +7,9 @@ import {
 } from "lucide-vue-next";
 import { h } from "vue";
 
-export type ToastType = "success" | "error" | "info" | "warning";
+type ToastType = "success" | "error" | "info" | "warning";
 
-export function showToast(type: ToastType, message: string) {
+function showToast(type: ToastType, message: string) {
   const typeStyles: Record<ToastType, string> = {
     success: "border-l-4 border-l-green-600 !bg-background !text-text",
     error: "border-l-4 border-l-destructive !bg-background !text-text",
@@ -27,7 +27,7 @@ export function showToast(type: ToastType, message: string) {
   const options: ToastOptions = {
     toastClassName: `relative flex min-h-12 rounded-lg justify-between overflow-hidden cursor-pointer shadow-lg border border-border/40 mb-2 ${typeStyles[type]}`,
 
-    bodyClassName: "flex text-sm font-semibold p-3 !text-text",
+    bodyClassName: "flex text-sm font-mono p-3 !text-text",
 
     hideProgressBar: true,
     autoClose: 3000,
@@ -39,4 +39,10 @@ export function showToast(type: ToastType, message: string) {
   };
 
   toast[type](message, options);
+}
+
+
+export {
+  showToast,
+  type ToastType
 }

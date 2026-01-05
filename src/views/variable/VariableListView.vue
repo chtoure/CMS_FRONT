@@ -30,48 +30,53 @@ import {
 import { showToast } from "../../lib/toast"
 import { validateValueByType } from "../../lib/validateType"
 
+const searchQuery = ref("")
+
+const debouncedSearch = ref("")
+
+let timeout: ReturnType<typeof setTimeout>
+watch(searchQuery, (newValue) => {
+  clearTimeout(timeout)
+  timeout = setTimeout(() => {
+    debouncedSearch.value = newValue
+  }, 300)
+})
+
 const {
   data: collections,
   isLoading: isCollectionsLoading,
   isError: isCollectionsError,
   error: collectionsError,
   refetch: refetchCollections,
-} = useGetCollections()
+} = useGetCollections(computed(() => debouncedSearch.value))
+
 const {
   mutate: createCol,
   isPending: isCreateColLoading,
-  isError: isCreateColError,
-  error: createColError,
-
 } = useCreateCollection()
+
 const {
   mutate: deleteCol,
   isPending: isDeleteColLoading,
-  isError: isDeleteColError,
-  error: deleteColError,
 } = useDeleteCollection()
+
 const {
   mutate: createVar,
   isPending: isCreateVarLoading,
-  isError: isCreateVarError,
-  error: createVarError,
 } = useCreateVariable()
+
 const {
   mutate: updateVar,
   isPending: isUpdateVarLoading,
-  isError: isUpdateVarError,
-  error: updateVarError,
 } = useUpdateVariable()
+
 const {
   mutate: deleteVar,
   isPending: isDeleteVarLoading,
-  isError: isDeleteVarError,
-  error: deleteVarError,
 } = useDeleteVariable()
 
 const sidebarOpen = ref(true)
-const selectedCollectionId = ref<number | null>(null)
-const searchQuery = ref("")
+const selectedCollectionId = ref<number | null>(0)
 const colorPickerOpen = ref(false)
 const editingCell = ref<{ id: number; field: "name" | "value" } | null>(null)
 const isCreatingCollection = ref<VariableType | null>(null)
@@ -90,23 +95,48 @@ const copyToClipboard = (text: string) => {
 
 watch(() => collections.value, (newCols) => {
   if (newCols && newCols.length > 0 && !selectedCollectionId.value) {
-    selectedCollectionId.value = newCols[0]?.id || null
+    selectedCollectionId.value = 0
   }
 }, { immediate: true })
 
-const selectedCollection = computed(() =>
-  collections.value?.find(c => c.id === selectedCollectionId.value) || null
-)
-
-const filteredVariables = computed(() => {
-  if (!selectedCollection.value) return []
-  const query = searchQuery.value.toLowerCase()
-  return selectedCollection.value.variables.filter(v =>
-    v.name.toLowerCase().includes(query) || v.value.toLowerCase().includes(query)
-  )
+const selectedCollection = computed(() => {
+  if (selectedCollectionId.value === 0) return null
+  return collections.value?.find(c => c.id === selectedCollectionId.value) || null
 })
 
-const handleUpdate = async (id: number, field: "name" | "value", newValue: string | number | boolean) => {
+const filteredVariables = computed(() => {
+  if (!collections.value) return []
+
+  const search = searchQuery.value.trim().toLowerCase()
+
+  // 1. D'abord, on détermine le périmètre (toutes les collections ou une seule)
+  let scope = collections.value
+
+  if (selectedCollectionId.value !== 0) {
+    scope = collections.value.filter(c => c.id === selectedCollectionId.value)
+  }
+
+  // 2. Ensuite, on extrait et on filtre les variables dans ce périmètre
+  const allVarsFromScope = scope.flatMap(col =>
+    col.variables.map(v => ({
+      ...v,
+      collectionName: col.name,
+      type: col.type
+    }))
+  )
+
+  // 3. On applique la recherche textuelle si nécessaire
+  if (search.length > 0) {
+    return allVarsFromScope.filter(v =>
+      v.name.toLowerCase().includes(search) ||
+      v.value.toLowerCase().includes(search)
+    )
+  }
+
+  return allVarsFromScope
+})
+
+const handleUpdate = async (id: number, field: "name" | "value", newValue: string | number | boolean, type?: VariableType) => {
   const stringValue = String(newValue);
   const cleanValue = stringValue.trim();
 
@@ -115,9 +145,11 @@ const handleUpdate = async (id: number, field: "name" | "value", newValue: strin
     return;
   }
 
-  if (field === "value" && selectedCollection.value) {
-    if (!validateValueByType(selectedCollection.value.type, cleanValue)) {
-      showToast("error", `Format invalide pour le type ${selectedCollection.value.type}`);
+  const targetType = type || selectedCollection.value?.type;
+
+  if (field === "value" && targetType) {
+    if (!validateValueByType(targetType, cleanValue)) {
+      showToast("error", `Format invalide pour le type ${targetType}`);
       return;
     }
   }
@@ -129,7 +161,7 @@ const handleUpdate = async (id: number, field: "name" | "value", newValue: strin
       refetchCollections();
       showToast("success", "Variable mise à jour");
     },
-    onError: (error: any) => {
+    onError: (error) => {
       showToast("error", `Erreur: ${error.message}`);
       refetchCollections();
     }
@@ -217,19 +249,19 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
 </script>
 
 <template>
-  <div class="flex flex-row  bg-background text-foreground overflow-hidden antialiased">
+  <div class="flex flex-row  bg-background text-foreground h-screen w-fit overflow-x-auto overflow-hidden antialiased font-mono">
 
-    <aside v-if="sidebarOpen" class="w-72 overflow-y-auto h-full flex-shrink-0">
+    <aside v-if="sidebarOpen" class="w-72 h-full sticky top-0 flex-shrink-0 border-r border-border flex flex-col bg-background">
       <div class="p-6 space-y-6">
         <div class="flex items-center justify-between">
-          <h2 class="p11 uppercase tracking-widest text-muted-foreground">Collections</h2>
+          <h2 class="p12 font-bold uppercase tracking-widest text-muted-foreground">Collections</h2>
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
               <button class="hover:bg-muted p-1 rounded transition-colors">
                 <Plus :size="16" :stroke-width="1.2" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent class="border-border p14">
+            <DropdownMenuContent class="border-border p14 font-mono">
               <DropdownMenuItem @click="prepareNewCollection('COLOR')"><Palette :size="14" class="mr-2 text-orange-500" :stroke-width="1.2"/> Color</DropdownMenuItem>
               <DropdownMenuItem @click="prepareNewCollection('NUMBER')"><Hash :size="14" class="mr-2 text-blue-500" :stroke-width="1.2" /> Number</DropdownMenuItem>
               <DropdownMenuItem @click="prepareNewCollection('STRING')"><Type :size="14" class="mr-2 text-green-500" :stroke-width="1.2" /> String</DropdownMenuItem>
@@ -238,35 +270,45 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
           </DropdownMenu>
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-4 font-mono">
           <div v-if="isCreatingCollection" class="relative">
              <input v-model="newCollectionName" v-focus type="text"
                     @keydown.enter="submitNewCollection"
                     @keydown.esc="cancelCollectionCreation"
                     class="w-full pl-3 pr-8 py-1 rounded border border-primary/30 bg-transparent p14 outline-none"
-                    placeholder="Collection name..."/>
+                    placeholder="Nom Collection..."/>
              <X @click="cancelCollectionCreation" class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer" :size="14" />
           </div>
 
-          <div class="space-y-1">
+          <div class="space-y-1 overflow-y-auto custom-scrollbar">
+            <div
+              @click="selectedCollectionId = 0"
+              :class="['flex items-center justify-between px-3 py-1.5 rounded cursor-pointer transition-all font-mono',
+                selectedCollectionId === 0 ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-foreground/80']"
+            >
+              <span class="p14 truncate">Tout</span>
+              <span class="p11 opacity-60"></span>
+            </div>
             <ContextMenu v-for="collection in (collections ?? [])" :key="collection.id">
               <ContextMenuTrigger>
                 <div
                   @click="selectedCollectionId = collection.id"
-                  :class="['flex items-center justify-between px-3 py-1.5 rounded cursor-pointer transition-all',
+                  :class="['flex items-center justify-between px-3 py-1.5 rounded cursor-pointer transition-all font-mono',
                     selectedCollectionId === collection.id ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-foreground/80']"
                 >
                   <span class="p14 truncate">{{ collection.name }}</span>
                   <span class="p11 opacity-60">{{ collection.variables.length }} ({{ collection.type }})</span>
                 </div>
               </ContextMenuTrigger>
+
               <ContextMenuContent class="w-48 border-border">
                 <ContextMenuItem @click="selectedCollectionId = collection.id"><Edit3 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Open</ContextMenuItem>
                 <ContextMenuItem @click="deleteCollection(collection.id)" class="text-destructive">
-                  <Trash2 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Delete Collection
+                  <Trash2 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Delete
                 </ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>
+
           </div>
         </div>
 
@@ -283,9 +325,11 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
             <button @click="sidebarOpen = !sidebarOpen" class="text-muted-foreground hover:text-foreground p-1 hover:bg-muted rounded transition-colors">
               <Menu :size="18" :stroke-width="1.2" />
             </button>
-            <h1 class="p13 tracking-tight">{{ selectedCollection?.name || 'Select Collection' }}</h1>
+            <h1 v-if="!searchQuery" class="p12 font-bold tracking-tight">
+              {{ selectedCollectionId === 0 ? 'Tout' : (selectedCollection?.name || 'Sélectionner') }}
+            </h1>
           </div>
-          <button v-if="selectedCollection" @click="addNewVariable" class="text-muted-foreground hover:text-primary transition-colors">
+          <button v-if="selectedCollectionId !==0 && !searchQuery" @click="addNewVariable" class="text-muted-foreground hover:text-primary transition-colors">
             <Plus :size="20" :stroke-width="1.2" />
           </button>
         </div>
@@ -293,24 +337,25 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
         <div class="relative">
           <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50" :size="16" />
           <input v-model="searchQuery" type="text" placeholder="Search variables..."
-            class="w-full bg-transparent border border-border/60 rounded-lg px-3 py-2 pl-10 p14 focus:outline-none focus:border-primary/50 transition-colors" />
+            class="w-full pl-10 input-custom bg-transparent" />
         </div>
       </div>
 
-      <div class="flex-1 overflow-y-auto">
+      <div class="flex-1 overflow-y-auto custom-scrollbar">
         <div v-if="isCollectionsError" class="flex justify-center p-8">
           <CompositionError :error="collectionsError" />
         </div>
 
-        <table v-else-if="selectedCollection" class="w-full border-collapse">
-          <thead class="sticky top-0 z-10 bg-background/95 border-b border-border text-muted-foreground p11 uppercase tracking-widest">
+        <table v-else-if="filteredVariables.length > 0" class="w-full border-collapse">
+          <thead class="sticky top-0 z-10 bg-background opacity-100 border-b border-border text-muted-foreground p11 uppercase tracking-widest">
             <tr>
               <th class="px-8 py-3 text-left">Name</th>
               <th class="px-8 py-3 text-left">Value</th>
-              <th class="px-8 py-3 w-12"></th>
+              <th v-if="searchQuery || selectedCollectionId === 0" class="px-8 py-3 text-left">Collection</th>
+              <th v-if="searchQuery || selectedCollectionId === 0" class="px-8 py-3 text-left">Type</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-border/50">
+          <tbody class="divide-y divide-border custom-scrollbar">
             <ContextMenu v-for="v in filteredVariables" :key="v.id">
               <ContextMenuTrigger as-child>
                 <tr class="hover:bg-muted/30 transition-colors group">
@@ -318,7 +363,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
                     <input v-if="editingCell?.id === v.id && editingCell?.field === 'name'"
                       v-focus
                       v-model="tempEditValue"
-                      @blur="handleUpdate(v.id, 'name', tempEditValue)"
+                      @blur="handleUpdate(v.id, 'name', tempEditValue, v.type)"
                       @keydown.enter="($event.target as HTMLInputElement).blur()"
                       @keydown.esc="editingCell = null"
                       class="bg-background border border-primary/50 rounded px-2 py-0.5 outline-none "
@@ -327,7 +372,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
                   </td>
 
                   <td class="px-8 py-4 p14" @dblclick="startEditing(v, 'value')">
-                    <template v-if="selectedCollection.type === 'COLOR'">
+                    <template v-if="v.type === 'COLOR'">
                       <CompositionColorPicker
                         :is-open="colorPickerOpen && editingCell?.id === v.id"
                         :initial-color="v.value"
@@ -335,19 +380,19 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
                         @color-change="handleColorChange">
                         <template #trigger>
                           <div class="flex items-center gap-3 cursor-pointer" @click="startEditing(v, 'value'); colorPickerOpen = true">
-                            <div class="w-6 h-6 rounded border border-border" :style="{ backgroundColor: `#${v.value}` }" />
+                            <div class="w-6 h-6 rounded border border-border shadow-sm" :style="{ backgroundColor: `#${v.value}` }" />
                             <span class="font-mono text-muted-foreground uppercase">#{{ v.value }}</span>
                           </div>
                         </template>
                       </CompositionColorPicker>
                     </template>
 
-                    <template v-else-if="selectedCollection.type === 'BOOLEAN'">
+                    <template v-else-if="v.type === 'BOOLEAN'">
                       <button
-                        @click="handleUpdate(v.id, 'value', v.value === 'true' ? 'false' : 'true')"
+                        @click="handleUpdate(v.id, 'value', v.value === 'true' ? 'false' : 'true', v.type)"
                         :class="[
-                          'px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-colors',
-                          v.value === 'true' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
+                          'px-3 py-1 rounded-full text-[10px] uppercase transition-colors font-bold tracking-wider',
+                          v.value === 'true' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'
                         ]"
                       >
                         {{ v.value }}
@@ -359,14 +404,25 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
                         <input v-if="editingCell?.id === v.id && editingCell?.field === 'value'"
                           v-focus
                           v-model="tempEditValue"
-                          :type="selectedCollection.type === 'NUMBER' ? 'number' : 'text'"
-                          @blur="handleUpdate(v.id, 'value', tempEditValue)"
+                          :type="v.type === 'NUMBER' ? 'number' : 'text'"
+                          @blur="handleUpdate(v.id, 'value', tempEditValue, v.type)"
                           @keydown.enter="($event.target as HTMLInputElement).blur()"
-                          class="bg-background border border-primary/50 rounded px-2 py-0.5 outline-none font-mono"
+                          @keydown.esc="editingCell = null"
+                          class="bg-background border border-primary/50 rounded px-2 py-0.5 outline-none font-mono w-full max-w-[150px]"
                         />
                         <span v-else class="text-muted-foreground font-mono">{{ v.value }}</span>
                       </div>
                     </template>
+                  </td>
+                  <td v-if="searchQuery || selectedCollectionId === 0" class="px-8 py-4">
+                    <span class="p11 px-2 py-0.5 rounded border border-border bg-muted/50 text-muted-foreground">
+                      {{ v.collectionName }}
+                    </span>
+                  </td>
+                  <td v-if="searchQuery || selectedCollectionId === 0" class="px-8 py-4">
+                    <span class="p11 px-2 py-0.5 rounded border border-border bg-muted/50 text-muted-foreground">
+                      {{ v.type }}
+                    </span>
                   </td>
                 </tr>
               </ContextMenuTrigger>
@@ -385,9 +441,22 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
               </ContextMenuContent>
             </ContextMenu>
           </tbody>
+
         </table>
+        <div class="flex-1 overflow-y-auto">
+          <div v-if="isCollectionsLoading" class="flex justify-center p-12">
+            <Loader2 class="animate-spin text-primary/60" :size="30" />
+          </div>
+
+          <div v-else-if="searchQuery && filteredVariables.length === 0" class="flex flex-col items-center justify-center h-64 text-muted-foreground">
+            <Search :size="24" class="mb-2 opacity-20" />
+            <p class="p14">Aucun résultat pour "{{ searchQuery }}"</p>
+          </div>
+
+          <table v-else-if="filteredVariables.length > 0" class="w-full border-collapse">
+            </table>
+        </div>
       </div>
     </main>
-
   </div>
 </template>

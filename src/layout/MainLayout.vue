@@ -10,8 +10,11 @@ import { useRoute } from 'vue-router';
 const isSidebarCollapsed = ref(false);
 const route = useRoute();
 
+const isMobile = ref(false);
+
 const setCollapsedByViewport = () => {
-  isSidebarCollapsed.value = window.innerWidth < 1024;
+  isMobile.value = window.innerWidth < 1024;
+  isSidebarCollapsed.value = isMobile.value;
 };
 
 const handleResize = () => {
@@ -37,12 +40,33 @@ const toggleSidebar = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value;
 };
 
+watch(() => route.fullPath, () => {
+  if (window.innerWidth < 1024) {
+    isSidebarCollapsed.value = true;
+  }
+});
+
+
+
+
 </script>
 
 
 <template>
-  <div class="flex h-screen overflow-hidden p13">
-    <CompositionSidebar :is-collapsed="isSidebarCollapsed" />
+  <div class="flex h-screen overflow-hidden">
+
+    <div
+      class="fixed lg:static inset-y-0 left-0 z-50 w-auto lg:w-auto"
+      :class="{ 'hidden': isSidebarCollapsed }"
+    >
+      <CompositionSidebar :is-collapsed="isSidebarCollapsed" />
+    </div>
+
+    <div
+      v-if="!isSidebarCollapsed"
+      class="fixed inset-0 bg-black/50 z-40 lg:hidden"
+      @click="isSidebarCollapsed = true"
+    ></div>
 
     <div class="flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300">
       <CompositionHeader
@@ -57,7 +81,3 @@ const toggleSidebar = () => {
     </div>
   </div>
 </template>
-
-<style>
-
-</style>

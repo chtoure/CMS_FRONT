@@ -14,13 +14,9 @@
     });
 
     const inputBaseClasses = cn(
-        'h-8 w-full rounded-md border text-[13px]',
-        'bg-background px-2.5 py-1.5',
-        'border-border ring-offset-background',
-        'file:border-0 file:bg-transparent file:text-[13px] file:font-medium',
-        'placeholder:text-muted-foreground',
-        'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1',
-        'disabled:cursor-not-allowed disabled:opacity-50'
+        'w-full',
+        'px-2.5 py-1.5',
+        'input-custom',
     );
 
     const iconLeftClasses = cn(
