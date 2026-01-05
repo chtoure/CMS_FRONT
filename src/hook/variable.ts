@@ -1,14 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import axios from "axios";
 import type { Collection, Variable, VariableType } from "../type/Variable";
+import { toValue, type MaybeRefOrGetter } from "vue";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
-const useGetCollections = () => {
+const useGetCollections = (searchQuery?: MaybeRefOrGetter<string | undefined>) => {
   return useQuery({
-    queryKey: ['collections'],
+    queryKey: ['collections', toValue(searchQuery)],
     queryFn: async () => {
-      const response = await axios.get<Collection[]>(`${BASE_URL}/collections`);
+      const search = toValue(searchQuery) || "";
+      const response = await axios.get<Collection[]>(`${BASE_URL}/collections?search=${search}`);
       return response.data;
     }
   });

@@ -54,6 +54,7 @@
   --sidebar-ring: #0c8ce9;
 
   --border-width: 1px;
+  --scrollbar-color: #e2e8f0;
 }
 
 .dark {
@@ -103,6 +104,7 @@
   --sidebar-ring: #0c8ce9;
 
   --border-width: 1px;
+  --scrollbar-color: #FFFFFF33;
 }
 
 
@@ -201,13 +203,13 @@ body {
     background-color: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: var(--scrollbar-color);
     border-radius: 5px;
     border: 2px solid transparent;
     background-clip: padding-box;
   }
   .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.3);
+    background-color: var(--scrollbar-color);
   }
 
   .p14 {
