@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { ref, computed } from "vue"
-  import { Plus, Pencil, X } from "lucide-vue-next"
+  import { Plus, Pencil, X, FolderOpen } from "lucide-vue-next"
   import { useGetMediaList, useCreateMedia, useDeleteMedia } from "../../hook/media"
   import { showToast } from "../../lib/toast"
   import Button from "@/components/ui/button/Button.vue"
@@ -112,15 +112,11 @@
 
 
 
-    <div v-if="mediaList?.length" class="card rounded-none p-6" >
+    <div class="card rounded-none p-6" >
 
       <div class="py-3 flex items-center justify-between ">
         <div>
           <div>
-            <!-- <button v-for="t in ['all', 'image', 'video']" :key="t" @click="filterChange(t)"
-              :class="['px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all', filterType === t ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted-foreground hover:text-foreground']">
-              {{ t === 'all' ? 'Tous' : t }}
-            </button> -->
             <Select v-model="filterType" @update:modelValue="(val:string) => filterChange(val)">
               <SelectTrigger class="input-custom">
                 <SelectValue placeholder="Sort by" />
@@ -143,7 +139,7 @@
         </CompositionConfirmDialog>
       </div>
 
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-8">
+      <div v-if="mediaList?.length" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-8">
         <div v-for="item in mediaList" :key="item.id" class="group relative">
           <div class="card relative aspect-[3/4] overflow-hidden bg-secondary shadow-sm transition-all duration-700 hover:border-primary">
             <img v-if="item.type === 'image'" :src="item.file_path" class="w-full h-full object-cover transition-transform duration-1000" />
@@ -187,7 +183,8 @@
         </div>
       </div>
 
+      <CompositionListEmpty v-else title="Aucun media" description="Aucun media trouvé dans votre galerie" :icon="FolderOpen" />
+
     </div>
-    <CompositionListEmpty v-else label="Aucun trésor trouvé dans votre galerie" />
   </div>
 </template>

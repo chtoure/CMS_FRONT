@@ -14,6 +14,7 @@ import ChangePasswordView from '../views/auth/ChangePasswordView.vue'
 import AdminVue from '../views/user/AdminVue.vue'
 import ForgetPasswordView from '../views/auth/ForgetPasswordView.vue'
 import RolesPermissionsView from '../views/user/Roles&PermissionsView.vue'
+import ParameterView from '../views/parameter/ParameterView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -52,7 +53,7 @@ const router = createRouter({
                 path: '',
                 component: MainLayout,
                 // Permet de proteger les urls (Ici toutes les routes enfants)
-                meta: { requiresAuth: true },
+                // meta: { requiresAuth: true },
                 children: [
                     {
                       path: 'dashboard',
@@ -88,6 +89,11 @@ const router = createRouter({
                       path: 'roles-permissions',
                       name: 'admin.roles-permissions',
                       component: RolesPermissionsView
+                    },
+                    {
+                      path: 'parameter',
+                      name: 'admin.parameter',
+                      component: ParameterView
                     }
                 ]
             },

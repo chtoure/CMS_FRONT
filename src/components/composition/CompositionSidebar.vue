@@ -3,10 +3,11 @@ import { reactive, computed, type Component } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   LayoutDashboard,
-  Package,
   ChevronDown,
   ChevronRight,
   UserStar,
+  FolderOpen,
+  Database,
 } from 'lucide-vue-next'
 import DropdownMenu from '@/components/ui/dropdown-menu/DropdownMenu.vue'
 import DropdownMenuTrigger from '@/components/ui/dropdown-menu/DropdownMenuTrigger.vue'
@@ -52,14 +53,14 @@ const navItems: NavItems[] = [
     },
     {
       label: 'Media',
-      icon: Package,
+      icon: FolderOpen,
       href: 'admin.media',
       menuKey: 'media',
       submenu: null
     },
     {
       label: 'Variable',
-      icon: Package,
+      icon: Database,
       href: 'admin.variable',
       menuKey: 'variable',
       submenu: null
@@ -78,7 +79,7 @@ const isChildActive = (submenu: SubMenu[]) => {
 }
 
 const sidebarClasses = computed(() => [
-  'bg-sidebar border-r border-sidebar-border/40 flex flex-col h-screen transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-2xl z-30',
+  'bg-sidebar border-r border-sidebar-border flex flex-col h-screen transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-2xl z-30',
   props.isCollapsed ? 'w-20' : 'w-64'
 ])
 
@@ -92,7 +93,6 @@ const linkClasses = (isActive: boolean) => [
 
 <template>
   <aside :class="sidebarClasses">
-    <!-- Section Logo avec animation Eldorado -->
     <div class="p-6 mb-4 flex items-center gap-3" :class="{ 'justify-center': props.isCollapsed }">
       <div class="relative group">
         <div class="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
@@ -133,7 +133,7 @@ const linkClasses = (isActive: boolean) => [
           <template v-if="item.submenu">
             <button
               @click="toggleMenu(item.menuKey)"
-              :class="linkClasses(!!openMenus[item.menuKey] && !props.isCollapsed)"
+              :class="linkClasses(isChildActive(item.submenu) && !props.isCollapsed)"
             >
               <component :is="item.icon" class="w-4 h-4 flex-shrink-0" :stroke-width="3" />
               <span v-if="!props.isCollapsed" class="font-medium flex-1 text-left">
@@ -166,15 +166,22 @@ const linkClasses = (isActive: boolean) => [
           <template v-else>
             <RouterLink
               :to="{ name: item.href }"
-              v-slot="{ isActive }"
+              custom
+              v-slot="{ navigate }"
             >
-              <button :class="linkClasses(isActive)">
+              <button
+                @click="navigate"
+                :class="linkClasses(route.name === item.href)"
+              >
                 <component :is="item.icon" class="w-4 h-4 flex-shrink-0" :stroke-width="3"/>
                 <span v-if="!props.isCollapsed" class="font-medium flex-1 text-left">
                   {{ item.label }}
                 </span>
                 <span v-if="props.isCollapsed" class="sr-only">{{ item.label }}</span>
-                <div v-if="isActive && !props.isCollapsed" class="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-white rounded-l-full"></div>
+
+                <div v-if="route.name === item.href && !props.isCollapsed"
+                    class="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-white rounded-l-full">
+                </div>
               </button>
             </RouterLink>
           </template>

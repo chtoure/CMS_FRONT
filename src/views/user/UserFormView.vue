@@ -2,13 +2,18 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import  type { AddUserData, UpdateProfileData, UserProfile } from '../../type/user';
-import {  ArrowLeft,  ShieldCheck, Mail, User } from 'lucide-vue-next';
+import {  ArrowLeft,  ShieldCheck, Mail, User, Save } from 'lucide-vue-next';
 import { Button } from '../../components/ui/button';
 import { useAddUser } from '../../hook/user';
 import CompositionLoading from '../../components/composition/CompositionLoading.vue';
 // import CompositionError from '../../components/composition/CompositionError.vue';
 import { showToast } from "../../lib/toast"
 import { useUpdateProfile } from '../../hook/user';
+import Select from '../../components/ui/select/Select.vue';
+import SelectTrigger from '../../components/ui/select/SelectTrigger.vue';
+import SelectValue from '../../components/ui/select/SelectValue.vue';
+import SelectContent from '../../components/ui/select/SelectContent.vue';
+import SelectItem from '../../components/ui/select/SelectItem.vue';
 
 
 interface Props {
@@ -135,23 +140,22 @@ const handleCancel = () => {
   <CompositionLoading v-if="isAdding || isUpdateProfiling" />
   <!-- <CompositionError v-else-if="isAddError" :error="addError?.message"/> -->
 
-  <div v-else class="">
+  <div v-else class="card rounded-none p-6">
     <div class="mb-8 flex items-center justify-between">
-      <div>
+      <div class="flex items-center gap-2">
         <button
           @click="handleCancel"
-          class="flex items-center gap-2 text-sm text-gray-500 hover:text-indigo-600 transition-colors mb-2"
+          class="flex items-center gap-2 text-text hover:text-primary transition-colors"
         >
-          <ArrowLeft class="size-4" />
-          Retour à la liste
+          <ArrowLeft class="size-4" :font-weight="1" />
         </button>
-        <h1 class="text-2xl font-bold text-gray-900">
+        <h1 class="text-huge font-bold text-text">
           {{ isEditing ? 'Modifier le profil' : 'Créer un nouvel utilisateur' }}
         </h1>
       </div>
     </div>
 
-    <form @submit.prevent="handleSubmit" class="space-y-8 border border-border  p-6 sm:p-10 shadow-sm">
+    <form @submit.prevent="handleSubmit" class="space-y-8">
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 
@@ -159,31 +163,31 @@ const handleCancel = () => {
           <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">Informations personnelles</h2>
 
           <div class="space-y-2">
-            <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <User class="size-4 text-gray-400" /> Nom complet
+            <label class="flex items-center gap-2 text-sm font-medium text-text">
+              <User class="size-4" /> Nom complet
             </label>
             <input
               v-model="full_name"
               type="text"
               placeholder="Ex: Jean Dupont"
-              class="w-full rounded-xl border-gray-300 border px-4 py-3 text-sm focus-visible:ring-1  focus-visible:ring-primary outline-none transition-all"
-              :class="{ 'border-red-500 bg-red-50': errors.full_name }"
+              class="input-custom"
+              :class="{ 'border border-destructive': errors.full_name }"
             />
             <p v-if="errors.full_name" class="text-xs text-red-500 mt-1">{{ errors.full_name }}</p>
           </div>
 
           <div class="space-y-2">
-            <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <Mail class="size-4 text-gray-400" /> Adresse Email
+            <label class="flex items-center gap-2 text-sm font-medium text-text">
+              <Mail class="size-4" /> Adresse Email
             </label>
             <input
               v-model="email"
               type="email"
               placeholder="jean@exemple.com"
-              class="w-full rounded-xl border-gray-300 border px-4 py-3 text-sm focus-visible:ring-1  focus-visible:ring-primary outline-none transition-all"
-              :class="{ 'border-red-500 bg-red-50': errors.email }"
+              class="input-custom"
+              :class="{ 'border border-destructive': errors.email }"
             />
-            <p v-if="errors.email" class="text-xs text-red-500 mt-1">{{ errors.email }}</p>
+            <p v-if="errors.email" class="text-xs text-destructive mt-1">{{ errors.email }}</p>
           </div>
 
 
@@ -194,38 +198,55 @@ const handleCancel = () => {
           <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">Accès & Rôles</h2>
 
           <div class="space-y-2">
-            <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <ShieldCheck class="size-4 text-gray-400" /> Rôle utilisateur
+            <label class="flex items-center gap-2 text-sm font-medium text-text">
+              <ShieldCheck class="size-4 text-text" /> Rôle utilisateur
+            </label>
+            <Select v-model="role">
+              <SelectTrigger class="input-custom">
+                <SelectValue placeholder="Rôle" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="user" class="select-item-custom">Utilisateur (Lecture seule)</SelectItem>
+                <SelectItem value="manager" class="select-item-custom">Manager (Gestion limitée)</SelectItem>
+                <SelectItem value="admin" class="select-item-custom">Administrateur (Accès total)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p v-if="errors.role" class="text-xs text-destructive mt-1">{{ errors.role }}</p>
+
+            <!-- <label class="flex items-center gap-2 text-sm font-medium text-text">
+              <ShieldCheck class="size-4 text-text" /> Rôle utilisateur
             </label>
             <select
               v-model="role"
-              class="w-full rounded-xl border-gray-300 border px-4 py-3 text-sm focus-visible:ring-1  focus-visible:ring-primary outline-none transition-all appearance-none"
-              :class="{ 'border-red-500 bg-red-50': errors.role }"
+              class="input-custom"
+              :class="{ 'border-destructive bg-destructive': errors.role }"
             >
               <option value="user">Utilisateur (Lecture seule)</option>
               <option value="manager">Manager (Gestion limitée)</option>
               <option value="admin">Administrateur (Accès total)</option>
             </select>
-            <p v-if="errors.role" class="text-xs text-red-500 mt-1">{{ errors.role }}</p>
+            <p v-if="errors.role" class="text-xs text-destructive mt-1">{{ errors.role }}</p> -->
           </div>
         </div>
 
 
       </div>
 
-      <div class="pt-8 border-t border-gray-100 flex flex-col-reverse sm:flex-row justify-end gap-4">
+      <div class="pt-8 border-t border-border flex flex-col-reverse sm:flex-row justify-end gap-4">
         <Button
           type="button"
           @click="handleCancel"
-          class="bg-white text-gray-600 hover:bg-gray-100 "
+          class="bg-destructive text-text h-10 "
         >
           Annuler
         </Button>
 
         <Button
           type="submit"
+          class="text-text h-10"
         >
-        Enregistrer
+        <Save class="size-4" />
+          Enregistrer
 
         </Button>
       </div>

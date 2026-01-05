@@ -18,8 +18,8 @@ const showPassword = ref(false);
 
 <template>
     <div class="w-full">
-        <label :for="id" class="block text-sm/6 font-medium text-gray-900">{{ label }}</label>
-        
+        <label :for="id" class="block text-sm/6 font-medium text-text">{{ label }}</label>
+
         <div class="mt-2 relative">
             <input
                 :id="id"
@@ -27,13 +27,13 @@ const showPassword = ref(false);
                 :value="modelValue"
                 @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
                 :placeholder="placeholder"
-                class="block w-full rounded-md bg-white px-3 py-1.5 pr-10 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+                class="input-custom"
             />
 
-            <button 
-                type="button" 
+            <button
+                type="button"
                 @click="showPassword = !showPassword"
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors focus:outline-none"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-text hover:text-text transition-colors focus:outline-none"
             >
                 <span v-if="showPassword" title="Masquer"><Eye /></span>
                 <span v-else title="Afficher"><EyeOff /></span>

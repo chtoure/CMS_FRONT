@@ -71,7 +71,7 @@ watch(() => route.fullPath, () => {
     <div class="flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300">
       <CompositionHeader
         :onToggleSidebar="toggleSidebar"
-        headerClass="bg-background"
+        headerClass="bg-sidebar"
         :isSidebarCollapsed="isSidebarCollapsed"
       />
 
