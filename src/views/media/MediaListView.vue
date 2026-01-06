@@ -16,6 +16,7 @@
   import SelectContent from "@/components/ui/select/SelectContent.vue"
   import SelectItem from "@/components/ui/select/SelectItem.vue"
   import CompositionPageHeader from "@/components/composition/CompositionPageHeader.vue"
+import { getErrorMessage } from "../../lib/errorMessage"
 
   const filterType = ref("all");
   const selectedItems = ref<Set<number>>(new Set());
@@ -46,7 +47,7 @@
         showToast('success', 'Éléments supprimés de l\'Eldorado');
       },
       onError: (error: Error) => {
-        showToast('error', `Erreur: ${error.message}`);
+        showToast('error', `${getErrorMessage(error)}`);
       }
     });
   }
@@ -75,7 +76,7 @@
       await mediaQuery.refetch();
       showToast('success', 'Médias importés avec succès');
     } catch (error) {
-      showToast('error', `Échec de l'import: ${error}`);
+      showToast('error', `${getErrorMessage(error)}`);
     }
   }
 

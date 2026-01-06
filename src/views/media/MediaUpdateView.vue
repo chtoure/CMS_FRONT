@@ -40,6 +40,7 @@ import SelectItem from '@/components/ui/select/SelectItem.vue';
 import CompositionPageHeader from '@/components/composition/CompositionPageHeader.vue';
 import router from '../../router';
 import { showToast } from '../../lib/toast';
+import { getErrorMessage } from '../../lib/errorMessage';
 
 const route = useRoute()
 const id = Number(route.params.id)
@@ -829,8 +830,8 @@ const saveModifications = async () => {
       showToast('success', 'Image mise à jour avec succès');
       router.back();
     },
-    onError: () => {
-      showToast('error', 'Une erreur est survenue lors de la mise à jour de l\'image');
+    onError: (error) => {
+      showToast('error', `${getErrorMessage(error)}`);
     }
   });
 };

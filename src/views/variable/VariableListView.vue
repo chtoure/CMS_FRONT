@@ -31,6 +31,7 @@ import {
 import { showToast } from "../../lib/toast"
 import { validateValueByType } from "../../lib/validateType"
 import CompositionListEmpty from "../../components/composition/CompositionListEmpty.vue"
+import { getErrorMessage } from "../../lib/errorMessage"
 
 const searchQuery = ref("")
 
@@ -192,7 +193,7 @@ const submitNewCollection = async () => {
           showToast("success", "Collection créée avec succès")
         },
         onError: (error) => {
-          showToast("error", `Echec de création de la collection: ${error.message}`)
+          showToast("error", `${getErrorMessage(error)}`)
         }
       }
     )
@@ -217,7 +218,7 @@ const addNewVariable = async () => {
         showToast("success", "Variable créée avec succès")
       },
       onError: (error) => {
-        showToast("error", `Echec de création de la variable: ${error.message}`)
+        showToast("error", `${getErrorMessage(error)}`)
       }
     }
   )
@@ -230,7 +231,7 @@ const deleteVariable = async (id: number) => {
       showToast("success", "Variable supprimée avec succès")
     },
     onError: (error) => {
-      showToast("error", `Echec de suppression de la variable: ${error.message}`)
+      showToast("error", `${getErrorMessage(error)}`)
     }
   })
 }
@@ -242,7 +243,7 @@ const deleteCollection = async (id: number) => {
       showToast("success", "Collection supprimée avec succès")
     },
     onError: (error) => {
-      showToast("error", `Echec de suppression de la collection: ${error.message}`)
+      showToast("error", `${getErrorMessage(error)}`)
     }
   })
 }
