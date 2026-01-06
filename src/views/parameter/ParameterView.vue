@@ -9,10 +9,10 @@ import { showToast } from '../../lib/toast'
 import CompositionLoading from '@/components/composition/CompositionLoading.vue'
 import { getErrorMessage } from '../../lib/errorMessage'
 import CompositionError from '@/components/composition/CompositionError.vue'
-import { validationSchema } from '../../validation/parameterValidate'
+import { parameterSchema } from '../../validation/parameterValidate'
 
 const { handleSubmit, setValues } = useForm({
-  validationSchema,
+  validationSchema: parameterSchema,
   initialValues: {
     entity_name: '',
     title: '',

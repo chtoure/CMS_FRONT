@@ -1,7 +1,7 @@
 import { toTypedSchema } from "@vee-validate/zod";
 import { z } from "zod";
 
-const validationSchema = toTypedSchema(
+const parameterSchema = toTypedSchema(
   z.object({
     entity_name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
     title: z.string().min(5, "Le titre est trop court pour le SEO"),
@@ -12,5 +12,5 @@ const validationSchema = toTypedSchema(
 
 
 export {
-  validationSchema
+  parameterSchema
 }
