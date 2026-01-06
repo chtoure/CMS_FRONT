@@ -2,7 +2,8 @@
 import { ref, computed, watch } from "vue"
 import {
   Search, Plus, Menu, Palette, Hash, Type,
-  ToggleLeft, Loader2, Trash2, X, Copy, Edit3
+  ToggleLeft, Loader2, Trash2, X, Copy, Edit3,
+  Database
 } from "lucide-vue-next"
 import type { Variable, VariableType } from "../../type/Variable"
 
@@ -29,6 +30,7 @@ import {
 } from "../../hook/variable"
 import { showToast } from "../../lib/toast"
 import { validateValueByType } from "../../lib/validateType"
+import CompositionListEmpty from "../../components/composition/CompositionListEmpty.vue"
 
 const searchQuery = ref("")
 
@@ -443,6 +445,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
           </tbody>
 
         </table>
+        <CompositionListEmpty v-else :icon="Database" title="Aucune variable" description="Cliquez sur le bouton + pour ajouter une variable"/>
         <div class="flex-1 overflow-y-auto">
           <div v-if="isCollectionsLoading" class="flex justify-center p-12">
             <Loader2 class="animate-spin text-primary/60" :size="30" />
