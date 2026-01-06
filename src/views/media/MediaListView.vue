@@ -16,15 +16,28 @@
   import SelectContent from "@/components/ui/select/SelectContent.vue"
   import SelectItem from "@/components/ui/select/SelectItem.vue"
   import CompositionPageHeader from "@/components/composition/CompositionPageHeader.vue"
-import { getErrorMessage } from "../../lib/errorMessage"
+  import { getErrorMessage } from "../../lib/errorMessage"
+import CompositionPagination from "../../components/composition/CompositionPagination.vue"
+import { watch } from "vue"
 
   const filterType = ref("all");
+  const currentPage = ref(1);
+  const itemsPerPage = ref(10);
+
+  watch(currentPage, () => {
+    console.log(currentPage.value);
+
+    mediaQuery.refetch();
+  })
+
   const selectedItems = ref<Set<number>>(new Set());
   const showRemoveButton = ref(false);
   const fileInput = ref<HTMLElement | null>(null);
 
   const filterParams = computed(() => ({
-    type: filterType.value === "all" ? undefined : filterType.value as "image" | "video"
+    type: filterType.value === "all" ? undefined : filterType.value as "image" | "video",
+    page: currentPage.value,
+    limit: itemsPerPage.value
   }));
 
   const mediaQuery = useGetMediaList(filterParams);
@@ -33,7 +46,11 @@ import { getErrorMessage } from "../../lib/errorMessage"
 
   const filterChange = (val: string ) => {
     filterType.value = val;
+    currentPage.value = 1;
   }
+
+  const mediaResults = computed(() => mediaQuery.data.value?.results || []);
+  const totalItems = computed(() => mediaQuery.data.value?.count || 0);
 
   const deleteSelectedItems = (id?: number) => {
     const payload = id ? id : Array.from(selectedItems.value);
@@ -140,48 +157,60 @@ import { getErrorMessage } from "../../lib/errorMessage"
         </CompositionConfirmDialog>
       </div>
 
-      <div v-if="mediaList?.length" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-8">
-        <div v-for="item in mediaList" :key="item.id" class="group relative">
-          <div class="card relative aspect-[3/4] overflow-hidden bg-secondary shadow-sm transition-all duration-700 hover:border-primary">
-            <img v-if="item.type === 'image'" :src="item.file_path" class="w-full h-full object-cover transition-transform duration-1000" />
-            <div v-else class="w-full h-full bg-slate-950 flex items-center justify-center">
-              <video :src="item.file_path" class="w-full h-full object-cover opacity-60" muted />
-            </div>
+      <div v-if="mediaList?.results.length" >
 
-            <div class="absolute top-3 left-3 z-20 transition-transform active:scale-90">
-              <BaseCheckbox
-                :checked="selectedItems.has(item.id)"
-                @update:checked="(v:boolean) => toggleSelection(item.id, v)"
-                class="w-3 h-3 rounded border border-border bg-background backdrop-blur-sm data-[state=checked]:bg-primary data-[state=checked]:border-primary shadow-lg"
-              />
-            </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-8">
+          <div v-for="item in mediaResults" :key="item.id" class="group relative">
+            <div class="card relative aspect-[3/4] overflow-hidden bg-secondary shadow-sm transition-all duration-700 hover:border-primary">
+              <img v-if="item.type === 'image'" :src="item.file_path" class="w-full h-full object-cover transition-transform duration-1000" />
+              <div v-else class="w-full h-full bg-slate-950 flex items-center justify-center">
+                <video :src="item.file_path" class="w-full h-full object-cover opacity-60" muted />
+              </div>
 
-            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 z-10">
-              <div class="absolute bottom-6 left-6 right-6 space-y-2">
-                <p class="text-white font-black text-sm truncate uppercase tracking-widest">{{ item.alt || 'Sans titre' }}</p>
-                <div class="flex gap-2">
-                  <CompositionVideoImageModal :type="item.type" :href="item.file_path" :alt="item.alt">
-                    <template #trigger>
-                      <button class="flex-1 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white py-2 rounded-xl text-[10px] font-black uppercase transition-all">Aperçu</button>
-                    </template>
-                  </CompositionVideoImageModal>
+              <div class="absolute top-3 left-3 z-20 transition-transform active:scale-90">
+                <BaseCheckbox
+                  :checked="selectedItems.has(item.id)"
+                  @update:checked="(v:boolean) => toggleSelection(item.id, v)"
+                  class="w-3 h-3 rounded border border-border bg-background backdrop-blur-sm data-[state=checked]:bg-primary data-[state=checked]:border-primary shadow-lg"
+                />
+              </div>
 
-                  <button v-if="item.type === 'image'" @click="$router.push({ name: 'admin.media.update', params: { id: item.id } })" class="bg-primary text-white p-2 rounded-xl transition-all hover:scale-110">
-                    <Pencil class="w-4 h-4" />
-                  </button>
+              <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 z-10">
+                <div class="absolute bottom-6 left-6 right-6 space-y-2">
+                  <p class="text-white font-black text-sm truncate uppercase tracking-widest">{{ item.alt || 'Sans titre' }}</p>
+                  <div class="flex gap-2">
+                    <CompositionVideoImageModal :type="item.type" :href="item.file_path" :alt="item.alt">
+                      <template #trigger>
+                        <button class="flex-1 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white py-2 rounded-xl text-[10px] font-black uppercase transition-all">Aperçu</button>
+                      </template>
+                    </CompositionVideoImageModal>
 
-                  <CompositionConfirmDialog @confirm="deleteSelectedItems(item.id)" header="Suppression de l'actif" description="Êtes-vous sûr de vouloir supprimer ce média ?" cancelText="Annuler" actionText="Supprimer" >
-                    <template #dialogButton>
-                      <button class="bg-destructive text-white p-2 rounded-xl transition-all hover:scale-110">
-                        <X class="w-4 h-4" />
-                      </button>
-                    </template>
-                  </CompositionConfirmDialog>
+                    <button v-if="item.type === 'image'" @click="$router.push({ name: 'admin.media.update', params: { id: item.id } })" class="bg-primary text-white p-2 rounded-xl transition-all hover:scale-110">
+                      <Pencil class="w-4 h-4" />
+                    </button>
+
+                    <CompositionConfirmDialog @confirm="deleteSelectedItems(item.id)" header="Suppression de l'actif" description="Êtes-vous sûr de vouloir supprimer ce média ?" cancelText="Annuler" actionText="Supprimer" >
+                      <template #dialogButton>
+                        <button class="bg-destructive text-white p-2 rounded-xl transition-all hover:scale-110">
+                          <X class="w-4 h-4" />
+                        </button>
+                      </template>
+                    </CompositionConfirmDialog>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+
         </div>
+        <div class="flex justify-center pt-8">
+          <CompositionPagination
+            v-model="currentPage"
+            :total="totalItems"
+            :limit="itemsPerPage"
+          />
+        </div>
+
       </div>
 
       <CompositionListEmpty v-else title="Aucun media" description="Aucun media trouvé dans votre galerie" :icon="FolderOpen" />

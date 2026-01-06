@@ -90,6 +90,12 @@ interface SaveMediaPayload {
   };
 }
 
+interface MediaFilter {
+  type?: 'image' | 'video' | null
+  page?: number
+  limit?: number
+}
+
 
 
 export type {
@@ -103,5 +109,6 @@ export type {
   CropState,
   Filters,
   Transform,
-  SaveMediaPayload
+  SaveMediaPayload,
+  MediaFilter
 };
