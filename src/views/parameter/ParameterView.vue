@@ -106,7 +106,7 @@ const onSave = handleSubmit(async (values) => {
                 <div>
                   <label class="block text-text font-medium mb-2">Nom de l'entité</label>
                   <input v-bind="field" type="text" :class="['input-custom', { 'border-destructive': errorMessage }]" placeholder="Ex: Mon Entreprise">
-                  <p v-if="errorMessage" class="text-destructive text-xs mt-1">{{ errorMessage }}</p>
+                  <p v-if="errorMessage" class="mt-2 text-xs text-destructive font-medium italic">{{ errorMessage }}</p>
                 </div>
               </Field>
 
@@ -114,7 +114,7 @@ const onSave = handleSubmit(async (values) => {
                 <div>
                   <label class="block text-text font-medium mb-2">Titre du site</label>
                   <input v-bind="field" type="text" :class="['input-custom', { 'border-destructive': errorMessage }]" placeholder="Ex: Bienvenue">
-                  <p v-if="errorMessage" class="text-destructive text-xs mt-1">{{ errorMessage }}</p>
+                  <p v-if="errorMessage" class="mt-2 text-xs text-destructive font-medium italic">{{ errorMessage }}</p>
                 </div>
               </Field>
 
@@ -122,7 +122,7 @@ const onSave = handleSubmit(async (values) => {
                 <div>
                   <label class="block text-text font-medium mb-2">Description SEO</label>
                   <textarea v-bind="field" :class="['input-custom min-h-[100px] pt-2', { 'border-destructive': errorMessage }]" placeholder="Décrivez votre site..."></textarea>
-                  <p v-if="errorMessage" class="text-destructive text-xs mt-1">{{ errorMessage }}</p>
+                  <p v-if="errorMessage" class="mt-2 text-xs text-destructive font-medium italic">{{ errorMessage }}</p>
                 </div>
               </Field>
 
