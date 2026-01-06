@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { type Ref, unref } from "vue";
-import type { Media, SaveMediaPayload } from "../type/media";
+import type { Media, MediaFilter, SaveMediaPayload } from "../type/media";
 import api, { handleResponse } from "../api/fetchConfig";
+import type { Pagination } from "../type/pagination";
 
 
 const useCreateMedia = () => {
@@ -31,12 +32,23 @@ const useGetMedia = (id : number) => {
 }
 
 
-const useGetMediaList = (filter : Ref<{type : 'image' | 'video' | null | undefined}> | {type : 'image' | 'video' | null | undefined}) =>{
+const useGetMediaList = (filter: Ref<MediaFilter> | MediaFilter) => {
   return useQuery({
     queryKey: ['medias', filter],
     queryFn: async () => {
-      const type = unref(filter).type;
-      return handleResponse<Media[]>(await api(`/medias${type ? `?type=${type}` : ''}`))
+      const params = unref(filter)
+      const query = new URLSearchParams()
+
+      if (params.type) query.append('type', params.type)
+      if (params.page) query.append('page', params.page.toString())
+      if (params.limit) query.append('limit', params.limit.toString())
+
+      console.log(query.toString());
+
+
+      const response = await api(`/medias?${query.toString()}`)
+
+      return handleResponse<Pagination<Media>>(response)
     }
   })
 }
