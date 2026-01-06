@@ -53,7 +53,7 @@ const router = createRouter({
                 path: '',
                 component: MainLayout,
                 // Permet de proteger les urls (Ici toutes les routes enfants)
-                // meta: { requiresAuth: true },
+                meta: { requiresAuth: true },
                 children: [
                     {
                       path: 'dashboard',
