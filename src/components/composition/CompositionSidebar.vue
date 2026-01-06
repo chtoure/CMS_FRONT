@@ -15,11 +15,15 @@ import DropdownMenuContent from '../ui/dropdown-menu/DropdownMenuContent.vue'
 import DropdownMenuLabel from '../ui/dropdown-menu/DropdownMenuLabel.vue'
 import DropdownMenuSeparator from '../ui/dropdown-menu/DropdownMenuSeparator.vue'
 import DropdownMenuItem from '../ui/dropdown-menu/DropdownMenuItem.vue'
+import { useGetParameters } from '../../hook/parameter'
 
 const route = useRoute()
 const props = defineProps<{
   isCollapsed: boolean
 }>()
+
+const { data: params} = useGetParameters()
+
 
 interface SubMenu {
   label: string,
@@ -93,23 +97,19 @@ const linkClasses = (isActive: boolean) => [
 
 <template>
   <aside :class="sidebarClasses">
-    <div class="p-6 mb-4 flex items-center gap-3" :class="{ 'justify-center': props.isCollapsed }">
-      <div class="relative group">
+    <div class="p-6 pt-1 pb-1 flex items-center gap-3" :class="{ 'justify-center': props.isCollapsed }">
+      <div v-if="props.isCollapsed" class="relative group pt-4">
         <div class="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
         <div class="relative w-10 h-10 bg-card rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm border border-border/50">
-          <span class="text-primary font-black text-xl tracking-tighter">E</span>
+          <span class="text-primary font-black text-xl tracking-tighter">{{ params?.entity_name.charAt(0).toUpperCase() }}</span>
         </div>
       </div>
-      <div v-if="!props.isCollapsed" class="animate-in fade-in slide-in-from-left-4 duration-700">
-        <h1 class="font-black text-xl text-foreground tracking-tighter leading-none">Enerlog</h1>
-        <div class="flex items-center gap-1.5 mt-0.5">
-          <span class="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span>
-          <span class="text-[9px] text-muted-foreground font-bold tracking-[0.3em] uppercase">Connecté</span>
-        </div>
+      <div v-else class="animate-in fade-in slide-in-from-left-4 duration-700 w-full">
+        <img :src="params?.logo" alt="logo" class="w-full  object-contain">
       </div>
     </div>
 
-    <nav class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+    <nav class="flex-1 overflow-y-auto p-4 pt-1 custom-scrollbar">
         <div v-for="item in navItems" :key="item.label" class="mb-1">
           <DropdownMenu v-if="item.submenu && props.isCollapsed">
             <DropdownMenuTrigger as-child>

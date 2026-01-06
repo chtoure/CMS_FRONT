@@ -2,24 +2,37 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import  type { AddUserData, UpdateProfileData, UserProfile } from '../../type/user';
-import {  ArrowLeft,  ShieldCheck, Mail, User, Save } from 'lucide-vue-next';
+import {  ArrowLeft,  ShieldCheck, Mail, User, Save, ChevronsUpDown, Check } from 'lucide-vue-next';
 import { Button } from '../../components/ui/button';
 import { useAddUser } from '../../hook/user';
 import CompositionLoading from '../../components/composition/CompositionLoading.vue';
 // import CompositionError from '../../components/composition/CompositionError.vue';
 import { showToast } from "../../lib/toast"
 import { useUpdateProfile } from '../../hook/user';
-import Select from '../../components/ui/select/Select.vue';
-import SelectTrigger from '../../components/ui/select/SelectTrigger.vue';
-import SelectValue from '../../components/ui/select/SelectValue.vue';
-import SelectContent from '../../components/ui/select/SelectContent.vue';
-import SelectItem from '../../components/ui/select/SelectItem.vue';
+import { cn } from '../../lib/utils';
+import Popover from '../../components/ui/popover/Popover.vue';
+import PopoverTrigger from '../../components/ui/popover/PopoverTrigger.vue';
+import PopoverContent from '../../components/ui/popover/PopoverContent.vue';
+import Command from '../../components/ui/command/Command.vue';
+import CommandInput from '../../components/ui/command/CommandInput.vue';
+import CommandEmpty from '../../components/ui/command/CommandEmpty.vue';
+import CommandList from '../../components/ui/command/CommandList.vue';
+import CommandGroup from '../../components/ui/command/CommandGroup.vue';
+import CommandItem from '../../components/ui/command/CommandItem.vue';
+import { useElementSize } from '@vueuse/core';
 
 
 interface Props {
   initialData?: UserProfile;
   isEditing?: boolean;
 }
+
+const roles = [
+  { value: 'user', label: 'Utilisateur (Lecture seule)' },
+  { value: 'manager', label: 'Manager (Gestion limitée)' },
+  { value: 'admin', label: 'Administrateur (Accès total)' },
+]
+const open = ref(false)
 
 const props = withDefaults(defineProps<Props>(), {
   isEditing: false
@@ -31,6 +44,9 @@ const full_name = ref(props.initialData?.full_name || '');
 const email = ref(props.initialData?.email || '');
 const role = ref(props.initialData?.role?.name || '');
 const errors = ref<{ full_name?: string; email?: string , role?: string }>({});
+
+const triggerRef = ref(null)
+const { width } = useElementSize(triggerRef)
 
 
 
@@ -201,7 +217,59 @@ const handleCancel = () => {
             <label class="flex items-center gap-2 text-sm font-medium text-text">
               <ShieldCheck class="size-4 text-text" /> Rôle utilisateur
             </label>
-            <Select v-model="role">
+
+            <Popover v-model:open="open" class="w-full">
+              <PopoverTrigger as-child>
+                <Button
+                ref="triggerRef"
+                  variant="outline"
+                  role="combobox"
+                  :aria-expanded="open"
+                  class="input-custom justify-between w-full font-normal"
+                >
+                  {{ role
+                      ? roles.find((r) => r.value === role)?.label
+                      : "Sélectionner un rôle..."
+                  }}
+                  <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+
+              <PopoverContent :style="{ width: `${width}px` }">
+                <Command>
+                  <CommandInput placeholder="Rechercher un rôle..." />
+                  <CommandEmpty>Aucun rôle trouvé.</CommandEmpty>
+
+                  <CommandList>
+                    <CommandGroup>
+                      <CommandItem
+                        v-for="r in roles"
+                        :key="r.value"
+                        :value="r.value"
+                        class="select-item-custom cursor-pointer"
+                        @select="() => {
+                          role = r.value
+                          open = false
+                        }"
+                      >
+                        <Check
+                          :class="cn(
+                            'mr-2 h-4 w-4',
+                            role === r.value ? 'opacity-100' : 'opacity-0'
+                          )"
+                        />
+                        {{ r.label }}
+                      </CommandItem>
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+
+            <p v-if="errors.role" class="text-xs text-destructive mt-1">{{ errors.role }}</p>
+
+
+            <!-- <Select v-model="role">
               <SelectTrigger class="input-custom">
                 <SelectValue placeholder="Rôle" />
               </SelectTrigger>
@@ -210,8 +278,7 @@ const handleCancel = () => {
                 <SelectItem value="manager" class="select-item-custom">Manager (Gestion limitée)</SelectItem>
                 <SelectItem value="admin" class="select-item-custom">Administrateur (Accès total)</SelectItem>
               </SelectContent>
-            </Select>
-            <p v-if="errors.role" class="text-xs text-destructive mt-1">{{ errors.role }}</p>
+            </Select> -->
 
             <!-- <label class="flex items-center gap-2 text-sm font-medium text-text">
               <ShieldCheck class="size-4 text-text" /> Rôle utilisateur
