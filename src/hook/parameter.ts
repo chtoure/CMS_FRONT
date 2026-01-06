@@ -25,6 +25,8 @@ const useUpdateParameters = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['parameters'] })
   });
 };
+
+
 export {
   useGetParameters,
   useUpdateParameters
