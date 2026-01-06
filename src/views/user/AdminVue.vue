@@ -36,7 +36,7 @@ const filteredUsers = computed(() => {
   if (!users.value) return [];
   if (!search.value.trim()) return users.value;
   const query = search.value.toLowerCase();
-  return users.value.filter(u =>
+  return users.value.filter((u:UserProfile) =>
     u.full_name.toLowerCase().includes(query) ||
     u.email.toLowerCase().includes(query)
   );
@@ -67,7 +67,7 @@ const closeForm = () => {
   <CompositionError v-else-if="isgetError" :error="getError?.message" />
 
 
-  <div class="min-h-screen space-y-10 ">
+  <div v-else class="min-h-screen space-y-10 ">
     <CompositionPageHeader>
       <template #content>
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">

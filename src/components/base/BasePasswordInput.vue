@@ -1,19 +1,31 @@
-
 <script setup lang="ts">
 import { ref } from 'vue';
-import { EyeOff , Eye } from 'lucide-vue-next';
+import { EyeOff, Eye } from 'lucide-vue-next';
 
-const emit = defineEmits(['update:modelValue']);
+// 1. On définit les options du composant ici (remplace la 2ème balise script)
+defineOptions({
+  inheritAttrs: false
+});
 
-const { modelValue, placeholder, label, id } = defineProps({
+// 2. Définition des Props
+defineProps({
     modelValue: { type: String, default: '' },
+    value: { type: String, default: '' },
     placeholder: { type: String, default: '••••••••' },
     label: { type: String, default: 'Password' },
     id: { type: String, default: () => `pw-${Math.random().toString(36).substring(2, 7)}` }
 });
 
-// État pour la visibilité uniquement
+// 3. Définition des Emits
+const emit = defineEmits(['update:modelValue', 'input', 'blur']);
+
 const showPassword = ref(false);
+
+const handleInput = (event: Event) => {
+    const val = (event.target as HTMLInputElement).value;
+    emit('update:modelValue', val);
+    emit('input', event);
+};
 </script>
 
 <template>
@@ -22,10 +34,12 @@ const showPassword = ref(false);
 
         <div class="mt-2 relative">
             <input
+                v-bind="$attrs"
                 :id="id"
                 :type="showPassword ? 'text' : 'password'"
-                :value="modelValue"
-                @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+                :value="modelValue || value"
+                @input="handleInput"
+                @blur="emit('blur', $event)"
                 :placeholder="placeholder"
                 class="input-custom"
             />
@@ -33,10 +47,10 @@ const showPassword = ref(false);
             <button
                 type="button"
                 @click="showPassword = !showPassword"
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-text hover:text-text transition-colors focus:outline-none"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-text opacity-50 hover:opacity-100 transition-colors focus:outline-none"
             >
-                <span v-if="showPassword" title="Masquer"><Eye /></span>
-                <span v-else title="Afficher"><EyeOff /></span>
+                <Eye v-if="showPassword" class="size-5" />
+                <EyeOff v-else class="size-5" />
             </button>
         </div>
     </div>

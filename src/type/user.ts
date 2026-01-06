@@ -33,10 +33,10 @@ export interface UpdateProfileData {
   role?: string | null;
 }
 
-export interface UpdateProfileResponse {
-  message: string;
-  user: UserProfile;
-}
+// export interface UpdateProfileResponse {
+//   message: string;
+//   user: UserProfile;
+// }
 
 
 
@@ -48,10 +48,10 @@ export interface AddUserData {
   role?: string | null;
 }
 
-export interface AddUserResponse {
-  message: string;
-  user: UserProfile;
-}
+// export interface AddUserResponse {
+//   message: string;
+//   user: UserProfile;
+// }
 
 
 
@@ -60,7 +60,13 @@ export interface ChangePasswordData {
   newPassword: string;
 }
 
-export interface ChangePasswordResponse {
+// export interface ChangePasswordResponse {
+//   message: string;
+//   user: UserProfile;
+// }
+
+
+// Interface
+export interface VerifyCode {
   message: string;
-  user: UserProfile;
 }

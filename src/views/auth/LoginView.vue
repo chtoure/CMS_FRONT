@@ -1,7 +1,8 @@
 
 
 <template>
-  <CompositionLoading v-if="isLoggingIn" />
+  <div class="min-h-screen">
+    <CompositionLoading v-if="isLoggingIn" />
 
   <div v-else class="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
     <div class="sm:mx-auto sm:w-full sm:max-w-sm">
@@ -10,73 +11,88 @@
     </div>
 
     <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-      <form @submit.prevent="onSubmit" class="space-y-4">
+      <!-- <form @submit.prevent="onSubmit" class="space-y-4"> -->
+      <Field name="email" v-slot="{ field, errorMessage }">
         <div>
           <label for="email" class="block text-sm/6 font-medium text-text">Email address</label>
           <div class="mt-2">
             <input
-              v-model="email"
+              v-bind="field"
               type="email"
               id="email"
               placeholder="Entrez votre email"
               autocomplete="email"
-              required
               class="input-custom"
             />
+            <p v-if="errorMessage" class="text-destructive text-xs mt-1">{{ errorMessage }}</p>
           </div>
         </div>
+      </Field>
 
+      <Field name="password" v-slot="{ field, errorMessage }">
         <div>
           <div class="mt-2">
             <BasePasswordInput
-                v-model="userPassword"
+                v-bind="field"
                 placeholder="Entrer votre Mot de passe"
                 container-class="w-full"
             />
           </div>
+          <p v-if="errorMessage" class="text-destructive text-xs mt-1">{{ errorMessage }}</p>
         </div>
+      </Field>
 
-        <p v-if="isError" class="text-xs text-red-600 font-medium">
-          {{ (error as any)?.response?.data?.message || 'Identifiants incorrects' }}
+        <p v-if="isError" class="mt-4 text-center text-destructive">
+          {{ error?.message }}
         </p>
 
-        <div>
+        <div class="mt-4">
           <Button
-            type="submit"
+            @click="onSubmit"
             :disabled="isLoggingIn"
             class="w-full h-10"
           >
             {{ isLoggingIn ? 'Connexion...' : 'Se Loger' }}
           </Button>
         </div>
-      </form>
+      <!-- </form> -->
 
       <div class="mt-10 text-center text-sm/6 text-text opacity-80">
         <div class="text-sm">
-          <router-link :to="{ name: 'auth.forgot-password' }" class="font-semibold text-accent hover:text-accent-foreground">Mot de passe oublié ?</router-link>
+          <router-link :to="{ name: 'auth.forgot-password' }" class="font-semibold text-primary">Mot de passe oublié ?</router-link>
         </div>
       </div>
     </div>
   </div>
+  </div>
+
 </template>
 
 
 <script setup lang="ts">
 
-  import { ref } from 'vue';
   import { useLogin } from '../../hook/user'; // Import de ton hook
   import BasePasswordInput from '@/components/base/BasePasswordInput.vue';
   import CompositionLoading from "@/components/composition/CompositionLoading.vue";
   import { userStore } from '../../stores/user';
   import router from '../../router';
-import Button from '../../components/ui/button/Button.vue';
+  import Button from '../../components/ui/button/Button.vue';
+  import { useForm,Field } from 'vee-validate';
+  import { validationSchemaLogin } from '../../validation/loginValidate';
+
+
+
 
 
   // Initialisation
-  const userPassword = ref('');
-  const email = ref('');
   const storeUser = userStore();
-
+  const { handleSubmit } = useForm({
+    validationSchema: validationSchemaLogin,
+    initialValues: {
+      email:"",
+      password:""
+    }
+  })
 
   // Utilisation du hook de login
   const {
@@ -99,13 +115,23 @@ const initials = ((full_name:string) => {
 
 
 
-  const onSubmit = () => {
-    login(
-      {
-        email:email.value,
-        password:userPassword.value
-      },
-      {
+  // const onSubmit = handleSubmit(async (values)) => {
+  //   login(
+  //     {
+  //       email:email.value,
+  //       password:userPassword.value
+  //     },
+
+  //   );
+  // };
+
+
+
+  const onSubmit = handleSubmit(async (values) => {
+
+      login({
+        ...values
+      },{
         onSuccess(data) {
           console.log(data);
           // On stocke les infos reçues du backend dans Pinia
@@ -120,6 +146,8 @@ const initials = ((full_name:string) => {
         }
       }
     );
-  };
+   })
+
+
 
 </script>

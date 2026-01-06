@@ -13,7 +13,7 @@
     <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
       <form @submit.prevent="onSubmit" class="space-y-4">
         <div v-if="!sendEmail && !reset_password">
-          <label for="email" class="block font-bold text-text">Email address</label>
+          <label for="email" class="block font-medium text-text">Email address</label>
           <div class="mt-2">
             <input
               v-model="email"
@@ -28,7 +28,7 @@
         </div>
 
         <div v-if="sendEmail">
-            <label for="code" class="block font-bold text-text">Code</label>
+            <label for="code" class="block font-medium text-text">Code</label>
             <div class="mt-2">
               <input
                 v-model="code"
@@ -42,11 +42,11 @@
             </div>
 
             <div class="mt-2 text-center">
-              <p class="text-xs text-gray-600 " v-if="sendEmail && !reset_password">Veuillez entrer le code envoyé à votre adresse email.</p>
-              <p v-if="timeLeft > 0" class="text-sm text-gray-600">
-                Le code expire dans : <span class="font-bold text-primary">{{ formattedTime }}</span>
+              <p class="text-xs text-text " v-if="sendEmail && !reset_password">Veuillez entrer le code envoyé à votre adresse email.</p>
+              <p v-if="timeLeft > 0" class="text-sm text-text">
+                Le code expire dans : <span class="font-medium text-primary">{{ formattedTime }}</span>
               </p>
-              <p v-else class="text-sm text-red-600 font-bold">Le code a expiré.</p>
+              <p v-else class="text-sm text-destructive font-medium">Le code a expiré.</p>
             </div>
         </div>
 
@@ -102,7 +102,7 @@
 
       <div class="flex items-center justify-between mt-10 text-center text-sm/6 text-text">
         <div class="">
-          <router-link :to="{ name: 'auth.login' }" class=" text-accent  hover:text-accent-foreground">Connexion</router-link>
+          <router-link :to="{ name: 'auth.login' }" class=" text-primary font-semibold opacity-80">Connexion</router-link>
         </div>
          <div class="">
           <button v-if="sendEmail" @click="onSubmitSendCode" type="button"
