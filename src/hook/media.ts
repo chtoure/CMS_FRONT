@@ -1,16 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { type Ref, unref } from "vue";
-import axios from "axios";
 import type { Media, SaveMediaPayload } from "../type/media";
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+import api, { handleResponse } from "../api/fetchConfig";
 
 
 const useCreateMedia = () => {
   return useMutation({
     mutationFn: async (formData: FormData) => {
-      const response = await axios.post<Media>(`${BASE_URL}/media`, formData);
-      return response.data;
+      return handleResponse<Media>(
+        await api(`/media`, {
+          method: 'POST',
+          body: formData
+        })
+      );
     },
   })
 }
@@ -20,8 +22,9 @@ const useGetMedia = (id : number) => {
   return useQuery({
     queryKey: ['media', id],
     queryFn: async ()=> {
-      const response = await axios.get<Media>(`${BASE_URL}/media/${id}`);
-      return response.data;
+      return handleResponse<Media>(
+        await api(`/media/${id}`)
+      );
     },
     staleTime: 1000 * 60,
    })
@@ -33,10 +36,7 @@ const useGetMediaList = (filter : Ref<{type : 'image' | 'video' | null | undefin
     queryKey: ['medias', filter],
     queryFn: async () => {
       const type = unref(filter).type;
-      const response = await axios.get<Media[]>(`${BASE_URL}/medias`, {
-        params: type ? { type } : {}
-      });
-      return response.data;
+      return handleResponse<Media[]>(await api(`/medias${type ? `?type=${type}` : ''}`))
     }
   })
 }
@@ -45,13 +45,16 @@ const useDeleteMedia = () => {
   return useMutation({
     mutationFn: async (payload: number | number[]) => {
       if (Array.isArray(payload)) {
-        const response = await axios.delete(`${BASE_URL}/media`, {
-          data: { ids: payload }
+        const response = await api(`/media`, {
+          method: 'DELETE',
+          body: JSON.stringify({ ids: payload })
         });
-        return response.data;
+        return handleResponse(response);
       }
-      const response = await axios.delete(`${BASE_URL}/media/${payload}`);
-      return response.data;
+      const response = await api(`/media/${payload}`, {
+        method: 'DELETE',
+      });
+      return handleResponse(response);
     },
   });
 };
@@ -64,8 +67,11 @@ const useUpdateMedia = () => {
 
       console.log('data', mediaId, payload);
 
-      const { data } = await axios.put(`${BASE_URL}/media/${mediaId}`, payload.operations);
-      return data;
+      const response = await api(`/media/${mediaId}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload.operations)
+      });
+      return handleResponse(response);
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['media', variables] });
