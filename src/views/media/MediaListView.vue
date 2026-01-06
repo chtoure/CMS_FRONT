@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { ref, computed } from "vue"
-  import { Plus, Pencil, X, FolderOpen } from "lucide-vue-next"
+  import { Plus, Pencil, X, FolderOpen, Eye } from "lucide-vue-next"
   import { useGetMediaList, useCreateMedia, useDeleteMedia } from "../../hook/media"
   import { showToast } from "../../lib/toast"
   import Button from "@/components/ui/button/Button.vue"
@@ -181,7 +181,9 @@ import { watch } from "vue"
                   <div class="flex gap-2">
                     <CompositionVideoImageModal :type="item.type" :href="item.file_path" :alt="item.alt">
                       <template #trigger>
-                        <button class="flex-1 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white py-2 rounded-xl text-[10px] font-black uppercase transition-all">Aperçu</button>
+                        <button class="bg-accent text-white p-2 rounded-xl transition-all hover:scale-110">
+                          <Eye class="w-4 h-4" />
+                        </button>
                       </template>
                     </CompositionVideoImageModal>
 
