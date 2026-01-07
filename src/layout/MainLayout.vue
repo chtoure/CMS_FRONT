@@ -48,7 +48,7 @@ const toggleSidebar = () => {
         'lg:static lg:translate-x-0 border-r border-sidebar-border',
         isSidebarCollapsed
           ? '-translate-x-full lg:translate-x-0 lg:w-20'
-          : 'translate-x-0 w-64'
+          : 'translate-x-0 w-72'
       )"
     >
       <CompositionSidebar :is-collapsed="isSidebarCollapsed" />
