@@ -68,16 +68,16 @@ const handleLogout = () => {
         </div>
         <div class="my-2 h-px bg-border" />
         <!-- Updated text colors and hover states with new design system -->
-        <RouterLink :to="{name:'admin.settings'}" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground rounded-lg transition-all duration-200">
+        <RouterLink :to="{name:'admin.settings'}" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-primary rounded-lg transition-all duration-200">
             <User class="w-4 h-4" /> Profile
         </RouterLink>
-        <!-- <a href="#" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground rounded-lg transition-all duration-200">
+        <!-- <a href="#" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-primary rounded-lg transition-all duration-200">
             <User class="w-4 h-4" /> Profile
         </a> -->
-        <a href="#" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground rounded-lg transition-all duration-200">
+        <a href="#" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-primary rounded-lg transition-all duration-200">
             <FileText class="w-4 h-4" /> Reports
         </a>
-        <a href="#" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground rounded-lg transition-all duration-200">
+        <a href="#" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-primary rounded-lg transition-all duration-200">
             <Settings class="w-4 h-4" /> Settings
         </a>
         <Button

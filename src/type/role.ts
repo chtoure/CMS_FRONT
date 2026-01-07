@@ -1,6 +1,10 @@
+import type { UserProfile } from "./user"
 
 
 export interface Role {
-  name: string;
-  description: string | null;
+  id: number,
+  name : string,
+  description : string | null
+  users: UserProfile[]
 }
+
