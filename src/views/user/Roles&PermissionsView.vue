@@ -1,6 +1,6 @@
 
 <script setup lang="ts">
-import { Pencil, Plus, ShieldCheck, Check, X, Shield, MoreHorizontal,Trash2, ChevronsUpDown } from 'lucide-vue-next';
+import { Pencil, Plus, ShieldCheck, Check, X, Shield, Trash2, ChevronsUpDown } from 'lucide-vue-next';
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue';
 import Tabs from '../../components/ui/tabs/Tabs.vue';
 import TabsList from '../../components/ui/tabs/TabsList.vue';
@@ -17,151 +17,61 @@ import CommandList from '../../components/ui/command/CommandList.vue';
 import CommandGroup from '../../components/ui/command/CommandGroup.vue';
 import CommandItem from '../../components/ui/command/CommandItem.vue';
 import { useElementSize } from '@vueuse/core';
+import { cn } from '../../lib/utils';
+import { useGetRoles } from '../../hook/role';
+import CompositionLoading from '../../components/composition/CompositionLoading.vue';
+import CompositionError from '../../components/composition/CompositionError.vue';
+import type { Role, RoleUpdate } from '../../type/role';
+import type { Permission } from '../../type/permission';
+import { useGetPermissions } from '../../hook/permission';
+import Button from '../../components/ui/button/Button.vue';
+import { useUpdateRole } from '../../hook/role';
+import { showToast } from '../../lib/toast';
+import RoleFormView from './RoleFormView.vue';
+import CompositionModal from '../../components/composition/CompositionModal.vue';
 
 
-interface Role {
-  id: number,
-  name : string,
-  description : string,
-  Permissions: Permission[] | null
-}
 
-interface Permission {
-  id: number,
-  name : string,
-  description : string,
-  roles : Role [] | null
-}
-
-
-const roles = ref<Role[]>([
-  {
-    id:1,
-    name:"Administrateur",
-    description: "",
-    Permissions:[
-       {
-        id:1,
-        name: "create_user",
-        description: "Creation des utilisateurs",
-        roles:null
-       },
-       {
-        id:2,
-    name: "read_page_admin",
-    description: "Lecture page admin",
-        roles:null
-       },
-       {
-       id:3,
-        name: "ipadate_page_admin",
-        description: "Modifier les données de la page admin",
-        roles:null
-       }
-    ]
-
-  },
-   {
-    id:2,
-    name:"Manager",
-    description: "Gestion des magasins",
-    Permissions:[
-       {
-        id:1,
-        name: "create_user",
-        description: "Creation des utilisateurs",
-        roles:null
-       },
-       {
-        id:2,
-    name: "read_page_admin",
-    description: "Lecture page admin",
-        roles:null
-       }
-    ]
-  },
-   {
-    id:3,
-    name:"User",
-    description: "Lecture seule",
-    Permissions:[
-       {
-        id:2,
-    name: "read_page_admin",
-    description: "Lecture page admin",
-        roles:null
-       }
-    ]
-  }
-])
-
-const  permissions = ref<Permission[]>([
-  {
-    id:1,
-    name: "create_user",
-    description: "Creation des utilisateurs",
-    roles:[
-      {
-        id:1,
-        name:"Administrateur",
-        description: "Gestion illimité",
-        Permissions:null
-      }
-    ]
-  },
-   {
-    id:2,
-    name: "read_page_admin",
-    description: "Lecture page admin",
-    roles:[
-      {
-        id:1,
-        name:"Administrateur",
-        description: "Gestion illimité",
-         Permissions:null
-      },
-      {
-        id:2,
-        name:"Manager",
-        description: "Gestion des magasins",
-         Permissions:null
-      },
-      {
-        id:3,
-        name:"User",
-        description: "Lecture seule",
-         Permissions:null
-      }
-    ]
-  },
-  {
-    id:3,
-    name: "ipadate_page_admin",
-    description: "Modifier les données de la page admin",
-    roles:[
-      {
-        id:1,
-        name:"Administrateur",
-        description: "Gestion illimité",
-         Permissions:null
-      },
-      {
-        id:2,
-        name:"Manager",
-        description: "Gestion des magasins",
-         Permissions:null
-      }
-    ]
-  }
-])
-
-
+// Initialisation
 const editingId = ref<number | null>(null);
-const editForm = ref({ name: '', description: ''});
+const editForm = ref({ name: '', description: '',permissions: [] as Permission[]});
 const open = ref(false)
 const triggerRef = ref(null)
 const { width } = useElementSize(triggerRef)
 
+const vFocus = {
+  mounted: (el: HTMLElement) => el.focus()
+}
+
+
+
+// Hook listes Roles
+const {
+  data: dataRoles,
+  isLoading: loadingRole,
+  isError: ErrorRole,
+  error: errorRole,
+  refetch: getAllRoles
+} = useGetRoles()
+
+
+// Hook listes Permissions
+const {
+  data:dataPermissions,
+  isLoading: loadingPermission,
+  isError: ErrorPermission,
+  error: errorPermission,
+  refetch: getAllPermissions
+} = useGetPermissions()
+
+
+// Hook update Role
+const {
+  mutate:updateRole,
+  isPending:updateLoading,
+  isError:isErrorRole,
+  error:errorRoleUpdate
+}= useUpdateRole()
 
 
 // Activer le mode édition au double-clic
@@ -169,7 +79,8 @@ const startEdit = (role: Role) => {
   editingId.value = role.id;
   editForm.value = {
     name: role.name,
-    description: role.description
+    description: role.description || '',
+    permissions: role.permissions ? [...role.permissions] : []
   };
 };
 
@@ -179,8 +90,36 @@ const cancelEdit = () => {
 
 const saveEdit = (id: number) => {
   console.log("Sauvegarde de la permission", id, editForm.value);
-  // Ici tu appelles ton API Update
+
+const roleUpdateData: RoleUpdate = {
+  name: editForm.value.name,
+  description: editForm.value.description,
+  permissionIds: editForm.value.permissions.map(p => p.id)
+};
+  updateRole({
+    id,
+    dataRole:roleUpdateData
+  },{
+    onSuccess(){
+      getAllRoles();
+      getAllPermissions();
+      showToast('success', 'Role modifié avec succès');
+    },
+    onError(errorRoleUpdate){
+      showToast('error', `Erreur lors de la modification de role : ${errorRoleUpdate.message || 'Erreur inconnue'}`);
+    }
+  })
   editingId.value = null;
+};
+
+// Fonction pour ajouter/retirer une permission dans editForm
+const togglePermission = (permission: Permission) => {
+  const index = editForm.value.permissions.findIndex(p => p.id === permission.id);
+  if (index > -1) {
+    editForm.value.permissions.splice(index, 1); // Retirer
+  } else {
+    editForm.value.permissions.push(permission); // Ajouter
+  }
 };
 
 
@@ -189,7 +128,14 @@ const saveEdit = (id: number) => {
 
 <template>
 
-  <div class="min-h-screen space-y-10">
+  <CompositionLoading v-if="loadingRole || loadingPermission || updateLoading" />
+
+  <CompositionError
+    v-else-if="ErrorRole || ErrorPermission || isErrorRole"
+    :error="errorRole?.message || errorPermission?.message || errorRoleUpdate?.message"
+  />
+
+  <div v-else class="min-h-screen space-y-10">
 
     <CompositionPageHeader>
       <template #content>
@@ -202,12 +148,19 @@ const saveEdit = (id: number) => {
             </div>
           </div>
 
-          <div class="flex items-center gap-4">
-            <Button class=" flex items-center rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95">
-              <Plus class="w-6 h-6 mr-2" />
-              Role
-            </Button>
-          </div>
+          <CompositionModal title="Role">
+            <template #trigger>
+              <div class="flex items-center gap-4">
+                <Button class=" flex items-center rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95">
+                  <Plus class="w-6 h-6 mr-2" />
+                  Role
+                </Button>
+              </div>
+            </template>
+            <template #content>
+              <RoleFormView />
+            </template>
+          </CompositionModal>
         </div>
       </template>
     </CompositionPageHeader>
@@ -229,7 +182,7 @@ const saveEdit = (id: number) => {
 
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div
-              v-for="role in roles"
+              v-for="role in dataRoles"
               :key="role.id"
               class="group cursor-pointer"
               @dblclick="startEdit(role)"
@@ -260,7 +213,7 @@ const saveEdit = (id: number) => {
                       <textarea
                         v-if="editingId === role.id"
                         v-model="editForm.description"
-                        rows="1"
+                        rows="2"
                         class="bg-background border border-border rounded px-2 py-1 text-sm w-full outline-none focus:ring-1 ring-primary resize-none"
                       />
                       <p v-else class="text-sm leading-relaxed text-text opacity-80 ">
@@ -268,63 +221,70 @@ const saveEdit = (id: number) => {
                       </p>
                     </div>
                     <b></b>
-                    <div v-if="editingId === role.id">
-                      <label class="flex items-center gap-2 text-sm font-medium text-text">
-                        Permissions
+                    <div v-if="editingId === role.id" class="mt-4 space-y-2">
+                      <label class=" font-medium text-text tracking-tight">
+                        Permissions associées
                       </label>
 
-                      <Popover v-model:open="open" class="w-full">
+                      <Popover v-model:open="open">
                         <PopoverTrigger as-child>
                           <Button
-                          ref="triggerRef"
+                            ref="triggerRef"
                             variant="outline"
                             role="combobox"
-                            :aria-expanded="open"
-                            class="input-custom justify-between w-full font-normal"
+                            class="w-full relative flex items-center justify-center bg-background border-border font-normal h-7"
                           >
-                            <!-- {{  role.Permissions
-                                ? role.Permissions.find((r) => r.name === role)?.description
-                                : "Sélectionner un rôle..."
-                            }} -->
-                            <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            <span class="truncate text-center mx-8">
+                              {{ editForm.permissions.length > 0
+                                  ? `${editForm.permissions.length} permission(s) selectionée(s)`
+                                  : "Choisir les permissions..."
+                              }}
+                            </span>
+
+                            <ChevronsUpDown class="absolute right-3 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
 
-                        <PopoverContent :style="{ width: `${width}px` }">
+                        <PopoverContent :style="{ width: `${width}px` }" class="p-0">
                           <Command>
-                            <CommandInput placeholder="Rechercher un rôle..." />
-                            <CommandEmpty>Aucun rôle trouvé.</CommandEmpty>
-
+                            <CommandInput placeholder="Rechercher une permission..." />
+                            <CommandEmpty>Aucune permission trouvée.</CommandEmpty>
                             <CommandList>
                               <CommandGroup>
                                 <CommandItem
-                                  v-for="r in role.Permissions"
-                                  :key="r.id"
-                                  :name="r.name"
-                                  class="select-item-custom cursor-pointer"
-                                  @select="() => {
-                                    role = r.name
-                                    open = false
-                                  }"
+                                  v-for="p in dataPermissions"
+                                  :key="p.id"
+                                  :value="p.name"
+                                  class="cursor-pointer data-[highlighted]:bg-primary data-[highlighted]:text-white"
+                                  @select="togglePermission(p)"
                                 >
                                   <Check
                                     :class="cn(
-                                      'mr-2 h-4 w-4',
-                                      role === r.name ? 'opacity-100' : 'opacity-0'
+                                      'mr-2 h-4 w-4 text-text',
+                                      editForm.permissions.some(item => item.id === p.id) ? 'opacity-100' : 'opacity-0'
                                     )"
                                   />
-                                  {{ r.description }}
+                                  <div class="flex flex-col">
+                                    <span>{{ p.name }}</span>
+                                    <span class="text-[10px] opacity-50">{{ p.description }}</span>
+                                  </div>
                                 </CommandItem>
                               </CommandGroup>
                             </CommandList>
                           </Command>
                         </PopoverContent>
                       </Popover>
+
+                      <div class="flex flex-wrap gap-1 mt-2">
+                        <span v-for="p in editForm.permissions" :key="p.id" class="px-2 py-0.5 bg-primary/10 text-primary text-[10px] rounded border border-primary/20">
+                          {{ p.name }}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
                   <div v-if="editingId !== role.id" class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button @click.stop="startEdit(role)" class="p-2 hover:bg-muted rounded-full text-text hover:text-primary transition-colors">
+                    <button @click.stop="startEdit(role)" class="p-2 hover:bg-muted rounded-full text-text hover:text-primary">
                       <Pencil class="h-4 w-4" />
                     </button>
                     <button class="p-2 hover:bg-muted rounded-full text-text hover:text-destructive transition-colors">
@@ -336,13 +296,13 @@ const saveEdit = (id: number) => {
                 <div v-if="editingId === role.id" class="mt-4 pt-4 border-t border-border/10 flex justify-center gap-6">
                   <button
                     @click="saveEdit(role.id)"
-                    class="flex items-center gap-1 px-4 py-1 text-success hover:bg-muted rounded-md transition-all text-xs font-bold uppercase tracking-widest"
+                    class="flex items-center gap-1 px-4 py-1 text-success hover:bg-muted rounded-md transition-all text-xs font-bold tracking-widest"
                   >
                     <Check :size="16" stroke-width="3" /> Valider
                   </button>
                   <button
                     @click="cancelEdit"
-                    class="flex items-center gap-1 px-4 py-1 text-destructive hover:bg-muted rounded-md transition-all text-xs font-bold uppercase tracking-widest"
+                    class="flex items-center gap-1 px-4 py-1 text-destructive hover:bg-muted rounded-md transition-all text-xs font-bold  tracking-widest"
                   >
                     <X :size="16" stroke-width="3" /> Annuler
                   </button>
@@ -377,19 +337,12 @@ const saveEdit = (id: number) => {
 
                 <tbody class="divide-y divide-border">
                   <tr
-                    v-for="permission in permissions"
+                    v-for="permission in dataPermissions"
                     :key="permission.id"
                     class="group hover:bg-muted/40"
                   >
                     <td class="p-4">
-                      <!-- <input
-                        v-if="editingId === permission.id"
-                        v-model="editForm.name"
-                        v-focus
-                        class="bg-background border border-border rounded px-2 py-1 text-sm w-full outline-none focus:ring-1 ring-primary"
-                        @keydown.enter="saveEdit(permission.id)"
-                        @keydown.esc="cancelEdit"
-                      /> -->
+
                       <div  class="flex items-center gap-2">
                         <Shield :size="14" class="text-text" />
                         <span class="text-sm font-medium tracking-tight">{{ permission.name }}</span>
@@ -397,13 +350,7 @@ const saveEdit = (id: number) => {
                     </td>
 
                     <td class="p-4">
-                      <!-- <input
-                        v-if="editingId === permission.id"
-                        v-model="editForm.description"
-                        class="bg-background border border-border rounded px-2 py-1 text-sm w-full outline-none focus:ring-1 ring-primary"
-                        @keydown.enter="saveEdit(permission.id)"
-                        @keydown.esc="cancelEdit"
-                      /> -->
+
                       <span  class="text-xs text-text line-clamp-1">
                         {{ permission.description }}
                       </span>
@@ -426,19 +373,8 @@ const saveEdit = (id: number) => {
                     </td>
 
                     <td class="p-4 text-right">
-                      <!-- <div v-if="editingId === permission.id" class="flex justify-end gap-2">
-                        <button @click="saveEdit(permission.id)" class="p-1 text-success hover:bg-muted rounded">
-                          <Check :size="16" />
-                        </button>
-                        <button @click="cancelEdit" class="p-1 text-destructive hover:bg-muted rounded">
-                          <X :size="16" />
-                        </button>
-                      </div> -->
+
                       <div class="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button class="p-1 hover:bg-muted rounded text-text hover:text-primary">
-                            <MoreHorizontal :size="16" />
-                        </button>
-                        <b></b>
                          <button class="p-2 hover:bg-muted rounded text-text hover:text-destructive">
                             <Trash2 :size="16"/>
                           </button>
@@ -450,10 +386,7 @@ const saveEdit = (id: number) => {
             </div>
           </div>
         </TabsContent>
-
-
-
-       </Tabs>
+      </Tabs>
 
     </main>
 

@@ -1,6 +1,6 @@
 
 
-import { useMutation, useQuery } from "@tanstack/vue-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import api, { handleResponse } from "../api/fetchConfig";
 import type { LoginCredentials, AuthResponse, UserProfile, AddUserData, ChangePasswordData,UpdateProfileData, VerifyCode } from "../type/user";
 
@@ -21,13 +21,19 @@ export const useLogin = () => {
 
 //Hook personnalisé pour la mutation de déconnexion
 export const useLogout = () =>{
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () =>{
       await api('/logout', {
       method:'POST'
       });
-
       return true;
+    },
+    onSuccess(){
+      queryClient.clear();
+    },
+    onError(){
+      queryClient.clear();
     }
   })
 }
