@@ -13,6 +13,16 @@ const useGetCollections = (searchQuery?: MaybeRefOrGetter<string | undefined>) =
   });
 };
 
+const useGetVariables = (searchQuery?: MaybeRefOrGetter<string | undefined>) => {
+  return useQuery({
+    queryKey: ['variables', toValue(searchQuery)],
+    queryFn: async () => {
+      const search = toValue(searchQuery) || "";
+      return handleResponse<Variable[]>(await api(`/variables?search=${search}`));
+    }
+  });
+};
+
 const useCreateVariable = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -95,6 +105,7 @@ const useDeleteCollection = () => {
 
 export {
   useGetCollections,
+  useGetVariables,
   useCreateCollection,
   useDeleteCollection,
   useCreateVariable,
