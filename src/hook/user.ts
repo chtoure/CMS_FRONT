@@ -2,7 +2,9 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import api, { handleResponse } from "../api/fetchConfig";
-import type { LoginCredentials, AuthResponse, UserProfile, AddUserData, ChangePasswordData,UpdateProfileData, VerifyCode } from "../type/user";
+import type { LoginCredentials, AuthResponse, UserProfile, AddUserData, ChangePasswordData,UpdateProfileData, VerifyCode, userFilter } from "../type/user";
+import { unref, type Ref } from "vue";
+import type { Pagination } from "../type/pagination";
 
 
 // Hook personnalisé pour la mutation de connexion
@@ -59,11 +61,22 @@ export const useUpdateProfile = () => {
 
 
 // Hook get users list
-export const useGetUsers = () => {
+export const useGetUsers = (filter: Ref<userFilter> | userFilter) => {
   return useQuery({
-    queryKey: ["users"],
+    queryKey: ["users",filter],
     queryFn:async () => {
-      return handleResponse<UserProfile[]>(await api("/users"));
+      const params = unref(filter)
+      const query = new URLSearchParams()
+
+      if (params.page) query.append('page', params.page.toString())
+      if (params.limit) query.append('limit', params.limit.toString())
+
+      console.log(query.toString());
+
+
+      const response = await api(`/users?${query.toString()}`)
+
+      return handleResponse<Pagination<UserProfile>>(response)
     }
   })
 }

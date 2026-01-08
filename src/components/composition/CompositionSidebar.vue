@@ -201,14 +201,16 @@ import {
   Database,
   UserStar
 } from 'lucide-vue-next'
-import { useRoute, RouterLink } from 'vue-router'
+import { useRoute, RouterLink, useRouter } from 'vue-router'
 import { cn } from '../../lib/utils'
 import { useGetParameters } from '../../hook/parameter'
 import { userStore } from '../../stores/user'
 import { useLogout } from '../../hook/user'
 import Button from '../ui/button/Button.vue'
 
+
 const route = useRoute()
+const router = useRouter()
 const { data: params} = useGetParameters()
 const storeUser = userStore();
 
@@ -218,7 +220,20 @@ const {
 } = useLogout();
 
 const handleLogout = () => {
-  logout();
+  logout(void 0, {
+
+    onSuccess() {
+      storeUser.setUserInfo(null);
+      router.push({ name: 'auth.login' });
+    },
+    onError(err) {
+      console.error('Erreur de déconnexion :', err);
+      storeUser.setUserInfo(null);
+      router.push({ name: 'auth.login' });
+    }
+  });
+
+
 };
 
 const props = defineProps<{

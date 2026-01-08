@@ -1,21 +1,44 @@
 
 import { useMutation, useQuery } from "@tanstack/vue-query";
 import api, { handleResponse } from "../api/fetchConfig";
-import type { AddRole, Role } from "../type/role";
+import type { AddRole, Role, roleFilter } from "../type/role";
 import type { RoleUpdate } from "../type/role";
 import type { Permission } from "../type/permission";
+import { unref, type Ref } from "vue";
+import type { Pagination } from "../type/pagination";
 
 
-// Hook get role list
-export const useGetRoles = () => {
+// Hook get role list Avec pagination
+export const useGetRoles = (filter: Ref<roleFilter> | roleFilter) => {
   return useQuery({
-    queryKey: ["roles"],
+    queryKey: ["roles",filter],
     queryFn:async () => {
-      return handleResponse<Role[]>(await api("/roles"));
+      const params = unref(filter)
+      const query = new URLSearchParams()
+
+      if (params.page) query.append('page', params.page.toString())
+      if (params.limit) query.append('limit', params.limit.toString())
+
+      console.log(query.toString());
+
+
+      const response = await api(`/roles?${query.toString()}`)
+
+      return handleResponse<Pagination<Role>>(response)
     }
   })
 }
 
+
+// Hook get role list sans pagination
+export const useGetRolesNoPaginate = () => {
+  return useQuery({
+    queryKey: ["rolesNoPaginate"],
+    queryFn:async () => {
+      return handleResponse<Role[]>(await api("/rolesNoPaginate"));
+    }
+  })
+}
 
 
 // Hook update role

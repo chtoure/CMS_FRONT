@@ -7,3 +7,8 @@ export interface Permission {
   description : string | null,
   roles : Role []
 }
+
+export interface permsFilter {
+  page?: number
+  limit?: number
+}

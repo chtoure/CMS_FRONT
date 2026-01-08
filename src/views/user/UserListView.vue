@@ -1,13 +1,14 @@
-
+<!--
 
 <script setup lang="ts">
 import type { UserProfile } from '../../type/user';
-import { Users } from 'lucide-vue-next';
-import UserCardView from './UserCardView.vue';
 import CompositionListEmpty from '../../components/composition/CompositionListEmpty.vue';
+import { Users } from 'lucide-vue-next';
+
 
 interface UserListProps {
-  users: UserProfile[]; // Utilisation du nouveau type
+  users: UserProfile[];
+  items: number
 }
 
 
@@ -16,8 +17,10 @@ defineProps<UserListProps>();
 
 const emit = defineEmits<{
   edit: [user: UserProfile],
-  delete: [id: number] // L'ID est maintenant un number selon ton type
+  delete: [id: number]
 }>();
+
+
 
 
 </script>
@@ -35,4 +38,5 @@ const emit = defineEmits<{
       @delete="emit('delete', user.id)"
     />
   </div>
-</template>
+
+</template> -->

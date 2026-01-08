@@ -6,11 +6,14 @@ import   {User,
 } from 'lucide-vue-next'
 import { useLogout } from "../../hook/user";
 import { userStore } from '../../stores/user';
-import router from '../../router';
+import { useRouter } from 'vue-router';
+import Button from '../ui/button/Button.vue';
 
 
 // Initialisations
 const storeUser = userStore();
+const router = useRouter()
+
 
 // Logout hook
 const {
@@ -64,9 +67,12 @@ const handleLogout = () => {
         <a href="#" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-primary hover:text-white rounded-lg transition-all duration-200">
             <FileText class="w-4 h-4" /> Reports
         </a>
-        <a href="#" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-primary hover:text-white rounded-lg transition-all duration-200">
+        <RouterLink :to="{ name: 'admin.parameter' }" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-primary hover:text-white rounded-lg transition-all duration-200">
             <Settings class="w-4 h-4" /> Settings
-        </a>
+        </RouterLink>
+        <!-- <a href="#" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-primary hover:text-white rounded-lg transition-all duration-200">
+            <Settings class="w-4 h-4" /> Settings
+        </a> -->
         <Button
           variant="ghost"
           size="sm"
