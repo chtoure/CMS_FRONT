@@ -5,13 +5,15 @@ import   {User,
     Settings,
 } from 'lucide-vue-next'
 import { useLogout } from "../../hook/user";
-import { useQueryClient } from "@tanstack/vue-query";
 import { userStore } from '../../stores/user';
-import router from '../../router';
+import { useRouter } from 'vue-router';
+import Button from '../ui/button/Button.vue';
 
 
 // Initialisations
 const storeUser = userStore();
+const router = useRouter()
+
 
 // Logout hook
 const {
@@ -19,8 +21,7 @@ const {
   isPending: isLoggingOut,
 } = useLogout();
 
-// Pour vider le cache après déconnexion
-const queryClient = useQueryClient();
+
 
 
 
@@ -29,23 +30,12 @@ const handleLogout = () => {
   logout(void 0, {
 
     onSuccess() {
-
-      // Vider tout le cache de Vue Query (sécurité)
-      queryClient.clear();
-      // Vider les infos utilisateur dans le store Pinia
       storeUser.setUserInfo(null);
-      // Redirection vers la page de login
       router.push({ name: 'auth.login' });
-
     },
     onError(err) {
-
       console.error('Erreur de déconnexion :', err);
-      //Vider tout le cache de Vue Query (sécurité) meme en cas d'erreur
-      queryClient.clear();
-      // Vider les infos utilisateur dans le store Pinia
       storeUser.setUserInfo(null);
-      // Redirection vers la page de login
       router.push({ name: 'auth.login' });
     }
   });
@@ -68,18 +58,21 @@ const handleLogout = () => {
         </div>
         <div class="my-2 h-px bg-border" />
         <!-- Updated text colors and hover states with new design system -->
-        <RouterLink :to="{name:'admin.settings'}" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground rounded-lg transition-all duration-200">
+        <RouterLink :to="{name:'admin.settings'}" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-primary hover:text-white rounded-lg transition-all duration-200">
             <User class="w-4 h-4" /> Profile
         </RouterLink>
-        <!-- <a href="#" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground rounded-lg transition-all duration-200">
+        <!-- <a href="#" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-primary hover:text-white rounded-lg transition-all duration-200">
             <User class="w-4 h-4" /> Profile
         </a> -->
-        <a href="#" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground rounded-lg transition-all duration-200">
+        <a href="#" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-primary hover:text-white rounded-lg transition-all duration-200">
             <FileText class="w-4 h-4" /> Reports
         </a>
-        <a href="#" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground rounded-lg transition-all duration-200">
+        <RouterLink :to="{ name: 'admin.parameter' }" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-primary hover:text-white rounded-lg transition-all duration-200">
             <Settings class="w-4 h-4" /> Settings
-        </a>
+        </RouterLink>
+        <!-- <a href="#" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-primary hover:text-white rounded-lg transition-all duration-200">
+            <Settings class="w-4 h-4" /> Settings
+        </a> -->
         <Button
           variant="ghost"
           size="sm"

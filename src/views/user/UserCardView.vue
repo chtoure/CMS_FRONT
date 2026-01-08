@@ -1,4 +1,4 @@
-
+<!--
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { UserProfile } from '../../type/user';
@@ -24,6 +24,8 @@ const initials = computed(() => {
     .toUpperCase()
     .slice(0, 2) || '?';
 });
+
+
 
 
 </script>
@@ -66,4 +68,4 @@ const initials = computed(() => {
       </div>
     </div>
   </div>
-</template>
+</template> -->

@@ -20,6 +20,7 @@ import CommandList from '../../components/ui/command/CommandList.vue';
 import CommandGroup from '../../components/ui/command/CommandGroup.vue';
 import CommandItem from '../../components/ui/command/CommandItem.vue';
 import { useElementSize } from '@vueuse/core';
+import { useGetRolesNoPaginate } from '../../hook/role';
 
 
 interface Props {
@@ -27,11 +28,6 @@ interface Props {
   isEditing?: boolean;
 }
 
-const roles = [
-  { value: 'user', label: 'Utilisateur (Lecture seule)' },
-  { value: 'manager', label: 'Manager (Gestion limitée)' },
-  { value: 'admin', label: 'Administrateur (Accès total)' },
-]
 const open = ref(false)
 
 const props = withDefaults(defineProps<Props>(), {
@@ -64,6 +60,13 @@ const {
 } = useUpdateProfile();
 
 
+// Hook listes Roles sans pagination
+const {
+  data: dataRoles,
+  isLoading: loadingRole,
+  refetch: getAllRoles
+} = useGetRolesNoPaginate()
+
 // --- Validation ---
 const validate = () => {
   errors.value = {};
@@ -92,6 +95,7 @@ const handleSubmitAddUser = () => {
 
   addUser(newUser, {
     onSuccess: () => {
+      getAllRoles()
       showToast('success', 'utilisateur ajouté avec succès');
       emit('success');
     },
@@ -112,6 +116,7 @@ const handleSubmitEditUser = () => {
       role: role.value,
     };
 
+
     if (!props.initialData?.id) {
       showToast('error', "ID utilisateur manquant pour la modification.");
       return;
@@ -119,6 +124,7 @@ const handleSubmitEditUser = () => {
 
     updateProfile({ profileData: updateData, id: props.initialData?.id }, {
       onSuccess: () => {
+        getAllRoles()
         showToast('success', 'utilisateur modifié avec succès');
         emit('success');
       },
@@ -153,7 +159,7 @@ const handleCancel = () => {
 
 <template>
 
-  <CompositionLoading v-if="isAdding || isUpdateProfiling" />
+  <CompositionLoading v-if="isAdding || isUpdateProfiling || loadingRole" />
   <!-- <CompositionError v-else-if="isAddError" :error="addError?.message"/> -->
 
   <div v-else class="card rounded-none p-6">
@@ -189,7 +195,7 @@ const handleCancel = () => {
               class="input-custom"
               :class="{ 'border border-destructive': errors.full_name }"
             />
-            <p v-if="errors.full_name" class="text-xs text-red-500 mt-1">{{ errors.full_name }}</p>
+            <p v-if="errors.full_name" class="text-xs text-destructive mt-1">{{ errors.full_name }}</p>
           </div>
 
           <div class="space-y-2">
@@ -221,14 +227,14 @@ const handleCancel = () => {
             <Popover v-model:open="open" class="w-full">
               <PopoverTrigger as-child>
                 <Button
-                ref="triggerRef"
+                  ref="triggerRef"
                   variant="outline"
                   role="combobox"
                   :aria-expanded="open"
-                  class="input-custom justify-between w-full font-normal"
+                  class="input-custom justify-between w-full font-normal h-8"
                 >
                   {{ role
-                      ? roles.find((r) => r.value === role)?.label
+                      ? dataRoles?.find((r) => r.name === role)?.name
                       : "Sélectionner un rôle..."
                   }}
                   <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -243,22 +249,22 @@ const handleCancel = () => {
                   <CommandList>
                     <CommandGroup>
                       <CommandItem
-                        v-for="r in roles"
-                        :key="r.value"
-                        :value="r.value"
+                        v-for="r in dataRoles"
+                        :key="r.id"
+                        :value="r.name"
                         class="select-item-custom cursor-pointer"
                         @select="() => {
-                          role = r.value
+                          role = r.name
                           open = false
                         }"
                       >
                         <Check
                           :class="cn(
                             'mr-2 h-4 w-4',
-                            role === r.value ? 'opacity-100' : 'opacity-0'
+                            role === r.name ? 'opacity-100' : 'opacity-0'
                           )"
                         />
-                        {{ r.label }}
+                        {{ r.name }}
                       </CommandItem>
                     </CommandGroup>
                   </CommandList>
@@ -303,14 +309,14 @@ const handleCancel = () => {
         <Button
           type="button"
           @click="handleCancel"
-          class="bg-destructive text-text h-10 "
+          class="bg-destructive text-white h-10 "
         >
           Annuler
         </Button>
 
         <Button
           type="submit"
-          class="text-text h-10"
+          class="text-white h-10"
         >
         <Save class="size-4" />
           Enregistrer

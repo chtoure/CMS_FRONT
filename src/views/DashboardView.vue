@@ -28,12 +28,12 @@ useHead({
   ],
 })
 const mediaQuery = useGetMediaList({ limit: 5, page: 1 })
-const userQuery = useGetUsers();
+const userQuery = useGetUsers({});
 const variableQuery = useGetVariables()
 const totalMedia = computed(() => mediaQuery.data.value?.count || 0)
 const recentMedia = computed(() => mediaQuery.data.value?.results.slice(0, 4) || [])
 const totalVariable = computed(() => variableQuery.data.value?.length || 0)
-const totalUser = computed(() => userQuery.data.value?.length || 0)
+const totalUser = computed(() => userQuery.data.value?.results.length || 0)
 const storeUser = userStore();
 
 const stats = computed(() => [

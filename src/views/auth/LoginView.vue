@@ -75,10 +75,10 @@
   import BasePasswordInput from '@/components/base/BasePasswordInput.vue';
   import CompositionLoading from "@/components/composition/CompositionLoading.vue";
   import { userStore } from '../../stores/user';
-  import router from '../../router';
   import Button from '../../components/ui/button/Button.vue';
   import { useForm,Field } from 'vee-validate';
   import { validationSchemaLogin } from '../../validation/loginValidate';
+  import { useRouter } from 'vue-router';
   import { useGetParameters } from '../../hook/parameter';
 
 
@@ -95,6 +95,8 @@
       password:""
     }
   })
+  const router = useRouter()
+
 
   // Utilisation du hook de login
   const {

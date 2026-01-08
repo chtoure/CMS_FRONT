@@ -4,39 +4,60 @@
 import { ref, computed } from 'vue';
 import { useGetUsers } from '../../hook/user';
 import type { UserProfile } from '../../type/user';
-import { Users, UserPlus } from 'lucide-vue-next';
+import { Users, UserPlus, Pencil, Trash2 } from 'lucide-vue-next';
 
 
 // Composants convertis
-import UserListView from './UserListView.vue';
 import UserFormView from './UserFormView.vue';
 import CompositionError from '../../components/composition/CompositionError.vue';
 import CompositionLoading from '../../components/composition/CompositionLoading.vue';
 import Button from '@/components/ui/button/Button.vue';
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue';
+import Select from '../../components/ui/select/Select.vue';
+import SelectTrigger from '../../components/ui/select/SelectTrigger.vue';
+import SelectValue from '../../components/ui/select/SelectValue.vue';
+import SelectContent from '../../components/ui/select/SelectContent.vue';
+import SelectItem from '../../components/ui/select/SelectItem.vue';
+import CompositionTable from '../../components/composition/CompositionTable.vue';
+import CompositionListEmpty from '../../components/composition/CompositionListEmpty.vue';
 
 
 
-// 1. Données & États
+
+
+const search = ref('');
+const isEditing = ref(false);
+const selectedUser = ref<UserProfile | undefined>(undefined);
+const currentPage = ref(1);
+const itemsPerPage = ref(10);
+
+
+  const filterParams = computed(() => ({
+    page: currentPage.value,
+    limit: itemsPerPage.value
+  }));
+
+
+  // 1. Données & États
 const {
   data: users,
   isLoading,
   isError: isgetError,
   error: getError,
   refetch: refetchUsers
-} = useGetUsers();
+} = useGetUsers(filterParams);
 
 
-const search = ref('');
-const isEditing = ref(false);
-const selectedUser = ref<UserProfile | undefined>(undefined);
+const userResults = computed(() => users.value?.results || []);
+const totalItems = computed(() => users.value?.count || 0);
+
 
 // 2. Recherche filtrée (équivalent de useMemo)
 const filteredUsers = computed(() => {
-  if (!users.value) return [];
-  if (!search.value.trim()) return users.value;
+  if (!userResults.value) return [];
+  if (!search.value.trim()) return userResults.value;
   const query = search.value.toLowerCase();
-  return users.value.filter((u:UserProfile) =>
+  return userResults.value.filter((u:UserProfile) =>
     u.full_name.toLowerCase().includes(query) ||
     u.email.toLowerCase().includes(query)
   );
@@ -59,6 +80,21 @@ const closeForm = () => {
   selectedUser.value = undefined;
   refetchUsers();
 };
+
+const emit = defineEmits<{
+  edit: [user: UserProfile],
+  delete: [id: number]
+}>();
+
+const columns = [
+  { key: 'full_name', label: 'Nom'  },
+  { key: 'email', label: 'Email' },
+  { key: 'role', label: 'Role' },
+  { key: 'status', label: 'Status' },
+  { key: 'actions', label: 'Actions', class: 'w-10' },
+]
+
+
 </script>
 
 <template>
@@ -110,16 +146,55 @@ const closeForm = () => {
         <div class="bg-background border border-border  shadow-sm overflow-hidden">
           <div class="p-6 border-b border-border flex flex-col sm:flex-row justify-between items-center gap-4">
             <h3 class="font-bold text-text">Liste des utilisateurs</h3>
-            <div class="w-full sm:w-72">
-               <!-- <SearchBar v-model="search" placeholder="Rechercher..." /> -->
+            <div class="">
+              <Select>
+                <SelectTrigger class="input-custom">
+                  <SelectValue placeholder="Filter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" class="select-item-custom">Tous</SelectItem>
+                  <SelectItem value="active" class="select-item-custom">Active</SelectItem>
+                  <SelectItem value="archive" class="select-item-custom">Achivés</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           <div class="p-0">
-             <UserListView
-               :users="filteredUsers"
-               @edit="openEditPage"
-             />
+
+             <CompositionListEmpty v-if="filteredUsers.length === 0" title="Aucun utilisateur" description="Aucune donnée trouvée dans la base de données." :icon="Users" />
+               <div v-else class="card rounded-none p-6" >
+                  <CompositionTable
+                    :columns="columns"
+                    :data="filteredUsers"
+                    :total="totalItems"
+                    v-model:current-page="currentPage"
+                    v-model:limit="itemsPerPage"
+                  >
+
+                    <template #cell-role="{ row }">
+                      <span>{{ row.role?.name }}</span>
+                    </template>
+
+                    <template #cell-status="{ row }">
+                      <span v-if="row.role">Active </span>
+                      <span v-else>Non Active</span>
+                    </template>
+
+                    <template #cell-actions="{ row }">
+                      <div class="flex items-center gap-1 ">
+                        <button @click="openEditPage(row)" class="p-2  rounded-full text-text hover:text-primary">
+                        <Pencil class="h-4 w-4" />
+                      </button>
+                      <button @click="emit('delete', row.id)" class="p-2  rounded-full text-text hover:text-destructive">
+                        <Trash2 class="h-4 w-4" />
+                      </button>
+                      </div>
+                    </template>
+
+                  </CompositionTable>
+                </div>
+
           </div>
         </div>
       </template>

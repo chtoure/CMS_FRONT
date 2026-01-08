@@ -119,12 +119,12 @@
   import { ref, computed, onUnmounted } from 'vue';
   import CompositionLoading from "@/components/composition/CompositionLoading.vue";
   import { userStore } from '../../stores/user';
-  import router from '../../router';
   import { useForgotPassword } from '../../hook/user';
   import { useVerifyCode } from '../../hook/user';
   import { useResetPassword } from '../../hook/user';
 import { watch } from 'vue';
 import BasePasswordForceInput from '../../components/base/BasePasswordForceInput.vue';
+import { useRouter } from 'vue-router';
 
 
 
@@ -138,6 +138,8 @@ import BasePasswordForceInput from '../../components/base/BasePasswordForceInput
   const reset_password = ref(false);
   const password_non_confirmed = ref(false);
   const messageError = ref('');
+  const router = useRouter()
+
 
 
 
