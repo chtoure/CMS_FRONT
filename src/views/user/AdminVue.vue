@@ -4,7 +4,7 @@
 import { ref, computed } from 'vue';
 import { useGetUsers } from '../../hook/user';
 import type { UserProfile } from '../../type/user';
-import { Users, UserPlus, Pencil, Trash2 } from 'lucide-vue-next';
+import { Users, UserPlus, Pencil, MoreHorizontal, Archive } from 'lucide-vue-next';
 
 
 // Composants convertis
@@ -20,6 +20,12 @@ import SelectContent from '../../components/ui/select/SelectContent.vue';
 import SelectItem from '../../components/ui/select/SelectItem.vue';
 import CompositionTable from '../../components/composition/CompositionTable.vue';
 import CompositionListEmpty from '../../components/composition/CompositionListEmpty.vue';
+import DropdownMenu from '../../components/ui/dropdown-menu/DropdownMenu.vue';
+import DropdownMenuTrigger from '../../components/ui/dropdown-menu/DropdownMenuTrigger.vue';
+import DropdownMenuContent from '../../components/ui/dropdown-menu/DropdownMenuContent.vue';
+import DropdownMenuLabel from '../../components/ui/dropdown-menu/DropdownMenuLabel.vue';
+import DropdownMenuSeparator from '../../components/ui/dropdown-menu/DropdownMenuSeparator.vue';
+import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue';
 
 
 
@@ -143,9 +149,9 @@ const columns = [
 
       <template v-else>
 
-        <div class="bg-background border border-border  shadow-sm overflow-hidden">
-          <div class="p-6 border-b border-border flex flex-col sm:flex-row justify-between items-center gap-4">
-            <h3 class="font-bold text-text">Liste des utilisateurs</h3>
+        <div class="card rounded-none overflow-hidden">
+          <div class="p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <p class="font-bold text-text huge">Liste des utilisateurs</p>
             <div class="">
               <Select>
                 <SelectTrigger class="input-custom">
@@ -163,7 +169,7 @@ const columns = [
           <div class="p-0">
 
              <CompositionListEmpty v-if="filteredUsers.length === 0" title="Aucun utilisateur" description="Aucune donnée trouvée dans la base de données." :icon="Users" />
-               <div v-else class="card rounded-none p-6" >
+               <div v-else class="p-6" >
                   <CompositionTable
                     :columns="columns"
                     :data="filteredUsers"
@@ -182,14 +188,33 @@ const columns = [
                     </template>
 
                     <template #cell-actions="{ row }">
-                      <div class="flex items-center gap-1 ">
-                        <button @click="openEditPage(row)" class="p-2  rounded-full text-text hover:text-primary">
-                        <Pencil class="h-4 w-4" />
-                      </button>
-                      <button @click="emit('delete', row.id)" class="p-2  rounded-full text-text hover:text-destructive">
-                        <Trash2 class="h-4 w-4" />
-                      </button>
-                      </div>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger as-child>
+                          <Button variant="ghost" size="icon" @click.stop="console.log('Editer', row)">
+                            <MoreHorizontal class="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator/>
+                          <DropdownMenuLabel>
+                            <button  @click="openEditPage(row)" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
+                              <Pencil class="w-4 h-4" /> Modifier
+                            </button>
+                          </DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel>
+                            <CompositionConfirmDialog @confirm="emit('delete', row.id)" header="Suppression de l'utilisateur" description="Êtes-vous sûr de vouloir Archiver ?" cancelText="Annuler" actionText="Archiver" >
+                              <template #dialogButton>
+                                <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110">
+                                  <Archive class="w-4 h-4" /> Archiver
+                                </button>
+                              </template>
+                            </CompositionConfirmDialog>
+                          </DropdownMenuLabel>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </template>
 
                   </CompositionTable>

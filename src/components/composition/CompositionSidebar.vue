@@ -1,205 +1,14 @@
-<!-- <script setup lang="ts">
-import { reactive, computed, type Component } from 'vue'
-import { useRoute } from 'vue-router'
-import {
-  LayoutDashboard,
-  ChevronDown,
-  ChevronRight,
-  UserStar,
-  FolderOpen,
-  Database,
-} from 'lucide-vue-next'
-import DropdownMenu from '@/components/ui/dropdown-menu/DropdownMenu.vue'
-import DropdownMenuTrigger from '@/components/ui/dropdown-menu/DropdownMenuTrigger.vue'
-import DropdownMenuContent from '../ui/dropdown-menu/DropdownMenuContent.vue'
-import DropdownMenuLabel from '../ui/dropdown-menu/DropdownMenuLabel.vue'
-import DropdownMenuSeparator from '../ui/dropdown-menu/DropdownMenuSeparator.vue'
-import DropdownMenuItem from '../ui/dropdown-menu/DropdownMenuItem.vue'
-import { useGetParameters } from '../../hook/parameter'
-
-const route = useRoute()
-const props = defineProps<{
-  isCollapsed: boolean
-}>()
-
-const { data: params} = useGetParameters()
-
-
-interface SubMenu {
-  label: string,
-  icon: Component,
-  href: string
-}
-
-interface NavItems  {
-  label: string,
-  icon: Component,
-  href?: string,
-  menuKey: string,
-  submenu: SubMenu[] | null
-}
-
-const openMenus = reactive<{ [key: string]: boolean }>({
-  dashboard: true,
-})
-
-const toggleMenu = (menu: string) => {
-  openMenus[menu] = !openMenus[menu]
-}
-
-const navItems: NavItems[] = [
-    {
-      label: 'Dashboard',
-      icon: LayoutDashboard,
-      menuKey: 'dashboard',
-      href: 'admin.dashboard',
-      submenu: null,
-    },
-    {
-      label: 'Media',
-      icon: FolderOpen,
-      href: 'admin.media',
-      menuKey: 'media',
-      submenu: null
-    },
-    {
-      label: 'Variable',
-      icon: Database,
-      href: 'admin.variable',
-      menuKey: 'variable',
-      submenu: null
-    },
-    {
-      label: 'Admin',
-      icon: UserStar,
-      href: 'admin.users',
-      menuKey: 'admhin',
-      submenu: null
-    }
-]
-
-const isChildActive = (submenu: SubMenu[]) => {
-  return submenu?.some(sub => route.name === sub.href)
-}
-
-const sidebarClasses = computed(() => [
-  'bg-sidebar border-r border-sidebar-border flex flex-col h-screen transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-2xl z-30',
-  props.isCollapsed ? 'w-20' : 'w-64'
-])
-
-const linkClasses = (isActive: boolean) => [
-  'w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 mb-1.5 text-[13px] group relative overflow-hidden',
-  isActive
-    ? 'bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 scale-[1.02]'
-    : 'text-sidebar-foreground hover:bg-secondary/80 hover:text-foreground'
-];
-</script>
-
-<template>
-  <aside :class="sidebarClasses">
-    <div class="p-6 pt-1 pb-1 flex items-center gap-3" :class="{ 'justify-center': props.isCollapsed }">
-      <div v-if="props.isCollapsed" class="relative group pt-4">
-        <div class="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-        <div class="relative w-10 h-10 bg-card rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm border border-border/50">
-          <span class="text-primary font-black text-xl tracking-tighter">{{ params?.entity_name.charAt(0).toUpperCase() }}</span>
-        </div>
-      </div>
-      <div v-else class="animate-in fade-in slide-in-from-left-4 duration-700 w-full">
-        <img :src="params?.logo" alt="logo" class="w-full  object-contain">
-      </div>
-    </div>
-
-    <nav class="flex-1 overflow-y-auto p-4 pt-1 custom-scrollbar">
-        <div v-for="item in navItems" :key="item.label" class="mb-1">
-          <DropdownMenu v-if="item.submenu && props.isCollapsed">
-            <DropdownMenuTrigger as-child>
-              <button :class="linkClasses(isChildActive(item.submenu))">
-                <component :is="item.icon" class="w-4 h-4" :stroke-width="3" />
-                <span class="sr-only">{{ item.label }}</span>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="right" align="start" class="w-52 ml-1">
-              <DropdownMenuLabel class="text-xs">{{ item.label }}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem v-for="subItem in item.submenu" :key="subItem.label" as-child>
-                <RouterLink :to="{ name: subItem.href }" class="cursor-pointer w-full flex text-[13px]">
-                  <component :is="subItem.icon" class="w-4 h-4 mr-2" :stroke-width="3" />
-                  {{ subItem.label }}
-                </RouterLink>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <template v-if="item.submenu">
-            <button
-              @click="toggleMenu(item.menuKey)"
-              :class="linkClasses(isChildActive(item.submenu) && !props.isCollapsed)"
-            >
-              <component :is="item.icon" class="w-4 h-4 flex-shrink-0" :stroke-width="3" />
-              <span v-if="!props.isCollapsed" class="font-medium flex-1 text-left">
-                {{ item.label }}
-              </span>
-              <div v-if="!props.isCollapsed">
-                <ChevronDown v-if="openMenus[item.menuKey]" class="w-3.5 h-3.5" />
-                <ChevronRight v-else class="w-3.5 h-3.5" />
-              </div>
-            </button>
-
-            <div v-if="openMenus[item.menuKey] && !props.isCollapsed" class="ml-7 mt-0.5 space-y-0.5">
-              <RouterLink
-                v-for="subItem in item.submenu"
-                :key="subItem.label"
-                :to="{ name: subItem.href }"
-                v-slot="{ isActive }"
-              >
-                <div :class="[
-                  'flex items-center gap-2 px-2.5 py-1.5 text-[13px] rounded-md transition-all duration-150 cursor-pointer',
-                  isActive ? 'text-primary font-medium bg-primary/10' : 'text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent'
-                ]">
-                  <component :is="subItem.icon" class="w-3.5 h-3.5" :stroke-width="3"/>
-                  {{ subItem.label }}
-                </div>
-              </RouterLink>
-            </div>
-          </template>
-
-          <template v-else>
-            <RouterLink
-              :to="{ name: item.href }"
-              custom
-              v-slot="{ navigate }"
-            >
-              <button
-                @click="navigate"
-                :class="linkClasses(route.name === item.href)"
-              >
-                <component :is="item.icon" class="w-4 h-4 flex-shrink-0" :stroke-width="3"/>
-                <span v-if="!props.isCollapsed" class="font-medium flex-1 text-left">
-                  {{ item.label }}
-                </span>
-                <span v-if="props.isCollapsed" class="sr-only">{{ item.label }}</span>
-
-                <div v-if="route.name === item.href && !props.isCollapsed"
-                    class="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-white rounded-l-full">
-                </div>
-              </button>
-            </RouterLink>
-          </template>
-        </div>
-    </nav>
-  </aside>
-</template> -->
-
-
 
 <script setup lang="ts">
-import { computed, type Component } from 'vue'
+import { computed, type Component, ref } from 'vue'
 import {
   LogOut,
   LayoutDashboard,
   FolderOpen,
   Database,
-  UserStar
+  UserStar,
+  ChevronDown,
+  ShieldUser
 } from 'lucide-vue-next'
 import { useRoute, RouterLink, useRouter } from 'vue-router'
 import { cn } from '../../lib/utils'
@@ -207,6 +16,14 @@ import { useGetParameters } from '../../hook/parameter'
 import { userStore } from '../../stores/user'
 import { useLogout } from '../../hook/user'
 import Button from '../ui/button/Button.vue'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator
+} from '../ui/dropdown-menu'
 
 
 const route = useRoute()
@@ -244,21 +61,58 @@ const isOpen = computed(() => !props.isCollapsed)
 
 interface NavItem {
   label: string
-  href: string
+  href?: string
   icon: Component
   badge?: string
+  children?: NavItem[]
+  id: string
+}
+
+const openMenus = ref<Record<string, boolean>>({})
+
+const toggleMenu = (id: string) => {
+  openMenus.value[id] = !openMenus.value[id]
+}
+
+const isParentActive = (item: NavItem) => {
+  if (item.href === route.name) return true
+  if (item.children) {
+    return item.children.some(child => child.href === route.name)
+  }
+  return false
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', icon: LayoutDashboard, href: 'admin.dashboard' },
-  { label: 'Media', icon: FolderOpen, href: 'admin.media'},
-  { label: 'Variable', icon: Database, href: 'admin.variable' },
-  { label: 'Admin', icon: UserStar, href: 'admin.users' }
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: 'admin.dashboard' },
+  { id: 'media', label: 'Media', icon: FolderOpen, href: 'admin.media'},
+  { id: 'variable', label: 'Variable', icon: Database, href: 'admin.variable' },
+  {
+    id: 'admin',
+    label: 'Admin',
+    icon: UserStar,
+    children: [
+      { id: 'users', label: 'Utilisateurs', icon: UserStar, href: 'admin.users' },
+      { id: 'roles', label: 'Roles', icon: ShieldUser, href: 'admin.roles-permissions' },
+    ]
+  }
 ]
 
+navItems.forEach(item => {
+  if (item.children && item.children.some(child => child.href === route.name)) {
+    openMenus.value[item.id] = true
+  }
+})
+
 const activeItem = computed(() => {
-  const currentItem = navItems.find(item => item.href === route.name)
-  return currentItem ? currentItem.label : ""
+  // Check children first
+  for (const item of navItems) {
+    if (item.href === route.name) return item.label
+    if (item.children) {
+      const activeChild = item.children.find(child => child.href === route.name)
+      if (activeChild) return activeChild.label
+    }
+  }
+  return ""
 })
 
 </script>
@@ -290,13 +144,14 @@ const activeItem = computed(() => {
     </div>
 
     <nav class="flex-1 overflow-y-auto px-3 py-6 space-y-1 scrollbar-hide">
-      <div v-for="item in navItems" :key="item.label" class="relative group">
+      <div v-for="item in navItems" :key="item.id" class="relative group">
         <RouterLink
+          v-if="!item.children"
           :to="{ name: item.href }"
           :class="cn(
             'flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-200',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary',
-            'relative group overflow-hidden',
+            'relative group overflow-hidden mb-1',
             activeItem === item.label
               ? 'bg-primary text-white shadow-xl shadow-sidebar-primary/30'
               : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary'
@@ -330,6 +185,98 @@ const activeItem = computed(() => {
 
           <div v-if="isCollapsed && activeItem !== item.label" class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-sidebar-primary rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity" />
         </RouterLink>
+
+        <div v-else class="space-y-1">
+          <!-- Dropdown en mode réduit -->
+          <DropdownMenu v-if="isCollapsed">
+            <DropdownMenuTrigger as-child>
+              <button
+                :class="cn(
+                  'w-full flex items-center justify-center h-10 rounded-xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary',
+                  isParentActive(item)
+                    ? 'bg-primary text-white shadow-lg shadow-sidebar-primary/30'
+                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary'
+                )"
+              >
+                <component :is="item.icon" class="w-5 h-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="right" :side-offset="10" class="w-48 bg-sidebar border-sidebar-border shadow-2xl">
+              <DropdownMenuLabel class="text-xs font-bold text-sidebar-foreground/50 px-2 pb-1">{{ item.label }}</DropdownMenuLabel>
+              <DropdownMenuSeparator class="bg-sidebar-border" />
+              <DropdownMenuItem
+                v-for="child in item.children"
+                :key="child.id"
+                as-child
+                class="hover:bg-sidebar-accent focus:bg-sidebar-accent rounded-lg hover:!text-primary"
+              >
+                <RouterLink
+                  :to="{ name: child.href }"
+                  :class="cn(
+                    'flex items-center gap-3 w-full px-2 py-1.5 text-sm transition-colors font-semibold ',
+                    activeItem === child.label ? 'text-sidebar-primary font-bold' : 'text-sidebar-foreground '
+                  )"
+                >
+                  <component :is="child.icon" class="w-4 h-4" />
+                  <span>{{ child.label }}</span>
+                </RouterLink>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          <template v-else>
+            <button
+              @click="toggleMenu(item.id)"
+              :class="cn(
+                'w-full flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-200',
+                'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary',
+                isParentActive(item) && !openMenus[item.id] ? 'bg-sidebar-accent/50' : ''
+              )"
+            >
+              <span class="text-sidebar-foreground/70 group-hover:text-sidebar-primary">
+                <component :is="item.icon" class="w-5 h-5" />
+              </span>
+
+              <template v-if="isOpen">
+                <span class="font-semibold text-sm flex-1 text-left truncate">
+                  {{ item.label }}
+                </span>
+                <ChevronDown
+                  :class="cn(
+                    'w-4 h-4 transition-transform duration-200',
+                    openMenus[item.id] ? 'rotate-0' : '-rotate-90'
+                  )"
+                />
+              </template>
+            </button>
+
+            <transition
+              enter-active-class="transition duration-200 ease-out"
+              enter-from-class="transform scale-95 opacity-0 -translate-y-2"
+              enter-to-class="transform scale-100 opacity-100 translate-y-0"
+              leave-active-class="transition duration-150 ease-in"
+              leave-from-class="transform scale-100 opacity-100 translate-y-0"
+              leave-to-class="transform scale-95 opacity-0 -translate-y-2"
+            >
+              <div v-if="openMenus[item.id] && isOpen" class="ml-9 space-y-1 border-l border-sidebar-border pl-2">
+                <RouterLink
+                  v-for="child in item.children"
+                  :key="child.id"
+                  :to="{ name: child.href }"
+                  :class="cn(
+                    'flex items-center gap-3 px-3 py-1.5 rounded-lg transition-all duration-200 text-sm',
+                    activeItem === child.label
+                      ? 'bg-primary/10 text-primary font-bold'
+                      : 'text-sidebar-foreground hover:text-sidebar-primary hover:bg-sidebar-accent'
+                  )"
+                >
+                  <component :is="child.icon" class="w-4 h-4" />
+                  <span>{{ child.label }}</span>
+                </RouterLink>
+              </div>
+            </transition>
+          </template>
+        </div>
       </div>
     </nav>
 
