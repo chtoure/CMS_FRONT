@@ -24,3 +24,8 @@ export interface AddRole{
   description? : string,
   permissionIds? : number[]
 }
+
+export interface roleFilter {
+  page?: number
+  limit?: number
+}

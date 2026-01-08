@@ -54,9 +54,9 @@
   import BasePasswordForceInput from '../../components/base/BasePasswordForceInput.vue';
   import { ref, watch } from 'vue';
   import CompositionLoading from "@/components/composition/CompositionLoading.vue";
-  import router from '../../router';
   import { useChangePassword } from '../../hook/user';
   import { userStore } from '../../stores/user';
+import { useRouter } from 'vue-router';
 
 
   // Initialisation
@@ -65,6 +65,8 @@
   const password_non_confirmed = ref(false);
   const messageError = ref('');
   const store = userStore();
+  const router = useRouter()
+
 
 
   // Utilisation du hook change password

@@ -20,7 +20,7 @@ import CommandList from '../../components/ui/command/CommandList.vue';
 import CommandGroup from '../../components/ui/command/CommandGroup.vue';
 import CommandItem from '../../components/ui/command/CommandItem.vue';
 import { useElementSize } from '@vueuse/core';
-import { useGetRoles } from '../../hook/role';
+import { useGetRolesNoPaginate } from '../../hook/role';
 
 
 interface Props {
@@ -60,12 +60,12 @@ const {
 } = useUpdateProfile();
 
 
-// Hook listes Roles
+// Hook listes Roles sans pagination
 const {
   data: dataRoles,
   isLoading: loadingRole,
   refetch: getAllRoles
-} = useGetRoles()
+} = useGetRolesNoPaginate()
 
 // --- Validation ---
 const validate = () => {
@@ -195,7 +195,7 @@ const handleCancel = () => {
               class="input-custom"
               :class="{ 'border border-destructive': errors.full_name }"
             />
-            <p v-if="errors.full_name" class="text-xs text-red-500 mt-1">{{ errors.full_name }}</p>
+            <p v-if="errors.full_name" class="text-xs text-destructive mt-1">{{ errors.full_name }}</p>
           </div>
 
           <div class="space-y-2">
@@ -227,11 +227,11 @@ const handleCancel = () => {
             <Popover v-model:open="open" class="w-full">
               <PopoverTrigger as-child>
                 <Button
-                ref="triggerRef"
+                  ref="triggerRef"
                   variant="outline"
                   role="combobox"
                   :aria-expanded="open"
-                  class="input-custom justify-between w-full font-normal"
+                  class="input-custom justify-between w-full font-normal h-8"
                 >
                   {{ role
                       ? dataRoles?.find((r) => r.name === role)?.name
@@ -309,14 +309,14 @@ const handleCancel = () => {
         <Button
           type="button"
           @click="handleCancel"
-          class="bg-destructive text-text h-10 "
+          class="bg-destructive text-white h-10 "
         >
           Annuler
         </Button>
 
         <Button
           type="submit"
-          class="text-text h-10"
+          class="text-white h-10"
         >
         <Save class="size-4" />
           Enregistrer

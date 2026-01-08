@@ -1,12 +1,12 @@
 
 <script setup lang="ts">
-import { Pencil, Plus, ShieldCheck, Check, X, Shield, Trash2, ChevronsUpDown } from 'lucide-vue-next';
+import { Pencil, Plus, ShieldCheck, Check, X, Trash2, ChevronsUpDown } from 'lucide-vue-next';
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue';
 import Tabs from '../../components/ui/tabs/Tabs.vue';
 import TabsList from '../../components/ui/tabs/TabsList.vue';
 import TabsTrigger from '../../components/ui/tabs/TabsTrigger.vue';
 import TabsContent from '../../components/ui/tabs/TabsContent.vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import Popover from '../../components/ui/popover/Popover.vue';
 import PopoverTrigger from '../../components/ui/popover/PopoverTrigger.vue';
 import PopoverContent from '../../components/ui/popover/PopoverContent.vue';
@@ -23,12 +23,15 @@ import CompositionLoading from '../../components/composition/CompositionLoading.
 import CompositionError from '../../components/composition/CompositionError.vue';
 import type { Role, RoleUpdate } from '../../type/role';
 import type { Permission } from '../../type/permission';
-import { useGetPermissions } from '../../hook/permission';
+import { useGetPermissions, useGetPermissionsNoPaginate } from '../../hook/permission';
 import Button from '../../components/ui/button/Button.vue';
 import { useUpdateRole } from '../../hook/role';
 import { showToast } from '../../lib/toast';
 import RoleFormView from './RoleFormView.vue';
 import CompositionModal from '../../components/composition/CompositionModal.vue';
+import CompositionListEmpty from '../../components/composition/CompositionListEmpty.vue';
+import CompositionTable from '../../components/composition/CompositionTable.vue';
+import CompositionPagination from '../../components/composition/CompositionPagination.vue';
 
 
 
@@ -39,10 +42,36 @@ const open = ref(false)
 const triggerRef = ref(null)
 const { width } = useElementSize(triggerRef)
 
+const currentPageRole = ref(1);
+const itemsPerPageRole = ref(10);
+
+const currentPagePerms = ref(1);
+const itemsPerPagePerms = ref(10);
+
+
+const filterParamsRole = computed(() => ({
+  page: currentPageRole.value,
+  limit: itemsPerPageRole.value
+}))
+
+
+const filterParamsPerms = computed(() => ({
+  page: currentPagePerms.value,
+  limit: itemsPerPagePerms.value
+}))
+
 const vFocus = {
   mounted: (el: HTMLElement) => el.focus()
 }
 
+// Colums Permissions
+const columns = [
+  { key: 'name', label: 'Nom technique'  },
+  { key: 'description', label: 'Description' },
+  { key: 'role', label: 'Rôles' },
+  { key: 'status', label: 'Status' },
+  { key: 'actions', label: 'Actions', class: 'w-10' },
+]
 
 
 // Hook listes Roles
@@ -52,17 +81,33 @@ const {
   isError: ErrorRole,
   error: errorRole,
   refetch: getAllRoles
-} = useGetRoles()
+} = useGetRoles(filterParamsRole)
 
 
-// Hook listes Permissions
+const roleResults = computed(() => dataRoles.value?.results || []);
+const totalItemsRole = computed(() => dataRoles.value?.count || 0);
+
+
+// Hook listes Permissions Avec pagination
 const {
   data:dataPermissions,
   isLoading: loadingPermission,
   isError: ErrorPermission,
   error: errorPermission,
   refetch: getAllPermissions
-} = useGetPermissions()
+} = useGetPermissions(filterParamsPerms)
+
+
+const permissionResults = computed(() => dataPermissions.value?.results || []);
+const totalItemsPermission = computed(() => dataPermissions.value?.count || 0);
+
+
+
+// Hook listes Permissions sans pagination
+const {
+  data:dataPermissionsNoPaginate,
+  isLoading: loadingPermissionNoPaginate,
+} = useGetPermissionsNoPaginate()
 
 
 // Hook update Role
@@ -122,13 +167,12 @@ const togglePermission = (permission: Permission) => {
   }
 };
 
-
 </script>
 
 
 <template>
 
-  <CompositionLoading v-if="loadingRole || loadingPermission || updateLoading" />
+  <CompositionLoading v-if="loadingRole || loadingPermission || updateLoading || loadingPermissionNoPaginate" />
 
   <CompositionError
     v-else-if="ErrorRole || ErrorPermission || isErrorRole"
@@ -178,213 +222,199 @@ const togglePermission = (permission: Permission) => {
 
         <!-- Partie Role -->
         <TabsContent value="role">
-          <p class="mt-1 mb-4 text-center text-text font-medium ">Double-cliquez sur une carte pour modifier</p>
+          <CompositionListEmpty v-if="roleResults.length === 0" title="Aucun role" description="Aucune donnée trouvée dans la base de données." :icon="ShieldCheck" />
+          <div v-els*>
+            <p class="mt-1 mb-4 text-center text-text font-medium ">Double-cliquez sur une carte pour modifier</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div
+                v-for="role in roleResults"
+                :key="role.id"
+                class="group cursor-pointer"
+                @dblclick="startEdit(role)"
+              >
+                <div class="card p-5 h-auto transition-all hover:-translate-y-1 flex flex-col">
 
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div
-              v-for="role in dataRoles"
-              :key="role.id"
-              class="group cursor-pointer"
-              @dblclick="startEdit(role)"
-            >
-              <div class="card p-5 h-auto transition-all hover:-translate-y-1 flex flex-col">
+                  <div class="flex items-start justify-between gap-4">
 
-                <div class="flex items-start justify-between gap-4">
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 mb-2">
+                        <input
+                          v-if="editingId === role.id"
+                          v-model="editForm.name"
+                          v-focus
+                          class="bg-background border border-border rounded px-2 py-1 text-sm w-full outline-none focus:ring-1 ring-primary"
+                          @keydown.enter="saveEdit(role.id)"
+                          @keydown.esc="cancelEdit"
+                        />
+                        <div v-else class="flex text-primary items-center gap-2">
+                          <ShieldCheck :size="16" />
+                          <h3 class="text-lg font-medium leading-none tracking-tight text-text ">
+                            {{ role.name }}
+                          </h3>
+                        </div>
+                      </div>
 
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2 mb-2">
-                      <input
-                        v-if="editingId === role.id"
-                        v-model="editForm.name"
-                        v-focus
-                        class="bg-background border border-border rounded px-2 py-1 text-sm w-full outline-none focus:ring-1 ring-primary"
-                        @keydown.enter="saveEdit(role.id)"
-                        @keydown.esc="cancelEdit"
-                      />
-                      <div v-else class="flex text-primary items-center gap-2">
-                        <ShieldCheck :size="16" />
-                        <h3 class="text-lg font-medium leading-none tracking-tight text-text ">
-                          {{ role.name }}
-                        </h3>
+                      <div>
+                        <textarea
+                          v-if="editingId === role.id"
+                          v-model="editForm.description"
+                          rows="2"
+                          class="bg-background border border-border rounded px-2 py-1 text-sm w-full outline-none focus:ring-1 ring-primary resize-none"
+                        />
+                        <p v-else class="text-sm leading-relaxed text-text opacity-80 ">
+                          {{ role.description || 'Aucune description disponible.' }}
+                        </p>
+                      </div>
+                      <b></b>
+                      <div v-if="editingId === role.id" class="mt-4 space-y-2">
+                        <label class=" font-medium text-text tracking-tight">
+                          Permissions associées
+                        </label>
+
+                        <Popover v-model:open="open">
+                          <PopoverTrigger as-child>
+                            <Button
+                              ref="triggerRef"
+                              variant="outline"
+                              role="combobox"
+                              class="w-full relative flex items-center justify-center bg-background border-border font-normal h-7"
+                            >
+                              <span class="truncate text-center mx-8">
+                                {{ editForm.permissions.length > 0
+                                    ? `${editForm.permissions.length} permission(s) selectionée(s)`
+                                    : "Choisir les permissions..."
+                                }}
+                              </span>
+
+                              <ChevronsUpDown class="absolute right-3 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+
+                          <PopoverContent :style="{ width: `${width}px` }" class="p-0">
+                            <Command>
+                              <CommandInput placeholder="Rechercher une permission..." />
+                              <CommandEmpty>Aucune permission trouvée.</CommandEmpty>
+                              <CommandList>
+                                <CommandGroup>
+                                  <CommandItem
+                                    v-for="p in dataPermissionsNoPaginate"
+                                    :key="p.id"
+                                    :value="p.name"
+                                    class="cursor-pointer data-[highlighted]:bg-primary data-[highlighted]:text-white"
+                                    @select="togglePermission(p)"
+                                  >
+                                    <Check
+                                      :class="cn(
+                                        'mr-2 h-4 w-4 text-text',
+                                        editForm.permissions.some(item => item.id === p.id) ? 'opacity-100' : 'opacity-0'
+                                      )"
+                                    />
+                                    <div class="flex flex-col">
+                                      <span>{{ p.name }}</span>
+                                      <span class="text-[10px] opacity-50">{{ p.description }}</span>
+                                    </div>
+                                  </CommandItem>
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+
+                        <div class="flex flex-wrap gap-1 mt-2">
+                          <span v-for="p in editForm.permissions" :key="p.id" class="px-2 py-0.5 bg-primary/10 text-primary text-[10px] rounded border border-primary/20">
+                            {{ p.name }}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
-                    <div>
-                      <textarea
-                        v-if="editingId === role.id"
-                        v-model="editForm.description"
-                        rows="2"
-                        class="bg-background border border-border rounded px-2 py-1 text-sm w-full outline-none focus:ring-1 ring-primary resize-none"
-                      />
-                      <p v-else class="text-sm leading-relaxed text-text opacity-80 ">
-                        {{ role.description || 'Aucune description disponible.' }}
-                      </p>
-                    </div>
-                    <b></b>
-                    <div v-if="editingId === role.id" class="mt-4 space-y-2">
-                      <label class=" font-medium text-text tracking-tight">
-                        Permissions associées
-                      </label>
-
-                      <Popover v-model:open="open">
-                        <PopoverTrigger as-child>
-                          <Button
-                            ref="triggerRef"
-                            variant="outline"
-                            role="combobox"
-                            class="w-full relative flex items-center justify-center bg-background border-border font-normal h-7"
-                          >
-                            <span class="truncate text-center mx-8">
-                              {{ editForm.permissions.length > 0
-                                  ? `${editForm.permissions.length} permission(s) selectionée(s)`
-                                  : "Choisir les permissions..."
-                              }}
-                            </span>
-
-                            <ChevronsUpDown class="absolute right-3 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-
-                        <PopoverContent :style="{ width: `${width}px` }" class="p-0">
-                          <Command>
-                            <CommandInput placeholder="Rechercher une permission..." />
-                            <CommandEmpty>Aucune permission trouvée.</CommandEmpty>
-                            <CommandList>
-                              <CommandGroup>
-                                <CommandItem
-                                  v-for="p in dataPermissions"
-                                  :key="p.id"
-                                  :value="p.name"
-                                  class="cursor-pointer data-[highlighted]:bg-primary data-[highlighted]:text-white"
-                                  @select="togglePermission(p)"
-                                >
-                                  <Check
-                                    :class="cn(
-                                      'mr-2 h-4 w-4 text-text',
-                                      editForm.permissions.some(item => item.id === p.id) ? 'opacity-100' : 'opacity-0'
-                                    )"
-                                  />
-                                  <div class="flex flex-col">
-                                    <span>{{ p.name }}</span>
-                                    <span class="text-[10px] opacity-50">{{ p.description }}</span>
-                                  </div>
-                                </CommandItem>
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-
-                      <div class="flex flex-wrap gap-1 mt-2">
-                        <span v-for="p in editForm.permissions" :key="p.id" class="px-2 py-0.5 bg-primary/10 text-primary text-[10px] rounded border border-primary/20">
-                          {{ p.name }}
-                        </span>
-                      </div>
+                    <div v-if="editingId !== role.id" class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button @click.stop="startEdit(role)" class="p-2 hover:bg-muted rounded-full text-text hover:text-primary">
+                        <Pencil class="h-4 w-4" />
+                      </button>
+                      <button class="p-2 hover:bg-muted rounded-full text-text hover:text-destructive transition-colors">
+                        <Trash2 class="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
 
-                  <div v-if="editingId !== role.id" class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button @click.stop="startEdit(role)" class="p-2 hover:bg-muted rounded-full text-text hover:text-primary">
-                      <Pencil class="h-4 w-4" />
+                  <div v-if="editingId === role.id" class="mt-4 pt-4 border-t border-border/10 flex justify-center gap-6">
+                    <button
+                      @click="saveEdit(role.id)"
+                      class="flex items-center gap-1 px-4 py-1 text-success hover:bg-muted rounded-md transition-all text-xs font-bold tracking-widest"
+                    >
+                      <Check :size="16" stroke-width="3" /> Valider
                     </button>
-                    <button class="p-2 hover:bg-muted rounded-full text-text hover:text-destructive transition-colors">
-                      <Trash2 class="h-4 w-4" />
+                    <button
+                      @click="cancelEdit"
+                      class="flex items-center gap-1 px-4 py-1 text-destructive hover:bg-muted rounded-md transition-all text-xs font-bold  tracking-widest"
+                    >
+                      <X :size="16" stroke-width="3" /> Annuler
                     </button>
                   </div>
-                </div>
 
-                <div v-if="editingId === role.id" class="mt-4 pt-4 border-t border-border/10 flex justify-center gap-6">
-                  <button
-                    @click="saveEdit(role.id)"
-                    class="flex items-center gap-1 px-4 py-1 text-success hover:bg-muted rounded-md transition-all text-xs font-bold tracking-widest"
-                  >
-                    <Check :size="16" stroke-width="3" /> Valider
-                  </button>
-                  <button
-                    @click="cancelEdit"
-                    class="flex items-center gap-1 px-4 py-1 text-destructive hover:bg-muted rounded-md transition-all text-xs font-bold  tracking-widest"
-                  >
-                    <X :size="16" stroke-width="3" /> Annuler
-                  </button>
                 </div>
-
               </div>
             </div>
-          </div>
+            <div class="flex items-center justify-end px-2 py-8">
+              <CompositionPagination
+                :total="totalItemsRole"
+                :limit="itemsPerPageRole"
+                v-model:perPage="itemsPerPageRole"
+                v-model:model-value="currentPageRole"
+
+              />
+            </div>
+            </div>
         </TabsContent>
 
 
         <!-- Partie Permission -->
         <TabsContent value="permission" class="mt-4">
-          <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-            <div class="flex items-center justify-between p-4 border-b border-border bg-muted/20">
-              <div>
-                <h3 class="font-medium text-text">Permissions</h3>
+          <CompositionListEmpty v-if="permissionResults.length === 0" title="Aucune permission" description="Aucune donnée trouvée dans la base de données." :icon="ShieldCheck" />
+          <div v-else>
+            <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+              <div class="flex items-center justify-between p-4 border-b border-border bg-muted/20">
+                <div>
+                  <h3 class="font-medium text-text">Permissions</h3>
+                </div>
               </div>
             </div>
+            <CompositionTable
+                :columns="columns"
+                :data="permissionResults"
+                :total="totalItemsPermission"
+                v-model:current-page="currentPagePerms"
+                v-model:limit="itemsPerPagePerms"
+              >
 
-            <div class="overflow-x-auto">
-              <table class="w-full border-collapse text-left font-medium">
-                <thead class="bg-muted/30 border-b border-border">
-                  <tr>
-                    <th class="p-4 text-xs font-medium text-text uppercase">Nom technique</th>
-                    <th class="p-4 text-xs font-medium text-text uppercase">Description</th>
-                    <th class="p-4 text-xs font-medium text-text uppercase">Rôles</th>
-                    <th class="p-4 text-xs font-medium text-text uppercase">Status</th>
-                    <th class="p-4 text-xs font-medium text-text uppercase text-right w-20"></th>
-                  </tr>
-                </thead>
-
-                <tbody class="divide-y divide-border">
-                  <tr
-                    v-for="permission in dataPermissions"
-                    :key="permission.id"
-                    class="group hover:bg-muted/40"
-                  >
-                    <td class="p-4">
-
-                      <div  class="flex items-center gap-2">
-                        <Shield :size="14" class="text-text" />
-                        <span class="text-sm font-medium tracking-tight">{{ permission.name }}</span>
-                      </div>
-                    </td>
-
-                    <td class="p-4">
-
-                      <span  class="text-xs text-text line-clamp-1">
-                        {{ permission.description }}
-                      </span>
-                    </td>
-
-                    <td class="p-4">
-                      <div class="flex flex-wrap gap-1">
-                        <span
-                          v-for="role in permission.roles"
-                          :key="role.id"
-                          class="text-[9px] px-2 py-0.5 rounded-full border border-border bg-muted font-bold"
-                        >
-                          {{ role.name }}
-                        </span>
-                      </div>
-                    </td>
-
-                    <td class="p-4">
-                      <span class="text-[9px] px-2 py-0.5 rounded-full border border-border bg-muted font-bold"> Active </span>
-                    </td>
-
-                    <td class="p-4 text-right">
-
-                      <div class="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                         <button class="p-2 hover:bg-muted rounded text-text hover:text-destructive">
-                            <Trash2 :size="16"/>
-                          </button>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+                <template #cell-role="{ row }">
+                  <div class="flex flex-wrap gap-1">
+                    <span
+                      v-for="role in row.roles"
+                      :key="role.id"
+                      class="px-2 py-0.5 rounded-full border border-border bg-muted"
+                    >
+                      {{ role.name }}
+                    </span>
+                  </div>
+                </template>
+                <template #cell-status="{ row }">
+                  <td class="p-4">
+                    <span v-if="row.roles.length!=0" class="px-2 py-0.5 rounded-full border border-border bg-muted"> Active </span>
+                    <span v-else class="px-2 py-0.5 rounded-full border border-border bg-muted"> Non Active </span>
+                  </td>
+                </template>
+                <template #cell-actions="{  }">
+                  <div class="flex justify-end ">
+                      <button class="p-2 rounded text-text hover:text-destructive">
+                        <Trash2 :size="16"/>
+                      </button>
+                  </div>
+                </template>
+              </CompositionTable>
           </div>
+
         </TabsContent>
       </Tabs>
 
