@@ -19,29 +19,45 @@ import SelectTrigger from '../../components/ui/select/SelectTrigger.vue';
 import SelectValue from '../../components/ui/select/SelectValue.vue';
 import SelectContent from '../../components/ui/select/SelectContent.vue';
 import SelectItem from '../../components/ui/select/SelectItem.vue';
+import CompositionPagination from '../../components/composition/CompositionPagination.vue';
 
 
 
-// 1. Données & États
+
+
+const search = ref('');
+const isEditing = ref(false);
+const selectedUser = ref<UserProfile | undefined>(undefined);
+const currentPage = ref(1);
+const itemsPerPage = ref(10);
+
+
+  const filterParams = computed(() => ({
+    page: currentPage.value,
+    limit: itemsPerPage.value
+  }));
+
+
+  // 1. Données & États
 const {
   data: users,
   isLoading,
   isError: isgetError,
   error: getError,
   refetch: refetchUsers
-} = useGetUsers();
+} = useGetUsers(filterParams);
 
 
-const search = ref('');
-const isEditing = ref(false);
-const selectedUser = ref<UserProfile | undefined>(undefined);
+const userResults = computed(() => users.value?.results || []);
+const totalItems = computed(() => users.value?.count || 0);
+
 
 // 2. Recherche filtrée (équivalent de useMemo)
 const filteredUsers = computed(() => {
-  if (!users.value) return [];
-  if (!search.value.trim()) return users.value;
+  if (!userResults.value) return [];
+  if (!search.value.trim()) return userResults.value;
   const query = search.value.toLowerCase();
-  return users.value.filter((u:UserProfile) =>
+  return userResults.value.filter((u:UserProfile) =>
     u.full_name.toLowerCase().includes(query) ||
     u.email.toLowerCase().includes(query)
   );
@@ -135,6 +151,13 @@ const closeForm = () => {
                @edit="openEditPage"
              />
           </div>
+        </div>
+        <div class="flex justify-center pt-8">
+          <CompositionPagination
+            v-model="currentPage"
+            :total="totalItems"
+            :limit="itemsPerPage"
+          />
         </div>
       </template>
     </main>

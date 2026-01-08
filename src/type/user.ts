@@ -18,6 +18,11 @@ export interface UserProfile {
   initials?: string;
 }
 
+export interface userFilter {
+  page?: number
+  limit?: number
+}
+
 export interface AuthResponse {
   message: string;
   user: UserProfile;
