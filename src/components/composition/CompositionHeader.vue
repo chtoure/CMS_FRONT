@@ -3,9 +3,9 @@
     import {
         Maximize,
         Settings,
-        PanelLeftClose,
-        PanelLeftOpen,
-        Search
+        Search,
+        X,
+        Menu
     } from 'lucide-vue-next'
     import CompositionUserDropDown from '@/components/composition/CompositionUserDropDown.vue'
     import CompositionDarkMode from '@/components/composition/CompositionDarkMode.vue';
@@ -93,8 +93,8 @@
                 @click="props.onToggleSidebar"
                 class="flex items-center justify-center p-2 rounded-xl transition-all duration-200 text-muted-foreground hover:bg-secondary hover:text-foreground hover:scale-110 active:scale-95"
             >
-                <PanelLeftOpen v-if="props.isSidebarCollapsed" class="w-5 h-5" />
-                <PanelLeftClose v-else class="w-5 h-5" />
+                <Menu v-if="props.isSidebarCollapsed" class="w-5 h-5" />
+                <X v-else class="w-5 h-5" />
             </button>
 
             <BaseSearchInput

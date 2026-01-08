@@ -51,7 +51,7 @@ const handlePerPageChange = (val: string | number) => {
         />
 
         <template v-for="(item, index) in items">
-          <PaginationItem v-if="item.type === 'page'" :key="index" :value="item.value" as-child>
+          <PaginationItem v-if="item.type === 'page'" :key="index" :value="item.value" as-child class="!border-border">
             <Button
               class="w-9 h-9 p-0 rounded-xl transition-all duration-200"
               :variant="item.value === modelValue ? 'default' : 'outline'"

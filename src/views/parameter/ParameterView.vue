@@ -126,7 +126,7 @@ const onSave = handleSubmit(async (values) => {
                 </div>
               </Field>
 
-              <Button @click="onSave" class="h-11 w-full sm:w-auto" :disabled="isSaving">
+              <Button @click="onSave" class="h-11 w-full sm:w-auto text-white" :disabled="isSaving">
                 <Loader2 v-if="isSaving" class="w-4 h-4 mr-2 animate-spin" />
                 <Save v-else class="w-4 h-4 mr-2" />
                 Sauvegarder
