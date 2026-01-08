@@ -23,6 +23,15 @@
   import SelectValue from '../../components/ui/select/SelectValue.vue'
   import SelectContent from '../../components/ui/select/SelectContent.vue'
   import SelectItem from '../../components/ui/select/SelectItem.vue'
+  import { useHead } from '@vueuse/head'
+
+  useHead({
+    meta: [
+      { name: 'description', content: 'Gérez vos actifs visuels avec précision sur la plateforme Compositor.' },
+      { property: 'og:title', content:'Médiathèque' },
+      { property: 'og:description', content: 'Gérez vos actifs visuels avec précision sur la plateforme Compositor.' },
+    ],
+  })
 
   const selectedItems = ref<Set<number>>(new Set());
   const showRemoveButton = ref(false);

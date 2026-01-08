@@ -53,6 +53,8 @@
   --sidebar-border: #dfdfdf;
   --sidebar-ring: #0c8ce9;
 
+  --pagination-item-text: #000000;
+
   --border-width: 1px;
   --scrollbar-color: #e2e8f0;
 }
@@ -102,6 +104,8 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #373737;
   --sidebar-ring: #0c8ce9;
+
+  --pagination-item-text: #ffffff;
 
   --border-width: 1px;
   --scrollbar-color: #FFFFFF33;

@@ -17,7 +17,6 @@ defineProps<Props>()
 const emit = defineEmits(['update:modelValue', 'update:perPage'])
 
 const handlePerPageChange = (val: string | number) => {
-
   const numValue = typeof val === 'string' ? parseInt(val, 10) : val
   if (!isNaN(numValue) && numValue > 0) {
     emit('update:perPage', numValue)
@@ -27,46 +26,57 @@ const handlePerPageChange = (val: string | number) => {
 </script>
 
 <template>
-  <div class="flex items-center justify-between w-full gap-4">
-    <div class="flex items-center gap-2">
+  <div class="flex flex-col md:flex-row items-center justify-between w-full gap-6 md:gap-4">
+
+    <div class="flex items-center gap-2 order-2 md:order-1">
       <span class="text-xs text-sidebar-foreground/60 font-medium tracking-wider">Afficher</span>
       <Input
         type="number"
         :model-value="perPage"
         @update:model-value="handlePerPageChange"
-        class="h-9 w-16 input-custom"
+        class="h-9 w-16 input-custom bg-background"
       />
     </div>
 
     <Pagination
       :total="total"
       :items-per-page="perPage"
-      :model-value="modelValue"
-      @update:model-value="(val: number) => emit('update:modelValue', val)"
+      :page="modelValue"
+      @update:page="(val) => emit('update:modelValue', val)"
+      :sibling-count="0"
+      class="order-1 md:order-2 w-full md:w-auto"
+      show-edges
     >
-      <PaginationContent v-slot="{ items }">
+      <PaginationContent v-slot="{ items }" class="justify-center md:justify-end gap-1 md:gap-2">
+
         <PaginationPrevious
-          @click="modelValue > 1 && emit('update:modelValue', modelValue - 1)"
-          class="hover:bg-sidebar-accent/50 border-sidebar-border/50 transition-colors"
+           @click="emit('update:modelValue', modelValue - 1)"
+           :disabled="modelValue === 1"
+           class="hover:bg-sidebar-accent border-sidebar-border transition-none h-9 px-3"
         />
 
         <template v-for="(item, index) in items">
-          <PaginationItem v-if="item.type === 'page'" :key="index" :value="item.value" as-child class="!border-border">
+          <PaginationItem v-if="item.type === 'page'" :key="index" :value="item.value" as-child>
             <Button
-              class="w-9 h-9 p-0 rounded-xl transition-all duration-200"
-              :variant="item.value === modelValue ? 'default' : 'outline'"
-              :class="item.value === modelValue ? 'bg-sidebar-primary shadow-lg shadow-sidebar-primary/30' : 'border-sidebar-border/50 hover:bg-sidebar-accent/50'"
+              class="w-9 h-9 p-0 rounded-xl transition-none text-pagination-item-text border border-border"
+              :class="[
+                item.value === modelValue
+                  ? 'bg-primary text-white pointer-events-none border-none'
+                  : 'border-sidebar-border bg-background hover:bg-sidebar-accent hidden sm:flex', // 'hidden sm:flex' cache les non-actifs sur mobile
+                item.value === modelValue ? 'flex' : '' // On s'assure que l'actif est toujours visible
+              ]"
               @click="emit('update:modelValue', item.value)"
             >
               {{ item.value }}
             </Button>
           </PaginationItem>
-          <PaginationEllipsis v-else :key="item.type" :index="index" />
+          <PaginationEllipsis v-else :key="`ellipsis-${index}`" :index="index" class="hidden sm:flex" />
         </template>
 
         <PaginationNext
-          @click="modelValue < Math.ceil(total/perPage) && emit('update:modelValue', modelValue + 1)"
-          class="hover:bg-sidebar-accent/50 border-sidebar-border/50 transition-colors"
+          @click="emit('update:modelValue', modelValue + 1)"
+          :disabled="modelValue >= Math.ceil(total / perPage)"
+          class="hover:bg-sidebar-accent border-sidebar-border transition-none h-9 px-3"
         />
       </PaginationContent>
     </Pagination>

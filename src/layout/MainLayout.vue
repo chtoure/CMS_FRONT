@@ -1,9 +1,30 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import CompositionHeader from '@/components/composition/CompositionHeader.vue'
 import CompositionSidebar from '../components/composition/CompositionSidebar.vue'
 import { cn } from '../lib/utils'
+import { useGetParameters } from '../hook/parameter'
+import { useHead } from '@vueuse/head'
+
+const { data: params} = useGetParameters()
+
+const seoData = computed(() => ({
+  title: params.value?.title || "Compositor",
+  description: params.value?.description || "Gérez vos actifs visuels avec précision sur la plateforme Compositor.",
+  image: params.value?.logo || ""
+}))
+
+useHead({
+  title: () => seoData.value.title,
+  meta: [
+    { name: 'description', content: () => seoData.value.description },
+    { property: 'og:title', content: () => seoData.value.title },
+    { property: 'og:description', content: () => seoData.value.description },
+    { property: 'og:image', content: () => seoData.value.image },
+    { name: 'twitter:card', content: 'summary_large_image' },
+  ],
+})
 
 const isSidebarCollapsed = ref(false)
 const isMobile = ref(false)

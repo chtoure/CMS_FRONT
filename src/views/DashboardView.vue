@@ -18,7 +18,15 @@ import { useGetMediaList } from '../hook/media'
 import { userStore } from '../stores/user'
 import { useGetVariables } from '../hook/variable'
 import { useGetUsers } from '../hook/user'
+import { useHead } from '@vueuse/head'
 
+useHead({
+  meta: [
+    { name: 'description', content: 'Voici votre tableau de bord' },
+    { property: 'og:title', content:'Dashboard' },
+    { property: 'og:description', content: 'Voici votre tableau de bord' },
+  ],
+})
 const mediaQuery = useGetMediaList({ limit: 5, page: 1 })
 const userQuery = useGetUsers();
 const variableQuery = useGetVariables()

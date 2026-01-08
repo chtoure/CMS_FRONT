@@ -6,11 +6,11 @@
 
   <div v-else class="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
     <div class="sm:mx-auto sm:w-full sm:max-w-sm">
-      <img class="mx-auto h-10 w-auto" src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=600" alt="Your Company" />
-      <h2 class="mt-10 text-center text-huge font-bold tracking-tight text-text">Connexion</h2>
+      <img class="mx-auto h-20 w-auto" :src="params?.logo" alt="Your Company" />
+      <h2 class="mt-6 text-center text-huge font-bold tracking-tight text-text">Connexion</h2>
     </div>
 
-    <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
+    <div class="mt-6 sm:mx-auto sm:w-full sm:max-w-sm">
       <!-- <form @submit.prevent="onSubmit" class="space-y-4"> -->
       <Field name="email" v-slot="{ field, errorMessage }">
         <div>
@@ -79,12 +79,14 @@
   import Button from '../../components/ui/button/Button.vue';
   import { useForm,Field } from 'vee-validate';
   import { validationSchemaLogin } from '../../validation/loginValidate';
+  import { useGetParameters } from '../../hook/parameter';
 
 
 
 
 
   // Initialisation
+  const { data: params} = useGetParameters()
   const storeUser = userStore();
   const { handleSubmit } = useForm({
     validationSchema: validationSchemaLogin,
