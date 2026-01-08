@@ -171,9 +171,9 @@ const handleCancel = () => {
         >
           <ArrowLeft class="size-4" :font-weight="1" />
         </button>
-        <h1 class="text-huge font-bold text-text">
+        <p class="huge font-bold text-text huge">
           {{ isEditing ? 'Modifier le profil' : 'Créer un nouvel utilisateur' }}
-        </h1>
+        </p>
       </div>
     </div>
 
@@ -182,7 +182,7 @@ const handleCancel = () => {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 
         <div class="space-y-6">
-          <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">Informations personnelles</h2>
+          <p class="huge font-semibold text-primary uppercase tracking-wider">Informations personnelles</p>
 
           <div class="space-y-2">
             <label class="flex items-center gap-2 text-sm font-medium text-text">
@@ -274,38 +274,13 @@ const handleCancel = () => {
 
             <p v-if="errors.role" class="text-xs text-destructive mt-1">{{ errors.role }}</p>
 
-
-            <!-- <Select v-model="role">
-              <SelectTrigger class="input-custom">
-                <SelectValue placeholder="Rôle" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="user" class="select-item-custom">Utilisateur (Lecture seule)</SelectItem>
-                <SelectItem value="manager" class="select-item-custom">Manager (Gestion limitée)</SelectItem>
-                <SelectItem value="admin" class="select-item-custom">Administrateur (Accès total)</SelectItem>
-              </SelectContent>
-            </Select> -->
-
-            <!-- <label class="flex items-center gap-2 text-sm font-medium text-text">
-              <ShieldCheck class="size-4 text-text" /> Rôle utilisateur
-            </label>
-            <select
-              v-model="role"
-              class="input-custom"
-              :class="{ 'border-destructive bg-destructive': errors.role }"
-            >
-              <option value="user">Utilisateur (Lecture seule)</option>
-              <option value="manager">Manager (Gestion limitée)</option>
-              <option value="admin">Administrateur (Accès total)</option>
-            </select>
-            <p v-if="errors.role" class="text-xs text-destructive mt-1">{{ errors.role }}</p> -->
           </div>
         </div>
 
 
       </div>
 
-      <div class="pt-8 border-t border-border flex flex-col-reverse sm:flex-row justify-end gap-4">
+      <div class="flex flex-col-reverse sm:flex-row justify-end gap-4">
         <Button
           type="button"
           @click="handleCancel"
