@@ -193,7 +193,7 @@ const linkClasses = (isActive: boolean) => [
 
 
 <script setup lang="ts">
-import { computed, ref, type Component } from 'vue'
+import { computed, type Component } from 'vue'
 import {
   LogOut,
   LayoutDashboard,
@@ -201,13 +201,14 @@ import {
   Database,
   UserStar
 } from 'lucide-vue-next'
-import { RouterLink } from 'vue-router'
+import { useRoute, RouterLink } from 'vue-router'
 import { cn } from '../../lib/utils'
 import { useGetParameters } from '../../hook/parameter'
 import { userStore } from '../../stores/user'
 import { useLogout } from '../../hook/user'
 import Button from '../ui/button/Button.vue'
 
+const route = useRoute()
 const { data: params} = useGetParameters()
 const storeUser = userStore();
 
@@ -240,11 +241,10 @@ const navItems: NavItem[] = [
   { label: 'Admin', icon: UserStar, href: 'admin.users' }
 ]
 
-const activeItem = ref("Dashboard")
-
-const setActive = (label: string) => {
-  activeItem.value = label
-}
+const activeItem = computed(() => {
+  const currentItem = navItems.find(item => item.href === route.name)
+  return currentItem ? currentItem.label : ""
+})
 
 </script>
 
@@ -274,13 +274,12 @@ const setActive = (label: string) => {
       </div>
     </div>
 
-    <nav class="flex-1 overflow-y-auto px-3 py-6 space-y-2 scrollbar-hide">
+    <nav class="flex-1 overflow-y-auto px-3 py-6 space-y-1 scrollbar-hide">
       <div v-for="item in navItems" :key="item.label" class="relative group">
         <RouterLink
           :to="{ name: item.href }"
-          @click="setActive(item.label)"
           :class="cn(
-            'flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200',
+            'flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-200',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary',
             'relative group overflow-hidden',
             activeItem === item.label

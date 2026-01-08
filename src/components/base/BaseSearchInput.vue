@@ -17,7 +17,7 @@
     const inputBaseClasses = cn(
         'w-full',
         'px-2.5 py-1.5',
-        'input-custom transition-all duration-300 focus:ring-2 focus:ring-primary/20',
+        'input-custom transition-all duration-300 focus:ring-1 focus:ring-primary/20',
     );
 
     const iconLeftClasses = cn(
@@ -122,7 +122,7 @@
 
         </div>
 
-        <div v-if="showDropdown && (results.length > 0 || !modelValue)" :class="dropdownClasses">
+        <div v-if="showDropdown && (results.length > 0 || !modelValue)" :class="dropdownClasses" class="border border-border">
             <div v-if="results.length > 0" class="p-2 space-y-1">
                 <div v-for="(item, index) in results"
                     :key="item.id"
