@@ -57,9 +57,11 @@ watch(mediaData, (newData) => {
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const containerRef = ref<HTMLDivElement | null>(null);
 const cropOverlayRef = ref<HTMLDivElement | null>(null);
+const maskCanvas = document.createElement('canvas'); // Hors écran
+const maskCtx = maskCanvas.getContext('2d');
 
 
-const activeTool = ref<Tool>('crop');
+const activeTool = ref<Tool>('remove-bg');
 const imageState = reactive<ImageState>({
   url: null,
   loaded: false,
@@ -207,15 +209,20 @@ function initializeImage(img: HTMLImageElement, url: string) {
   imageState.originalWidth = img.naturalWidth;
   imageState.originalHeight = img.naturalHeight;
 
-  const maxWidth = 800;
-  const maxHeight = 600;
-  const ratio = Math.min(maxWidth / img.naturalWidth, maxHeight / img.naturalHeight);
+  // Le canvas support est fixe (ex: 800x600) pour servir de conteneur
+  canvasWidth.value = 800;
+  canvasHeight.value = 600;
 
-  canvasWidth.value = img.naturalWidth * ratio;
-  canvasHeight.value = img.naturalHeight * ratio;
+  // Initialiser le canvas de masque à la taille de l'image originale
+  maskCanvas.width = img.naturalWidth;
+  maskCanvas.height = img.naturalHeight;
+  if (maskCtx) {
+    maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+  }
 
-  cropState.width = canvasWidth.value * 0.6;
-  cropState.height = canvasHeight.value * 0.6;
+  // Centrer le crop box par défaut
+  cropState.width = 300;
+  cropState.height = 300;
   cropState.x = (canvasWidth.value - cropState.width) / 2;
   cropState.y = (canvasHeight.value - cropState.height) / 2;
 
@@ -234,22 +241,37 @@ function renderCanvas() {
   canvas.width = canvasWidth.value;
   canvas.height = canvasHeight.value;
 
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save();
 
+  // 1. Centrer le canvas
   ctx.translate(canvas.width / 2, canvas.height / 2);
 
-  const totalRotation = appliedModifications.transform.rotate + transform.rotate;
-  const rotation = (totalRotation * Math.PI) / 180;
-  ctx.rotate(rotation);
+  // 2. Appliquer les transformations
+  const totalRotation = (appliedModifications.transform.rotate + transform.rotate) % 360;
+  ctx.rotate((totalRotation * Math.PI) / 180);
 
   const totalFlipH = appliedModifications.transform.flipH !== transform.flipH;
   const totalFlipV = appliedModifications.transform.flipV !== transform.flipV;
+  ctx.scale(totalFlipH ? -1 : 1, totalFlipV ? -1 : 1);
+
   const totalZoom = appliedModifications.transform.zoom * transform.zoom;
 
-  const scaleX = totalFlipH ? -1 : 1;
-  const scaleY = totalFlipV ? -1 : 1;
-  ctx.scale(scaleX * totalZoom, scaleY * totalZoom);
+  // 3. Calculer l'échelle pour "Contain" l'image sans étirement
+  const isOddRotation = Math.round(totalRotation / 90) % 2 !== 0;
+  const origW = imageState.originalWidth;
+  const origH = imageState.originalHeight;
 
+  // Dimensions "visuelles" après rotation
+  const visualW = isOddRotation ? origH : origW;
+  const visualH = isOddRotation ? origW : origH;
+
+  const baseScale = Math.min(canvas.width / visualW, canvas.height / visualH);
+  const finalScale = baseScale * totalZoom;
+
+  ctx.scale(finalScale, finalScale);
+
+  // 4. Appliquer les filtres
   const finalFilters = {
     blur: Math.max(appliedModifications.filters.blur, filters.blur),
     grayscale: appliedModifications.filters.grayscale || filters.grayscale,
@@ -264,43 +286,21 @@ function renderCanvas() {
   if (finalFilters.contrast !== 100) filterString += `contrast(${finalFilters.contrast}%) `;
   if (finalFilters.saturation !== 100) filterString += `saturate(${finalFilters.saturation}%) `;
   if (finalFilters.grayscale) filterString += 'grayscale(100%) ';
-
   ctx.filter = filterString.trim() || 'none';
 
-  // Calculer les dimensions de dessin basées sur la rotation totale
-  // Si la rotation est impaire (90, 270), on doit inverser W et H pour le drawImage
-  const isOddRotation = Math.round(totalRotation / 90) % 2 !== 0;
-  const drawWidth = isOddRotation ? canvas.height : canvas.width;
-  const drawHeight = isOddRotation ? canvas.width : canvas.height;
+  // 5. Dessiner l'image (origW et origH sont les dimensions natives)
+  ctx.drawImage(imageElement.value, -origW / 2, -origH / 2, origW, origH);
 
-  ctx.drawImage(
-    imageElement.value,
-    -drawWidth / 2,
-    -drawHeight / 2,
-    drawWidth,
-    drawHeight
-  );
-
-  ctx.restore();
-
-  if ((activeTool.value === 'remove-bg' || appliedRemovedPixels.size > 0) && (removedPixels.size > 0 || appliedRemovedPixels.size > 0)) {
-    const imageData = ctx.getImageData(0, 0, canvasWidth.value, canvasHeight.value);
-    const data = imageData.data;
-
-    const allRemovedPixels = new Set([...appliedRemovedPixels, ...removedPixels]);
-    allRemovedPixels.forEach((key) => {
-      const parts = key.split(',').map(Number);
-      const x = parts[0];
-      const y = parts[1];
-      if (x !== undefined && y !== undefined) {
-        const idx = (y * canvasWidth.value + x) * 4;
-        data[idx + 3] = 0;
-      }
-    });
-
-    ctx.putImageData(imageData, 0, 0);
+  // 6. Masque Remove BG
+  if (appliedModifications.bgRemoved || removedPixels.size > 0 || appliedRemovedPixels.size > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.filter = 'none';
+    ctx.drawImage(maskCanvas, -origW / 2, -origH / 2, origW, origH);
+    ctx.restore();
   }
 
+  ctx.restore();
   updateRealCropCoordinates();
 }
 
@@ -316,75 +316,59 @@ function updateRealCropCoordinates() {
   if (!imageElement.value || !canvasRef.value) return;
 
   const totalRotation = (appliedModifications.transform.rotate + transform.rotate) % 360;
-  const isOddRotation = Math.round(totalRotation / 90) % 2 !== 0;
   const totalZoom = appliedModifications.transform.zoom * transform.zoom;
 
-  // 1. Calculer les dimensions de l'image "logique" (originale mais potentiellement pivotée)
-  // pour faire le lien avec ce que l'utilisateur voit sur le canvas
   const origW = imageState.originalWidth;
   const origH = imageState.originalHeight;
 
-  // 2. Facteurs d'échelle entre le canvas et l'image originale (centrée et zoomée)
-  // Dans renderCanvas, drawWidth est soit canvasWidth soit canvasHeight selon la rotation
-  const drawW = isOddRotation ? canvasHeight.value : canvasWidth.value;
-  const drawH = isOddRotation ? canvasWidth.value : canvasHeight.value;
+  const isOddRotation = Math.round(totalRotation / 90) % 2 !== 0;
+  const visualW = isOddRotation ? origH : origW;
+  const visualH = isOddRotation ? origW : origH;
 
-  // 3. Transformation inverse : Point sur Canvas -> Point sur Image Originale
-  // On commence par le centre du canvas
+  const baseScale = Math.min(canvasWidth.value / visualW, canvasHeight.value / visualH);
+  const finalScale = baseScale * totalZoom;
+
   const centerX = canvasWidth.value / 2;
   const centerY = canvasHeight.value / 2;
 
   const mapPoint = (cx: number, cy: number) => {
-    // Relatif au centre
-    const tx = cx - centerX;
-    const ty = cy - centerY;
+    // 1. Relatif au centre du canvas
+    let x = cx - centerX;
+    let y = cy - centerY;
 
-    // Inverse Rotation
+    // 2. Rotation inverse
     const rad = (-totalRotation * Math.PI) / 180;
     const cos = Math.cos(rad);
     const sin = Math.sin(rad);
-    const x1 = tx * cos - ty * sin;
-    const y1 = tx * sin + ty * cos;
+    const rx = x * cos - y * sin;
+    const ry = x * sin + y * cos;
 
-    // Inverse Flip (note: flips are applied relative to center in renderCanvas)
+    // 3. Mirror inverse
     const totalFlipH = appliedModifications.transform.flipH !== transform.flipH;
     const totalFlipV = appliedModifications.transform.flipV !== transform.flipV;
-    const x2 = totalFlipH ? -x1 : x1;
-    const y2 = totalFlipV ? -y1 : y1;
+    const mx = totalFlipH ? -rx : rx;
+    const my = totalFlipV ? -ry : ry;
 
-    // Inverse Scale (Zoom + Fit)
-    // fitScale est le ratio de réduction appliqué pour l'affichage
-    const fitScaleX = drawW / origW;
-    const fitScaleY = drawH / origH;
-    const x3 = x2 / (totalZoom * fitScaleX);
-    const y3 = y2 / (totalZoom * fitScaleY);
+    // 4. Échelle inverse
+    const finalX = mx / finalScale + origW / 2;
+    const finalY = my / finalScale + origH / 2;
 
-    // Retour aux coordonnées image (0,0 au top-left)
-    return {
-      x: x3 + origW / 2,
-      y: y3 + origH / 2
-    };
+    return { x: finalX, y: finalY };
   };
 
-  const topLeft = mapPoint(cropState.x, cropState.y);
-  const bottomRight = mapPoint(cropState.x + cropState.width, cropState.y + cropState.height);
+  const p1 = mapPoint(cropState.x, cropState.y);
+  const p2 = mapPoint(cropState.x + cropState.width, cropState.y + cropState.height);
 
-  // Pour le crop simple (rectangulaire), on prend les min/max car la rotation peut incliner le cadre
-  // Note: Si l'utilisateur a tourné de 45°, le cadre de crop sur le canvas ne sera plus aligné avec les axes de l'image.
-  // Mais ici la rotation est généralement par pas de 90°.
-  cropState.realX = Math.round(Math.min(topLeft.x, bottomRight.x));
-  cropState.realY = Math.round(Math.min(topLeft.y, bottomRight.y));
-  cropState.realWidth = Math.round(Math.abs(bottomRight.x - topLeft.x));
-  cropState.realHeight = Math.round(Math.abs(bottomRight.y - topLeft.y));
+  cropState.realX = Math.round(Math.min(p1.x, p2.x));
+  cropState.realY = Math.round(Math.min(p1.y, p2.y));
+  cropState.realWidth = Math.round(Math.abs(p2.x - p1.x));
+  cropState.realHeight = Math.round(Math.abs(p2.y - p1.y));
 
-  // Sécurité limites
+  // Sécurité
   cropState.realX = Math.max(0, Math.min(cropState.realX, origW));
   cropState.realY = Math.max(0, Math.min(cropState.realY, origH));
   if (cropState.realX + cropState.realWidth > origW) cropState.realWidth = origW - cropState.realX;
   if (cropState.realY + cropState.realHeight > origH) cropState.realHeight = origH - cropState.realY;
-
-  cropState.realWidth = Math.max(1, cropState.realWidth);
-  cropState.realHeight = Math.max(1, cropState.realHeight);
 }
 
 
@@ -524,7 +508,7 @@ function colorDistance(c1: number[], c2: number[]): number {
 }
 
 function floodFillBG(x: number, y: number) {
-  if (!canvasRef.value || !imageElement.value) return;
+  if (!canvasRef.value || !imageElement.value || !maskCtx) return;
 
   const tempCanvas = document.createElement('canvas');
   tempCanvas.width = canvasWidth.value;
@@ -547,8 +531,14 @@ function floodFillBG(x: number, y: number) {
   const queue: [number, number][] = [[x, y]];
   const visited = new Set<string>();
 
+  const scaleX = imageState.originalWidth / canvasWidth.value;
+  const scaleY = imageState.originalHeight / canvasHeight.value;
+
+  maskCtx.save();
+  maskCtx.fillStyle = 'black';
+
   while (queue.length > 0) {
-    const [cx, cy] = queue.shift()!;
+    const [cx, cy] = queue.shift()! ;
     const key = `${cx},${cy}`;
 
     if (visited.has(key)) continue;
@@ -564,7 +554,9 @@ function floodFillBG(x: number, y: number) {
     ];
 
     if (colorDistance(pixelColor, targetColor) <= tolerance.value) {
-      removedPixels.add(key);
+      // Dessiner sur le masque original
+      maskCtx.fillRect(cx * scaleX, cy * scaleY, scaleX, scaleY);
+      removedPixels.add('modified');
 
       queue.push([cx + 1, cy]);
       queue.push([cx - 1, cy]);
@@ -572,50 +564,61 @@ function floodFillBG(x: number, y: number) {
       queue.push([cx, cy - 1]);
     }
   }
+  maskCtx.restore();
 
   renderCanvas();
 }
 
 function brushRemoveBG(x: number, y: number) {
+  if (!maskCtx || !imageElement.value) return;
+
   const radius = brushSize.value / 2;
   const hardnessValue = hardness.value / 100;
 
-  for (let dx = -radius; dx < radius; dx++) {
-    for (let dy = -radius; dy < radius; dy++) {
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist <= radius) {
-        const px = Math.round(x + dx);
-        const py = Math.round(y + dy);
+  // Conversion des coordonnées du canvas d'affichage vers l'image originale
+  const scaleX = imageState.originalWidth / canvasWidth.value;
+  const scaleY = imageState.originalHeight / canvasHeight.value;
 
-        if (px >= 0 && px < canvasWidth.value && py >= 0 && py < canvasHeight.value) {
-          const opacity = Math.pow(1 - dist / radius, hardnessValue);
-          if (Math.random() < opacity) {
-            removedPixels.add(`${px},${py}`);
-          }
-        }
-      }
-    }
-  }
+  const origX = x * scaleX;
+  const origY = y * scaleY;
+  const origRadius = radius * scaleX;
+
+  maskCtx.save();
+  maskCtx.beginPath();
+  const gradient = maskCtx.createRadialGradient(origX, origY, 0, origX, origY, origRadius);
+  gradient.addColorStop(0, `rgba(0, 0, 0, 1)`);
+  gradient.addColorStop(hardnessValue, `rgba(0, 0, 0, 1)`);
+  gradient.addColorStop(1, `rgba(0, 0, 0, 0)`);
+
+  maskCtx.fillStyle = gradient;
+  maskCtx.arc(origX, origY, origRadius, 0, Math.PI * 2);
+  maskCtx.fill();
+  maskCtx.restore();
+
+  // On garde un moyen de savoir si le masque a été modifié pour le rendu (optionnel si on check le contenu du canvas)
+  removedPixels.add('modified');
 
   renderCanvas();
 }
 
 function brushRestoreBG(x: number, y: number) {
+  if (!maskCtx || !imageElement.value) return;
+
   const radius = brushSize.value / 2;
 
-  for (let dx = -radius; dx < radius; dx++) {
-    for (let dy = -radius; dy < radius; dy++) {
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist <= radius) {
-        const px = Math.round(x + dx);
-        const py = Math.round(y + dy);
+  const scaleX = imageState.originalWidth / canvasWidth.value;
+  const scaleY = imageState.originalHeight / canvasHeight.value;
 
-        if (px >= 0 && px < canvasWidth.value && py >= 0 && py < canvasHeight.value) {
-          removedPixels.delete(`${px},${py}`);
-        }
-      }
-    }
-  }
+  const origX = x * scaleX;
+  const origY = y * scaleY;
+  const origRadius = radius * scaleX;
+
+  maskCtx.save();
+  maskCtx.globalCompositeOperation = 'destination-out';
+  maskCtx.beginPath();
+  maskCtx.arc(origX, origY, origRadius, 0, Math.PI * 2);
+  maskCtx.fill();
+  maskCtx.restore();
 
   renderCanvas();
 }
@@ -628,6 +631,9 @@ function undoBGRemoval() {
 }
 
 function resetBGRemoval() {
+  if (maskCtx) {
+    maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+  }
   removedPixels.clear();
   maskHistory.value = [];
   renderCanvas();
@@ -814,7 +820,7 @@ const saveModifications = async () => {
         }
       },
       adjustments: {
-        brightness: (appliedModifications.filters.brightness / 100) * (filters.brightness / 100),
+        brightness: (appliedModifications.filters.brightness / 100) * (filters.brightness / 100), // En facteur (1.0 = normal)
         contrast: (appliedModifications.filters.contrast / 100) * (filters.contrast / 100),
         saturation: (appliedModifications.filters.saturation / 100) * (filters.saturation / 100),
         blur: Math.max(appliedModifications.filters.blur, filters.blur),
@@ -882,7 +888,7 @@ const saveModifications = async () => {
             </button>
                     </div>
       </div>
-      <Tabs :default-value="tools[0]?.id">
+      <Tabs v-model="activeTool">
 
         <div class="flex">
 
