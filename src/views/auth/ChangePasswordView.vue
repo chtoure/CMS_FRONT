@@ -31,14 +31,14 @@
               :show-strength="false"
             />
             <p v-if="password_non_confirmed || isError" class="mt-2 text-xs text-destructive font-medium italic">
-              {{ (error as any)?.response?.data?.message || messageError }}
+              {{ error?.message || messageError }}
             </p>
           </div>
 
         <div>
           <button
             type="submit"
-            class="flex w-full justify-center rounded-md bg-primary px-3 py-1.5 text-sm/6 font-semibold text-primary shadow-sm hover:bg-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            class="flex w-full justify-center rounded-md bg-primary px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
           {{ isLoading ? 'Changement...' : 'Enregistrer' }}
           </button>

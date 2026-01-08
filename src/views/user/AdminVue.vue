@@ -14,6 +14,11 @@ import CompositionError from '../../components/composition/CompositionError.vue'
 import CompositionLoading from '../../components/composition/CompositionLoading.vue';
 import Button from '@/components/ui/button/Button.vue';
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue';
+import Select from '../../components/ui/select/Select.vue';
+import SelectTrigger from '../../components/ui/select/SelectTrigger.vue';
+import SelectValue from '../../components/ui/select/SelectValue.vue';
+import SelectContent from '../../components/ui/select/SelectContent.vue';
+import SelectItem from '../../components/ui/select/SelectItem.vue';
 
 
 
@@ -110,8 +115,17 @@ const closeForm = () => {
         <div class="bg-background border border-border  shadow-sm overflow-hidden">
           <div class="p-6 border-b border-border flex flex-col sm:flex-row justify-between items-center gap-4">
             <h3 class="font-bold text-text">Liste des utilisateurs</h3>
-            <div class="w-full sm:w-72">
-               <!-- <SearchBar v-model="search" placeholder="Rechercher..." /> -->
+            <div class="">
+              <Select>
+                <SelectTrigger class="input-custom">
+                  <SelectValue placeholder="Filter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" class="select-item-custom">Tous</SelectItem>
+                  <SelectItem value="active" class="select-item-custom">Active</SelectItem>
+                  <SelectItem value="archive" class="select-item-custom">Achivés</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

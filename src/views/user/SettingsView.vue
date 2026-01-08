@@ -1,7 +1,7 @@
 
 
 <template>
-  <CompositionLoading v-if="isUpdating" />
+  <CompositionLoading v-if="isUpdating || loadingPerms" />
   <CompositionError v-else-if="isUpdateError" :error="updateError?.message"/>
 
   <!-- <form v-else @submit.prevent="handleSubmit" class="w-full"> -->
@@ -77,11 +77,11 @@
             <label class="text-sm/6 font-semibold text-text">Permissions accordées</label>
             <div class="mt-3 flex flex-wrap gap-2">
               <span
-                v-for="perm in ['Gérer les utilisateurs', 'Gérer les médias', 'Accès logs']"
-                :key="perm"
+                v-for="perm in permissionsRole"
+                :key="perm.id"
                 class="inline-flex items-center rounded-md bg-background px-2.5 py-1 text-xs font-medium text-primary ring-1 ring-ring"
               >
-                {{ perm }}
+                {{ perm.name }}
               </span>
             </div>
           </div>
@@ -120,6 +120,7 @@
   import { showToast } from "../../lib/toast"
   import { validationSchemaProfile } from '../../validation/profileValidate';
   import { Field, useForm } from 'vee-validate';
+import { useGetPermissionsRole } from '../../hook/role';
 
 
 
@@ -136,6 +137,8 @@ const { values, resetForm, handleSubmit } = useForm({
     password: undefined
   }
 });
+
+
 
 // États pour la confirmation de mot de passe
 const confirm_new_password = ref(undefined);
@@ -179,6 +182,8 @@ const getInitials = (name: string) => {
 };
 
 const { mutate: updateProfile, isPending: isUpdating ,isError:isUpdateError,error:updateError} = useUpdateProfile();
+const { data: permissionsRole , isLoading:loadingPerms } = useGetPermissionsRole(store.userInfo?.id || 0)
+
 
 // 5. Logique de soumission
 const onSubmit = handleSubmit((formValues) => {
