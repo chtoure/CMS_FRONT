@@ -135,13 +135,13 @@ const activeItem = computed(() => {
         )"
       >
         <img v-if="params?.media?.type === 'image'" :src="params?.media?.file_path" alt="logo" class="w-full  object-contain">
-        <video v-else-if="params?.media?.type === 'video'" autoplay :src="params?.media?.file_path" alt="logo" class="w-full  object-contain"></video>
+        <video v-else-if="params?.media?.type === 'video'" autoplay loop muted :src="params?.media?.file_path" alt="logo" class="w-full  object-contain"></video>
 
       </div>
 
       <div v-if="isCollapsed" class="w-12 h-12 flex items-center justify-center relative z-10 transition-all">
         <img v-if="params?.media?.type === 'image'" :src="params?.media?.file_path" alt="logo" class="object-contain">
-        <video v-else-if="params?.media?.type === 'video'" autoplay :src="params?.media?.file_path" alt="logo" class="w-full  object-contain"></video>
+        <video v-else-if="params?.media?.type === 'video'" autoplay loop muted :src="params?.media?.file_path" alt="logo" class="w-full  object-contain"></video>
       </div>
     </div>
 

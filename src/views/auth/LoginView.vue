@@ -1,74 +1,3 @@
-
-
-<template>
-  <div class="min-h-screen">
-    <CompositionLoading v-if="isLoggingIn" />
-
-  <div v-else class="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-sm">
-      <img class="mx-auto h-20 w-auto" :src="params?.logo" alt="Your Company" />
-      <h2 class="mt-6 text-center text-huge font-bold tracking-tight text-text">Connexion</h2>
-    </div>
-
-    <div class="mt-6 sm:mx-auto sm:w-full sm:max-w-sm">
-      <!-- <form @submit.prevent="onSubmit" class="space-y-4"> -->
-      <Field name="email" v-slot="{ field, errorMessage }">
-        <div>
-          <label for="email" class="block text-sm/6 font-medium text-text">Email address</label>
-          <div class="mt-2">
-            <input
-              v-bind="field"
-              type="email"
-              id="email"
-              placeholder="Entrez votre email"
-              autocomplete="email"
-              class="input-custom"
-            />
-            <p v-if="errorMessage" class="text-destructive text-xs mt-1">{{ errorMessage }}</p>
-          </div>
-        </div>
-      </Field>
-
-      <Field name="password" v-slot="{ field, errorMessage }">
-        <div>
-          <div class="mt-2">
-            <BasePasswordInput
-                v-bind="field"
-                placeholder="Entrer votre Mot de passe"
-                container-class="w-full"
-            />
-          </div>
-          <p v-if="errorMessage" class="text-destructive text-xs mt-1">{{ errorMessage }}</p>
-        </div>
-      </Field>
-
-        <p v-if="isError" class="mt-4 text-center text-destructive">
-          {{ error?.message }}
-        </p>
-
-        <div class="mt-4">
-          <Button
-            @click="onSubmit"
-            :disabled="isLoggingIn"
-            class="w-full h-10"
-          >
-            {{ isLoggingIn ? 'Connexion...' : 'Se Loger' }}
-          </Button>
-        </div>
-      <!-- </form> -->
-
-      <div class="mt-10 text-center text-sm/6 text-text opacity-80">
-        <div class="text-sm">
-          <router-link :to="{ name: 'auth.forgot-password' }" class="font-semibold text-primary">Mot de passe oublié ?</router-link>
-        </div>
-      </div>
-    </div>
-  </div>
-  </div>
-
-</template>
-
-
 <script setup lang="ts">
 
   import { useLogin } from '../../hook/user'; // Import de ton hook
@@ -155,3 +84,75 @@ const initials = ((full_name:string) => {
 
 
 </script>
+
+
+<template>
+  <div class="min-h-screen">
+    <CompositionLoading v-if="isLoggingIn" />
+
+  <div v-else class="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-sm">
+      <img v-if="params?.media?.type === 'image'" class="mx-auto h-20 w-auto" :src="params?.media?.file_path" alt="Your Company" />
+      <video v-else-if="params?.media?.type === 'video'" autoplay loop muted class="mx-auto h-20 w-auto" :src="params?.media?.file_path" alt="Your Company" />
+      <h2 class="mt-6 text-center text-huge font-bold tracking-tight text-text">Connexion</h2>
+    </div>
+
+    <div class="mt-6 sm:mx-auto sm:w-full sm:max-w-sm">
+      <!-- <form @submit.prevent="onSubmit" class="space-y-4"> -->
+      <Field name="email" v-slot="{ field, errorMessage }">
+        <div>
+          <label for="email" class="block text-sm/6 font-medium text-text">Email address</label>
+          <div class="mt-2">
+            <input
+              v-bind="field"
+              type="email"
+              id="email"
+              placeholder="Entrez votre email"
+              autocomplete="email"
+              class="input-custom"
+            />
+            <p v-if="errorMessage" class="text-destructive text-xs mt-1">{{ errorMessage }}</p>
+          </div>
+        </div>
+      </Field>
+
+      <Field name="password" v-slot="{ field, errorMessage }">
+        <div>
+          <div class="mt-2">
+            <BasePasswordInput
+                v-bind="field"
+                placeholder="Entrer votre Mot de passe"
+                container-class="w-full"
+            />
+          </div>
+          <p v-if="errorMessage" class="text-destructive text-xs mt-1">{{ errorMessage }}</p>
+        </div>
+      </Field>
+
+        <p v-if="isError" class="mt-4 text-center text-destructive">
+          {{ error?.message }}
+        </p>
+
+        <div class="mt-4">
+          <Button
+            @click="onSubmit"
+            :disabled="isLoggingIn"
+            class="w-full h-10"
+          >
+            {{ isLoggingIn ? 'Connexion...' : 'Se Loger' }}
+          </Button>
+        </div>
+      <!-- </form> -->
+
+      <div class="mt-10 text-center text-sm/6 text-text opacity-80">
+        <div class="text-sm">
+          <router-link :to="{ name: 'auth.forgot-password' }" class="font-semibold text-primary">Mot de passe oublié ?</router-link>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+</template>
+
+

@@ -95,7 +95,7 @@ const onSave = handleSubmit(async (values) => {
             <h2 class="text-text text-h1 font-semibold ">Logo du Site</h2>
             <div class="relative bg-muted rounded-lg overflow-hidden border border-border aspect-video flex items-center justify-center w-full">
               <img v-if="mediaType== 'image'" :src="previewImage || '/userIcon.png'" class="max-h-full max-w-full object-contain p-4" />
-              <video v-else-if="mediaType== 'video'" autoplay :src="previewImage" class="max-h-full max-w-full object-contain p-4" />
+              <video v-else-if="mediaType== 'video'" autoplay loop :src="previewImage" class="max-h-full max-w-full object-contain p-4" />
             </div>
             <Field name="mediaId" v-slot="{ errorMessage }">
               <div class="flex flex-col gap-2">
