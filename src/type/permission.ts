@@ -6,9 +6,11 @@ export interface Permission {
   name : string,
   description : string | null,
   roles : Role []
+  archive: boolean;
 }
 
 export interface permsFilter {
-  page?: number
+  archive: true | false | null,
+  page?: number,
   limit?: number
 }

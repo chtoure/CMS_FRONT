@@ -16,6 +16,7 @@ export const useGetRoles = (filter: Ref<roleFilter> | roleFilter) => {
       const params = unref(filter)
       const query = new URLSearchParams()
 
+      if (params.archive) query.append('archive', params.archive.toString())
       if (params.page) query.append('page', params.page.toString())
       if (params.limit) query.append('limit', params.limit.toString())
 

@@ -26,6 +26,7 @@ import DropdownMenuContent from '../../components/ui/dropdown-menu/DropdownMenuC
 import DropdownMenuLabel from '../../components/ui/dropdown-menu/DropdownMenuLabel.vue';
 import DropdownMenuSeparator from '../../components/ui/dropdown-menu/DropdownMenuSeparator.vue';
 import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue';
+import { watch } from 'vue';
 
 
 
@@ -36,9 +37,11 @@ const isEditing = ref(false);
 const selectedUser = ref<UserProfile | undefined>(undefined);
 const currentPage = ref(1);
 const itemsPerPage = ref(10);
+const filterArchiv = ref("all");
 
 
   const filterParams = computed(() => ({
+    archive: filterArchiv.value === "all" ? null : (filterArchiv.value === "true"),
     page: currentPage.value,
     limit: itemsPerPage.value
   }));
@@ -54,8 +57,19 @@ const {
 } = useGetUsers(filterParams);
 
 
+  const filterChange = (val: string ) => {
+    filterArchiv.value = val;
+    currentPage.value = 1;
+  }
+
+
 const userResults = computed(() => users.value?.results || []);
 const totalItems = computed(() => users.value?.count || 0);
+
+
+  watch([currentPage, itemsPerPage, filterArchiv], () => {
+    refetchUsers();
+  });
 
 
 // 2. Recherche filtrée (équivalent de useMemo)
@@ -153,14 +167,14 @@ const columns = [
           <div class="p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
             <p class="font-bold text-text huge">Liste des utilisateurs</p>
             <div class="">
-              <Select>
+              <Select v-model="filterArchiv" @update:model-value="(val) => filterChange(val as string)">
                 <SelectTrigger class="input-custom">
                   <SelectValue placeholder="Filter" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all" class="select-item-custom">Tous</SelectItem>
-                  <SelectItem value="active" class="select-item-custom">Active</SelectItem>
-                  <SelectItem value="archive" class="select-item-custom">Achivés</SelectItem>
+                  <SelectItem value="false" class="select-item-custom">Active</SelectItem>
+                  <SelectItem value="true" class="select-item-custom">Achivés</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -183,8 +197,8 @@ const columns = [
                     </template>
 
                     <template #cell-status="{ row }">
-                      <span v-if="row.role">Active </span>
-                      <span v-else>Non Active</span>
+                      <span v-if="row.archive">Archiver </span>
+                      <span v-else>Active</span>
                     </template>
 
                     <template #cell-actions="{ row }">

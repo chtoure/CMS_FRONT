@@ -6,7 +6,7 @@ import Tabs from '../../components/ui/tabs/Tabs.vue';
 import TabsList from '../../components/ui/tabs/TabsList.vue';
 import TabsTrigger from '../../components/ui/tabs/TabsTrigger.vue';
 import TabsContent from '../../components/ui/tabs/TabsContent.vue';
-import { computed, ref } from 'vue';
+import { computed, ref} from 'vue';
 import Popover from '../../components/ui/popover/Popover.vue';
 import PopoverTrigger from '../../components/ui/popover/PopoverTrigger.vue';
 import PopoverContent from '../../components/ui/popover/PopoverContent.vue';
@@ -32,6 +32,12 @@ import CompositionModal from '../../components/composition/CompositionModal.vue'
 import CompositionListEmpty from '../../components/composition/CompositionListEmpty.vue';
 import CompositionTable from '../../components/composition/CompositionTable.vue';
 import CompositionPagination from '../../components/composition/CompositionPagination.vue';
+import Select from '../../components/ui/select/Select.vue';
+import SelectTrigger from '../../components/ui/select/SelectTrigger.vue';
+import SelectValue from '../../components/ui/select/SelectValue.vue';
+import SelectContent from '../../components/ui/select/SelectContent.vue';
+import SelectItem from '../../components/ui/select/SelectItem.vue';
+import { watch } from 'vue';
 
 
 
@@ -44,18 +50,22 @@ const { width } = useElementSize(triggerRef)
 
 const currentPageRole = ref(1);
 const itemsPerPageRole = ref(10);
+const filterArchivRole = ref("all");
 
 const currentPagePerms = ref(1);
 const itemsPerPagePerms = ref(10);
+const filterArchivPerms = ref("all");
 
 
 const filterParamsRole = computed(() => ({
+  archive: filterArchivRole.value === "all" ? null : (filterArchivRole.value === "true"),
   page: currentPageRole.value,
   limit: itemsPerPageRole.value
 }))
 
 
 const filterParamsPerms = computed(() => ({
+   archive: filterArchivPerms.value === "all" ? null : (filterArchivPerms.value === "true"),
   page: currentPagePerms.value,
   limit: itemsPerPagePerms.value
 }))
@@ -102,6 +112,25 @@ const permissionResults = computed(() => dataPermissions.value?.results || []);
 const totalItemsPermission = computed(() => dataPermissions.value?.count || 0);
 
 
+
+const filterChangeRole = (val: string ) => {
+  filterArchivRole.value = val;
+  currentPageRole.value = 1;
+}
+
+
+const filterChangePerms = (val: string ) => {
+  filterArchivPerms.value = val;
+  currentPagePerms.value = 1;
+}
+
+watch([currentPageRole, itemsPerPageRole, filterArchivRole], () => {
+  getAllRoles();
+});
+
+watch([currentPagePerms, itemsPerPagePerms, filterArchivPerms], () => {
+  getAllPermissions();
+});
 
 // Hook listes Permissions sans pagination
 const {
@@ -220,12 +249,28 @@ const togglePermission = (permission: Permission) => {
             </TabsList>
         </div>
 
-        <div class="card rounded-none p-6">
+        <div class="card rounded-none p-4">
           <TabsContent value="role">
+            <div class="p-2 flex flex-col sm:flex-row justify-between items-center gap-4">
+              <p class="mt-1 mb-4 text-center text-text font-medium ">Double-cliquez sur une carte pour modifier</p>
+              <!-- <p class="font-bold text-text huge">Liste des utilisateurs</p> -->
+              <div  class="mb-4">
+                <Select v-model="filterArchivRole" @update:model-value="(val:any) => filterChangeRole(val as string)">
+                  <SelectTrigger class="input-custom">
+                    <SelectValue placeholder="Filter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" class="select-item-custom">Tous</SelectItem>
+                    <SelectItem value="false" class="select-item-custom">Active</SelectItem>
+                    <SelectItem value="true" class="select-item-custom">Achivés</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-              <CompositionListEmpty v-if="roleResults.length === 0" title="Aucun role" description="Aucune donnée trouvée dans la base de données." :icon="ShieldCheck" />
+            <CompositionListEmpty v-if="roleResults.length === 0" title="Aucun role" description="Aucune donnée trouvée dans la base de données." :icon="ShieldCheck" />
               <div v-else>
-                <p class="mt-1 mb-4 text-center text-text font-medium ">Double-cliquez sur une carte pour modifier</p>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div
                     v-for="role in roleResults"
@@ -371,15 +416,30 @@ const togglePermission = (permission: Permission) => {
           </TabsContent>
 
           <TabsContent value="permission">
+
+          <div class="rounded-none overflow-hidden">
+              <div class="flex items-center justify-between p-4 bg-muted/20">
+                <div>
+                  <h3 class="font-medium text-text">Permissions</h3>
+                </div>
+                  <div class="">
+                    <Select v-model="filterArchivPerms" @update:model-value="(val:any) => filterChangePerms(val as string)">
+                      <SelectTrigger class="input-custom">
+                        <SelectValue placeholder="Filter" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all" class="select-item-custom">Tous</SelectItem>
+                        <SelectItem value="false" class="select-item-custom">Active</SelectItem>
+                        <SelectItem value="true" class="select-item-custom">Achivés</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+              </div>
+            </div>
+
             <CompositionListEmpty v-if="permissionResults.length === 0" title="Aucune permission" description="Aucune donnée trouvée dans la base de données." :icon="ShieldCheck" />
             <div v-else>
-              <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-                <div class="flex items-center justify-between p-4 border-b border-border bg-muted/20">
-                  <div>
-                    <h3 class="font-medium text-text">Permissions</h3>
-                  </div>
-                </div>
-              </div>
+
               <CompositionTable
                   :columns="columns"
                   :data="permissionResults"
@@ -401,8 +461,8 @@ const togglePermission = (permission: Permission) => {
                   </template>
                   <template #cell-status="{ row }">
                     <td class="p-4">
-                      <span v-if="row.roles.length!=0" class="px-2 py-0.5 rounded-full border border-border bg-muted"> Active </span>
-                      <span v-else class="px-2 py-0.5 rounded-full border border-border bg-muted"> Non Active </span>
+                      <span v-if="row.archive" class="px-2 py-0.5 rounded-full border border-border bg-muted"> Archiver </span>
+                      <span v-else class="px-2 py-0.5 rounded-full border border-border bg-muted"> Active </span>
                     </td>
                   </template>
                   <template #cell-actions="{  }">
