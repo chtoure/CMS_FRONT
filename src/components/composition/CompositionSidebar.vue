@@ -134,12 +134,14 @@ const activeItem = computed(() => {
           isOpen ? 'opacity-100' : 'hidden'
         )"
       >
-        <img :src="params?.logo" alt="logo" class="w-full  object-contain">
+        <img v-if="params?.media?.type === 'image'" :src="params?.media?.file_path" alt="logo" class="w-full  object-contain">
+        <video v-else-if="params?.media?.type === 'video'" autoplay :src="params?.media?.file_path" alt="logo" class="w-full  object-contain"></video>
 
       </div>
 
       <div v-if="isCollapsed" class="w-12 h-12 flex items-center justify-center relative z-10 transition-all">
-        <img :src="params?.logo" alt="logo" class="object-contain">
+        <img v-if="params?.media?.type === 'image'" :src="params?.media?.file_path" alt="logo" class="object-contain">
+        <video v-else-if="params?.media?.type === 'video'" autoplay :src="params?.media?.file_path" alt="logo" class="w-full  object-contain"></video>
       </div>
     </div>
 
@@ -223,7 +225,7 @@ const activeItem = computed(() => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          
+
           <template v-else>
             <button
               @click="toggleMenu(item.id)"

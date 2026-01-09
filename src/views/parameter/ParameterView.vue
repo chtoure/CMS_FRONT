@@ -1,33 +1,54 @@
 <script setup lang="ts">
-import { Pencil, Save, Loader2 } from 'lucide-vue-next'
+import {Save, Loader2, ChevronsUpDown, Check } from 'lucide-vue-next'
 import Button from '@/components/ui/button/Button.vue'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useForm, Field } from 'vee-validate'
 import { useGetParameters, useUpdateParameters } from '../../hook/parameter'
-import { useCreateMedia } from '../../hook/media'
 import { showToast } from '../../lib/toast'
 import CompositionLoading from '@/components/composition/CompositionLoading.vue'
 import { getErrorMessage } from '../../lib/errorMessage'
 import CompositionError from '@/components/composition/CompositionError.vue'
 import { parameterSchema } from '../../validation/parameterValidate'
+import Popover from '../../components/ui/popover/Popover.vue'
+import PopoverTrigger from '../../components/ui/popover/PopoverTrigger.vue'
+import { useGetMediaList } from '../../hook/media'
+import PopoverContent from '../../components/ui/popover/PopoverContent.vue'
+import Command from '../../components/ui/command/Command.vue'
+import CommandInput from '../../components/ui/command/CommandInput.vue'
+import CommandEmpty from '../../components/ui/command/CommandEmpty.vue'
+import CommandList from '../../components/ui/command/CommandList.vue'
+import CommandGroup from '../../components/ui/command/CommandGroup.vue'
+import CommandItem from '../../components/ui/command/CommandItem.vue'
+import { cn } from '../../lib/utils'
 
-const { handleSubmit, setValues } = useForm({
+const open = ref(false);
+const media = ref<number>();
+const mediaQuery = useGetMediaList({});
+
+const {handleSubmit, setValues, setFieldValue } = useForm({
   validationSchema: parameterSchema,
   initialValues: {
     entity_name: '',
     title: '',
     description: '',
-    logo: ''
+    mediaId: undefined
   }
 })
 
 const { data: params, isLoading: isLoadingParams, isError: isErrorParams, error: errorParams } = useGetParameters()
 const { mutate: updateParams, isPending: isSaving } = useUpdateParameters()
-const { mutateAsync: uploadMedia } = useCreateMedia()
 
-const fileInput = ref<HTMLInputElement | null>(null)
-const selectedFile = ref<File | null>(null)
 const previewImage = ref('')
+
+const changeMedia = (id: number) => {
+  media.value = id
+  setFieldValue('mediaId', id)
+  previewImage.value = mediaQuery?.data.value?.results?.find((m) => m.id === id)?.file_path || ''
+}
+
+const mediaType = computed(() => {
+  return mediaQuery?.data.value?.results?.find((m) => m.id === media.value)?.type;
+})
 
 
 watch(params, (newParams) => {
@@ -36,36 +57,21 @@ watch(params, (newParams) => {
       entity_name: newParams.entity_name,
       title: newParams.title,
       description: newParams.description ?? '',
-      logo: newParams.logo
+      mediaId: newParams.media?.id
     })
-    previewImage.value = newParams.logo
+    media.value = newParams.media?.id
+    previewImage.value = newParams.media?.file_path || ''
   }
 }, { immediate: true })
 
-const triggerFileInput = () => fileInput.value?.click()
-
-const handleFileChange = (event: Event) => {
-  const file = (event.target as HTMLInputElement).files?.[0]
-  if (file) {
-    selectedFile.value = file
-    previewImage.value = URL.createObjectURL(file)
-  }
-}
-
 const onSave = handleSubmit(async (values) => {
+
+  console.log(values);
+
   try {
-    let finalLogoPath = values.logo
-
-    if (selectedFile.value) {
-      const formData = new FormData()
-      formData.append('file', selectedFile.value)
-      const newMedia = await uploadMedia(formData)
-      finalLogoPath = newMedia.file_path
-    }
-
     updateParams({
       ...values,
-      logo: finalLogoPath || ''
+      mediaId: values.mediaId
     }, {
       onSuccess: () => showToast('success', 'Paramètres mis à jour avec succès'),
       onError: (error: Error) => showToast('error', error.message)
@@ -85,17 +91,68 @@ const onSave = handleSubmit(async (values) => {
       <main v-if="!isLoadingParams">
         <div class="mx-auto max-w-6xl grid grid-cols-1 gap-8 lg:grid-cols-2">
 
-          <div class="card p-8 bg-background border border-border">
-            <h2 class="text-text text-h1 font-semibold mb-6">Logo du Site</h2>
-            <div class="flex flex-row items-end gap-6">
-              <div class="relative bg-muted rounded-lg overflow-hidden border border-border aspect-video flex items-center justify-center w-full">
-                <img :src="previewImage || '/userIcon.png'" class="max-h-full max-w-full object-contain p-4" />
-              </div>
-              <input type="file" ref="fileInput" class="hidden" accept="image/*" @change="handleFileChange" />
-              <Button variant="outline" class="h-10" @click="triggerFileInput">
-                <Pencil class="w-4 h-4 mr-2" /> Changer
-              </Button>
+          <div class="card flex flex-col gap-6 p-8 bg-background border border-border">
+            <h2 class="text-text text-h1 font-semibold ">Logo du Site</h2>
+            <div class="relative bg-muted rounded-lg overflow-hidden border border-border aspect-video flex items-center justify-center w-full">
+              <img v-if="mediaType== 'image'" :src="previewImage || '/userIcon.png'" class="max-h-full max-w-full object-contain p-4" />
+              <video v-else-if="mediaType== 'video'" autoplay :src="previewImage" class="max-h-full max-w-full object-contain p-4" />
             </div>
+            <Field name="mediaId" v-slot="{ errorMessage }">
+              <div class="flex flex-col gap-2">
+                <div class="flex flex-row items-end gap-6">
+                  <Popover v-model:open="open" class="w-full">
+                    <PopoverTrigger as-child>
+                      <Button
+                        ref="triggerRef"
+                        variant="outline"
+                        role="combobox"
+                        :aria-expanded="open"
+                        :class="cn('input-custom justify-between w-full font-normal h-8', { 'border-destructive': errorMessage })"
+                      >
+                        {{ mediaQuery?.data.value?.results?.find((m) => m.id === media)
+                            ? mediaQuery?.data.value?.results?.find((m) => m.id === media)?.alt
+                            : "Sélectionner un media..."
+                        }}
+                        <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+
+                    <PopoverContent >
+                      <Command>
+                        <CommandInput placeholder="Rechercher un media..." />
+                        <CommandEmpty>Aucun media trouvé.</CommandEmpty>
+
+                        <CommandList>
+                          <CommandGroup>
+                            <CommandItem
+                              v-for="m in mediaQuery?.data.value?.results"
+                              :key="m.id"
+                              :value="m.id"
+                              class="select-item-custom cursor-pointer"
+                              @select="() => {
+                                changeMedia(m.id)
+                                open = false
+                              }"
+                            >
+                              <Check
+                                :class="cn(
+                                  'mr-2 h-4 w-4',
+                                  media === m.id ? 'opacity-100' : 'opacity-0'
+                                )"
+                              />
+                              <img v-if="m.type === 'image'" :src="m.file_path" alt="" class="w-12 contain-cover"/>
+                              <video v-else-if="m.type === 'video'" autoplay muted :src="m.file_path" class="w-12 contain-cover" />
+                              {{ m.alt }}
+                            </CommandItem>
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <p v-if="errorMessage" class="text-xs text-destructive font-medium italic">{{ errorMessage }}</p>
+              </div>
+            </Field>
           </div>
 
           <div class="card bg-background p-8 border border-border">
