@@ -1,13 +1,13 @@
 
 
-import { useQuery } from "@tanstack/vue-query";
+import { useMutation, useQuery } from "@tanstack/vue-query";
 import api, { handleResponse } from "../api/fetchConfig";
 import type { Permission, permsFilter } from "../type/permission";
 import { unref, type Ref } from "vue";
 import type { Pagination } from "../type/pagination";
 
 
-// Hook get role list avec pagination
+// Hook get permission list avec pagination
 export const useGetPermissions = (filter: Ref<permsFilter> | permsFilter) => {
   return useQuery({
     queryKey: ["permissions",filter],
@@ -39,3 +39,31 @@ export const useGetPermissionsNoPaginate = () => {
     }
   })
 }
+
+
+
+
+// Archiver un permission
+export const useDeletePermission = () => {
+  return useMutation({
+    mutationFn: async (idUser: number) => {
+      const response = await api(`/archivePermissions/${idUser}`, {
+        method: 'PUT',
+      });
+      return handleResponse(response);
+    },
+  });
+};
+
+
+// Restorer un permission
+export const useRestorePermission = () => {
+  return useMutation({
+    mutationFn: async (idUser: number) => {
+      const response = await api(`/restorePermissions/${idUser}`, {
+        method: 'PUT',
+      });
+      return handleResponse(response);
+    },
+  });
+};

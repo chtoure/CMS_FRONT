@@ -10,7 +10,7 @@ export interface Permission {
 }
 
 export interface permsFilter {
-  archive: true | false | null,
+  archive: string,
   page?: number,
   limit?: number
 }

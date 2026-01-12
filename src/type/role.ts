@@ -27,7 +27,7 @@ export interface AddRole{
 }
 
 export interface roleFilter {
-  archive: true | false | null,
+  archive: string,
   page?: number,
   limit?: number
 }

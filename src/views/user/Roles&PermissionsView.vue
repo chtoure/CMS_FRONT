@@ -1,6 +1,6 @@
 
 <script setup lang="ts">
-import { Pencil, Plus, ShieldCheck, Check, X, Trash2, ChevronsUpDown } from 'lucide-vue-next';
+import { Pencil, Plus, ShieldCheck, Check, X, ChevronsUpDown , Archive, ArchiveRestore } from 'lucide-vue-next';
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue';
 import Tabs from '../../components/ui/tabs/Tabs.vue';
 import TabsList from '../../components/ui/tabs/TabsList.vue';
@@ -18,12 +18,12 @@ import CommandGroup from '../../components/ui/command/CommandGroup.vue';
 import CommandItem from '../../components/ui/command/CommandItem.vue';
 import { useElementSize } from '@vueuse/core';
 import { cn } from '../../lib/utils';
-import { useGetRoles } from '../../hook/role';
+import { useDeleteRole, useGetRoles, useRestoreRole } from '../../hook/role';
 import CompositionLoading from '../../components/composition/CompositionLoading.vue';
 import CompositionError from '../../components/composition/CompositionError.vue';
 import type { Role, RoleUpdate } from '../../type/role';
 import type { Permission } from '../../type/permission';
-import { useGetPermissions, useGetPermissionsNoPaginate } from '../../hook/permission';
+import { useDeletePermission, useGetPermissions, useGetPermissionsNoPaginate, useRestorePermission } from '../../hook/permission';
 import Button from '../../components/ui/button/Button.vue';
 import { useUpdateRole } from '../../hook/role';
 import { showToast } from '../../lib/toast';
@@ -38,6 +38,10 @@ import SelectValue from '../../components/ui/select/SelectValue.vue';
 import SelectContent from '../../components/ui/select/SelectContent.vue';
 import SelectItem from '../../components/ui/select/SelectItem.vue';
 import { watch } from 'vue';
+import { getErrorMessage } from '../../lib/errorMessage';
+import CompositionVerifyButton from '../../components/composition/CompositionVerifyButton.vue';
+import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue';
+
 
 
 
@@ -58,14 +62,14 @@ const filterArchivPerms = ref("all");
 
 
 const filterParamsRole = computed(() => ({
-  archive: filterArchivRole.value === "all" ? null : (filterArchivRole.value === "true"),
+  archive: filterArchivRole.value,
   page: currentPageRole.value,
   limit: itemsPerPageRole.value
 }))
 
 
 const filterParamsPerms = computed(() => ({
-   archive: filterArchivPerms.value === "all" ? null : (filterArchivPerms.value === "true"),
+   archive: filterArchivPerms.value,
   page: currentPagePerms.value,
   limit: itemsPerPagePerms.value
 }))
@@ -196,16 +200,132 @@ const togglePermission = (permission: Permission) => {
   }
 };
 
+
+
+// Hook Role Restore & Archive
+const {
+  mutate : archiveRole,
+  isPending: archibePendingRole,
+  isError : isArchiveErrorRole,
+  error : errorArchiveRole
+
+} = useDeleteRole()
+
+
+
+const {
+  mutate : restoreRole,
+  isPending: restorePendingRole,
+  isError : isrestorErrorRole,
+  error : errorRestorRle
+
+} = useRestoreRole()
+
+
+
+// Hook Perms Restore & Archive
+const {
+  mutate : archivePerms,
+  isPending: archibePendingPerms,
+  isError : isArchiveErrorPerms,
+  error : errorArchivePerms
+
+} = useDeletePermission()
+
+
+
+const {
+  mutate : restorePerms,
+  isPending: restorePendingPerms,
+  isError : isrestorErrorPerms,
+  error : errorRestorPerms
+
+} = useRestorePermission()
+
+
+
+
+
+
+// Methode  archive && restore role
+const archivedRole = (id: number) => {
+  archiveRole(id,{
+     onSuccess: async () => {
+        getAllRoles();
+        getAllPermissions();
+        showToast('success', 'Role archivé avec success');
+     },
+     onError: (error: Error) => {
+        showToast('error', `${getErrorMessage(error)}`);
+      }
+  })
+}
+
+
+
+const restoredRole = (id: number) => {
+  restoreRole(id,{
+     onSuccess: async () => {
+        getAllRoles();
+        getAllPermissions();
+        showToast('success', 'Role restoré avec success');
+     },
+     onError: (error: Error) => {
+        showToast('error', `${getErrorMessage(error)}`);
+      }
+  })
+}
+
+
+
+
+
+// Methode  archive && restore Perms
+const archivedPerms = (id: number) => {
+  archivePerms(id,{
+     onSuccess: async () => {
+        getAllRoles();
+        getAllPermissions();
+        showToast('success', 'Permission archivé avec success');
+     },
+     onError: (error: Error) => {
+        showToast('error', `${getErrorMessage(error)}`);
+      }
+  })
+}
+
+
+
+const restoredPerms = (id: number) => {
+  restorePerms(id,{
+     onSuccess: async () => {
+        getAllRoles();
+        getAllPermissions();
+        showToast('success', 'Permission restoré avec success');
+     },
+     onError: (error: Error) => {
+        showToast('error', `${getErrorMessage(error)}`);
+      }
+  })
+}
+
+
+
+
+
+
+
+
 </script>
 
 
 <template>
 
-  <CompositionLoading v-if="loadingRole || loadingPermission || updateLoading || loadingPermissionNoPaginate" />
+  <CompositionLoading v-if="loadingRole || loadingPermission || updateLoading || loadingPermissionNoPaginate || archibePendingRole || restorePendingRole || archibePendingPerms || restorePendingPerms" />
 
   <CompositionError
-    v-else-if="ErrorRole || ErrorPermission || isErrorRole"
-    :error="errorRole?.message || errorPermission?.message || errorRoleUpdate?.message"
+    v-else-if="ErrorRole || ErrorPermission || isErrorRole || isArchiveErrorRole || isrestorErrorRole || isArchiveErrorPerms || isrestorErrorPerms"
+    :error="errorRole?.message || errorPermission?.message || errorRoleUpdate?.message || errorArchiveRole?.message || errorRestorRle?.message || errorArchivePerms?.message || errorRestorPerms?.message"
   />
 
   <div v-else class="min-h-screen space-y-10">
@@ -374,14 +494,34 @@ const togglePermission = (permission: Permission) => {
                           </div>
                         </div>
 
-                        <div v-if="editingId !== role.id" class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button @click.stop="startEdit(role)" class="p-2 hover:bg-muted rounded-full text-text hover:text-primary">
-                            <Pencil class="h-4 w-4" />
-                          </button>
-                          <button class="p-2 hover:bg-muted rounded-full text-text hover:text-destructive transition-colors">
-                            <Trash2 class="h-4 w-4" />
-                          </button>
-                        </div>
+                        <CompositionVerifyButton :if="!role.archive">
+                          <div v-if="editingId !== role.id" class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button @click.stop="startEdit(role)" class="p-2 hover:bg-muted rounded-full text-text hover:text-primary">
+                              <Pencil class="h-4 w-4" />
+                            </button>
+                            <CompositionConfirmDialog @confirm="archivedRole(role.id)" header="Suppression de role" description="Êtes-vous sûr de vouloir Archiver ?" cancelText="Annuler" actionText="Archiver" >
+                               <template #dialogButton>
+                                  <button class="p-2 hover:bg-muted rounded-full text-text hover:text-destructive transition-colors">
+                                    <Archive class="h-4 w-4" />
+                                  </button>
+                               </template>
+                            </CompositionConfirmDialog>
+                          </div>
+                        </CompositionVerifyButton>
+
+                         <CompositionVerifyButton :if="role.archive">
+                          <div v-if="editingId !== role.id" class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <CompositionConfirmDialog @confirm="restoredRole(role.id)" header="Restoration de role" description="Êtes-vous sûr de vouloir restorer ?" cancelText="Annuler" actionText="Restorer" >
+                              <template #dialogButton>
+                                  <button class="p-2 hover:bg-muted rounded-full text-text hover:text-destructive transition-colors">
+                                    <ArchiveRestore class="h-4 w-4" />
+                                  </button>
+                              </template>
+
+                            </CompositionConfirmDialog>
+                          </div>
+                        </CompositionVerifyButton>
+
                       </div>
 
                       <div v-if="editingId === role.id" class="mt-4 pt-4 border-t border-border/10 flex justify-center gap-6">
@@ -465,12 +605,31 @@ const togglePermission = (permission: Permission) => {
                       <span v-else class="px-2 py-0.5 rounded-full border border-border bg-muted"> Active </span>
                     </td>
                   </template>
-                  <template #cell-actions="{  }">
-                    <div class="flex justify-end ">
-                        <button class="p-2 rounded text-text hover:text-destructive">
-                          <Trash2 :size="16"/>
-                        </button>
-                    </div>
+                  <template #cell-actions="{ row }">
+
+                    <CompositionVerifyButton :if="!row.archive">
+                        <CompositionConfirmDialog @confirm="archivedPerms(row.id)" header="suppression d'une permission" description="Êtes-vous sûr de vouloir archiver ?" cancelText="Annuler" actionText="Archiver" >
+                          <template #dialogButton>
+                            <div class="flex justify-end ">
+                                <button class="p-2 rounded text-text hover:text-destructive">
+                                  <Archive :size="16"/>
+                                </button>
+                            </div>
+                          </template>
+                        </CompositionConfirmDialog>
+                     </CompositionVerifyButton>
+
+                     <CompositionVerifyButton :if="row.archive">
+                        <CompositionConfirmDialog @confirm="restoredPerms(row.id)" header="Restoration d'une permission" description="Êtes-vous sûr de vouloir restorer ?" cancelText="Annuler" actionText="Restorer" >
+                          <template #dialogButton>
+                            <div class="flex justify-end ">
+                                <button class="p-2 rounded text-text hover:text-destructive">
+                                  <ArchiveRestore :size="16"/>
+                                </button>
+                            </div>
+                          </template>
+                        </CompositionConfirmDialog>
+                     </CompositionVerifyButton>
                   </template>
                 </CompositionTable>
             </div>

@@ -20,7 +20,7 @@ export interface UserProfile {
 }
 
 export interface userFilter {
-  archive: true | false | null,
+  archive: string,
   page?: number
   limit?: number
 }

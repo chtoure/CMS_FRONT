@@ -83,3 +83,29 @@ export const useGetPermissionsRole = (id : number) => {
    })
 }
 
+
+
+// Archiver un role
+export const useDeleteRole = () => {
+  return useMutation({
+    mutationFn: async (idUser: number) => {
+      const response = await api(`/archiveRoles/${idUser}`, {
+        method: 'PUT',
+      });
+      return handleResponse(response);
+    },
+  });
+};
+
+
+// Restorer un role
+export const useRestoreRole = () => {
+  return useMutation({
+    mutationFn: async (idUser: number) => {
+      const response = await api(`/restoreRoles/${idUser}`, {
+        method: 'PUT',
+      });
+      return handleResponse(response);
+    },
+  });
+};
