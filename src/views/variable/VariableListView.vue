@@ -5,7 +5,7 @@ import {
   ToggleLeft, Loader2, Trash2, X, Copy, Edit3,
   Database
 } from "lucide-vue-next"
-import type { Variable, VariableType } from "../../type/Variable"
+import type { Variable, VariableType } from "../../type/variable"
 
 import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue"
 import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue"

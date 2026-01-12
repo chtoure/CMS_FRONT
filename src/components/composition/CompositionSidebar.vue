@@ -94,6 +94,11 @@ const navItems: NavItem[] = [
       { id: 'users', label: 'Utilisateurs', icon: UserStar, href: 'admin.users' },
       { id: 'roles', label: 'Roles', icon: ShieldUser, href: 'admin.roles-permissions' },
     ]
+  },{
+    id: 'content-entry',
+    label: 'Content Entry',
+    icon: Database,
+    href: 'admin.content-entry'
   }
 ]
 
