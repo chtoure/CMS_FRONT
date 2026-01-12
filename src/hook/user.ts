@@ -68,6 +68,7 @@ export const useGetUsers = (filter: Ref<userFilter> | userFilter) => {
       const params = unref(filter)
       const query = new URLSearchParams()
 
+      if (params.archive) query.append('archive', params.archive.toString())
       if (params.page) query.append('page', params.page.toString())
       if (params.limit) query.append('limit', params.limit.toString())
 
@@ -151,3 +152,29 @@ export const useResetPassword = () => {
     }
   })
 }
+
+
+// Archiver un user
+export const useDeleteUser = () => {
+  return useMutation({
+    mutationFn: async (idUser: number) => {
+      const response = await api(`/archiveUsers/${idUser}`, {
+        method: 'PUT',
+      });
+      return handleResponse(response);
+    },
+  });
+};
+
+
+// Restorer un user
+export const useRestoreUser = () => {
+  return useMutation({
+    mutationFn: async (idUser: number) => {
+      const response = await api(`/restoreUers/${idUser}`, {
+        method: 'PUT',
+      });
+      return handleResponse(response);
+    },
+  });
+};

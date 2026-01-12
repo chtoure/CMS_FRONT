@@ -4,7 +4,7 @@
 import { ref, computed } from 'vue';
 import { useGetUsers } from '../../hook/user';
 import type { UserProfile } from '../../type/user';
-import { Users, UserPlus, Pencil, MoreHorizontal, Archive } from 'lucide-vue-next';
+import { Users, UserPlus, Pencil, MoreHorizontal, Archive, ArchiveRestore } from 'lucide-vue-next';
 
 
 // Composants convertis
@@ -26,7 +26,12 @@ import DropdownMenuContent from '../../components/ui/dropdown-menu/DropdownMenuC
 import DropdownMenuLabel from '../../components/ui/dropdown-menu/DropdownMenuLabel.vue';
 import DropdownMenuSeparator from '../../components/ui/dropdown-menu/DropdownMenuSeparator.vue';
 import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue';
-
+import { watch } from 'vue';
+import { useDeleteUser, useRestoreUser } from '../../hook/user';
+import { showToast } from '../../lib/toast';
+import { getErrorMessage } from '../../lib/errorMessage';
+import { userStore } from '../../stores/user';
+import CompositionVerifyButton from '../../components/composition/CompositionVerifyButton.vue';
 
 
 
@@ -36,9 +41,12 @@ const isEditing = ref(false);
 const selectedUser = ref<UserProfile | undefined>(undefined);
 const currentPage = ref(1);
 const itemsPerPage = ref(10);
+const filterArchiv = ref("all");
+const storeUser = userStore();
 
 
   const filterParams = computed(() => ({
+    archive: filterArchiv.value,
     page: currentPage.value,
     limit: itemsPerPage.value
   }));
@@ -54,8 +62,40 @@ const {
 } = useGetUsers(filterParams);
 
 
+  const filterChange = (val: string ) => {
+    filterArchiv.value = val;
+    currentPage.value = 1;
+  }
+
+
+
 const userResults = computed(() => users.value?.results || []);
 const totalItems = computed(() => users.value?.count || 0);
+
+
+  watch([currentPage, itemsPerPage, filterArchiv], () => {
+    refetchUsers();
+  });
+
+
+const {
+  mutate : archiveUser,
+  isPending: archibePending,
+  isError : isArchiveError,
+  error : errorArchive
+
+} = useDeleteUser()
+
+
+
+const {
+  mutate : restoreUser,
+  isPending: restorePending,
+  isError : isrestorError,
+  error : errorRestor
+
+} = useRestoreUser()
+
 
 
 // 2. Recherche filtrée (équivalent de useMemo)
@@ -68,6 +108,34 @@ const filteredUsers = computed(() => {
     u.email.toLowerCase().includes(query)
   );
 });
+
+
+
+const archivedUser = (id: number) => {
+  archiveUser(id,{
+     onSuccess: async () => {
+       refetchUsers();
+        showToast('success', 'Utilisateur archivé avec success');
+     },
+     onError: (error: Error) => {
+        showToast('error', `${getErrorMessage(error)}`);
+      }
+  })
+}
+
+
+
+const restoredUser = (id: number) => {
+  restoreUser(id,{
+     onSuccess: async () => {
+       refetchUsers();
+        showToast('success', 'Utilisateur restoré avec success');
+     },
+     onError: (error: Error) => {
+        showToast('error', `${getErrorMessage(error)}`);
+      }
+  })
+}
 
 
 // 4. Actions
@@ -87,10 +155,6 @@ const closeForm = () => {
   refetchUsers();
 };
 
-const emit = defineEmits<{
-  edit: [user: UserProfile],
-  delete: [id: number]
-}>();
 
 const columns = [
   { key: 'full_name', label: 'Nom'  },
@@ -105,8 +169,8 @@ const columns = [
 
 <template>
 
-  <CompositionLoading v-if="isLoading" />
-  <CompositionError v-else-if="isgetError" :error="getError?.message" />
+  <CompositionLoading v-if="isLoading || archibePending || restorePending" />
+  <CompositionError v-else-if="isgetError || isArchiveError || isrestorError" :error="getError?.message || errorArchive?.message || errorRestor?.message" />
 
 
   <div v-else class="min-h-screen space-y-10 ">
@@ -153,14 +217,14 @@ const columns = [
           <div class="p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
             <p class="font-bold text-text huge">Liste des utilisateurs</p>
             <div class="">
-              <Select>
+              <Select v-model="filterArchiv" @update:model-value="(val) => filterChange(val as string)">
                 <SelectTrigger class="input-custom">
                   <SelectValue placeholder="Filter" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all" class="select-item-custom">Tous</SelectItem>
-                  <SelectItem value="active" class="select-item-custom">Active</SelectItem>
-                  <SelectItem value="archive" class="select-item-custom">Achivés</SelectItem>
+                  <SelectItem value="false" class="select-item-custom">Active</SelectItem>
+                  <SelectItem value="true" class="select-item-custom">Achivés</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -183,8 +247,8 @@ const columns = [
                     </template>
 
                     <template #cell-status="{ row }">
-                      <span v-if="row.role">Active </span>
-                      <span v-else>Non Active</span>
+                      <span v-if="row.archive">Archiver </span>
+                      <span v-else>Active</span>
                     </template>
 
                     <template #cell-actions="{ row }">
@@ -198,21 +262,34 @@ const columns = [
                         <DropdownMenuContent>
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator/>
-                          <DropdownMenuLabel>
+                          <CompositionVerifyButton :if="!row.archive">
+                            <DropdownMenuLabel >
                             <button  @click="openEditPage(row)" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
                               <Pencil class="w-4 h-4" /> Modifier
                             </button>
-                          </DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuLabel>
-                            <CompositionConfirmDialog @confirm="emit('delete', row.id)" header="Suppression de l'utilisateur" description="Êtes-vous sûr de vouloir Archiver ?" cancelText="Annuler" actionText="Archiver" >
-                              <template #dialogButton>
-                                <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110">
-                                  <Archive class="w-4 h-4" /> Archiver
-                                </button>
-                              </template>
-                            </CompositionConfirmDialog>
-                          </DropdownMenuLabel>
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel>
+                              <CompositionConfirmDialog @confirm="archivedUser(row.id)" header="Suppression de l'utilisateur" description="Êtes-vous sûr de vouloir Archiver ?" cancelText="Annuler" actionText="Archiver" >
+                                <template #dialogButton>
+                                  <button v-if="row.id !== storeUser.userInfo?.id" class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110">
+                                    <Archive class="w-4 h-4"  /> Archiver
+                                  </button>
+                                </template>
+                              </CompositionConfirmDialog>
+                            </DropdownMenuLabel>
+                          </CompositionVerifyButton>
+                          <CompositionVerifyButton :if="row.archive">
+                            <DropdownMenuLabel>
+                              <CompositionConfirmDialog @confirm="restoredUser(row.id)" header="Restoration de l'utilisateur" description="Êtes-vous sûr de vouloir restorer ?" cancelText="Annuler" actionText="Restorer" >
+                                <template #dialogButton>
+                                  <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110">
+                                    <ArchiveRestore  class="w-4 h-4"  /> Restorer
+                                  </button>
+                                </template>
+                              </CompositionConfirmDialog>
+                            </DropdownMenuLabel>
+                          </CompositionVerifyButton>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </template>

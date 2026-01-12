@@ -7,7 +7,8 @@ export interface Role {
   name : string,
   description : string | null,
   users: UserProfile[],
-  permissions: Permission []
+  permissions: Permission [],
+  archive: boolean;
 }
 
 
@@ -26,6 +27,7 @@ export interface AddRole{
 }
 
 export interface roleFilter {
-  page?: number
+  archive: string,
+  page?: number,
   limit?: number
 }

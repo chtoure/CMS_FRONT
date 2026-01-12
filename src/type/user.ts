@@ -16,9 +16,11 @@ export interface UserProfile {
   role: Role | null;
   isLoggedIn: boolean;
   initials?: string;
+  archive: boolean;
 }
 
 export interface userFilter {
+  archive: string,
   page?: number
   limit?: number
 }
