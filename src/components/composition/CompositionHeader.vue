@@ -1,13 +1,11 @@
 <script setup lang="ts">
-    import {
-        ref
-    } from 'vue'
-
+    import { computed, ref, onMounted, onUnmounted } from 'vue'
     import {
         Maximize,
         Settings,
-        PanelLeftClose,
-        PanelLeftOpen
+        Search,
+        X,
+        Menu
     } from 'lucide-vue-next'
     import CompositionUserDropDown from '@/components/composition/CompositionUserDropDown.vue'
     import CompositionDarkMode from '@/components/composition/CompositionDarkMode.vue';
@@ -20,6 +18,9 @@
     import AvatarImage from '@/components/ui/avatar/AvatarImage.vue';
     import AvatarFallback from '@/components/ui/avatar/AvatarFallback.vue';
     import DropdownMenuContent  from '@/components/ui/dropdown-menu/DropdownMenuContent.vue';
+    import { userStore } from '../../stores/user';
+    import { useRouter } from 'vue-router';
+    import { searchItems, type SearchItem } from '../../constants/searchItems';
 
 
     const props = defineProps<{
@@ -27,6 +28,8 @@
         headerClass?: string,
         isSidebarCollapsed?: boolean
     }>()
+
+    const router = useRouter();
 
     const isFullscreen = ref(false)
 
@@ -40,36 +43,73 @@
         }
     }
 
-    const SearchIcon = { template: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>' };
-    const CommandIcon = { template: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0 3 3 3 3 0 0 0 3-3z"/></svg>' };
-
     const searchTerm = ref('');
+    const storeUser = userStore();
+
+    const filteredResults = computed(() => {
+        if (!searchTerm.value) return [];
+        const term = searchTerm.value.toLowerCase();
+        return searchItems.filter(item =>
+            item.label.toLowerCase().includes(term) ||
+            item.description.toLowerCase().includes(term) ||
+            item.category.toLowerCase().includes(term)
+        ).slice(0, 8);
+    });
+
+    const handleSearchSelect = (item: SearchItem) => {
+        searchTerm.value = '';
+        if (item.href) {
+            router.push({ name: item.href });
+        }
+    };
+
+    const handleShortcut = (e: KeyboardEvent) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+            e.preventDefault();
+            const input = document.getElementById('global-search-input');
+            input?.focus();
+        }
+    };
+
+    onMounted(() => {
+        window.addEventListener('keydown', handleShortcut);
+    });
+
+    onUnmounted(() => {
+        window.removeEventListener('keydown', handleShortcut);
+    });
 
 
 </script>
 
 <template>
     <header :class="cn(
-        'h-14 border-b border-border bg-background flex items-center justify-between px-4 gap-3',
+        'h-16 sticky top-0 z-40 border-b border-border bg-background backdrop-blur-xl flex items-center justify-between px-6 gap-4', // Effet de verre (glassmorphism) et hauteur augmentée
         headerClass
     )" >
 
-        <div class="flex items-center gap-3 flex-1">
+        <div class="flex items-center gap-4 flex-1">
             <button
                 @click="props.onToggleSidebar"
-                class="flex items-center justify-center p-1.5 rounded-md transition-all duration-150 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none"
+                class="flex items-center justify-center p-2 rounded-xl transition-all duration-200 text-muted-foreground hover:bg-secondary hover:text-foreground hover:scale-110 active:scale-95"
             >
-                <PanelLeftOpen v-if="props.isSidebarCollapsed" class="w-4 h-4" />
-                <PanelLeftClose v-else class="w-4 h-4" />
+                <Menu v-if="props.isSidebarCollapsed" class="w-5 h-5" />
+                <X v-else class="w-5 h-5" />
             </button>
 
-            <BaseSearchInput v-model="searchTerm" placeholder="Search..." containerClass="max-w-sm">
+            <BaseSearchInput
+                id="global-search-input"
+                v-model="searchTerm"
+                :results="filteredResults"
+                @select="handleSearchSelect"
+                placeholder="Rechercher une fonctionnalité (Cmd + K)..."
+                containerClass="max-w-md hidden md:flex"
+            >
                 <template v-slot:iconLeft>
-                    <SearchIcon class="w-3.5 h-3.5" />
+                    <Search class="w-4 h-4" />
                 </template>
                 <template v-slot:shortcutRight>
-                    <CommandIcon class="w-3 h-3" />
-                    <span class="text-[11px]">K</span>
+                    <span class="text-[10px] font-black opacity-50">⌘ K</span>
                 </template>
             </BaseSearchInput>
         </div>
@@ -84,6 +124,7 @@
             </Button>
 
             <Button
+              @click="router.push({ name: 'admin.parameter' })"
               variant="ghost"
               :class="cn('text-muted-foreground hover:text-foreground p-1.5 h-8 w-8')">
                 <Settings class="w-4 h-4" />
@@ -96,14 +137,25 @@
                 <Button class="relative h-8 w-8 rounded-full overflow-hidden hover:opacity-80 transition-all duration-150 hover:ring-2 hover:ring-primary/30">
                   <Avatar>
                     <AvatarImage src="userIcon.png"/>
-                    <AvatarFallback>JS</AvatarFallback>
+                    <AvatarFallback>{{ storeUser.userInfo?.initials }}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" class="mt-2">
+              <DropdownMenuContent align="end" class="mt-2 bg-transparent border-none shadow-none">
                 <CompositionUserDropDown />
               </DropdownMenuContent>
             </DropdownMenu>
         </div>
     </header>
 </template>
+
+
+
+
+
+
+
+
+
+
+

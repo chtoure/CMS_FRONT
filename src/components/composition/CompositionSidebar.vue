@@ -1,166 +1,325 @@
+
 <script setup lang="ts">
-// All imports
-import { reactive, computed, type Component } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, type Component, ref } from 'vue'
 import {
+  LogOut,
   LayoutDashboard,
-  Package,
+  FolderOpen,
+  Database,
+  UserStar,
   ChevronDown,
-  ChevronRight,
+  ShieldUser
 } from 'lucide-vue-next'
-import DropdownMenu from '@/components/ui/dropdown-menu/DropdownMenu.vue'
-import DropdownMenuTrigger from '@/components/ui/dropdown-menu/DropdownMenuTrigger.vue'
-import DropdownMenuContent from '../ui/dropdown-menu/DropdownMenuContent.vue'
-import DropdownMenuLabel from '../ui/dropdown-menu/DropdownMenuLabel.vue'
-import DropdownMenuSeparator from '../ui/dropdown-menu/DropdownMenuSeparator.vue'
-import DropdownMenuItem from '../ui/dropdown-menu/DropdownMenuItem.vue'
-
-
-interface SubMenu {
-  label: string,
-  icon: Component,
-  href: string
-}
-
-interface NavItems  {
-  label: string,
-  icon: Component,
-  href?: string,
-  menuKey: string,
-  submenu: SubMenu[] | null
-}
+import { useRoute, RouterLink, useRouter } from 'vue-router'
+import { cn } from '../../lib/utils'
+import { useGetParameters } from '../../hook/parameter'
+import { userStore } from '../../stores/user'
+import { useLogout } from '../../hook/user'
+import Button from '../ui/button/Button.vue'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator
+} from '../ui/dropdown-menu'
 
 
 const route = useRoute()
+const router = useRouter()
+const { data: params} = useGetParameters()
+const storeUser = userStore();
+
+const {
+  mutate: logout,
+  isPending: isLoggingOut,
+} = useLogout();
+
+const handleLogout = () => {
+  logout(void 0, {
+
+    onSuccess() {
+      storeUser.setUserInfo(null);
+      router.push({ name: 'auth.login' });
+    },
+    onError(err) {
+      console.error('Erreur de déconnexion :', err);
+      storeUser.setUserInfo(null);
+      router.push({ name: 'auth.login' });
+    }
+  });
+
+
+};
+
 const props = defineProps<{
   isCollapsed: boolean
 }>()
 
-const openMenus = reactive<{ [key: string]: boolean }>({
-  dashboard: true,
-})
+const isOpen = computed(() => !props.isCollapsed)
 
-const toggleMenu = (menu: string) => {
-  openMenus[menu] = !openMenus[menu]
+interface NavItem {
+  label: string
+  href?: string
+  icon: Component
+  badge?: string
+  children?: NavItem[]
+  id: string
 }
 
-const navItems: NavItems[] = [
-    {
-      label: 'Dashboard',
-      icon: LayoutDashboard,
-      menuKey: 'dashboard',
-      href: 'admin.dashboard',
-      submenu: null,
-    },
-    {
-      label: 'Media',
-      icon: Package,
-      href: 'admin.media',
-      menuKey: 'media',
-      submenu: null
-    }
+const openMenus = ref<Record<string, boolean>>({})
+
+const toggleMenu = (id: string) => {
+  openMenus.value[id] = !openMenus.value[id]
+}
+
+const isParentActive = (item: NavItem) => {
+  if (item.href === route.name) return true
+  if (item.children) {
+    return item.children.some(child => child.href === route.name)
+  }
+  return false
+}
+
+const navItems: NavItem[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: 'admin.dashboard' },
+  { id: 'media', label: 'Media', icon: FolderOpen, href: 'admin.media'},
+  { id: 'variable', label: 'Variable', icon: Database, href: 'admin.variable' },
+  {
+    id: 'admin',
+    label: 'Admin',
+    icon: UserStar,
+    children: [
+      { id: 'users', label: 'Utilisateurs', icon: UserStar, href: 'admin.users' },
+      { id: 'roles', label: 'Roles', icon: ShieldUser, href: 'admin.roles-permissions' },
+    ]
+  }
 ]
 
-const isChildActive = (submenu: SubMenu[]) => {
-  return submenu?.some(sub => route.name === sub.href)
-}
+navItems.forEach(item => {
+  if (item.children && item.children.some(child => child.href === route.name)) {
+    openMenus.value[item.id] = true
+  }
+})
 
-const sidebarClasses = computed(() => [
-  'bg-background border-r border-sidebar-border flex flex-col h-screen transition-all duration-300',
-  props.isCollapsed ? 'w-16' : 'w-60'
-])
+const activeItem = computed(() => {
+  // Check children first
+  for (const item of navItems) {
+    if (item.href === route.name) return item.label
+    if (item.children) {
+      const activeChild = item.children.find(child => child.href === route.name)
+      if (activeChild) return activeChild.label
+    }
+  }
+  return ""
+})
 
-const linkClasses = (isActive: boolean) => [
-  'w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md transition-all duration-150 mb-0.5 text-[13px]',
-  isActive
-    ? 'bg-active text-sidebar-foreground font-medium'
-    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground'
-];
 </script>
 
 <template>
-  <aside :class="sidebarClasses">
-    <div class="p-4 border-b border-sidebar-border flex items-center gap-2.5 text-sidebar-foreground" :class="{ 'justify-center': props.isCollapsed }">
-      <div class="w-8 h-8 bg-primary rounded-md flex items-center justify-center flex-shrink-0">
-        <span class="text-primary-foreground font-bold text-lg">E</span>
+
+  <aside
+    :class="cn(
+      'bg-sidebar border-r border-sidebar-border flex flex-col h-screen transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-2xl z-30',
+      props.isCollapsed ? 'w-20' : 'w-72'
+    )"
+  >
+    <div class="h-24 flex items-center justify-center border-b border-sidebar-border px-4 relative overflow-hidden">
+      <div class="absolute inset-0 bg-gradient-to-r from-sidebar-primary/10 via-transparent to-sidebar-primary/5 animate-pulse" />
+
+      <div
+        :class="cn(
+          'flex items-center gap-3 transition-all duration-300 relative z-10',
+          isOpen ? 'opacity-100' : 'hidden'
+        )"
+      >
+        <img v-if="params?.media?.type === 'image'" :src="params?.media?.file_path" alt="logo" class="w-full  object-contain">
+        <video v-else-if="params?.media?.type === 'video'" autoplay loop muted :src="params?.media?.file_path" alt="logo" class="w-full  object-contain"></video>
+
       </div>
-      <div v-if="!props.isCollapsed">
-        <h1 class="font-semibold text-base text-foreground leading-none">Enerlog</h1>
-        <span class="text-[11px] text-primary font-font tracking-tight">POS</span>
+
+      <div v-if="isCollapsed" class="w-12 h-12 flex items-center justify-center relative z-10 transition-all">
+        <img v-if="params?.media?.type === 'image'" :src="params?.media?.file_path" alt="logo" class="object-contain">
+        <video v-else-if="params?.media?.type === 'video'" autoplay loop muted :src="params?.media?.file_path" alt="logo" class="w-full  object-contain"></video>
       </div>
     </div>
 
-    <nav class="flex-1 overflow-y-auto p-3 custom-scrollbar">
-        <div v-for="item in navItems" :key="item.label" class="mb-1">
+    <nav class="flex-1 overflow-y-auto px-3 py-6 space-y-1 scrollbar-hide">
+      <div v-for="item in navItems" :key="item.id" class="relative group">
+        <RouterLink
+          v-if="!item.children"
+          :to="{ name: item.href }"
+          :class="cn(
+            'flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-200',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary',
+            'relative group overflow-hidden mb-1',
+            activeItem === item.label
+              ? 'bg-primary text-white shadow-xl shadow-sidebar-primary/30'
+              : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary'
+          )"
+        >
+          <div v-if="activeItem === item.label" class="absolute inset-0 bg-gradient-to-r from-sidebar-primary/40 via-sidebar-primary/20 to-transparent opacity-50 animate-shimmer" />
 
-          <DropdownMenu v-if="item.submenu && props.isCollapsed">
+          <span
+            :class="cn(
+              'transition-colors duration-200 relative z-10',
+              activeItem === item.label ? 'text-white' : 'text-sidebar-foreground/70 group-hover:text-sidebar-primary'
+            )"
+          >
+            <component :is="item.icon" class="w-5 h-5" />
+          </span>
+
+          <template v-if="isOpen">
+            <span :class="cn('font-semibold text-sm flex-1 relative z-10 truncate', activeItem === item.label ? 'text-white' : '')">
+              {{ item.label }}
+            </span>
+            <span
+              v-if="item.badge"
+              :class="cn(
+                'text-xs rounded-full px-2.5 py-1 font-bold flex items-center justify-center relative z-10',
+                activeItem === item.label ? 'bg-white/25 text-white backdrop-blur-md' : 'bg-red-500 text-white'
+              )"
+            >
+              {{ item.badge }}
+            </span>
+          </template>
+
+          <div v-if="isCollapsed && activeItem !== item.label" class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-sidebar-primary rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity" />
+        </RouterLink>
+
+        <div v-else class="space-y-1">
+          <!-- Dropdown en mode réduit -->
+          <DropdownMenu v-if="isCollapsed">
             <DropdownMenuTrigger as-child>
-              <button :class="linkClasses(isChildActive(item.submenu))">
-                <component :is="item.icon" class="w-4 h-4" />
-                <span class="sr-only">{{ item.label }}</span>
+              <button
+                :class="cn(
+                  'w-full flex items-center justify-center h-10 rounded-xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary',
+                  isParentActive(item)
+                    ? 'bg-primary text-white shadow-lg shadow-sidebar-primary/30'
+                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary'
+                )"
+              >
+                <component :is="item.icon" class="w-5 h-5" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent side="right" align="start" class="w-52 ml-1">
-              <DropdownMenuLabel class="text-xs">{{ item.label }}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem v-for="subItem in item.submenu" :key="subItem.label" as-child>
-                <RouterLink :to="{ name: subItem.href }" class="cursor-pointer w-full flex text-[13px]">
-                  <component :is="subItem.icon" class="w-4 h-4 mr-2" />
-                  {{ subItem.label }}
+            <DropdownMenuContent side="right" :side-offset="10" class="w-48 bg-sidebar border-sidebar-border shadow-2xl">
+              <DropdownMenuLabel class="text-xs font-bold text-sidebar-foreground/50 px-2 pb-1">{{ item.label }}</DropdownMenuLabel>
+              <DropdownMenuSeparator class="bg-sidebar-border" />
+              <DropdownMenuItem
+                v-for="child in item.children"
+                :key="child.id"
+                as-child
+                class="hover:bg-sidebar-accent focus:bg-sidebar-accent rounded-lg hover:!text-primary"
+              >
+                <RouterLink
+                  :to="{ name: child.href }"
+                  :class="cn(
+                    'flex items-center gap-3 w-full px-2 py-1.5 text-sm transition-colors font-semibold ',
+                    activeItem === child.label ? 'text-sidebar-primary font-bold' : 'text-sidebar-foreground '
+                  )"
+                >
+                  <component :is="child.icon" class="w-4 h-4" />
+                  <span>{{ child.label }}</span>
                 </RouterLink>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <template v-if="item.submenu">
-            <button
-              @click="toggleMenu(item.menuKey)"
-              :class="linkClasses(!!openMenus[item.menuKey] && !props.isCollapsed)"
-            >
-              <component :is="item.icon" class="w-4 h-4 flex-shrink-0" />
-              <span v-if="!props.isCollapsed" class="font-medium flex-1 text-left">
-                {{ item.label }}
-              </span>
-              <div v-if="!props.isCollapsed">
-                <ChevronDown v-if="openMenus[item.menuKey]" class="w-3.5 h-3.5" />
-                <ChevronRight v-else class="w-3.5 h-3.5" />
-              </div>
-            </button>
-
-            <div v-if="openMenus[item.menuKey] && !props.isCollapsed" class="ml-7 mt-0.5 space-y-0.5">
-              <RouterLink
-                v-for="subItem in item.submenu"
-                :key="subItem.label"
-                :to="{ name: subItem.href }"
-                v-slot="{ isActive }"
-              >
-                <div :class="[
-                  'flex items-center gap-2 px-2.5 py-1.5 text-[13px] rounded-md transition-all duration-150 cursor-pointer',
-                  isActive ? 'text-primary font-medium bg-primary/10' : 'text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent'
-                ]">
-                  <component :is="subItem.icon" class="w-3.5 h-3.5" />
-                  {{ subItem.label }}
-                </div>
-              </RouterLink>
-            </div>
-          </template>
-
           <template v-else>
-            <RouterLink
-              :to="{ name: item.href }"
-              v-slot="{ isActive }"
+            <button
+              @click="toggleMenu(item.id)"
+              :class="cn(
+                'w-full flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-200',
+                'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary',
+                isParentActive(item) && !openMenus[item.id] ? 'bg-sidebar-accent/50' : ''
+              )"
             >
-              <button :class="linkClasses(isActive)">
-                <component :is="item.icon" class="w-4 h-4 flex-shrink-0" />
-                <span v-if="!props.isCollapsed" class="font-medium flex-1 text-left">
+              <span class="text-sidebar-foreground/70 group-hover:text-sidebar-primary">
+                <component :is="item.icon" class="w-5 h-5" />
+              </span>
+
+              <template v-if="isOpen">
+                <span class="font-semibold text-sm flex-1 text-left truncate">
                   {{ item.label }}
                 </span>
-                <span v-if="props.isCollapsed" class="sr-only">{{ item.label }}</span>
-              </button>
-            </RouterLink>
-          </template>
+                <ChevronDown
+                  :class="cn(
+                    'w-4 h-4 transition-transform duration-200',
+                    openMenus[item.id] ? 'rotate-0' : '-rotate-90'
+                  )"
+                />
+              </template>
+            </button>
 
+            <transition
+              enter-active-class="transition duration-200 ease-out"
+              enter-from-class="transform scale-95 opacity-0 -translate-y-2"
+              enter-to-class="transform scale-100 opacity-100 translate-y-0"
+              leave-active-class="transition duration-150 ease-in"
+              leave-from-class="transform scale-100 opacity-100 translate-y-0"
+              leave-to-class="transform scale-95 opacity-0 -translate-y-2"
+            >
+              <div v-if="openMenus[item.id] && isOpen" class="ml-9 space-y-1 border-l border-sidebar-border pl-2">
+                <RouterLink
+                  v-for="child in item.children"
+                  :key="child.id"
+                  :to="{ name: child.href }"
+                  :class="cn(
+                    'flex items-center gap-3 px-3 py-1.5 rounded-lg transition-all duration-200 text-sm',
+                    activeItem === child.label
+                      ? 'bg-primary/10 text-primary font-bold'
+                      : 'text-sidebar-foreground hover:text-sidebar-primary hover:bg-sidebar-accent'
+                  )"
+                >
+                  <component :is="child.icon" class="w-4 h-4" />
+                  <span>{{ child.label }}</span>
+                </RouterLink>
+              </div>
+            </transition>
+          </template>
         </div>
+      </div>
     </nav>
+
+    <div class="p-4 border-t border-sidebar-border space-y-3 backdrop-blur-sm">
+      <div v-if="isOpen" class="px-4 py-3 rounded-xl bg-sidebar-accent/30 border border-sidebar-border backdrop-blur-md">
+        <p class="text-xs font-bold text-sidebar-foreground truncate uppercase tracking-wider">{{ storeUser.userInfo?.full_name }}</p>
+        <p class="text-[10px] text-accent font-medium">{{ storeUser.userInfo?.role }}</p>
+      </div>
+
+      <Button
+        @click="handleLogout"
+        :disabled="isLoggingOut"
+        variant="ghost"
+        :class="cn(
+          'w-full h-10 flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200',
+          'text-destructive hover:bg-destructive hover:opacity-50 hover:text-white',
+          'font-semibold text-sm'
+        )"
+      >
+        <LogOut class="w-5 h-5" />
+        <span v-if="isOpen" class="truncate">Déconnexion</span>
+      </Button>
+    </div>
   </aside>
 </template>
+
+<style scoped>
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
+}
+
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+</style>

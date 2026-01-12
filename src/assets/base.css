@@ -1,126 +1,117 @@
-/* Inter font for Figma-like interface */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Figma Light Theme Colors */
-  --background: #ffffff;
-  --foreground: #2c2c2c;
-  --text: #2c2c2c;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+
+  --text: #0f172a;
+  --text-muted: #64748b;
 
   --card: #ffffff;
-  --card-foreground: #2c2c2c;
+  --card-foreground: #0f172a;
 
   --popover: #ffffff;
   --popover-foreground: #2c2c2c;
 
-  /* Primary: Figma Blue */
-  --primary: #0c8ce9;
+  --primary: #0284c7;
   --primary-foreground: #ffffff;
 
-  --active:#E1F1FF;
-  --active-foreground: #ffffff;
+  --active: #e0f2fe;
+  --active-foreground: #0369a1;
 
-  /* Secondary */
-  --secondary: #f5f5f5;
-  --secondary-foreground: #2c2c2c;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #475569;
 
-  /* Muted */
-  --muted: #f0f0f0;
-  --muted-foreground: #6d6d6d;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
 
-  /* Accent: Orange */
-  --accent: #ff7e33;
+  --accent: #f97316;
   --accent-foreground: #ffffff;
 
-  /* Destructive */
   --destructive: #f24822;
   --destructive-foreground: #ffffff;
 
-  /* Success */
   --success: #14ae5c;
   --success-foreground: #ffffff;
 
-  /* Borders & Inputs */
-  --border: #e5e5e5;
-  --input: #f5f5f5;
-  --ring: #0c8ce9;
+  --border: #e2e8f0;
+  --input: #ffffff;
+  --ring: #0284c7;
 
-  --radius: 0.5rem;
+  --radius: 12px;
 
-  /* Sidebar - Light */
-  --sidebar: #f5f5f5;
+  --sidebar: #ffffff;
   --sidebar-foreground: #2c2c2c;
   --sidebar-primary: #0c8ce9;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #ffffff;
+  --sidebar-accent: #f8fafc;
   --sidebar-accent-foreground: #2c2c2c;
-  --sidebar-border: #e5e5e5;
+  --sidebar-border: #dfdfdf;
   --sidebar-ring: #0c8ce9;
 
+  --pagination-item-text: #000000;
+
   --border-width: 1px;
+  --scrollbar-color: #e2e8f0;
 }
 
 .dark {
-  /* Figma Dark Theme - Exact colors from screenshot */
-  --background: #1e1e1e; /* Main dark background */
-  --foreground: #ffffff; /* Primary text */
-  --text: #ffffff;
+  --background: #020617;
+  --foreground: #f8fafc;
 
-  --card: #2c2c2c; /* White cards on dark background */
-  --card-foreground: #2c2c2c; /* Dark text on white cards */
+  --text: #f8fafc;
+  --text-muted: #64748b;
 
-  --popover: #2c2c2c; /* Dropdown/modal background */
+  --card: #0a101c;
+  --card-foreground: #f8fafc;
+
+  --popover: #2c2c2c;
   --popover-foreground: #ffffff;
 
-  /* Primary: Figma Blue */
-  --primary: #0c8ce9; /* Bright Figma blue */
-  --primary-foreground: #ffffff;
+  --primary: #0284c7;
+  --primary-foreground: #0c4a6e;
 
-  --active:#4A556C;
-  --active-foreground: #ffffff;
-  /* Secondary */
-  --secondary: #373737; /* Subtle dark gray */
-  --secondary-foreground: #b3b3b3; /* Light gray text */
+  --active: #1e293b;
+  --active-foreground: #38bdf8;
 
-  /* Muted */
-  --muted: #2c2c2c; /* Dark muted */
-  --muted-foreground: #b3b3b3; /* Light muted text */
+  --secondary: #373737;
+  --secondary-foreground: #b3b3b3;
 
-  /* Accent: Orange */
+  --muted: #2c2c2c;
+  --muted-foreground: #b3b3b3;
+
   --accent: #ff7e33;
-  --accent-foreground: #ffffff;
-
-  /* Destructive */
+  --accent-foreground: #ff7e33;
   --destructive: #f24822;
   --destructive-foreground: #ffffff;
 
-  /* Success */
   --success: #14ae5c;
   --success-foreground: #ffffff;
 
-  /* Borders & Inputs */
-  --border: #373737; /* Subtle borders */
-  --input: #2c2c2c; /* Dark input background */
+  --border: #1e293b;
+  --input: #0f172a;
   --ring: #0c8ce9;
 
-  /* Sidebar - Dark (like Figma left panel) */
-  --sidebar: #2c2c2c; /* Darker sidebar */
+  --sidebar: #020617;
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #0c8ce9;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #373737; /* Hover state */
+  --sidebar-accent: #0d1525;
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #373737;
   --sidebar-ring: #0c8ce9;
 
+  --pagination-item-text: #ffffff;
+
   --border-width: 1px;
+  --scrollbar-color: #FFFFFF33;
 }
 
-/* Global resets */
+
 *,
 *::before,
 *::after {
@@ -134,16 +125,34 @@ body {
   background: var(--background);
   transition: color 0.2s ease, background-color 0.2s ease;
   line-height: 1.5;
-  /* Figma uses Inter throughout */
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-family: "medium", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-weight: 400;
-  font-size: 13px; /* Figma's compact font size */
+  font-size: 13px;
+}
+
+@layer components {
+  .input-custom {
+    @apply h-9 w-full rounded-md !border !border-border bg-input px-3 py-1 text-[13px]
+           shadow-sm transition-all outline-none
+           focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:border-transparent
+           disabled:cursor-not-allowed disabled:opacity-50
+           placeholder:text-muted-foreground
+           file:border-0 file:bg-transparent file:text-[13px] file:font-medium;
+  }
+
+  .select-item-custom {
+    @apply cursor-pointer transition-colors;
+  }
+  .select-item-custom[data-highlighted] {
+    background-color: var(--primary) !important;
+    color: var(--primary-foreground) !important;
+    outline: none !important;
+  }
 }
 
 @layer base {
-  /* Figma-style typography - compact and clean */
   h1 {
     @apply text-2xl font-semibold tracking-tight text-text;
     font-family: "Inter", sans-serif;
@@ -190,7 +199,6 @@ body {
     @apply bg-background text-foreground;
   }
 
-  /* Figma-style scrollbar */
   .custom-scrollbar::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -199,16 +207,15 @@ body {
     background-color: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: var(--scrollbar-color);
     border-radius: 5px;
     border: 2px solid transparent;
     background-clip: padding-box;
   }
   .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.3);
+    background-color: var(--scrollbar-color);
   }
 
-  /* Compact text utilities like Figma */
   .p14 {
     font-size: 14px;
     line-height: 1.5;
@@ -240,7 +247,6 @@ body {
     letter-spacing: -0.01em;
   }
 
-  /* Figma-style card with subtle shadows */
   .card {
     background-color: var(--card);
     border: var(--border-width) solid var(--border);
@@ -250,10 +256,10 @@ body {
     transition: box-shadow 0.15s ease, transform 0.15s ease;
   }
 
-  .card:hover {
+  /* .card:hover {
     box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.1);
     transform: translateY(-1px);
-  }
+  } */
 
   .dark .card {
     box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2);
@@ -276,7 +282,6 @@ body {
   }
 }
 
-/* Figma color utilities */
 @layer utilities {
   .text-success {
     color: var(--success);
@@ -288,7 +293,6 @@ body {
     border-color: var(--success);
   }
 
-  /* Compact spacing like Figma */
   .space-compact {
     gap: 0.5rem;
   }
@@ -302,5 +306,17 @@ body {
   .py-compact {
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
+  }
+
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-md border border-border/50 shadow-sm;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
+  }
+
+  .hover-lift {
+    @apply transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg;
   }
 }
