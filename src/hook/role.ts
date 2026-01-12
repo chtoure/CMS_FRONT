@@ -16,6 +16,7 @@ export const useGetRoles = (filter: Ref<roleFilter> | roleFilter) => {
       const params = unref(filter)
       const query = new URLSearchParams()
 
+      if (params.archive) query.append('archive', params.archive.toString())
       if (params.page) query.append('page', params.page.toString())
       if (params.limit) query.append('limit', params.limit.toString())
 
@@ -82,3 +83,29 @@ export const useGetPermissionsRole = (id : number) => {
    })
 }
 
+
+
+// Archiver un role
+export const useDeleteRole = () => {
+  return useMutation({
+    mutationFn: async (idUser: number) => {
+      const response = await api(`/archiveRoles/${idUser}`, {
+        method: 'PUT',
+      });
+      return handleResponse(response);
+    },
+  });
+};
+
+
+// Restorer un role
+export const useRestoreRole = () => {
+  return useMutation({
+    mutationFn: async (idUser: number) => {
+      const response = await api(`/restoreRoles/${idUser}`, {
+        method: 'PUT',
+      });
+      return handleResponse(response);
+    },
+  });
+};
