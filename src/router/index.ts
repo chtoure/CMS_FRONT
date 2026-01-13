@@ -15,6 +15,7 @@ import AdminVue from '../views/user/AdminVue.vue'
 import ForgetPasswordView from '../views/auth/ForgetPasswordView.vue'
 import RolesPermissionsView from '../views/user/Roles&PermissionsView.vue'
 import ParameterView from '../views/parameter/ParameterView.vue'
+import ContentTypeListView from '@/views/contentType/ContentTypeListView.vue'
 import ContentEntryFormView from '../views/contentEntry/ContentEntryFormView.vue'
 import ContentEntryListView from '../views/contentEntry/ContentEntryListView.vue'
 
@@ -96,6 +97,11 @@ const router = createRouter({
                       path: 'parameter',
                       name: 'admin.parameter',
                       component: ParameterView
+                    },
+                    {
+                      path:"content-types",
+                      name:"admin.content-types",
+                      component:ContentTypeListView
                     },
                     {
                       path: 'content-entry',
