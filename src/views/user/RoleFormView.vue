@@ -43,13 +43,13 @@ const {
   data: dataPermissions,
   isLoading: loadinPermission,
   refetch:getPermissions
-} = useGetPermissions()
+} = useGetPermissions({})
 
 // Hook listes Roles
 const {
   isLoading: loadinRole,
   refetch:getRoles
-} = useGetRoles()
+} = useGetRoles({})
 
 
 
