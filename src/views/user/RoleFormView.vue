@@ -16,16 +16,17 @@ import CommandEmpty from '../../components/ui/command/CommandEmpty.vue';
 import CommandList from '../../components/ui/command/CommandList.vue';
 import CommandGroup from '../../components/ui/command/CommandGroup.vue';
 import CommandItem from '../../components/ui/command/CommandItem.vue';
-import { useAddRole, useGetRoles } from '../../hook/role';
+import { useAddRole } from '../../hook/role';
 import { validationSchemaRole } from '../../validation/RoleSchema';
 import { Field, useForm } from 'vee-validate';
 import CompositionError from '../../components/composition/CompositionError.vue';
-import { useGetPermissions } from '../../hook/permission';
+import { useGetPermissionsNoPaginate } from '../../hook/permission';
 import type { Permission } from '../../type/permission';
 
 
 // Initialisation
 const open = ref(false)
+const emit = defineEmits(['success', 'cancel'])
 
   const { handleSubmit,resetForm } = useForm({
     validationSchema: validationSchemaRole,
@@ -42,15 +43,7 @@ const open = ref(false)
 const {
   data: dataPermissions,
   isLoading: loadinPermission,
-  refetch:getPermissions
-} = useGetPermissions({})
-
-// Hook listes Roles
-const {
-  isLoading: loadinRole,
-  refetch:getRoles
-} = useGetRoles({})
-
+} = useGetPermissionsNoPaginate()
 
 
 // Hook add Role
@@ -84,8 +77,7 @@ const onSubmit = handleSubmit(async (values) => {
     ...values
   },{
     onSuccess(){
-      getRoles();
-      getPermissions();
+      emit('success')
       showToast('success', 'Role créer avec succès');
     },
     onError: (errorRole) => {
@@ -96,6 +88,7 @@ const onSubmit = handleSubmit(async (values) => {
 
 const handleCancel = () =>{
   resetForm()
+  emit('cancel')
 }
 
 </script>
@@ -106,7 +99,7 @@ const handleCancel = () =>{
 
   <div>
 
-    <CompositionLoading v-if=" loadinPermission || pendingAddRole || loadinRole" />
+    <CompositionLoading v-if=" loadinPermission || pendingAddRole" />
     <CompositionError v-else-if="isErrorAddRole" :error="errorRole?.message"/>
     <main v-else>
       <div  class="w-full">

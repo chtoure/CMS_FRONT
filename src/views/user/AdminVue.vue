@@ -13,13 +13,7 @@ import CompositionError from '../../components/composition/CompositionError.vue'
 import CompositionLoading from '../../components/composition/CompositionLoading.vue';
 import Button from '@/components/ui/button/Button.vue';
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue';
-import Select from '../../components/ui/select/Select.vue';
-import SelectTrigger from '../../components/ui/select/SelectTrigger.vue';
-import SelectValue from '../../components/ui/select/SelectValue.vue';
-import SelectContent from '../../components/ui/select/SelectContent.vue';
-import SelectItem from '../../components/ui/select/SelectItem.vue';
 import CompositionTable from '../../components/composition/CompositionTable.vue';
-import CompositionListEmpty from '../../components/composition/CompositionListEmpty.vue';
 import DropdownMenu from '../../components/ui/dropdown-menu/DropdownMenu.vue';
 import DropdownMenuTrigger from '../../components/ui/dropdown-menu/DropdownMenuTrigger.vue';
 import DropdownMenuContent from '../../components/ui/dropdown-menu/DropdownMenuContent.vue';
@@ -32,24 +26,32 @@ import { showToast } from '../../lib/toast';
 import { getErrorMessage } from '../../lib/errorMessage';
 import { userStore } from '../../stores/user';
 import CompositionVerifyButton from '../../components/composition/CompositionVerifyButton.vue';
+import { cn } from '../../lib/utils';
+import Badge from '../../components/ui/badge/Badge.vue';
 
 
 
 
-const search = ref('');
 const isEditing = ref(false);
 const selectedUser = ref<UserProfile | undefined>(undefined);
 const currentPage = ref(1);
 const itemsPerPage = ref(10);
 const filterArchiv = ref("all");
 const storeUser = userStore();
+const search = ref('')
 
 
-  const filterParams = computed(() => ({
+
+const filterOptions = [
+  { label: 'Actifs', value: 'false' },
+  { label: 'Archivés', value: 'true' }
+]
+
+const filterParams = computed(() => ({
     archive: filterArchiv.value,
     page: currentPage.value,
-    limit: itemsPerPage.value
-  }));
+    limit: itemsPerPage.value,
+}));
 
 
   // 1. Données & États
@@ -62,18 +64,13 @@ const {
 } = useGetUsers(filterParams);
 
 
-  const filterChange = (val: string ) => {
-    filterArchiv.value = val;
-    currentPage.value = 1;
-  }
-
 
 
 const userResults = computed(() => users.value?.results || []);
 const totalItems = computed(() => users.value?.count || 0);
 
 
-  watch([currentPage, itemsPerPage, filterArchiv], () => {
+  watch([currentPage, itemsPerPage], () => {
     refetchUsers();
   });
 
@@ -98,16 +95,35 @@ const {
 
 
 
-// 2. Recherche filtrée (équivalent de useMemo)
-const filteredUsers = computed(() => {
-  if (!userResults.value) return [];
-  if (!search.value.trim()) return userResults.value;
-  const query = search.value.toLowerCase();
-  return userResults.value.filter((u:UserProfile) =>
-    u.full_name.toLowerCase().includes(query) ||
-    u.email.toLowerCase().includes(query)
-  );
-});
+const filteredData = computed(() => {
+  return userResults.value.filter(item =>{
+    const matchesSearch = item.full_name.toLowerCase().includes(search.value.toLowerCase()) ||
+                          item.email.toLowerCase().includes(search.value.toLowerCase()) ||
+                          item.role?.name.toLowerCase().includes(search.value.toLowerCase())
+    let matchesArchive = true;
+    if (filterArchiv.value !== 'all') {
+      matchesArchive = item.archive === (filterArchiv.value === 'true');
+    }
+    return matchesSearch && matchesArchive;
+  })
+})
+
+
+const getStatusColor = (status: boolean) => {
+  switch (status) {
+    case false: return 'bg-success/20 text-success border-success/30'
+    case true: return 'bg-muted text-muted-foreground border-border'
+  }
+}
+
+const getStatusLabel = (status: boolean) => {
+
+  switch (status) {
+    case false: return 'Actif'
+    case true: return 'Archivé'
+  }
+}
+
 
 
 
@@ -214,42 +230,37 @@ const columns = [
       <template v-else>
 
         <div class="card rounded-none overflow-hidden">
-          <div class="p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <p class="font-bold text-text huge">Liste des utilisateurs</p>
-            <div class="">
-              <Select v-model="filterArchiv" @update:model-value="(val) => filterChange(val as string)">
-                <SelectTrigger class="input-custom">
-                  <SelectValue placeholder="Filter" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" class="select-item-custom">Tous</SelectItem>
-                  <SelectItem value="false" class="select-item-custom">Active</SelectItem>
-                  <SelectItem value="true" class="select-item-custom">Achivés</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
           <div class="p-0">
-
-             <CompositionListEmpty v-if="filteredUsers.length === 0" title="Aucun utilisateur" description="Aucune donnée trouvée dans la base de données." :icon="Users" />
-               <div v-else class="p-6" >
+               <div class="p-6" >
                   <CompositionTable
                     :columns="columns"
-                    :data="filteredUsers"
+                    :data="filteredData"
                     :total="totalItems"
-                    v-model:current-page="currentPage"
                     v-model:limit="itemsPerPage"
+                    v-model:currentPage="currentPage"
+
+                    searchable
+                    v-model:search="search"
+                    searchPlaceholder="Rechercher par nom ou email..."
+
+                    filterable
+                    v-model:filterValue="filterArchiv"
+                    :filterOptions="filterOptions"
+                    filterPlaceholder="Statut"
                   >
 
                     <template #cell-role="{ row }">
                       <span>{{ row.role?.name }}</span>
                     </template>
 
-                    <template #cell-status="{ row }">
-                      <span v-if="row.archive">Archiver </span>
-                      <span v-else>Active</span>
-                    </template>
+                   <template #cell-status="{ row }">
+                    <Badge
+                      variant="outline"
+                      :class="cn('px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', getStatusColor(row.archive))"
+                    >
+                      {{ getStatusLabel(row.archive) }}
+                    </Badge>
+                  </template>
 
                     <template #cell-actions="{ row }">
 

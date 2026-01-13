@@ -1,20 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import CompositionTable from '@/components/composition/CompositionTable.vue'
 import Button from '@/components/ui/button/Button.vue'
 import { Archive, ArchiveRestore, ClipboardList, MoreHorizontal, Pencil, Plus } from 'lucide-vue-next'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
-import Select from '../../components/ui/select/Select.vue'
-import SelectTrigger from '../../components/ui/select/SelectTrigger.vue'
-import SelectValue from '../../components/ui/select/SelectValue.vue'
-import SelectContent from '../../components/ui/select/SelectContent.vue'
-import SelectItem from '../../components/ui/select/SelectItem.vue'
 import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue'
 import DropdownMenu from '../../components/ui/dropdown-menu/DropdownMenu.vue'
 import DropdownMenuTrigger from '../../components/ui/dropdown-menu/DropdownMenuTrigger.vue'
 import DropdownMenuContent from '../../components/ui/dropdown-menu/DropdownMenuContent.vue'
 import DropdownMenuLabel from '../../components/ui/dropdown-menu/DropdownMenuLabel.vue'
 import DropdownMenuSeparator from '../../components/ui/dropdown-menu/DropdownMenuSeparator.vue'
+import { cn } from '../../lib/utils'
+import Badge from '../../components/ui/badge/Badge.vue'
+import CompositionVerifyButton from '../../components/composition/CompositionVerifyButton.vue'
+import { useRouter } from 'vue-router'
 
 
 
@@ -24,6 +23,7 @@ interface ContentType {
   slug: string
   description: string
   entriesCount: number
+  archive: boolean
 }
 
 // Mock Data
@@ -33,45 +33,87 @@ const contentTypes = ref<ContentType[]>([
     name: 'Article',
     slug: 'article',
     description: 'Articles de blog standard',
-    entriesCount: 15
+    entriesCount: 15,
+    archive: false
   },
   {
     id: 2,
     name: 'Produit',
     slug: 'product',
     description: 'Catalogue de produits',
-    entriesCount: 8
+    entriesCount: 8,
+    archive: false
   },
   {
     id: 3,
     name: 'Page',
     slug: 'page',
     description: 'Pages statiques du site',
-    entriesCount: 4
+    entriesCount: 4,
+    archive: true
   },
   {
     id: 4,
     name: 'Portfolio',
     slug: 'portfolio',
     description: 'Projets et réalisations',
-    entriesCount: 12
+    entriesCount: 12,
+    archive: false
   }
 ])
 
 const columns = [
-  { key: 'name', label: 'Nom', class: 'w-[200px]' },
-  { key: 'slug', label: 'Slug', class: 'w-[200px]' },
-  { key: 'description', label: 'Description' },
+  { key: 'id', label: 'ID', class: 'w-16' },
+  { key: 'name', label: 'Nom' },
+  { key: 'slug', label: 'Slug' },
+  { key: 'description', label: 'Description'},
+  { key: 'status', label: 'Statut', class: 'w-32' },
   { key: 'entriesCount', label: 'Entrées', class: 'w-[100px] text-center' },
-  { key: 'actions', label: 'Actions', class: 'w-[100px] text-end' }
+  { key: 'actions', label: 'Actions', class: 'w-10' }
 ]
 
 const limit = ref(10)
 const currentPage = ref(1)
-const total = ref(contentTypes.value.length)
+const search = ref('')
+const filterStatus = ref('all')
 
-const handleCreate = () => {
-  console.log('Create new content type')
+const filterOptions = [
+  { label: 'Actifs', value: 'active' },
+  { label: 'Archivés', value: 'archive' }
+]
+
+const filteredData = computed(() => {
+  return contentTypes.value.filter(item => {
+    // Filtrage par recherche
+    const matchesSearch = item.name.toLowerCase().includes(search.value.toLowerCase()) ||
+                          item.slug.toLowerCase().includes(search.value.toLowerCase()) ||
+                          item.description.toLowerCase().includes(search.value.toLowerCase())
+
+    // Filtrage par statut
+    let matchesFilter = true
+    if (filterStatus.value === 'active') {
+      matchesFilter = !item.archive
+    } else if (filterStatus.value === 'archive') {
+      matchesFilter = item.archive
+    }
+
+    return matchesSearch && matchesFilter
+  })
+})
+
+const getStatusColor = (status: boolean) => {
+  switch (status) {
+    case false: return 'bg-success/20 text-success border-success/30'
+    case true: return 'bg-muted text-muted-foreground border-border'
+  }
+}
+
+const getStatusLabel = (status: boolean) => {
+
+  switch (status) {
+    case false: return 'Actif'
+    case true: return 'Archivé'
+  }
 }
 
 const handleEdit = (row: ContentType) => {
@@ -81,6 +123,13 @@ const handleEdit = (row: ContentType) => {
 const handleDelete = (row: ContentType) => {
   console.log('Delete', row)
 }
+
+const router = useRouter()
+
+const handleCreate = () => {
+  router.push({ name: 'admin.content-types.create' })
+}
+
 </script>
 
 <template>
@@ -109,32 +158,37 @@ const handleDelete = (row: ContentType) => {
 
     <!-- Table -->
         <div class="card rounded-none overflow-hidden">
-          <div class="p-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <p class="font-bold text-text huge">Liste des types de contenus</p>
-            <div class="">
-              <Select>
-                <SelectTrigger class="input-custom">
-                  <SelectValue placeholder="Filter" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" class="select-item-custom">Tous</SelectItem>
-                  <SelectItem value="false" class="select-item-custom">Active</SelectItem>
-                  <SelectItem value="true" class="select-item-custom">Achivés</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
           <div class="p-6">
               <CompositionTable
                 :columns="columns"
-                :data="contentTypes"
-                :total="total"
+                :data="filteredData"
+                :total="filteredData.length"
                 v-model:limit="limit"
                 v-model:currentPage="currentPage"
+
+                searchable
+                v-model:search="search"
+                searchPlaceholder="Rechercher par nom ou slug..."
+
+                filterable
+                v-model:filterValue="filterStatus"
+                :filterOptions="filterOptions"
+                filterPlaceholder="Statut"
               >
                 <!-- Custom rendering for Name column -->
                 <template #cell-name="{ value }">
                   <span class="font-medium text-foreground">{{ value }}</span>
+                </template>
+
+
+
+                <template #cell-status="{ row }">
+                  <Badge
+                    variant="outline"
+                    :class="cn('px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', getStatusColor(row.archive))"
+                  >
+                    {{ getStatusLabel(row.archive) }}
+                  </Badge>
                 </template>
 
                 <!-- Custom rendering for Actions column -->
@@ -148,7 +202,7 @@ const handleDelete = (row: ContentType) => {
                       <DropdownMenuContent>
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator/>
-                        <!-- <CompositionVerifyButton> -->
+                        <CompositionVerifyButton :if="!row.archive">
                           <DropdownMenuLabel >
                           <button @click="handleEdit(row)" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
                             <Pencil class="w-4 h-4" /> Modifier
@@ -164,8 +218,8 @@ const handleDelete = (row: ContentType) => {
                               </template>
                             </CompositionConfirmDialog>
                           </DropdownMenuLabel>
-                        <!-- </CompositionVerifyButton> -->
-                        <!-- <CompositionVerifyButton> -->
+                        </CompositionVerifyButton>
+                        <CompositionVerifyButton :if="row.archive">
                           <DropdownMenuLabel>
                             <CompositionConfirmDialog header="Restoration de type de contenu" description="Êtes-vous sûr de vouloir restorer ?" cancelText="Annuler" actionText="Restorer" >
                               <template #dialogButton>
@@ -175,7 +229,7 @@ const handleDelete = (row: ContentType) => {
                               </template>
                             </CompositionConfirmDialog>
                           </DropdownMenuLabel>
-                        <!-- </CompositionVerifyButton> -->
+                        </CompositionVerifyButton>
                       </DropdownMenuContent>
                     </DropdownMenu>
                 </template>
