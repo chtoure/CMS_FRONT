@@ -17,8 +17,8 @@ interface IBaseField {
   required: boolean;
   placeholder?: string;
   description?: string;
-  colSpan?: 1 | 2;
-  defaultValue?: JsonValue; // Use imported JsonValue
+  // colSpan?: 1 | 2;
+  defaultValue?: JsonValue;
 }
 
 interface ITextConfig {

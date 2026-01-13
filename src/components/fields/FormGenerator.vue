@@ -38,7 +38,7 @@ const getComponent = (type: FieldType) => {
   }
 }
 const getColSpan = (field: IFieldDefinition) => {
-  if (field.colSpan) return field.colSpan === 2 ? 'md:col-span-2' : 'md:col-span-1'
+  // if (field.colSpan) return field.colSpan === 2 ? 'md:col-span-2' : 'md:col-span-1'
 
   // Default logic based on type
   const fullWidthTypes = [FieldType.RICH_TEXT, FieldType.RELATION]
