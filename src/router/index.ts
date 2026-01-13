@@ -16,6 +16,8 @@ import ForgetPasswordView from '../views/auth/ForgetPasswordView.vue'
 import RolesPermissionsView from '../views/user/Roles&PermissionsView.vue'
 import ParameterView from '../views/parameter/ParameterView.vue'
 import ContentTypeListView from '@/views/contentType/ContentTypeListView.vue'
+import ContentEntryFormView from '../views/contentEntry/ContentEntryFormView.vue'
+import ContentEntryListView from '../views/contentEntry/ContentEntryListView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -97,9 +99,29 @@ const router = createRouter({
                       component: ParameterView
                     },
                     {
-                      path: 'content-types',
-                      name: 'admin.content-types',
-                      component: ContentTypeListView
+                      path:"content-types",
+                      name:"admin.content-types",
+                      component:ContentTypeListView
+                    },
+                    {
+                      path: 'content-entry',
+                      children: [
+                        {
+                          path: '',
+                          name: 'admin.content-entry',
+                          component: ContentEntryListView
+                        },
+                        {
+                          path: 'create',
+                          name: 'admin.content-entry.create',
+                          component: ContentEntryFormView
+                        },
+                        {
+                          path: 'list',
+                          name: 'admin.content-entry.list',
+                          component: ContentEntryListView
+                        }
+                      ]
                     }
                 ]
             },

@@ -1,5 +1,6 @@
 <script setup lang="ts" generic="T">
 import { cn } from '../../lib/utils';
+import { Search } from 'lucide-vue-next';
 import Table from '../ui/table/Table.vue';
 import TableBody from '../ui/table/TableBody.vue';
 import TableCell from '../ui/table/TableCell.vue';
@@ -7,6 +8,11 @@ import TableHead from '../ui/table/TableHead.vue';
 import TableHeader from '../ui/table/TableHeader.vue';
 import TableRow from '../ui/table/TableRow.vue';
 import CompositionPagination from './CompositionPagination.vue'
+import Select from '../../components/ui/select/Select.vue'
+import SelectTrigger from '../../components/ui/select/SelectTrigger.vue'
+import SelectValue from '../../components/ui/select/SelectValue.vue'
+import SelectContent from '../../components/ui/select/SelectContent.vue'
+import SelectItem from '../../components/ui/select/SelectItem.vue'
 
 interface Column {
   key: string
@@ -14,29 +20,96 @@ interface Column {
   class?: string
 }
 
+interface FilterOption {
+  label: string
+  value: string
+}
+
 interface Props {
   columns: Column[]
   data: T[]
   total?: number
-  limit: number
+  limit?: number
   currentPage?: number
+
+  // Search
+  searchable?: boolean
+  search?: string
+  searchPlaceholder?: string
+
+  // Filter
+  filterable?: boolean
+  filterValue?: string
+  filterOptions?: FilterOption[]
+  filterPlaceholder?: string
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   total: 0,
   limit: 10,
-  currentPage: 1
+  currentPage: 1,
+  searchable: false,
+  search: '',
+  searchPlaceholder: 'Rechercher...',
+  filterable: false,
+  filterValue: 'all',
+  filterPlaceholder: 'Filtrer par'
 })
 
-const emit = defineEmits(['update:currentPage', 'update:limit', 'row-click'])
+const emit = defineEmits(['update:currentPage', 'update:limit', 'row-click', 'update:search', 'update:filterValue'])
 
 const handlePageChange = (val: number) => {
   emit('update:currentPage', val)
+}
+
+const onSearchInput = (e: Event) => {
+  emit('update:search', (e.target as HTMLInputElement).value)
+}
+
+const onFilterChange = (val: string | number | boolean | null | undefined) => {
+  emit('update:filterValue', String(val ?? ''))
 }
 </script>
 
 <template>
   <div class="space-y-4">
+    <!-- Header with Search and Filter -->
+    <div v-if="searchable || filterable" class="flex flex-col sm:flex-row justify-between items-center gap-4 py-3">
+      <div v-if="filterable" class="w-full sm:w-auto">
+        <Select :model-value="filterValue" @update:model-value="(val) => onFilterChange(val as string)">
+          <SelectTrigger class="input-custom min-w-[150px]">
+            <SelectValue :placeholder="filterPlaceholder" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all" class="select-item-custom">Tous</SelectItem>
+            <SelectItem
+              v-for="opt in filterOptions"
+              :key="opt.value"
+              :value="opt.value"
+              class="select-item-custom"
+            >
+              {{ opt.label }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div v-if="searchable" class="relative w-full sm:w-72 ml-auto">
+        <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <input
+          type="text"
+          :value="search"
+          @input="onSearchInput"
+          :placeholder="searchPlaceholder"
+          class="pl-9 input-custom"
+        />
+      </div>
+
+      <div v-if="$slots['extra-header']" class="flex items-center gap-2">
+        <slot name="extra-header" />
+      </div>
+    </div>
+
     <div class="border border-sidebar-border bg-sidebar/30 backdrop-blur-sm overflow-hidden">
       <Table class="border-collapse">
         <TableHeader class="bg-sidebar-accent">
@@ -90,10 +163,10 @@ const handlePageChange = (val: number) => {
 
     <div class="flex items-center justify-end px-2">
       <CompositionPagination
-        :total="total"
-        :limit="limit"
-        :perPage="limit"
-        :model-value="currentPage"
+        :total="props.total"
+        :limit="props.limit"
+        :perPage="props.limit"
+        :model-value="props.currentPage"
         @update:model-value="handlePageChange"
         @update:per-page="(val) => emit('update:limit', val)"
       />

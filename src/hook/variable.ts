@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
-import type { Collection, Variable, VariableType } from "../type/Variable";
+import type { Collection, Variable, VariableType } from "../type/variable";
 import { toValue, type MaybeRefOrGetter } from "vue";
 import api, { handleResponse } from "../api/fetchConfig";
 
