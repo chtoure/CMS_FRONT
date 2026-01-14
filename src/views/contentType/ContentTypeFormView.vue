@@ -19,7 +19,16 @@ import {
   Save,
   Undo2
 } from 'lucide-vue-next'
-import { FieldType } from '../../type/field'
+import {
+  FieldType,
+  type IFieldDefinition,
+  type ISelectConfig,
+  type ITaxonomyConfig,
+  type IRelationConfig,
+  type IMediaConfig,
+  type ITextConfig,
+  type INumberConfig
+} from '../../type/field'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
 import Button from '../../components/ui/button/Button.vue'
 import { Input } from '../../components/ui/input'
@@ -36,6 +45,9 @@ import BaseSwitch from '../../components/base/BaseSwitch.vue'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs'
 import { showToast } from '../../lib/toast'
 import { contentTypeSchema } from '../../validation/contentTypeValidate'
+import { useRegisterContentType, useGetContentTypes } from '../../hook/content-type'
+import CompositionLoading from '../../components/composition/CompositionLoading.vue'
+// import CompositionError from '../../components/composition/CompositionError.vue'
 
 
 const router = useRouter()
@@ -48,10 +60,14 @@ const form = ref({
   archive: false
 })
 
+const isFieldsExpanded = ref(true)
+
 // État des erreurs de validation
 const errors = ref<Record<string, string>>({})
 
 // Liste des champs (fields_schema)
+// On utilise any[] temporairement pour le ref pour éviter l'erreur d'instanciation trop profonde de TS
+// tout en gardant la réactivité complète de Vue.
 const fields = ref<any[]>([
   {
     type: FieldType.TEXT,
@@ -62,11 +78,32 @@ const fields = ref<any[]>([
   }
 ])
 
+
+const {
+  mutateAsync: registerContentType,
+  isPending: isRegistering,
+} = useRegisterContentType()
+
+
+const {
+  data: contentTypes,
+  isPending: isContentTypesLoading,
+} = useGetContentTypes()
+
+
 const visibleFields = computed(() => fields.value.slice(1))
 
+const fieldNames = computed(() => {
+  const names: string[] = []
+  for (const f of fields.value) {
+    names.push(f.name)
+  }
+  return names
+})
+
 // Gérer l'adaptation dynamique du nom du champ par défaut en cas de conflit
-watch(() => fields.value.map(f => f.name), (newNames) => {
-  const defaultField = fields.value[0]
+watch(fieldNames, (newNames) => {
+  const defaultField = fields.value[0] as IFieldDefinition
   if (!defaultField) return
 
   // On vérifie si un champ utilisateur (index > 0) utilise le nom du champ par défaut
@@ -128,7 +165,7 @@ const addField = () => {
     newName = `${baseName}_${++index}`
   }
 
-  const newField: any = {
+  const newField: IFieldDefinition = {
     type: FieldType.TEXT,
     name: newName,
     label: '',
@@ -137,34 +174,52 @@ const addField = () => {
     description: ''
   }
 
-  // Initialiser les props spécifiques
-  if (newField.type === FieldType.SELECT) newField.options = []
-  if (newField.type === FieldType.MEDIA) {
-    newField.allowedTypes = ['image']
-    newField.multiple = false
-  }
-
   fields.value.push(newField)
   expandedFieldIndex.value = fields.value.length - 1
 }
 
+const fieldTypesList = computed(() => {
+  const types: FieldType[] = []
+  for (const f of fields.value) {
+    types.push(f.type)
+  }
+  return types
+})
+
 // Watcher pour initialiser les props quand le type change
-watch(() => fields.value.map(f => f.type), (newTypes) => {
+watch(fieldTypesList, (newTypes) => {
   newTypes.forEach((type, index) => {
     const field = fields.value[index]
-    if (type === FieldType.SELECT && !field.options) field.options = []
-    if (type === FieldType.TAXONOMY && !field.taxonomy_slug) {
-      field.taxonomy_slug = ''
-      field.renderType = 'combobox'
-      field.multiple = false
+    if (!field) return
+    if (type === FieldType.SELECT) {
+      const selectField = field as ISelectConfig
+      if (!selectField.options) selectField.options = []
+      if (selectField.multiple === undefined) selectField.multiple = false
     }
-    if (type === FieldType.RELATION && !field.targetContentTypeSlug) {
-      field.targetContentTypeSlug = ''
-      field.multiple = false
+    if (type === FieldType.TAXONOMY) {
+      const taxonomyField = field as ITaxonomyConfig
+      if (!taxonomyField.taxonomy_slug) {
+        taxonomyField.taxonomy_slug = ''
+        taxonomyField.renderType = 'combobox'
+        taxonomyField.multiple = false
+      }
+      if (taxonomyField.multiple === undefined) taxonomyField.multiple = false
     }
-    if (type === FieldType.MEDIA && !field.allowedTypes) {
-      field.allowedTypes = ['image']
-      field.multiple = false
+    if (type === FieldType.RELATION) {
+      const relationField = field as IRelationConfig
+      if (!relationField.targetContentTypeSlug) {
+        relationField.targetContentTypeSlug = ''
+        relationField.multiple = false
+      }
+      if (relationField.multiple === undefined) relationField.multiple = false
+    }
+    if (type === FieldType.MEDIA) {
+      const mediaField = field as IMediaConfig
+      if (!mediaField.allowedTypes) {
+        mediaField.allowedTypes = ['image']
+        mediaField.multiple = false
+      }
+      if (mediaField.multiple === undefined) mediaField.multiple = false
     }
   })
 }, { deep: true })
@@ -230,8 +285,17 @@ const handleSubmit = () => {
     fields_schema: fields.value
   }
 
-  console.log('Submit ContentType:', payload)
-  showToast('success', 'Configuration validée avec succès')
+  registerContentType(
+    payload,{
+    onSuccess: () => {
+      showToast('success', 'Type de contenu créé avec succès')
+      router.push({name: 'admin.content-types'})
+    },
+    onError: (error) => {
+      showToast('error', error?.message)
+    }
+  })
+
 }
 
 const handleCancel = () => {
@@ -242,7 +306,10 @@ const handleCancel = () => {
 </script>
 
 <template>
-  <div class="min-h-screen space-y-10">
+
+  <CompositionLoading v-if="isRegistering || isContentTypesLoading" />
+
+  <div v-else class="min-h-screen space-y-10">
     <CompositionPageHeader>
       <template #content>
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
@@ -285,7 +352,7 @@ const handleCancel = () => {
                   v-model="form.name"
                   placeholder="Ex: Articles, Produits..."
                   class="input-custom"
-                  :class="{ 'border-destructive bg-destructive/5': errors.name }"
+                  :class="{ 'border border-destructive': errors.name }"
                 />
                 <p v-if="errors.name" class="text-xs text-destructive px-1 font-medium italic animate-in slide-in-from-top-1">{{ errors.name }}</p>
               </div>
@@ -296,7 +363,7 @@ const handleCancel = () => {
                   v-model="form.slug"
                   placeholder="identifiant-unique"
                   class="input-custom"
-                  :class="{ 'border-destructive bg-destructive/5': errors.slug }"
+                  :class="{ 'border border-destructive': errors.slug }"
                 />
                 <p v-if="errors.slug" class="text-xs text-destructive px-1 font-medium italic animate-in slide-in-from-top-1">{{ errors.slug }}</p>
               </div>
@@ -306,11 +373,11 @@ const handleCancel = () => {
               <Label for="description" class="text-sm font-bold  text-text px-1">Description</Label>
               <textarea
                 id="description"
-                :rows="3"
+                :rows="4"
                 v-model="form.description"
                 placeholder="Décrivez à quoi sert ce type de contenu..."
                 class="input-custom"
-                :class="{ 'border-destructive bg-destructive/5': errors.description }"
+                :class="{ 'border border-destructive': errors.description }"
               />
               <p v-if="errors.description" class="text-xs text-destructive px-1 font-medium italic animate-in slide-in-from-top-1">{{ errors.description }}</p>
             </div>
@@ -337,15 +404,22 @@ const handleCancel = () => {
 
       <!-- Section Gestion des Champs -->
       <section class="card rounded-none overflow-hidden">
-        <div class="flex items-center justify-between p-4 border-b border-border bg-card">
+        <div
+          class="flex items-center justify-between p-4 border-b border-border bg-card cursor-pointer hover:bg-muted/5 transition-colors"
+          @click="isFieldsExpanded = !isFieldsExpanded"
+        >
           <div class="flex items-center gap-2 font-bold text-text">
             <Settings2 class="w-5 h-5 text-text" />
             Champs
           </div>
-          <ChevronUp class="w-5 h-5 text-text" />
+          <ChevronUp
+            class="w-5 h-5 text-text transition-transform duration-300"
+            :class="{ 'rotate-180': !isFieldsExpanded }"
+          />
         </div>
 
-        <!-- Header de la "table" -->
+        <div v-show="isFieldsExpanded">
+          <!-- Header de la "table" -->
         <div class="grid grid-cols-[80px_1fr_1fr_1fr] px-6 py-3 bg-muted/20 border-b border-border text-xs font-bold text-text">
           <div>N°</div>
           <div>Libellé</div>
@@ -467,15 +541,45 @@ const handleCancel = () => {
                     <div v-if="field.type === FieldType.SELECT" class="space-y-4">
                       <div class="flex items-center justify-between">
                         <Label class="text-xs font-bold text-text">Options de sélection</Label>
-                        <Button variant="ghost" size="sm" @click="(field as any).options.push({ label: '', value: '' })" class="text-text font-bold hover:bg-transparent hover:text-primary">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          @click="(field as ISelectConfig).options.push('')"
+                          class="text-text font-bold hover:bg-transparent hover:text-primary"
+                        >
                           <Plus class="w-4 h-4 mr-1" /> Ajouter une option
                         </Button>
                       </div>
                       <div class="space-y-2">
-                        <div v-for="(opt, oIdx) in (field as any).options" :key="oIdx" class="flex gap-2 items-center">
-                          <Input v-model="opt.label" placeholder="Libellé" class="input-custom" />
-                          <Input v-model="opt.value" placeholder="Valeur" class="input-custom" />
-                          <Button variant="ghost" size="icon" @click="(field as any).options.splice(oIdx, 1)" class="text-destructive">
+                        <div v-for="(_, oIdx) in (field as ISelectConfig).options" :key="oIdx" class="flex gap-2 items-center">
+                          <Select
+                            :model-value="typeof (field as ISelectConfig).options[oIdx] === 'number' ? 'number' : 'string'"
+                            @update:model-value="(val) => {
+                              const options = (field as ISelectConfig).options;
+                              const currentVal = options[oIdx];
+                              if (val === 'number') {
+                                options[oIdx] = isNaN(Number(currentVal)) ? 0 : Number(currentVal);
+                              } else {
+                                options[oIdx] = String(currentVal);
+                              }
+                            }"
+                          >
+                            <SelectTrigger class="h-10 w-28 text-xs border-border">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="string" class="select-item-custom">Texte</SelectItem>
+                              <SelectItem value="number" class="select-item-custom">Nombre</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            :key="oIdx + '-' + typeof (field as ISelectConfig).options[oIdx]"
+                            v-model="(field as ISelectConfig).options[oIdx]"
+                            :type="typeof (field as ISelectConfig).options[oIdx] === 'number' ? 'number' : 'text'"
+                            placeholder="Valeur de l'option"
+                            class="input-custom"
+                          />
+                          <Button variant="ghost" size="icon" @click="(field as ISelectConfig).options.splice(oIdx, 1)" class="text-destructive">
                             <X class="w-4 h-4" />
                           </Button>
                         </div>
@@ -486,11 +590,11 @@ const handleCancel = () => {
                     <div v-if="field.type === FieldType.TAXONOMY" class="grid grid-cols-2 gap-4">
                       <div class="space-y-2">
                         <Label class="text-xs font-medium text-text">Slug de la taxonomie</Label>
-                        <Input v-model="(field as any).taxonomy_slug" placeholder="ex: categories" class="input-custom" />
+                        <Input v-model="(field as ITaxonomyConfig).taxonomy_slug" placeholder="ex: categories" class="input-custom" />
                       </div>
                       <div class="space-y-2">
                         <Label class="text-xs font-medium text-text">Mode d'affichage</Label>
-                        <Select v-model="(field as any).renderType">
+                        <Select v-model="(field as ITaxonomyConfig).renderType">
                           <SelectTrigger class="input-custom">
                             <SelectValue placeholder="Choisir un type" />
                           </SelectTrigger>
@@ -514,12 +618,30 @@ const handleCancel = () => {
                     <!-- Type RELATION : Cible du contenu -->
                     <div v-if="field.type === FieldType.RELATION" class="space-y-3">
                       <Label class="text-xs font-medium text-text">Cible de la relation (Slug)</Label>
-                      <Input v-model="(field as any).targetContentTypeSlug" placeholder="ex: articles" class="input-custom" />
+                      <Select v-model="(field as IRelationConfig).targetContentTypeSlug">
+                        <SelectTrigger class="input-custom">
+                          <SelectValue placeholder="Choisir un slug" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem v-for="ft in contentTypes" :key="ft.slug" :value="ft.slug" class="select-item-custom">
+                              <div class="flex items-center gap-2">
+                                <span class="font-medium text-text">{{ ft.slug }}</span>
+                              </div>
+                            </SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <!-- <Input v-model="(field as IRelationConfig).targetContentTypeSlug" placeholder="ex: articles" class="input-custom" /> -->
                     </div>
 
                     <!-- Multiple pour MEDIA, TAXONOMY, SELECT, RELATION -->
                     <div v-if="[FieldType.MEDIA, FieldType.TAXONOMY, FieldType.SELECT, FieldType.RELATION].includes(field.type)" class="flex items-center gap-3 p-3 bg-muted/20 rounded-xl">
-                      <BaseSwitch v-model="(field as any).multiple" id="multiple-toggle" />
+                      <BaseSwitch
+                        :model-value="!!(field as IMediaConfig | ITaxonomyConfig | ISelectConfig | IRelationConfig).multiple"
+                        @update:model-value="(val) => (field as any).multiple = val"
+                        id="multiple-toggle"
+                      />
                       <Label for="multiple-toggle" class="text-sm font-medium text-text">Autoriser plusieurs sélections</Label>
                     </div>
                   </div>
@@ -539,11 +661,11 @@ const handleCancel = () => {
                        <div class="grid grid-cols-2 gap-4">
                           <div class="space-y-2">
                             <Label class="text-xs font-medium text-text">Longueur Min</Label>
-                            <Input type="number" v-model="(field as any).minLength" placeholder="Longueur Min" class="input-custom" />
+                            <Input type="number" v-model="(field as ITextConfig).minLength" placeholder="Longueur Min" class="input-custom" />
                           </div>
                           <div class="space-y-2">
                             <Label class="text-xs font-medium text-text">Longueur Max</Label>
-                            <Input type="number" v-model="(field as any).maxLength" placeholder="Longueur Max" class="input-custom" />
+                            <Input type="number" v-model="(field as ITextConfig).maxLength" placeholder="Longueur Max" class="input-custom" />
                           </div>
                        </div>
                     </div>
@@ -552,11 +674,11 @@ const handleCancel = () => {
                        <div class="grid grid-cols-2 gap-4">
                           <div class="space-y-2">
                             <Label class="text-xs font-medium text-text">Valeur Min</Label>
-                            <Input type="number" v-model="(field as any).min" placeholder="Valeur Min" class="input-custom" />
+                            <Input type="number" v-model="(field as INumberConfig).min" placeholder="Valeur Min" class="input-custom" />
                           </div>
                           <div class="space-y-2">
                             <Label class="text-xs font-medium text-text">Valeur Max</Label>
-                            <Input type="number" v-model="(field as any).max" placeholder="Valeur Max" class="input-custom" />
+                            <Input type="number" v-model="(field as INumberConfig).max" placeholder="Valeur Max" class="input-custom" />
                           </div>
                        </div>
                     </div>
@@ -586,11 +708,16 @@ const handleCancel = () => {
           <p class="text-text font-medium mb-6">Commencez par ajouter votre premier champ au modèle.</p>
         </div>
 
+        </div>
+
         <!-- Bouton Ajouter au bas de la section (Aligné à droite comme sur l'image) -->
-        <div class="p-6 bg-muted/5 flex justify-end border-t border-border">
-          <Button @click="addField" class="rounded-lg h-12 px-8 bg-primary hover:bg-primary/90 text-white font-bold shadow-md active:scale-95 transition-all">
-            <Plus class="w-4 h-4 mr-2" />
-            Ajouter un champ
+        <div class="p-6 bg-muted/5 flex items-center gap-3 justify-end border-t border-border">
+          <Button @click="handleSubmit" class="rounded-xl h-12 px-6 bg-primary hover:bg-primary/90 text-white font-bold shadow-lg shadow-primary/20 active:scale-95">
+            <Save class="w-4 h-4 mr-2" />
+            Enregistrer
+          </Button>
+          <Button @click="addField" class="rounded-xl h-12 px-6 bg-primary hover:bg-primary/90 text-white font-bold shadow-lg shadow-primary/20 active:scale-95">
+            <Plus class="w-4 h-4 mr-2" />Ajouter un champ
           </Button>
         </div>
       </section>

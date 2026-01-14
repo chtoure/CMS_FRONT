@@ -49,14 +49,9 @@ interface ITaxonomyConfig {
   renderType: 'combobox' | 'badges' | 'checkbox';
 }
 
-interface ISelectOption {
-  label: string;
-  value: string | number;
-}
-
 interface ISelectConfig {
   type: FieldType.SELECT;
-  options: ISelectOption[];
+  options: (string | number)[];
   multiple: boolean;
 }
 
@@ -95,7 +90,6 @@ export {
   type INumberConfig,
   type IMediaConfig,
   type ITaxonomyConfig,
-  type ISelectOption,
   type ISelectConfig,
   type IBooleanConfig,
   type IRichTextConfig,
