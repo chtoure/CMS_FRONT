@@ -207,8 +207,8 @@ watch(fieldTypesList, (newTypes) => {
     }
     if (type === FieldType.RELATION) {
       const relationField = field as IRelationConfig
-      if (!relationField.targetContentTypeSlug) {
-        relationField.targetContentTypeSlug = ''
+      if (!relationField.contentTypeId) {
+        relationField.contentTypeId = 0
         relationField.multiple = false
       }
       if (relationField.multiple === undefined) relationField.multiple = false
@@ -256,6 +256,45 @@ const getFieldTypeLabel = (type: FieldType) => {
   return fieldTypes.find(t => t.type === type)?.label || type
 }
 
+
+// Nettoyage performant des champs pour respecter les interfaces de field.ts
+const cleanedFields = (fields: IFieldDefinition[]): IFieldDefinition[] => {
+  return fields.map((f): IFieldDefinition => {
+    const base = {
+      type: f.type,
+      name: f.name,
+      label: f.label,
+      required: f.required,
+      placeholder: f.placeholder,
+      description: f.description,
+    }
+
+    switch (f.type) {
+      case FieldType.TEXT:
+        return { ...base, type: FieldType.TEXT, minLength: f.minLength, maxLength: f.maxLength, pattern: f.pattern, defaultValue: f.defaultValue }
+      case FieldType.NUMBER:
+        return { ...base, type: FieldType.NUMBER, min: f.min, max: f.max, step: f.step, defaultValue: f.defaultValue }
+      case FieldType.MEDIA:
+        return { ...base, type: FieldType.MEDIA, allowedTypes: f.allowedTypes, multiple: f.multiple, maxSize: f.maxSize, defaultValue: f.defaultValue }
+      case FieldType.TAXONOMY:
+        return { ...base, type: FieldType.TAXONOMY, taxonomy_slug: f.taxonomy_slug, multiple: f.multiple, renderType: f.renderType, defaultValue: f.defaultValue }
+      case FieldType.SELECT:
+        return { ...base, type: FieldType.SELECT, options: f.options, multiple: f.multiple, defaultValue: f.defaultValue }
+      case FieldType.RICH_TEXT:
+        return { ...base, type: FieldType.RICH_TEXT, toolbar: f.toolbar, defaultValue: f.defaultValue }
+      case FieldType.RELATION:
+        return { ...base, type: FieldType.RELATION, contentTypeId: f.contentTypeId, multiple: f.multiple, defaultValue: f.defaultValue }
+      case FieldType.BOOLEAN:
+        return { ...base, type: FieldType.BOOLEAN, defaultValue: typeof f.defaultValue === 'boolean' ? f.defaultValue : undefined }
+      default:
+        return f
+    }
+  })
+}
+
+
+
+
 // Soumission
 const handleSubmit = () => {
   errors.value = {}
@@ -279,22 +318,27 @@ const handleSubmit = () => {
     showToast('error', 'Veuillez ajouter au moins un champ personnalisé')
     return
   }
+// Nettoyage des champs
+  const NetoyageFields = cleanedFields(fields.value)
+
 
   const payload = {
     ...form.value,
-    fields_schema: fields.value
+    fields_schema: NetoyageFields
   }
 
+  console.log('Payload nettoyé:', payload)
   registerContentType(
     payload,{
-    onSuccess: () => {
-      showToast('success', 'Type de contenu créé avec succès')
-      router.push({name: 'admin.content-types'})
-    },
-    onError: (error) => {
-      showToast('error', error?.message)
+      onSuccess: () => {
+        showToast('success', 'Type de contenu créé avec succès')
+        router.push({name: 'admin.content-types'})
+      },
+      onError: (error) => {
+        showToast('error', error.message)
+      }
     }
-  })
+  )
 
 }
 
@@ -458,12 +502,12 @@ const handleCancel = () => {
                 </span>
                 <!-- Mini actions au survol ou si déplié -->
                 <div v-if="expandedFieldIndex === fields.indexOf(field)" class="flex items-center gap-3 mt-1 text-[10px] font-bold text-primary animate-in fade-in slide-in-from-left-1">
-                   <button @click.stop="toggleExpand(fields.indexOf(field))" class="hover:text-primary/70">Modifier</button>
-                   <span class="text-border">|</span>
+                   <!-- <button @click.stop="toggleExpand(fields.indexOf(field))" class="hover:text-primary/70">Modifier</button>
+                   <span class="text-border">|</span> -->
                    <button @click.stop="duplicateField(fields.indexOf(field))" class="hover:text-primary/70">Dupliquer</button>
                    <span class="text-border">|</span>
-                   <button class="hover:text-primary/70 cursor-move">Déplacer</button>
-                   <span class="text-border">|</span>
+                   <!-- <button class="hover:text-primary/70 cursor-move">Déplacer</button>
+                   <span class="text-border">|</span> -->
                    <button @click.stop="removeField(fields.indexOf(field))" class="text-destructive hover:text-destructive/70">Supprimer</button>
                 </div>
               </div>
@@ -514,7 +558,7 @@ const handleCancel = () => {
                             <SelectItem v-for="ft in fieldTypes" :key="ft.type" :value="ft.type" class="select-item-custom">
                               <div class="flex items-center gap-2">
                                 <component :is="ft.icon" class="w-4 h-4 text-primary" />
-                                <span class="font-medium text-text">{{ ft.label }}</span>
+                                <span class="font-medium">{{ ft.label }}</span>
                               </div>
                             </SelectItem>
                           </SelectGroup>
@@ -618,15 +662,15 @@ const handleCancel = () => {
                     <!-- Type RELATION : Cible du contenu -->
                     <div v-if="field.type === FieldType.RELATION" class="space-y-3">
                       <Label class="text-xs font-medium text-text">Cible de la relation (Slug)</Label>
-                      <Select v-model="(field as IRelationConfig).targetContentTypeSlug">
+                      <Select v-model="(field as IRelationConfig).contentTypeId">
                         <SelectTrigger class="input-custom">
                           <SelectValue placeholder="Choisir un slug" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectItem v-for="ft in contentTypes" :key="ft.slug" :value="ft.slug" class="select-item-custom">
+                            <SelectItem v-for="ft in contentTypes" :key="ft.slug" :value="ft.id" class="select-item-custom">
                               <div class="flex items-center gap-2">
-                                <span class="font-medium text-text">{{ ft.slug }}</span>
+                                <span class="font-medium">{{ ft.slug }}</span>
                               </div>
                             </SelectItem>
                           </SelectGroup>
@@ -636,13 +680,40 @@ const handleCancel = () => {
                     </div>
 
                     <!-- Multiple pour MEDIA, TAXONOMY, SELECT, RELATION -->
-                    <div v-if="[FieldType.MEDIA, FieldType.TAXONOMY, FieldType.SELECT, FieldType.RELATION].includes(field.type)" class="flex items-center gap-3 p-3 bg-muted/20 rounded-xl">
-                      <BaseSwitch
-                        :model-value="!!(field as IMediaConfig | ITaxonomyConfig | ISelectConfig | IRelationConfig).multiple"
-                        @update:model-value="(val) => (field as any).multiple = val"
-                        id="multiple-toggle"
-                      />
-                      <Label for="multiple-toggle" class="text-sm font-medium text-text">Autoriser plusieurs sélections</Label>
+                    <!-- Options spécifiques : Multiple et Types de Média -->
+                    <div v-if="[FieldType.MEDIA, FieldType.TAXONOMY, FieldType.SELECT, FieldType.RELATION].includes(field.type)" class="space-y-4 p-4 bg-muted/10 rounded-xl border border-border">
+                        <!-- Section Média (Uniquement pour type MEDIA) -->
+                        <div v-if="field.type === FieldType.MEDIA" class="space-y-4  border-border pb-4">
+                          <Label class="text-xs font-medium text-tex">Types de fichiers autorisés</Label>
+                          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="flex items-center justify-between p-3 border border-border rounded-xl">
+                              <span class="text-xs font-medium text-text">Images</span>
+                              <BaseSwitch
+                                :model-value="!!(field as IMediaConfig).allowedTypes.includes('image')"
+                                @update:model-value="(val) => (field as IMediaConfig).allowedTypes = val ? [...(field as IMediaConfig).allowedTypes, 'image'] : (field as IMediaConfig).allowedTypes.filter((t) => t !== 'image')"
+                              />
+                            </div>
+                            <div class="flex items-center justify-between p-3 border border-border rounded-xl">
+                              <span class="text-xs font-medium text-text">Vidéos</span>
+                              <BaseSwitch
+                                :model-value="!!(field as IMediaConfig).allowedTypes.includes('video')"
+                                @update:model-value="(val) => (field as IMediaConfig).allowedTypes = val ? [...(field as IMediaConfig).allowedTypes, 'video'] : (field as IMediaConfig).allowedTypes.filter((t) => t !== 'video')"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Option Multiple (Pour tous les types concernés) -->
+                        <div :class="field.type === FieldType.MEDIA ? 'flex items-center justify-between px-2 border border-border rounded-xl p-4' : 'flex items-center justify-between px-2' ">
+                          <div class="space-y-0.5">
+                            <Label class="text-xs font-medium text-text">Sélections multiples</Label>
+                            <p class="text-xs text-muted-foreground font-medium">Permettre de choisir plusieurs éléments</p>
+                          </div>
+                          <BaseSwitch
+                            :model-value="!!(field as any).multiple"
+                            @update:model-value="(val) => (field as any).multiple = val"
+                          />
+                        </div>
                     </div>
                   </div>
                 </TabsContent>
