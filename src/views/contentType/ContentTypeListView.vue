@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import CompositionTable from '@/components/composition/CompositionTable.vue'
 import Button from '@/components/ui/button/Button.vue'
 import { Archive, ArchiveRestore, ClipboardList, MoreHorizontal, Pencil, Plus } from 'lucide-vue-next'
@@ -14,56 +14,15 @@ import { cn } from '../../lib/utils'
 import Badge from '../../components/ui/badge/Badge.vue'
 import CompositionVerifyButton from '../../components/composition/CompositionVerifyButton.vue'
 import { useRouter } from 'vue-router'
+import { useGetContentsPaginate } from '../../hook/content-type'
+import CompositionLoading from '../../components/composition/CompositionLoading.vue'
+import CompositionError from '../../components/composition/CompositionError.vue'
+import type { ContentType } from '../../type/content-type'
 
 
-
-interface ContentType {
-  id: number
-  name: string
-  slug: string
-  description: string
-  entriesCount: number
-  archive: boolean
-}
-
-// Mock Data
-const contentTypes = ref<ContentType[]>([
-  {
-    id: 1,
-    name: 'Article',
-    slug: 'article',
-    description: 'Articles de blog standard',
-    entriesCount: 15,
-    archive: false
-  },
-  {
-    id: 2,
-    name: 'Produit',
-    slug: 'product',
-    description: 'Catalogue de produits',
-    entriesCount: 8,
-    archive: false
-  },
-  {
-    id: 3,
-    name: 'Page',
-    slug: 'page',
-    description: 'Pages statiques du site',
-    entriesCount: 4,
-    archive: true
-  },
-  {
-    id: 4,
-    name: 'Portfolio',
-    slug: 'portfolio',
-    description: 'Projets et réalisations',
-    entriesCount: 12,
-    archive: false
-  }
-])
 
 const columns = [
-  { key: 'id', label: 'ID', class: 'w-16' },
+  { key: 'num', label: 'Num', class: 'w-16' },
   { key: 'name', label: 'Nom' },
   { key: 'slug', label: 'Slug' },
   { key: 'description', label: 'Description'},
@@ -72,32 +31,60 @@ const columns = [
   { key: 'actions', label: 'Actions', class: 'w-10' }
 ]
 
-const limit = ref(10)
-const currentPage = ref(1)
+const currentPage = ref(1);
+const itemsPerPage = ref(10);
+const filterArchiv = ref("all");
 const search = ref('')
-const filterStatus = ref('all')
+
+
 
 const filterOptions = [
-  { label: 'Actifs', value: 'active' },
-  { label: 'Archivés', value: 'archive' }
+  { label: 'Actifs', value: 'false' },
+  { label: 'Archivés', value: 'true' }
 ]
 
+const filterParams = computed(() => ({
+    archive: filterArchiv.value,
+    page: currentPage.value,
+    limit: itemsPerPage.value,
+}));
+
+
+
+const {
+  data: dataContentTypes,
+  isLoading: isLoadingContentTypes,
+  isError: isgetErrorContentTypes,
+  error: getErrorContentTypes,
+  refetch: refetchContentTypes
+} = useGetContentsPaginate(filterParams);
+
+
+const contentTypesResults = computed(() => dataContentTypes.value?.results || []);
+const totalItems = computed(() => dataContentTypes.value?.count || 0);
+
+
+
+watch([currentPage, itemsPerPage, filterArchiv], () => {
+  refetchContentTypes();
+});
+
+
+
+
 const filteredData = computed(() => {
-  return contentTypes.value.filter(item => {
+  return contentTypesResults.value.filter(item => {
     // Filtrage par recherche
     const matchesSearch = item.name.toLowerCase().includes(search.value.toLowerCase()) ||
                           item.slug.toLowerCase().includes(search.value.toLowerCase()) ||
-                          item.description.toLowerCase().includes(search.value.toLowerCase())
+                          item.description?.toLowerCase().includes(search.value.toLowerCase())
 
     // Filtrage par statut
-    let matchesFilter = true
-    if (filterStatus.value === 'active') {
-      matchesFilter = !item.archive
-    } else if (filterStatus.value === 'archive') {
-      matchesFilter = item.archive
+   let matchesArchive = true;
+    if (filterArchiv.value !== 'all') {
+      matchesArchive = item.archive === (filterArchiv.value === 'true');
     }
-
-    return matchesSearch && matchesFilter
+    return matchesSearch && matchesArchive;
   })
 })
 
@@ -133,6 +120,10 @@ const handleCreate = () => {
 </script>
 
 <template>
+
+  <CompositionLoading v-if="isLoadingContentTypes" />
+  <CompositionError v-else-if="isgetErrorContentTypes" :error="getErrorContentTypes?.message" />
+
   <div class="min-h-screen space-y-10">
     <CompositionPageHeader>
       <template #content>
@@ -162,8 +153,8 @@ const handleCreate = () => {
               <CompositionTable
                 :columns="columns"
                 :data="filteredData"
-                :total="filteredData.length"
-                v-model:limit="limit"
+                :total="totalItems"
+                v-model:limit="itemsPerPage"
                 v-model:currentPage="currentPage"
 
                 searchable
@@ -171,15 +162,24 @@ const handleCreate = () => {
                 searchPlaceholder="Rechercher par nom ou slug..."
 
                 filterable
-                v-model:filterValue="filterStatus"
+                v-model:filterValue="filterArchiv"
                 :filterOptions="filterOptions"
                 filterPlaceholder="Statut"
               >
                 <!-- Custom rendering for Name column -->
+
+
+                <template #cell-num="{ index }">
+                  {{  index + 1 }}
+                </template>
+
                 <template #cell-name="{ value }">
                   <span class="font-medium text-foreground">{{ value }}</span>
                 </template>
 
+                <template #cell-entriesCount="{  }">
+                  <span class="font-medium text-foreground">{{ 10 }}</span>
+                </template>
 
 
                 <template #cell-status="{ row }">

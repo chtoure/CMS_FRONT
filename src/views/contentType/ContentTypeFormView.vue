@@ -47,7 +47,6 @@ import { showToast } from '../../lib/toast'
 import { contentTypeSchema } from '../../validation/contentTypeValidate'
 import { useRegisterContentType, useGetContentTypes } from '../../hook/content-type'
 import CompositionLoading from '../../components/composition/CompositionLoading.vue'
-// import CompositionError from '../../components/composition/CompositionError.vue'
 
 
 const router = useRouter()
