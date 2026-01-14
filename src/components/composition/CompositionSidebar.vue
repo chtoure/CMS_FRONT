@@ -8,7 +8,8 @@ import {
   Database,
   UserStar,
   ChevronDown,
-  ShieldUser
+  ShieldUser,
+  ClipboardList
 } from 'lucide-vue-next'
 import { useRoute, RouterLink, useRouter } from 'vue-router'
 import { cn } from '../../lib/utils'
@@ -94,6 +95,11 @@ const navItems: NavItem[] = [
       { id: 'users', label: 'Utilisateurs', icon: UserStar, href: 'admin.users' },
       { id: 'roles', label: 'Roles', icon: ShieldUser, href: 'admin.roles-permissions' },
     ]
+  },{
+    id: 'content-types',
+    label: 'Content Types',
+    icon: ClipboardList,
+    href: 'admin.content-types'
   },{
     id: 'content-entry',
     label: 'Content Entry',

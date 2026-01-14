@@ -20,8 +20,11 @@ const props = defineProps<{
 const emit = defineEmits(['update:modelValue'])
 
 const value = computed({
-  get: () => (props.modelValue ?? '') as string,
-  set: (val) => emit('update:modelValue', val)
+  get: () => String(props.modelValue ?? ''),
+  set: (val) => {
+    const originalOption = selectConfig.value.options.find(opt => String(opt) === val);
+    emit('update:modelValue', originalOption !== undefined ? originalOption : val);
+  }
 })
 
 const selectConfig = computed(() => props.config as IBaseField & ISelectConfig)
@@ -39,12 +42,12 @@ const selectConfig = computed(() => props.config as IBaseField & ISelectConfig)
       </SelectTrigger>
       <SelectContent>
         <SelectItem
-          v-for="option in selectConfig.options"
-          :key="String(option.value)"
-          :value="String(option.value)"
+          v-for="(option, index) in selectConfig.options"
+          :key="index"
+          :value="String(option)"
           class="select-item-custom"
         >
-          {{ option.label }}
+          {{ option }}
         </SelectItem>
       </SelectContent>
     </Select>

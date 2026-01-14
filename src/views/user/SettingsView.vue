@@ -47,6 +47,7 @@
                 label="Nouveau mot de passe"
                 v-bind="field"
                 placeholder="Entrer le mot de passe"
+                autocomplete="new-password"
               />
               <p v-if="errorMessage" class="mt-1 text-xs text-destructive font-medium italic">{{ errorMessage }}</p>
             </div>
@@ -58,17 +59,18 @@
               v-model="confirm_new_password"
               placeholder="Répéter le mot de passe"
               :show-strength="false"
+              autocomplete="new-password"
             />
             <p class="mt-1 text-xs text-destructive font-medium italic">
               {{ messageError }}
             </p>
           </div>
 
-          <div class="sm:col-span-3">
+          <div class="sm:col-span-3" >
             <label class=" text-sm/6 font-semibold text-text">Rôle actuel</label>
             <div class="mt-2">
-              <span class="inline-flex items-center rounded-md bg-background px-3 py-1.5 text-sm font-medium text-primary ring-1 ring-ring">
-                {{ store.userInfo?.role?.name || "Administrateur" }}
+              <span v-if="store.userInfo?.role" class="inline-flex items-center rounded-md bg-background px-3 py-1.5 text-sm font-medium text-primary ring-1 ring-ring">
+                {{ store.userInfo?.role }}
               </span>
             </div>
           </div>
@@ -98,9 +100,9 @@
         <button
           type="button"
           @click="onSubmit"
-          class="w-full sm:w-auto rounded-md bg-primary px-4 py-2 text-sm font-semibold text-text shadow-sm hover:bg-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+          class="w-full sm:w-auto rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
         >
-          Enregistrer les modifications
+          Enregistrer
         </button>
       </div>
     </div>
@@ -120,7 +122,7 @@
   import { showToast } from "../../lib/toast"
   import { validationSchemaProfile } from '../../validation/profileValidate';
   import { Field, useForm } from 'vee-validate';
-import { useGetPermissionsRole } from '../../hook/role';
+  import { useGetPermissionsRole } from '../../hook/role';
 
 
 
@@ -209,6 +211,9 @@ const onSubmit = handleSubmit((formValues) => {
           ...data.user,
           initials: getInitials(data.user.full_name)
         };
+
+        console.log('Les données a enregistrer:', updatedUser );
+
         store.setUserInfo(updatedUser);
 
         // Vide les champs Vee-Validate (password devient "")

@@ -18,6 +18,7 @@ import ParameterView from '../views/parameter/ParameterView.vue'
 import ContentTypeListView from '@/views/contentType/ContentTypeListView.vue'
 import ContentEntryFormView from '../views/contentEntry/ContentEntryFormView.vue'
 import ContentEntryListView from '../views/contentEntry/ContentEntryListView.vue'
+import ContentTypeFormView from '../views/contentType/ContentTypeFormView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -100,8 +101,18 @@ const router = createRouter({
                     },
                     {
                       path:"content-types",
-                      name:"admin.content-types",
-                      component:ContentTypeListView
+                      children:[
+                        {
+                          path:"",
+                          name:"admin.content-types",
+                          component:ContentTypeListView
+                        },
+                        {
+                          path:"create",
+                          name:"admin.content-types.create",
+                          component:ContentTypeFormView
+                        }
+                      ]
                     },
                     {
                       path: 'content-entry',
