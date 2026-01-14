@@ -133,9 +133,6 @@ const handleSubmit = (status: 'published' | 'draft' = 'published') => {
                              <Button variant="outline" size="sm" class="h-8" @click="handleSubmit('draft')">
                                 Enregistrer brouillon
                              </Button>
-                             <Button variant="outline" size="sm" class="h-8">
-                                Prévisualiser
-                             </Button>
                         </div>
 
                         <div class="space-y-3 py-4 text-sm text-muted-foreground">
@@ -143,27 +140,28 @@ const handleSubmit = (status: 'published' | 'draft' = 'published') => {
                                 <div class="flex items-center gap-2">
                                     <Lock class="w-4 h-4" /> État :
                                 </div>
-                                <span class="font-medium text-text">Brouillon</span>
+                                <span class="font-medium text-primary">Brouillon</span>
                             </div>
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2">
                                     <Eye class="w-4 h-4" /> Visibilité :
                                 </div>
-                                <span class="font-medium text-text">Public</span>
+                                <span class="font-medium text-primary">Public</span>
                             </div>
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2">
                                     <Calendar class="w-4 h-4" /> Publier :
                                 </div>
-                                <span class="font-medium text-text">Tout de suite</span>
+                                <span class="font-medium text-primary">Tout de suite</span>
                             </div>
                         </div>
                     </CardContent>
-                    <div class="p-4 bg-muted/20 border-t border-border flex justify-end">
-                        <Button @click="() => handleSubmit('published')" :disabled="isCreating">
+                    <div class="p-4 border-t border-border flex justify-end">
+                        <Button @click="() => handleSubmit('published')" :disabled="isCreating" class="text-white">
                              <Loader2 v-if="isCreating" class="w-4 h-4 mr-2 animate-spin" />
                              Publier
                         </Button>
+
                     </div>
                 </Card>
 

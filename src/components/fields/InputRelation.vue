@@ -19,7 +19,7 @@ interface IRelationItem {
 
 const props = defineProps<{
   config: IFieldDefinition & IRelationConfig
-  modelValue?: number | number[] | null // On ne reçoit plus que des IDs
+  modelValue?: number | number[] | null
   error?: string
   hideLabel?: boolean
 }>()
