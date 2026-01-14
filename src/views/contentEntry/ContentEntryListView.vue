@@ -71,8 +71,8 @@ const totalItems = computed(() => filteredData.value.length)
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'published': return 'bg-success/20 text-success border-success/30'
-    case 'draft': return 'bg-warning/20 text-warning border-warning/30'
+    case 'published': return 'text-success border-success'
+    case 'draft': return 'bg-warning text-warning border-warning'
     case 'archived': return 'bg-muted text-muted-foreground border-border'
     default: return 'bg-secondary text-secondary-foreground'
   }
