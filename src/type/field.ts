@@ -17,7 +17,6 @@ interface IBaseField {
   required: boolean;
   placeholder?: string;
   description?: string;
-  // colSpan?: 1 | 2;
   defaultValue?: JsonValue;
 }
 
@@ -49,14 +48,14 @@ interface ITaxonomyConfig {
   renderType: 'combobox' | 'badges' | 'checkbox';
 }
 
-interface ISelectOption {
-  label: string;
-  value: string | number;
-}
+// interface ISelectOption {
+//   label: string;
+//   value: string | number;
+// }
 
 interface ISelectConfig {
   type: FieldType.SELECT;
-  options: ISelectOption[];
+  options: string[] | number[] | (string | number)[];
   multiple: boolean;
 }
 
@@ -72,7 +71,7 @@ interface IRichTextConfig {
 
 interface IRelationConfig {
   type: FieldType.RELATION;
-  targetContentTypeSlug: string;
+  contentTypeId: number;
   multiple: boolean;
 }
 
@@ -95,7 +94,6 @@ export {
   type INumberConfig,
   type IMediaConfig,
   type ITaxonomyConfig,
-  type ISelectOption,
   type ISelectConfig,
   type IBooleanConfig,
   type IRichTextConfig,

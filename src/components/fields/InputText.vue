@@ -2,16 +2,18 @@
 import { computed } from 'vue'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
-import { type IFieldDefinition } from '../../type/field'
-import { type JsonValue } from '../../type/content-entry'
+import { type IFieldDefinition, type ITextConfig } from '../../type/field'
 
 const props = defineProps<{
-  config: IFieldDefinition
-  modelValue?: JsonValue
+  config: IFieldDefinition & ITextConfig
+  modelValue?: string | null
   error?: string
+  hideLabel?: boolean
 }>()
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: string): void
+}>()
 
 const value = computed({
   get: () => (props.modelValue ?? '') as string,
@@ -23,21 +25,27 @@ const placeholder = computed(() => props.config.placeholder || props.config.labe
 
 <template>
   <div class="grid w-full items-center gap-1.5">
-    <Label :for="config.name" class="block text-text font-medium mb-2">
+    <Label v-if="!hideLabel" :for="config.name" class="block font-medium mb-1">
       {{ config.label }}
       <span v-if="config.required" class="text-destructive">*</span>
     </Label>
+
     <Input
       :id="config.name"
       v-model="value"
       :placeholder="placeholder"
-      :type="'text'"
+      type="text"
+      :required="config.required"
+      :minlength="config.minLength"
+      :maxlength="config.maxLength"
       class="input-custom"
     />
+
     <p v-if="config.description" class="text-xs text-muted-foreground">
       {{ config.description }}
     </p>
-    <p v-if="error" class="mt-2 text-xs text-destructive font-medium italic">
+
+    <p v-if="error" class="p12 text-destructive font-medium italic">
       {{ error }}
     </p>
   </div>

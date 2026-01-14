@@ -24,6 +24,7 @@ const props = defineProps<{
   config: IFieldDefinition
   modelValue?: JsonValue
   error?: string
+  hideLabel?: boolean
 }>()
 
 const emit = defineEmits(['update:modelValue'])
@@ -56,17 +57,16 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="grid w-full items-center gap-1.5">
-    <Label :for="config.name" class="block text-text font-medium mb-2" :class="{ 'text-destructive': error }">
+    <Label v-if="!hideLabel" :for="config.name" class="block text-text font-medium mb-2" :class="{ 'text-destructive': error }">
       {{ config.label }}
       <span v-if="config.required" class="text-destructive">*</span>
     </Label>
 
     <div
       class="w-full border border-border bg-background shadow-sm overflow-hidden"
-      :class="{ 'border-destructive ring-1 ring-destructive': error }"
     >
       <!-- Toolbar -->
-      <div v-if="editor" class="flex flex-wrap items-center gap-1 p-2 border-b bg-muted/30">
+      <div v-if="editor" class="flex flex-wrap items-center gap-1 p-2 border-b border-border bg-muted/30">
         <Button
           variant="ghost" size="sm" type="button"
           @click="editor.chain().focus().toggleBold().run()"

@@ -2,47 +2,60 @@
 import { computed } from 'vue'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
-import { type IFieldDefinition, type IBaseField, type INumberConfig } from '../../type/field'
-import { type JsonValue } from '../../type/content-entry'
+import { type IFieldDefinition, type INumberConfig } from '../../type/field'
 
 const props = defineProps<{
-  config: IFieldDefinition
-  modelValue?: JsonValue
+  config: IFieldDefinition & INumberConfig
+  modelValue?: number | string | null
   error?: string
+  hideLabel?: boolean
 }>()
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: number | null): void
+}>()
 
 const value = computed({
-  get: () => typeof props.modelValue === 'number' ? props.modelValue : Number(props.modelValue ?? 0),
-  set: (val) => emit('update:modelValue', val)
+  get: () => (props.modelValue === null || props.modelValue === undefined) ? '' : props.modelValue,
+  set: (val: number | string | null) => {
+    if (val === '' || val === null || val === undefined) {
+      emit('update:modelValue', null)
+    } else {
+      emit('update:modelValue', Number(val))
+    }
+  }
 })
 
-const numberConfig = computed(() => props.config as IBaseField & INumberConfig)
 const placeholder = computed(() => props.config.placeholder || props.config.label)
 </script>
 
 <template>
   <div class="grid w-full items-center gap-1.5">
-    <Label :for="config.name" class="text-text font-medium mb-2" :class="{ 'text-destructive': error }">
+    <Label
+      v-if="!hideLabel"
+      :for="config.name"
+      class="text-sm font-medium mb-1"
+    >
       {{ config.label }}
-      <span v-if="config.required" class="text-destructive">*</span>
+      <span v-if="config.required" class="text-destructive ml-0.5">*</span>
     </Label>
+
     <Input
       :id="config.name"
       v-model.number="value"
       :placeholder="placeholder"
       type="number"
-      :min="numberConfig.min"
-      :max="numberConfig.max"
-      :step="numberConfig.step"
+      :min="config.min"
+      :max="config.max"
+      :step="config.step ?? 'any'"
       class="input-custom"
-      :class="{ 'border-destructive': error }"
     />
-    <p v-if="config.description" class="text-xs text-muted-foreground">
+
+    <p v-if="config.description && !error" class="text-xs text-muted-foreground">
       {{ config.description }}
     </p>
-    <p v-if="error" class="mt-2 text-xs text-destructive font-medium italic">
+
+    <p v-if="error" class="p12 font-medium text-destructive italic">
       {{ error }}
     </p>
   </div>

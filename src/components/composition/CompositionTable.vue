@@ -1,6 +1,6 @@
 <script setup lang="ts" generic="T">
 import { cn } from '../../lib/utils';
-import { Search } from 'lucide-vue-next';
+import { List, Search } from 'lucide-vue-next';
 import Table from '../ui/table/Table.vue';
 import TableBody from '../ui/table/TableBody.vue';
 import TableCell from '../ui/table/TableCell.vue';
@@ -13,6 +13,7 @@ import SelectTrigger from '../../components/ui/select/SelectTrigger.vue'
 import SelectValue from '../../components/ui/select/SelectValue.vue'
 import SelectContent from '../../components/ui/select/SelectContent.vue'
 import SelectItem from '../../components/ui/select/SelectItem.vue'
+import CompositionListEmpty from './CompositionListEmpty.vue';
 
 interface Column {
   key: string
@@ -154,7 +155,7 @@ const onFilterChange = (val: string | number | boolean | null | undefined) => {
 
           <TableRow v-if="data.length === 0">
             <TableCell :colspan="columns.length" class="h-32 text-center text-muted-foreground">
-              Aucune donnée disponible.
+              <CompositionListEmpty title="Aucune donnée disponible." description="Aucune donnée disponible." :icon="List" />
             </TableCell>
           </TableRow>
         </TableBody>

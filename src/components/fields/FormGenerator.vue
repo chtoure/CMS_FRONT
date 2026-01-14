@@ -37,35 +37,34 @@ const getComponent = (type: FieldType) => {
     default: return null
   }
 }
-const getColSpan = (field: IFieldDefinition) => {
-  // if (field.colSpan) return field.colSpan === 2 ? 'md:col-span-2' : 'md:col-span-1'
-
-  // Default logic based on type
-  const fullWidthTypes = [FieldType.RICH_TEXT, FieldType.RELATION]
-  if (fullWidthTypes.includes(field.type)) return 'md:col-span-2'
-
-  if (field.type === FieldType.MEDIA && field.multiple) return 'md:col-span-2'
-  if (field.type === FieldType.TAXONOMY && (field.multiple || field.renderType === 'badges')) return 'md:col-span-2'
-
-  return 'md:col-span-1'
-}
 </script>
 
 <template>
-  <div class="grid grid-cols-1 md:grid-cols-2 grid-flow-dense items-start gap-4">
+  <div class="flex flex-col divide-y divide-border border border-border">
     <div
       v-for="field in fields"
       :key="field.name"
-      class="py-2"
-      :class="getColSpan(field)"
+      class="flex flex-col md:flex-row"
     >
-      <component
-        :is="getComponent(field.type)"
-        v-if="getComponent(field.type)"
-        :config="field"
-        v-model="formData[field.name]"
-        :error="errors?.[field.name]"
-      />
+      <!-- Label Column -->
+      <div class="w-full md:w-1/4 lg:w-1/5 bg-muted/20 p-4 border-r border-border flex items-start pt-6">
+        <label :for="field.name" class="text-sm font-semibold text-foreground/80 leading-none">
+          {{ field.label }}
+          <span v-if="field.required" class="text-destructive">*</span>
+        </label>
+      </div>
+
+      <!-- Input Column -->
+      <div class="flex-1 p-4 min-w-0">
+        <component
+          :is="getComponent(field.type)"
+          v-if="getComponent(field.type)"
+          :config="field"
+          v-model="formData[field.name]"
+          :error="errors?.[field.name]"
+          :hideLabel="true"
+        />
+      </div>
     </div>
   </div>
 </template>

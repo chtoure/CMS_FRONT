@@ -1,16 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { Label } from '../../components/ui/label'
-import { Button } from '../../components/ui/button'
-import { cn } from '../../lib/utils'
-import { Plus, Link as LinkIcon, X, Check, Search } from 'lucide-vue-next'
-import { type IFieldDefinition, type IRelationConfig, type IBaseField } from '../../type/field'
-import { type JsonValue } from '../../type/content-entry'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '../../components/ui/popover'
+import { X, Plus } from 'lucide-vue-next'
+import { type IFieldDefinition, type IRelationConfig } from '../../type/field'
 import {
   Command,
   CommandEmpty,
@@ -26,168 +18,134 @@ interface IRelationItem {
 }
 
 const props = defineProps<{
-  config: IFieldDefinition
-  modelValue?: JsonValue
+  config: IFieldDefinition & IRelationConfig
+  modelValue?: number | number[] | null // On ne reçoit plus que des IDs
   error?: string
+  hideLabel?: boolean
 }>()
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: number | number[] | null): void
+}>()
 
-const value = computed({
-  get: () => props.modelValue as IRelationItem | IRelationItem[] | null,
-  set: (val) => emit('update:modelValue', val as JsonValue)
-})
-
-const relationConfig = computed(() => props.config as IBaseField & IRelationConfig)
-const isDialogOpen = ref(false)
-
-// Mock data as requested
+// Mock local (À remplacer plus tard par un appel API basé sur config.targetModel)
 const mockEntries: IRelationItem[] = [
   { id: 1, name: 'Article de blog 1' },
   { id: 2, name: 'Page à propos' },
   { id: 3, name: 'Contact' },
   { id: 4, name: 'Services' },
-  { id: 5, name: 'Projets récents' }
+  { id: 5, name: 'Projets récents' },
 ]
 
+/**
+ * Logique de mapping :
+ * On transforme les IDs du modelValue en objets IRelationItem
+ * pour que le template puisse afficher les noms.
+ */
+const selectedItems = computed(() => {
+  if (!props.modelValue) return []
+  const ids = Array.isArray(props.modelValue) ? props.modelValue : [props.modelValue]
+  return mockEntries.filter(entry => ids.includes(entry.id))
+})
+
+const availableEntries = computed(() => {
+  const ids = Array.isArray(props.modelValue) ? props.modelValue : (props.modelValue ? [props.modelValue] : [])
+  return mockEntries.filter(entry => !ids.includes(entry.id))
+})
+
 const toggleSelection = (entry: IRelationItem) => {
-  if (relationConfig.value.multiple) {
-    const current = Array.isArray(value.value) ? [...value.value] : []
-    const index = current.findIndex(e => e.id === entry.id)
+  if (props.config.multiple) {
+    const current = Array.isArray(props.modelValue) ? [...props.modelValue] : []
+    const index = current.indexOf(entry.id)
+
     if (index > -1) {
       current.splice(index, 1)
     } else {
-      current.push(entry)
+      current.push(entry.id)
     }
-    value.value = current
+    emit('update:modelValue', current)
   } else {
-    value.value = entry
+    emit('update:modelValue', entry.id)
   }
 }
 
 const removeRelation = (id: number) => {
-  if (Array.isArray(value.value)) {
-    value.value = value.value.filter((e: IRelationItem) => e.id !== id)
+  if (Array.isArray(props.modelValue)) {
+    emit('update:modelValue', props.modelValue.filter(itemId => itemId !== id))
   } else {
-    value.value = null
+    emit('update:modelValue', null)
   }
-}
-
-const isSelected = (id: number) => {
-  if (Array.isArray(value.value)) {
-    return value.value.some(e => e.id === id)
-  }
-  return (value.value as IRelationItem | null)?.id === id
 }
 </script>
 
 <template>
   <div class="space-y-2">
     <div class="flex items-center justify-between">
-      <Label :for="config.name" class="text-sm font-semibold tracking-tight text-foreground/80">
+      <Label v-if="!hideLabel" :for="config.name" class="text-sm font-semibold tracking-tight text-foreground/80">
         {{ config.label }}
         <span v-if="config.required" class="text-destructive">*</span>
       </Label>
-      <span v-if="relationConfig.multiple" class="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Multiple</span>
+      <span v-if="config.multiple && !hideLabel" class="text-[9px] uppercase tracking-widest text-muted-foreground font-black bg-muted px-1.5 py-0.5 rounded">
+        Multiple
+      </span>
     </div>
 
-    <div class="flex flex-wrap gap-1.5 p-2 bg-muted/30 rounded-lg border border-border/50 min-h-[46px] transition-all hover:bg-muted/50">
-      <!-- Selected Relations Display -->
-      <template v-if="value">
-        <div
-          v-for="(item, index) in (Array.isArray(value) ? value : [value])"
-          :key="(item as IRelationItem).id || index"
-          class="flex items-center gap-1.5 pl-2 pr-1 h-7 rounded-md bg-background border shadow-sm text-xs font-medium animate-in fade-in zoom-in duration-200"
-        >
-          <LinkIcon class="h-3 w-3 text-primary/70" />
-          <span>{{ (item as IRelationItem).name || `ID: ${(item as IRelationItem).id}` }}</span>
-          <button
-            type="button"
-            @click.stop="removeRelation((item as IRelationItem).id)"
-            class="hover:bg-destructive/10 hover:text-destructive rounded-sm p-0.5 transition-colors"
-          >
-            <X class="h-3 w-3" />
-          </button>
+    <div class="border border-border overflow-hidden bg-background">
+      <Command class="rounded-none border-0">
+        <div class="items-center border-b border-border px-3 bg-background">
+          <CommandInput placeholder="Rechercher une entrée..." class="h-10 text-xs border-none focus:ring-0" />
         </div>
-      </template>
 
-      <!-- Trigger Popover -->
-      <Popover v-model:open="isDialogOpen">
-        <PopoverTrigger as-child>
-          <Button
-            v-if="relationConfig.multiple || !value"
-            variant="ghost"
-            size="sm"
-            class="h-7 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-background border-dashed border h-7 ml-auto"
-          >
-            <Plus class="h-3 w-3 mr-1" />
-            Lier
-          </Button>
-        </PopoverTrigger>
-
-        <PopoverContent class="w-[280px] p-0 shadow-2xl rounded-xl border-border/50" align="end">
-          <Command class="rounded-xl">
-            <div class="flex items-center border-b px-3 bg-muted/20">
-              <Search class="mr-2 h-4 w-4 shrink-0 opacity-50" />
-              <CommandInput placeholder="Rechercher..." class="h-10 text-xs border-none focus:ring-0" />
-            </div>
-            <CommandEmpty class="py-6 text-center text-xs text-muted-foreground">Aucun résultat trouvé.</CommandEmpty>
-            <CommandList class="max-h-[240px] overflow-y-auto">
-              <CommandGroup class="p-1">
+        <div class="flex h-[200px] divide-x divide-border">
+          <div class="w-1/2 flex flex-col bg-background">
+            <CommandEmpty class="py-10 text-center p11 text-text">Aucun résultat</CommandEmpty>
+            <CommandList class="flex-1 overflow-y-auto p-1 custom-scrollbar">
+              <CommandGroup heading="Disponibles" class="p11 !text-text px-2">
                 <CommandItem
-                  v-for="entry in mockEntries"
+                  v-for="entry in availableEntries"
                   :key="entry.id"
                   :value="entry.name"
-                  class="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer text-xs"
-                  @select="() => {
-                    toggleSelection(entry)
-                    if (!relationConfig.multiple) isDialogOpen = false
-                  }"
+                  class="flex items-center gap-2 px-2 py-2 cursor-pointer text-xs select-item-custom"
+                  @select="toggleSelection(entry)"
                 >
-                  <div class="flex items-center justify-center h-4 w-4 border rounded-sm">
-                    <Check
-                      :class="cn(
-                        'h-3 w-3 transition-all',
-                        isSelected(entry.id) ? 'opacity-100 scale-100' : 'opacity-0 scale-50'
-                      )"
-                    />
-                  </div>
-                  <span class="flex-1 truncate">{{ entry.name }}</span>
-                  <span class="text-[10px] opacity-40">#{{ entry.id }}</span>
+                  <Plus class="h-3 w-3 text-text" />
+                  <span class="truncate">{{ entry.name }}</span>
                 </CommandItem>
               </CommandGroup>
             </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+          </div>
 
-      <div v-if="!value" class="flex items-center text-[11px] text-muted-foreground italic ml-1 select-none">
-        Aucune relation sélectionnée
-      </div>
+          <div class="w-1/2 flex flex-col bg-background">
+            <div v-if="selectedItems.length === 0" class="flex-1 flex flex-col items-center justify-center p-4 text-muted-foreground italic text-[10px] opacity-60">
+              <span class="mb-1">Vide</span>
+            </div>
+            <div v-else class="flex-1 overflow-y-auto p-2 space-y-1.5 custom-scrollbar">
+              <p class="p11 text-text font-bold px-1 mb-2">Sélectionnés</p>
+              <div
+                v-for="item in selectedItems"
+                :key="item.id"
+                class="flex items-center justify-between px-2 py-1.5 bg-background border border-border text-xs group animate-in fade-in slide-in-from-right-1"
+              >
+                <span class="truncate font-medium">{{ item.name }}</span>
+                <button
+                  type="button"
+                  @click.stop="removeRelation(item.id)"
+                  class="text-muted-foreground hover:text-destructive transition-colors ml-2"
+                >
+                  <X class="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Command>
     </div>
 
-    <p v-if="config.description" class="text-[10px] text-muted-foreground px-1 translate-y-[-2px]">
+    <p v-if="config.description" class="text-[10px] text-muted-foreground italic">
       {{ config.description }}
     </p>
-    <p v-if="error" class="text-[10px] text-destructive font-semibold px-1 italic">
+    <p v-if="error" class="text-[10px] text-destructive font-bold italic animate-bounce-subtle">
       {{ error }}
     </p>
   </div>
 </template>
-
-<style scoped>
-.animate-in {
-  animation: animate-in 0.2s ease-out;
-}
-
-@keyframes animate-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-</style>
