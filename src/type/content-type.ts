@@ -13,6 +13,30 @@ interface ContentType {
 }
 
 
-export type {
-  ContentType
+interface RegisterContentType {
+    name: string,
+    slug: string,
+    description: string | null,
+    fields_schema: IFieldDefinition[],
+    archive: boolean | null;
 }
+
+
+interface UpdateContentType {
+    name?: string,
+    slug?: string,
+    description?: string | null,
+    fields_schema?: IFieldDefinition[],
+    archive?: boolean | null;
+}
+
+
+
+export type {
+  ContentType,
+  RegisterContentType,
+  UpdateContentType
+}
+
+
+
