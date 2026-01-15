@@ -27,7 +27,7 @@ const columns = [
   { key: 'slug', label: 'Slug' },
   { key: 'description', label: 'Description'},
   { key: 'status', label: 'Statut', class: 'w-32' },
-  { key: 'entriesCount', label: 'Entrées', class: 'w-[100px] text-center' },
+  { key: 'entriesCount', label: 'Champs Entrées', class: 'text-center' },
   { key: 'actions', label: 'Actions', class: 'w-10' }
 ]
 
@@ -177,8 +177,8 @@ const handleCreate = () => {
                   <span class="font-medium text-foreground">{{ value }}</span>
                 </template>
 
-                <template #cell-entriesCount="{  }">
-                  <span class="font-medium text-foreground">{{ 10 }}</span>
+                <template #cell-entriesCount="{ row }">
+                  <span class="font-medium text-foreground">{{ row.fields_schema.length }}</span>
                 </template>
 
 

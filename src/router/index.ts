@@ -6,7 +6,7 @@ import MainLayout from '@/layout/MainLayout.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import MediaListView from '@/views/media/MediaListView.vue'
 import MediaUpdateView from '@/views/media/MediaUpdateView.vue'
-import VariableListView from '../views/variable/VariableListView.vue'
+// import VariableListView from '../views/variable/VariableListView.vue'
 import TestView from '../views/variable/TestView.vue'
 import { setupAuthGuard } from './authGuard'
 import SettingsView from '@/views/user/SettingsView.vue'
@@ -19,6 +19,8 @@ import ContentTypeListView from '@/views/contentType/ContentTypeListView.vue'
 import ContentEntryFormView from '../views/contentEntry/ContentEntryFormView.vue'
 import ContentEntryListView from '../views/contentEntry/ContentEntryListView.vue'
 import ContentTypeFormView from '../views/contentType/ContentTypeFormView.vue'
+import TaxonomyListView from '../views/Taxonomy/TaxonomyListView.vue'
+import TaxonomyFormView from '../views/Taxonomy/TaxonomyFormView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -131,6 +133,26 @@ const router = createRouter({
                           path: 'list',
                           name: 'admin.content-entry.list',
                           component: ContentEntryListView
+                        }
+                      ]
+                    },
+                    {
+                      path: 'taxonomy',
+                      children: [
+                        {
+                          path: '',
+                          name: 'admin.taxonomies',
+                          component: TaxonomyListView
+                        },
+                        {
+                          path: 'create',
+                          name: 'admin.taxonomies.create',
+                          component: TaxonomyFormView
+                        },
+                        {
+                          path: 'edit/:id',
+                          name: 'admin.taxonomies.edit',
+                          component: TaxonomyFormView
                         }
                       ]
                     }
