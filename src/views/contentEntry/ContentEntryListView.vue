@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { FileText, Plus, MoreHorizontal, Pencil, Trash2, Eye } from 'lucide-vue-next'
 import { Button } from '../../components/ui/button'
@@ -15,8 +15,48 @@ import {
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu'
 import { Badge } from '../../components/ui/badge'
+import { useGetContentEntryByContentTypeId } from '../../hook/content-entry'
+import { useGetContentType } from '../../hook/content-type'
+import type { EntryStatus } from '../../type/content-entry'
+import CompositionLoading from '../../components/composition/CompositionLoading.vue'
+import CompositionError from '../../components/composition/CompositionError.vue'
+import { getErrorMessage } from '../../lib/errorMessage'
 
 const router = useRouter()
+const search = ref('')
+const filterStatus = ref('all')
+const currentPage = ref(1)
+const itemsPerPage = ref(10)
+
+
+const id = computed(() => {
+  return (router.currentRoute.value.params.id as unknown) as number
+})
+
+const filterOptions = [
+  { label: 'Publiés', value: 'PUBLISHED' },
+  { label: 'Brouillons', value: 'DRAFT' },
+  { label: 'Archivés', value: 'ARCHIVED' }
+]
+
+const filterParams = computed(() => ({
+  type: filterStatus.value === "all" ? undefined : (filterStatus.value as EntryStatus),
+  page: currentPage.value,
+  limit: itemsPerPage.value,
+  search: search.value
+}));
+
+
+
+const { data: entries, refetch: refetchEntries, isLoading: isLoadingEntries, error: errorEntries } = useGetContentEntryByContentTypeId({id: id.value, filter: filterParams})
+const { data: contentType } = useGetContentType(id.value)
+
+
+watch([currentPage, itemsPerPage, filterStatus, search], () => {
+  refetchEntries();
+});
+
+
 
 interface ContentEntryStub {
   id: number
@@ -30,69 +70,32 @@ interface ContentEntryStub {
 const columns = [
   { key: 'id', label: 'ID', class: 'w-16' },
   { key: 'title', label: 'Titre' },
+  { key: 'user', label: 'Auteur', class: 'w-48' },
   { key: 'status', label: 'Statut', class: 'w-32' },
-  { key: 'author', label: 'Auteur', class: 'w-48' },
-  { key: 'updatedAt', label: 'Dernière modification', class: 'w-48' },
   { key: 'actions', label: 'Actions', class: 'w-10' },
 ]
 
-// 2. Données statiques
-const staticData = ref<ContentEntryStub[]>([
-  { id: 1, title: 'Nouvel article sur le développement durable', status: 'published', author: 'Jean Dupont', updatedAt: '2024-01-12 14:30' },
-  { id: 2, title: 'Rapport annuel 2023', status: 'draft', author: 'Marie Curie', updatedAt: '2024-01-11 09:15' },
-  { id: 3, title: 'Présentation de l\'équipe', status: 'published', author: 'Paul Valéry', updatedAt: '2024-01-10 16:45' },
-  { id: 4, title: 'Politique de confidentialité v2', status: 'archived', author: 'Antoine de Saint-Exupéry', updatedAt: '2024-01-05 11:20' },
-  { id: 5, title: 'Guide d\'utilisation du CMS', status: 'published', author: 'Jean Dupont', updatedAt: '2024-01-02 10:00' }
-])
-
-// 3. États pour la recherche et le filtrage
-const search = ref('')
-const filterStatus = ref('all')
-const currentPage = ref(1)
-const itemsPerPage = ref(10)
-
-const filterOptions = [
-  { label: 'Publiés', value: 'published' },
-  { label: 'Brouillons', value: 'draft' },
-  { label: 'Archivés', value: 'archived' }
-]
-
-// 4. Logique de filtrage (simulée pour les données statiques)
-const filteredData = computed(() => {
-  return staticData.value.filter(item => {
-    const matchesSearch = item.title.toLowerCase().includes(search.value.toLowerCase()) ||
-                          item.author.toLowerCase().includes(search.value.toLowerCase())
-    const matchesFilter = filterStatus.value === 'all' || item.status === filterStatus.value
-    return matchesSearch && matchesFilter
-  })
-})
-
-const totalItems = computed(() => filteredData.value.length)
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'published': return 'text-success border-success'
-    case 'draft': return 'bg-warning text-warning border-warning'
-    case 'archived': return 'bg-muted text-muted-foreground border-border'
+    case 'PUBLISHED': return 'text-success border-success'
+    case 'DRAFT': return 'bg-warning text-warning border-warning'
+    case 'ARCHIVED': return 'bg-muted text-muted-foreground border-border'
     default: return 'bg-secondary text-secondary-foreground'
   }
 }
 
-const getStatusLabel = (status: string) => {
-  switch (status) {
-    case 'published': return 'Publié'
-    case 'draft': return 'Brouillon'
-    case 'archived': return 'Archivé'
-    default: return status
-  }
-}
 
 const handleRowClick = (row: ContentEntryStub) => {
   console.log('Row clicked:', row)
 }
 
 const navigateToCreate = () => {
-  router.push({ name: 'admin.content-entry.create' })
+  router.push({ name: 'admin.content-entry.create', params: { id: id.value} })
+}
+
+const navigateToUpdate = (entryId: number) => {
+  router.push({ name: 'admin.content-entry.update', params: { id: entryId } })
 }
 </script>
 
@@ -107,7 +110,7 @@ const navigateToCreate = () => {
             </div>
             <div class="space-y-1">
               <h1 class="text-huge font-black tracking-tighter leading-none">
-                <span class="text-primary italic">Entrées de contenu</span>
+                <span class="text-primary italic">Entrées de contenu {{ contentType?.name }}</span>
               </h1>
               <p class="text-background text-sm font-medium">Gérez l'ensemble de vos contenus dynamiques.</p>
             </div>
@@ -126,11 +129,13 @@ const navigateToCreate = () => {
     </CompositionPageHeader>
 
     <div class="card rounded-none overflow-hidden p-6">
-      <div class="p-0">
+      <CompositionLoading v-if="isLoadingEntries"/>
+      <CompositionError v-else-if="errorEntries" :error="getErrorMessage(errorEntries)"/>
+      <div v-else class="p-0">
         <CompositionTable
           :columns="columns"
-          :data="filteredData"
-          :total="totalItems"
+          :data="entries || []"
+          :total="entries?.length || 0"
           v-model:current-page="currentPage"
           v-model:limit="itemsPerPage"
 
@@ -145,18 +150,23 @@ const navigateToCreate = () => {
 
           @row-click="handleRowClick"
         >
-          <!-- Custom render for status -->
-          <template #cell-status="{ value: statusValue }">
+          <template #cell-title="{row}">
+            <p>{{ row.data_json.title }}</p>
+          </template>
+          <template #cell-user="{row}">
+            <p>{{ row.user?.full_name }}</p>
+          </template>
+          <template #cell-status="{ row }">
             <Badge
               variant="outline"
-              :class="cn('px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', getStatusColor(statusValue as string))"
+              :class="cn('px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', getStatusColor(row.status as string))"
             >
-              {{ getStatusLabel(statusValue as string) }}
+              {{ (row.status as string) }}
             </Badge>
           </template>
 
           <!-- Custom render for actions -->
-          <template #cell-actions>
+          <template #cell-actions="{row}">
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
                 <Button variant="ghost" size="icon" class="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors">
@@ -171,8 +181,14 @@ const navigateToCreate = () => {
                   <span class="text-sm font-medium">Voir</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-primary/10 focus:text-primary">
-                  <Pencil class="h-4 w-4" />
-                  <span class="text-sm font-medium">Modifier</span>
+                  <Button
+                    variant="ghost"
+                    @click="navigateToUpdate(row.id)"
+                    size="icon"
+                    class="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors"
+                  >
+                    <Pencil class="h-4 w-4" /> Modifier
+                  </Button>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator class="bg-border/50" />
                 <DropdownMenuItem class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">

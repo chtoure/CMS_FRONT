@@ -25,12 +25,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator
 } from '../ui/dropdown-menu'
+import { useGetContentTypes } from '../../hook/content-type'
 
 
 const route = useRoute()
 const router = useRouter()
 const { data: params} = useGetParameters()
 const storeUser = userStore();
+const { data: contentTypes} = useGetContentTypes();
+
 
 const {
   mutate: logout,
@@ -64,6 +67,7 @@ interface NavItem {
   label: string
   href?: string
   icon: Component
+  params?: Record<string, string | number>
   badge?: string
   children?: NavItem[]
   id: string
@@ -83,43 +87,59 @@ const isParentActive = (item: NavItem) => {
   return false
 }
 
-const navItems: NavItem[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: 'admin.dashboard' },
-  { id: 'media', label: 'Media', icon: FolderOpen, href: 'admin.media'},
-  { id: 'variable', label: 'Variable', icon: Database, href: 'admin.variable' },
-  {
-    id: 'admin',
-    label: 'Admin',
-    icon: UserStar,
-    children: [
-      { id: 'users', label: 'Utilisateurs', icon: UserStar, href: 'admin.users' },
-      { id: 'roles', label: 'Roles', icon: ShieldUser, href: 'admin.roles-permissions' },
-    ]
-  },{
-    id: 'content-types',
-    label: 'Content Types',
-    icon: ClipboardList,
-    href: 'admin.content-types'
-  },{
-    id: 'content-entry',
-    label: 'Content Entry',
-    icon: Database,
-    href: 'admin.content-entry'
-  }
-]
+const navItems = computed<NavItem[]>(() =>{
 
-navItems.forEach(item => {
+  const baseItems: NavItem[]= [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: 'admin.dashboard' },
+    { id: 'media', label: 'Media', icon: FolderOpen, href: 'admin.media'},
+    { id: 'variable', label: 'Variable', icon: Database, href: 'admin.variable' },
+    {
+      id: 'admin',
+      label: 'Admin',
+      icon: UserStar,
+      children: [
+        { id: 'users', label: 'Utilisateurs', icon: UserStar, href: 'admin.users' },
+        { id: 'roles', label: 'Roles', icon: ShieldUser, href: 'admin.roles-permissions' },
+      ]
+    },{
+      id: 'content-types',
+      label: 'Content Types',
+      icon: ClipboardList,
+      href: 'admin.content-types'
+    }
+  ];
+
+  const dynamicItems = contentTypes.value ? contentTypes.value.map(ct => ({
+    id: `content-type-${ct.id}`,
+    label: ct.name,
+    icon: Database,
+    href: 'admin.content-entry.list',
+    params: { id: ct.id }
+  })) : [];
+
+  return [...baseItems, ...dynamicItems];
+})
+
+navItems.value.forEach(item => {
   if (item.children && item.children.some(child => child.href === route.name)) {
     openMenus.value[item.id] = true
   }
 })
 
 const activeItem = computed(() => {
-  // Check children first
-  for (const item of navItems) {
-    if (item.href === route.name) return item.label
+  for (const item of navItems.value) {
+    // Vérification pour les items parents ou simples
+    const isSameRoute = item.href === route.name
+    const isSameParams = !item.params || Object.entries(item.params).every(([k, v]) => route.params[k] === String(v))
+
+    if (isSameRoute && isSameParams) return item.label
+
+    // Vérification pour les enfants
     if (item.children) {
-      const activeChild = item.children.find(child => child.href === route.name)
+      const activeChild = item.children.find(child => {
+        const childSameRoute = child.href === route.name
+        const childSameParams = !child.params || Object.entries(child.params).every(([k, v]) => route.params[k] === String(v))
+        return childSameRoute && childSameParams
+      })
       if (activeChild) return activeChild.label
     }
   }
@@ -160,7 +180,7 @@ const activeItem = computed(() => {
       <div v-for="item in navItems" :key="item.id" class="relative group">
         <RouterLink
           v-if="!item.children"
-          :to="{ name: item.href }"
+          :to="{ name: item.href, params: item.params }"
           :class="cn(
             'flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-200',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary',
@@ -182,7 +202,7 @@ const activeItem = computed(() => {
           </span>
 
           <template v-if="isOpen">
-            <span :class="cn('font-semibold text-sm flex-1 relative z-10 truncate', activeItem === item.label ? 'text-white' : '')">
+            <span :class="cn('font-semibold text-sm flex-1 relative z-10 truncate capitalize', activeItem === item.label ? 'text-white' : '')">
               {{ item.label }}
             </span>
             <span
@@ -226,7 +246,7 @@ const activeItem = computed(() => {
                 <RouterLink
                   :to="{ name: child.href }"
                   :class="cn(
-                    'flex items-center gap-3 w-full px-2 py-1.5 text-sm transition-colors font-semibold ',
+                    'flex items-center gap-3 w-full px-2 py-1.5 text-sm transition-colors font-semibold capitalize',
                     activeItem === child.label ? 'text-sidebar-primary font-bold' : 'text-sidebar-foreground '
                   )"
                 >
@@ -277,7 +297,7 @@ const activeItem = computed(() => {
                   :key="child.id"
                   :to="{ name: child.href }"
                   :class="cn(
-                    'flex items-center gap-3 px-3 py-1.5 rounded-lg transition-all duration-200 text-sm',
+                    'flex items-center gap-3 px-3 py-1.5 rounded-lg transition-all duration-200 text-sm capitalize',
                     activeItem === child.label
                       ? 'bg-primary/10 text-primary font-bold'
                       : 'text-sidebar-foreground hover:text-sidebar-primary hover:bg-sidebar-accent'

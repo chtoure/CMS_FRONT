@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watchEffect } from 'vue'
+import { ref, computed, watchEffect, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { buildZodSchema } from '../../validation/fieldsValidate'
 import FormGenerator from '../../components/fields/FormGenerator.vue'
@@ -10,26 +10,41 @@ import { useCreateContentEntry } from '../../hook/content-entry'
 import { userStore } from '../../stores/user'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
 import { ArrowLeft, Loader2, Eye, Calendar, Lock } from 'lucide-vue-next'
-import type { IContentData } from '../../type/content-entry'
+import  { EntryStatus, type IContentData, type RegisterContentEntry } from '../../type/content-entry'
 import { showToast } from '../../lib/toast'
+import CompositionError from '../../components/composition/CompositionError.vue'
+import { getErrorMessage } from '../../lib/errorMessage'
+import CompositionLoading from '../../components/composition/CompositionLoading.vue'
 
-const { data: contentTypes } = useGetContentType()
+
+
 const { mutate: createEntry, isPending: isCreating } = useCreateContentEntry()
+
 const store = userStore()
 const router = useRouter()
 
-// État
+const contentTypeId = ref<number>(0);
+
+watch(router.currentRoute , () => {
+  contentTypeId.value = (router.currentRoute.value.params.id as unknown) as number
+},
+{
+  immediate: true
+}
+)
+
+const { data: contentType, isLoading: isLoadingContentType, error: contentTypeError } = useGetContentType(contentTypeId.value)
 const formData = ref<IContentData>({})
 const errors = ref<Record<string, string>>({})
 
 // Schéma
-const schema = computed(() => buildZodSchema(contentTypes.value?.fields_schema || []))
+const schema = computed(() => buildZodSchema(contentType.value?.fields_schema || []))
 
 // Initialisation
 watchEffect(() => {
-  if (contentTypes.value?.fields_schema) {
+  if (contentType.value?.fields_schema) {
     const newData: IContentData = { ...formData.value }
-    contentTypes.value.fields_schema.forEach(field => {
+    contentType.value.fields_schema.forEach(field => {
       if (newData[field.name] === undefined) {
         newData[field.name] = field.defaultValue !== undefined ? field.defaultValue : null
       }
@@ -40,10 +55,10 @@ watchEffect(() => {
 
 // Tous les champs sont maintenant gérés par FormGenerator
 const mainFields = computed(() => {
-    return contentTypes.value?.fields_schema || []
+    return contentType.value?.fields_schema || []
 })
 
-const handleSubmit = (status: 'published' | 'draft' = 'published') => {
+const handleSubmit = (status: EntryStatus) => {
   errors.value = {}
   const result = schema.value.safeParse(formData.value)
 
@@ -56,31 +71,33 @@ const handleSubmit = (status: 'published' | 'draft' = 'published') => {
     return
   }
 
-  if (!contentTypes.value?.id) return
+  if (!contentType.value?.id) return
+
+  const entryData: RegisterContentEntry = {
+    contentTypeId: contentType.value.id,
+    status: status,
+    data_json: result.data,
+  }
 
   console.log('submit', {
-    contentTypeId: contentTypes.value.id,
+    contentTypeId: contentType.value.id,
     userId: store.userInfo?.id || 0,
-    data_json: {
-        ...result.data,
-        status: status // Si le backend supporte le statut
-    }
+    status: status,
+    data_json: result.data,
   })
 
   createEntry({
-    contentTypeId: contentTypes.value.id,
-    userId: store.userInfo?.id || 0,
-    data_json: {
-        ...result.data,
-        status: status // Si le backend supporte le statut
-    }
+    slug: contentType.value.slug,
+    data: entryData,
   }, {
     onSuccess: () => {
       showToast('success', 'Contenu enregistré avec succès')
       router.push({ name: 'admin.dashboard' })
     },
     onError: (error) => {
-       showToast('error', "Erreur lors de l'enregistrement")
+      console.log(error);
+
+       showToast('error', getErrorMessage(error))
        console.error(error)
     }
   })
@@ -108,7 +125,17 @@ const handleSubmit = (status: 'published' | 'draft' = 'published') => {
       </template>
     </CompositionPageHeader>
 
-    <div class="max-w-[1600px] mx-auto ">
+    <div v-if="isLoadingContentType">
+      <CompositionLoading />
+    </div>
+
+    <div v-else-if="contentTypeError">
+      <CompositionError :error="getErrorMessage(contentTypeError)" />
+    </div>
+
+
+
+    <div v-else class="max-w-[1600px] mx-auto ">
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-2">
             <!-- Colonne Principale (Gauche) -->
             <div class="lg:col-span-3 space-y-6">
@@ -130,7 +157,7 @@ const handleSubmit = (status: 'published' | 'draft' = 'published') => {
                     </CardHeader>
                     <CardContent class="p-4 space-y-4">
                         <div class="flex justify-between items-center gap-2">
-                             <Button variant="outline" size="sm" class="h-8" @click="handleSubmit('draft')">
+                             <Button variant="outline" size="sm" class="h-8" @click="handleSubmit(EntryStatus.DRAFT)">
                                 Enregistrer brouillon
                              </Button>
                         </div>
@@ -157,7 +184,7 @@ const handleSubmit = (status: 'published' | 'draft' = 'published') => {
                         </div>
                     </CardContent>
                     <div class="p-4 border-t border-border flex justify-end">
-                        <Button @click="() => handleSubmit('published')" :disabled="isCreating" class="text-white">
+                        <Button @click="() => handleSubmit(EntryStatus.PUBLISHED)" :disabled="isCreating" class="text-white">
                              <Loader2 v-if="isCreating" class="w-4 h-4 mr-2 animate-spin" />
                              Publier
                         </Button>

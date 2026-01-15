@@ -6,7 +6,6 @@ import MainLayout from '@/layout/MainLayout.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import MediaListView from '@/views/media/MediaListView.vue'
 import MediaUpdateView from '@/views/media/MediaUpdateView.vue'
-import VariableListView from '../views/variable/VariableListView.vue'
 import TestView from '../views/variable/TestView.vue'
 import { setupAuthGuard } from './authGuard'
 import SettingsView from '@/views/user/SettingsView.vue'
@@ -16,9 +15,11 @@ import ForgetPasswordView from '../views/auth/ForgetPasswordView.vue'
 import RolesPermissionsView from '../views/user/Roles&PermissionsView.vue'
 import ParameterView from '../views/parameter/ParameterView.vue'
 import ContentTypeListView from '@/views/contentType/ContentTypeListView.vue'
-import ContentEntryFormView from '../views/contentEntry/ContentEntryFormView.vue'
-import ContentEntryListView from '../views/contentEntry/ContentEntryListView.vue'
 import ContentTypeFormView from '../views/contentType/ContentTypeFormView.vue'
+import ContentEntryUpdateFormView from '../views/contentEntry/ContentEntryUpdateFormView.vue'
+import ContentEntryCreateFormView from '../views/contentEntry/ContentEntryCreateFormView.vue'
+import ContentEntryListView from '../views/contentEntry/ContentEntryListView.vue'
+
 
 const router = createRouter({
   history: createWebHistory(),
@@ -118,19 +119,19 @@ const router = createRouter({
                       path: 'content-entry',
                       children: [
                         {
-                          path: '',
-                          name: 'admin.content-entry',
-                          component: ContentEntryListView
-                        },
-                        {
-                          path: 'create',
+                          path: 'create/:id',
                           name: 'admin.content-entry.create',
-                          component: ContentEntryFormView
+                          component: ContentEntryCreateFormView
                         },
                         {
-                          path: 'list',
+                          path: 'list/:id',
                           name: 'admin.content-entry.list',
                           component: ContentEntryListView
+                        },
+                        {
+                          path: 'update/:id',
+                          name: 'admin.content-entry.update',
+                          component: ContentEntryUpdateFormView
                         }
                       ]
                     }

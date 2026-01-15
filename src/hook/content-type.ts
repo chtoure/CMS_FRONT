@@ -2,11 +2,11 @@ import { useQuery, useMutation } from "@tanstack/vue-query";
 import api, { handleResponse } from "../api/fetchConfig";
 import type { ContentType, RegisterContentType, UpdateContentType } from "../type/content-type";
 
-const useGetContentType = () => {
+const useGetContentType = (id: number) => {
   return useQuery({
-    queryKey: ['content-types'],
+    queryKey: ['content-type', id],
     queryFn: async () => {
-      return handleResponse<ContentType>(await api(`/mock/content-type`));
+      return handleResponse<ContentType>(await api(`/contents/${id}`));
     }
   });
 };

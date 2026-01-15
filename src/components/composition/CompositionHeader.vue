@@ -7,7 +7,8 @@
         X,
         Menu,
         Plus,
-        Minimize
+        Minimize,
+        Loader
     } from 'lucide-vue-next'
     import CompositionUserDropDown from '@/components/composition/CompositionUserDropDown.vue'
     import CompositionDarkMode from '@/components/composition/CompositionDarkMode.vue';
@@ -156,9 +157,9 @@
                   <div v-else class="flex flex-col gap-1">
                     <div v-for="contentType in contentTypes" :key="contentType.id">
                       <Button
-                        @click="router.push({ name: 'admin.content', params: { id: contentType.id } })"
-                        variant="ghost"
-                        class="h-8 w-full justify-start px-2 py-1.5 text-xs font-normal hover:bg-accent"
+                        @click="router.push({ name: 'admin.content-entry.create', params: { id: contentType.id } })"
+                        variant="outline"
+                        class="h-8 w-full justify-start px-2 py-1.5 text-xs font-normal border-none hover:bg-background"
                       >
                         {{ contentType.name }}
                       </Button>
