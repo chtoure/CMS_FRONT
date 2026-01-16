@@ -30,12 +30,19 @@ interface UpdateContentType {
     archive?: boolean | null;
 }
 
+interface contentTypeFilter {
+  archive: string,
+  page?: number
+  limit?: number
+}
+
 
 
 export type {
   ContentType,
   RegisterContentType,
-  UpdateContentType
+  UpdateContentType,
+  contentTypeFilter
 }
 
 

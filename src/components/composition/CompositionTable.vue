@@ -147,7 +147,7 @@ const onFilterChange = (val: string | number | boolean | null | undefined) => {
                 col.class
               )"
             >
-              <slot :name="`cell-${col.key}`" :value="row[col.key as keyof T]" :row="row">
+              <slot :name="`cell-${col.key}`" :value="row[col.key as keyof T]" :row="row" :index="rowIndex">
                 {{ row[col.key as keyof T] }}
               </slot>
             </TableCell>

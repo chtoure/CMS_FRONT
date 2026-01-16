@@ -47,7 +47,7 @@ import { showToast } from '../../lib/toast'
 import { contentTypeSchema } from '../../validation/contentTypeValidate'
 import { useRegisterContentType, useGetContentTypes } from '../../hook/content-type'
 import CompositionLoading from '../../components/composition/CompositionLoading.vue'
-// import CompositionError from '../../components/composition/CompositionError.vue'
+import { handleError } from '../../lib/error'
 
 
 const router = useRouter()
@@ -335,7 +335,7 @@ const handleSubmit = () => {
         router.push({name: 'admin.content-types'})
       },
       onError: (error) => {
-        showToast('error', error.message)
+        handleError(error)
       }
     }
   )

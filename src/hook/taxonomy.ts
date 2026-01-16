@@ -1,0 +1,59 @@
+import { useQuery, useMutation } from "@tanstack/vue-query";
+import api, { handleResponse } from "../api/fetchConfig";
+import type { Taxonomy, RegisterTaxonomy, UpdateTaxonomy, taxonomyFilter } from "../type/taxonomy";
+import { unref, type Ref, computed } from "vue";
+import type { Pagination } from "../type/pagination";
+
+// Hook get taxonomies list with pagination
+export const useGetTaxonomiesPaginate = (filter: Ref<taxonomyFilter> | taxonomyFilter) => {
+  return useQuery({
+    queryKey: ["taxonomies", filter],
+    queryFn: async () => {
+      const params = unref(filter)
+      const query = new URLSearchParams()
+
+      if (params.archive) query.append('archive', params.archive.toString())
+      if (params.page) query.append('page', params.page.toString())
+      if (params.limit) query.append('limit', params.limit.toString())
+
+      const response = await api(`/taxonomies?${query.toString()}`)
+
+      return handleResponse<Pagination<Taxonomy>>(response)
+    }
+  })
+}
+
+export const useRegisterTaxonomy = () => {
+  return useMutation({
+    mutationFn: async (taxonomy: RegisterTaxonomy) => {
+      return handleResponse<Taxonomy>(await api(`/taxonomies`, {
+        method: 'POST',
+        body: JSON.stringify(taxonomy)
+      }));
+    }
+  });
+};
+
+export const useUpdateTaxonomy = () => {
+  return useMutation({
+    mutationFn: async (taxonomy: UpdateTaxonomy) => {
+      const { id, ...data } = taxonomy;
+      return handleResponse<Taxonomy>(await api(`/taxonomies/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      }));
+    }
+  });
+};
+
+export const useGetTaxonomy = (id: Ref<number | string | null> | number | string | null) => {
+  return useQuery({
+    queryKey: ['taxonomy', id],
+    queryFn: async () => {
+      const taxonomyId = unref(id);
+      if (!taxonomyId) return null;
+      return handleResponse<Taxonomy>(await api(`/taxonomies/${taxonomyId}`));
+    },
+    enabled: computed(() => !!unref(id))
+  });
+};
