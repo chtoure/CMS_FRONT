@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { FileText, Plus, MoreHorizontal, Pencil, Trash2, Eye } from 'lucide-vue-next'
+import { FileText, Plus, MoreHorizontal, Pencil, Trash2 } from 'lucide-vue-next'
 import { Button } from '../../components/ui/button'
 import { cn } from '../../lib/utils'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
@@ -70,9 +70,9 @@ interface ContentEntryStub {
 const columns = [
   { key: 'id', label: 'ID', class: 'w-16' },
   { key: 'title', label: 'Titre' },
-  { key: 'user', label: 'Auteur', class: 'w-48' },
-  { key: 'status', label: 'Statut', class: 'w-32' },
-  { key: 'actions', label: 'Actions', class: 'w-10' },
+  { key: 'user', label: 'Auteur', class: '' },
+  { key: 'status', label: 'Statut', class: '' },
+  { key: 'actions', label: 'Actions', class: '' },
 ]
 
 
@@ -129,8 +129,7 @@ const navigateToUpdate = (entryId: number) => {
     </CompositionPageHeader>
 
     <div class="card rounded-none overflow-hidden p-6">
-      <CompositionLoading v-if="isLoadingEntries"/>
-      <CompositionError v-else-if="errorEntries" :error="getErrorMessage(errorEntries)"/>
+      <CompositionError v-if="errorEntries" :error="getErrorMessage(errorEntries)"/>
       <div v-else class="p-0">
         <CompositionTable
           :columns="columns"
@@ -150,6 +149,10 @@ const navigateToUpdate = (entryId: number) => {
 
           @row-click="handleRowClick"
         >
+          <template v-if="isLoadingEntries">
+            <CompositionLoading />
+          </template>
+
           <template #cell-title="{row}">
             <p>{{ row.data_json.title }}</p>
           </template>
@@ -174,26 +177,18 @@ const navigateToUpdate = (entryId: number) => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" class="w-48 p-1 rounded-xl shadow-xl border-border/50 text-sidebar-foreground bg-sidebar backdrop-blur-md">
-                <DropdownMenuLabel class="text-[10px] font-bold uppercase text-muted-foreground px-2 py-1.5 opacity-50">Options</DropdownMenuLabel>
-                <DropdownMenuSeparator class="bg-border/50" />
-                <DropdownMenuItem class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-primary/10 focus:text-primary">
-                  <Eye class="h-4 w-4" />
-                  <span class="text-sm font-medium">Voir</span>
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem class=" transition-colors focus:bg-primary/10 focus:text-primary">
+                  <button @click="navigateToUpdate(row.id)" class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
+                    <Pencil class="w-4 h-4" /> Modifier
+                  </button>
                 </DropdownMenuItem>
-                <DropdownMenuItem class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-primary/10 focus:text-primary">
-                  <Button
-                    variant="ghost"
-                    @click="navigateToUpdate(row.id)"
-                    size="icon"
-                    class="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors"
-                  >
-                    <Pencil class="h-4 w-4" /> Modifier
-                  </Button>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator class="bg-border/50" />
+                <DropdownMenuSeparator />
                 <DropdownMenuItem class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
-                  <Trash2 class="h-4 w-4" />
-                  <span class="text-sm font-medium">Supprimer</span>
+                  <button class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
+                    <Trash2 class="w-4 h-4" /> Supprimer
+                  </button>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

@@ -22,7 +22,7 @@ const useGetContentEntries = (params: { contentTypeSlug?: string, page?: number,
 
 const useGetContentEntryByContentTypeId = ({id, filter}: {id: number, filter?: Ref<ContentEntryFilter> | ContentEntryFilter}) => {
   return useQuery({
-    queryKey: ["content-entry", id],
+    queryKey: ["content-entry", id, filter],
     queryFn: async () => {
       const query = new URLSearchParams();
       const params = unref(filter)
