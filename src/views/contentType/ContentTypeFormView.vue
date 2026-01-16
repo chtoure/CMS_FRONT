@@ -48,6 +48,7 @@ import { contentTypeSchema } from '../../validation/contentTypeValidate'
 import { useRegisterContentType, useGetContentTypes } from '../../hook/content-type'
 import CompositionLoading from '../../components/composition/CompositionLoading.vue'
 import { handleError } from '../../lib/error'
+import {useGetTaxonomiesNoPaginate} from '../../hook/taxonomy'
 
 
 const router = useRouter()
@@ -66,8 +67,8 @@ const isFieldsExpanded = ref(true)
 const errors = ref<Record<string, string>>({})
 
 // Liste des champs (fields_schema)
-// On utilise any[] temporairement pour le ref pour éviter l'erreur d'instanciation trop profonde de TS
-// tout en gardant la réactivité complète de Vue.
+// On utilise any[] pour le ref pour éviter l'erreur d'instanciation trop profonde de TS avec Vue + Unions complexes
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const fields = ref<any[]>([
   {
     type: FieldType.TEXT,
@@ -77,6 +78,8 @@ const fields = ref<any[]>([
     required: true
   }
 ])
+
+const messageErrorNameChamp = ref('');
 
 
 const {
@@ -91,37 +94,58 @@ const {
 } = useGetContentTypes()
 
 
+const {
+  data: taxonomies,
+  isPending: isTaxonomiesLoading,
+} = useGetTaxonomiesNoPaginate()
+
 const visibleFields = computed(() => fields.value.slice(1))
 
-const fieldNames = computed(() => {
-  const names: string[] = []
-  for (const f of fields.value) {
-    names.push(f.name)
+
+
+// Changer le nom d'un champ s'il est déjà utilisé
+const handleNameChange = (index: number) => {
+  if (index === 0) return;
+
+  const currentField = fields.value[index];
+
+  // On aligne juste la saisie sur ce que le backend va faire
+  // pour que la comparaison 'includes' fonctionne à 100%
+  currentField.name = currentField.name.toLowerCase().trim().replace(/\s+/g, '_');
+
+  // Reseter le message d'erreur
+  messageErrorNameChamp.value = '';
+
+  const otherNames = fields.value
+    .filter((_, i) => i !== index)
+    .map(f => f.name.toLowerCase().trim()); // Sécurité supplémentaire
+
+
+  if (currentField.name.length === 0) {
+    messageErrorNameChamp.value = "Le nom du champ ne peut pas être vide.";
+    return;
   }
-  return names
-})
 
-// Gérer l'adaptation dynamique du nom du champ par défaut en cas de conflit
-watch(fieldNames, (newNames) => {
-  const defaultField = fields.value[0] as IFieldDefinition
-  if (!defaultField) return
-
-  // On vérifie si un champ utilisateur (index > 0) utilise le nom du champ par défaut
-  const userNames = newNames.slice(1)
-  if (userNames.includes(defaultField.name)) {
-    // Conflit détecté ! On change le nom du champ par défaut
-    // On cherche un préfixe unique pour le champ système
-    let suffix = 1
-    let newName = `_${defaultField.name}`
-    while (newNames.slice(1).includes(newName)) {
-      newName = `_title_${suffix++}`
+  //  L'utilisateur tente d'utiliser "title"
+  if (currentField.name === 'title') {
+    let suffix = 1;
+    let newName = 'title_1';
+    while (otherNames.includes(newName)) {
+      suffix++;
+      newName = `title_${suffix}`;
     }
-    defaultField.name = newName
-  } else if (defaultField.name !== 'title' && !userNames.includes('title')) {
-    // Si 'title' est redevenu disponible, on le redonne au champ par défaut
-    defaultField.name = 'title'
+    currentField.name = newName;
+    return;
   }
-}, { deep: true })
+
+  // Doublon avec un autre champ personnalisé
+  if (otherNames.includes(currentField.name)) {
+    messageErrorNameChamp.value = "Ce nom technique est déjà utilisé par un autre champ.";
+  }
+
+};
+
+
 
 // Auto-générer le slug à partir du nom
 watch(() => form.value.name, (newName) => {
@@ -148,7 +172,7 @@ const fieldTypes = [
   { type: FieldType.RICH_TEXT, label: 'Zone de texte (Riche)', icon: FileText, description: 'Éditeur de texte WYSIWYG' },
   { type: FieldType.NUMBER, label: 'Nombre', icon: Hash, description: 'Entrées numériques' },
   { type: FieldType.MEDIA, label: 'Média', icon: ImageIcon, description: 'Images, vidéos ou fichiers' },
-  { type: FieldType.TAXONOMY, label: 'Taxonomie', icon: TagIcon, description: 'Catégories ou étiquettes' },
+  { type: FieldType.TAXONOMY, label: 'Categorie', icon: TagIcon, description: 'Catégories ou étiquettes' },
   { type: FieldType.BOOLEAN, label: 'Vrai/Faux', icon: ToggleLeft, description: 'Interrupteur oui/non' },
   { type: FieldType.SELECT, label: 'Sélection', icon: List, description: 'Liste déroulante' },
   { type: FieldType.RELATION, label: 'Relation', icon: Link2, description: 'Lien vers un autre type de contenu' },
@@ -314,12 +338,20 @@ const handleSubmit = () => {
     return
   }
 
+
   if (visibleFields.value.length === 0) {
     showToast('error', 'Veuillez ajouter au moins un champ personnalisé')
     return
   }
+
+  if (messageErrorNameChamp.value.length > 0) {
+    showToast('error', messageErrorNameChamp.value)
+    return
+  }
+
+
 // Nettoyage des champs
-  const NetoyageFields = cleanedFields(fields.value)
+  const NetoyageFields = cleanedFields(fields.value as IFieldDefinition[])
 
 
   const payload = {
@@ -351,7 +383,7 @@ const handleCancel = () => {
 
 <template>
 
-  <CompositionLoading v-if="isRegistering || isContentTypesLoading" />
+  <CompositionLoading v-if="isRegistering || isContentTypesLoading || isTaxonomiesLoading" />
 
   <div v-else class="min-h-screen space-y-10">
     <CompositionPageHeader>
@@ -385,7 +417,7 @@ const handleCancel = () => {
 
     <div class="px-4 space-y-8">
       <!-- Section Configuration de Base -->
-      <section class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <section class="grid grid-cols-1 md:grid-cols-3 gap-2">
         <div class="md:col-span-2 space-y-6 p-8 card rounded-none">
           <div class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -574,7 +606,8 @@ const handleCancel = () => {
                       </div>
                       <div class="space-y-2">
                         <Label class="text-xs font-medium text-text">Identifiant (Name)</Label>
-                        <Input v-model="field.name" placeholder="identifiant_unique" class="input-custom font-mono" />
+                        <Input v-model="field.name" @change="handleNameChange(vIndex+1)" placeholder="identifiant_unique" class="input-custom"/>
+                        <span v-if="messageErrorNameChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorNameChamp }}</span>
                       </div>
                     </div>
                   </div>
@@ -630,11 +663,24 @@ const handleCancel = () => {
                       </div>
                     </div>
 
-                    <!-- Type TAXONOMY : Choix de la taxonomie -->
+                    <!-- Type TAXONOMY : Choix de la categorie -->
                     <div v-if="field.type === FieldType.TAXONOMY" class="grid grid-cols-2 gap-4">
                       <div class="space-y-2">
-                        <Label class="text-xs font-medium text-text">Slug de la taxonomie</Label>
-                        <Input v-model="(field as ITaxonomyConfig).taxonomy_slug" placeholder="ex: categories" class="input-custom" />
+                        <Label class="text-xs font-medium text-text">Categorie</Label>
+                        <Select v-model="(field as ITaxonomyConfig).taxonomy_slug">
+                          <SelectTrigger class="input-custom">
+                            <SelectValue placeholder="Choisir une categorie" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectItem v-for="taxonomy in taxonomies" :key="taxonomy.id" :value="taxonomy.slug" class="select-item-custom">
+                                <div class="flex items-center gap-2">
+                                  <span class="font-medium">{{ taxonomy.name }}</span>
+                                </div>
+                              </SelectItem>
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div class="space-y-2">
                         <Label class="text-xs font-medium text-text">Mode d'affichage</Label>

@@ -21,6 +21,7 @@ import ContentEntryListView from '../views/contentEntry/ContentEntryListView.vue
 import ContentTypeFormView from '../views/contentType/ContentTypeFormView.vue'
 import TaxonomyListView from '../views/Taxonomy/TaxonomyListView.vue'
 import TaxonomyFormView from '../views/Taxonomy/TaxonomyFormView.vue'
+import ContentTypeEditView from '../views/contentType/ContentTypeEditView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -113,6 +114,11 @@ const router = createRouter({
                           path:"create",
                           name:"admin.content-types.create",
                           component:ContentTypeFormView
+                        },
+                        {
+                          path:"edit/:id",
+                          name:"admin.content-types.edit",
+                          component:ContentTypeEditView
                         }
                       ]
                     },

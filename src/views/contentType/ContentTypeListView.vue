@@ -104,7 +104,7 @@ const getStatusLabel = (status: boolean) => {
 }
 
 const handleEdit = (row: ContentType) => {
-  console.log('Edit', row)
+  router.push({ name: 'admin.content-types.edit', params: { id: row.id } })
 }
 
 const handleDelete = (row: ContentType) => {
@@ -124,7 +124,7 @@ const handleCreate = () => {
   <CompositionLoading v-if="isLoadingContentTypes" />
   <CompositionError v-else-if="isgetErrorContentTypes" :error="getErrorContentTypes?.message" />
 
-  <div class="min-h-screen space-y-10">
+  <div v-else class="min-h-screen space-y-10">
     <CompositionPageHeader>
       <template #content>
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
@@ -178,7 +178,7 @@ const handleCreate = () => {
                 </template>
 
                 <template #cell-entriesCount="{ row }">
-                  <span class="font-medium text-foreground">{{ row.fields_schema.length }}</span>
+                  <span class="font-medium text-foreground">{{ row.fields_schema.length-1 }}</span>
                 </template>
 
 

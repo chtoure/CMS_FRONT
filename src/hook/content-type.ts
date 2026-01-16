@@ -13,6 +13,15 @@ const useGetContentType = () => {
   });
 };
 
+const useGetContentTypeById = (id: number | string) => {
+  return useQuery({
+    queryKey: ['content-types', id],
+    queryFn: async () => {
+      return handleResponse<ContentType>(await api(`/contents/${id}`));
+    }
+  });
+};
+
 
 const useGetContentTypes = () => {
   return useQuery({
@@ -59,10 +68,10 @@ const useRegisterContentType = () => {
 
 const useUpdateContentType = () => {
   return useMutation({
-    mutationFn: async (contentType: UpdateContentType) => {
-      return handleResponse<ContentType>(await api(`/contents`, {
+    mutationFn: async (data: {contentType: UpdateContentType,id: number}) => {
+      return handleResponse<ContentType>(await api(`/contents/${data.id}`, {
         method: 'PUT',
-        body: JSON.stringify(contentType)
+        body: JSON.stringify(data.contentType)
       }));
     }
   });
@@ -73,6 +82,7 @@ const useUpdateContentType = () => {
 
 export {
   useGetContentType,
+  useGetContentTypeById,
   useRegisterContentType,
   useUpdateContentType,
   useGetContentTypes

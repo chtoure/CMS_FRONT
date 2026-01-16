@@ -118,8 +118,8 @@ const handleCreate = () => {
           <div class="flex items-center gap-4">
             <Tags class="h-6 w-6" />
             <div class="space-y-2">
-              <h1 class="text-huge font-black tracking-tighter leading-none"> <span class="text-primary italic">Gestion des taxonomies</span></h1>
-              <p class="text-background opacity-80 text-lg font-medium">Gérez vos catégories et étiquettes.</p>
+              <h1 class="text-huge font-black tracking-tighter leading-none"> <span class="text-primary italic">Gestion des Catégories</span></h1>
+              <p class="text-background opacity-80 text-lg font-medium">Gérez vos catégories.</p>
             </div>
           </div>
 

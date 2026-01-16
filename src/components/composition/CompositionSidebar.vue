@@ -9,7 +9,8 @@ import {
   UserStar,
   ChevronDown,
   ShieldUser,
-  ClipboardList
+  ClipboardList,
+  Tags
 } from 'lucide-vue-next'
 import { useRoute, RouterLink, useRouter } from 'vue-router'
 import { cn } from '../../lib/utils'
@@ -105,7 +106,13 @@ const navItems: NavItem[] = [
     label: 'Content Entry',
     icon: Database,
     href: 'admin.content-entry'
-  }
+  },
+  {
+    id: 'taxonomies',
+    label: 'Catégories',
+    icon: Tags,
+    href: 'admin.taxonomies'
+  },
 ]
 
 navItems.forEach(item => {

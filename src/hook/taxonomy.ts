@@ -23,6 +23,17 @@ export const useGetTaxonomiesPaginate = (filter: Ref<taxonomyFilter> | taxonomyF
   })
 }
 
+export const useGetTaxonomiesNoPaginate = () => {
+  return useQuery({
+    queryKey: ["taxonomiesNoPaginate"],
+    queryFn: async () => {
+      const response = await api(`/taxonomiesNoPaginate`)
+      return handleResponse<Taxonomy[]>(response)
+    }
+  })
+}
+
+
 export const useRegisterTaxonomy = () => {
   return useMutation({
     mutationFn: async (taxonomy: RegisterTaxonomy) => {
