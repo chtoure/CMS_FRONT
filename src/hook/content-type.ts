@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/vue-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
 import api, { handleResponse } from "../api/fetchConfig";
 import type { ContentType, RegisterContentType, UpdateContentType, contentTypeFilter } from "../type/content-type";
 import { unref, type Ref } from "vue";
@@ -56,24 +56,73 @@ export const useGetContentsPaginate = (filter: Ref<contentTypeFilter> | contentT
 
 
 const useRegisterContentType = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (contentType: RegisterContentType) => {
       return handleResponse<ContentType>(await api(`/contents`, {
         method: 'POST',
         body: JSON.stringify(contentType)
       }));
-    }
+    },
+     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contents"] });
+    },
   });
 };
 
 const useUpdateContentType = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: {contentType: UpdateContentType,id: number}) => {
       return handleResponse<ContentType>(await api(`/contents/${data.id}`, {
         method: 'PUT',
         body: JSON.stringify(data.contentType)
       }));
-    }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contents"] });
+    },
+  });
+};
+
+
+
+
+// Archiver un content type
+const useArchiveContentType = () => {
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const response = await api(`/archiveContents/${id}`, {
+        method: 'PUT',
+      });
+      return handleResponse(response);
+    },
+  });
+};
+
+
+// Restorer un content type
+const useRestoreContentType = () => {
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const response = await api(`/restoreContents/${id}`, {
+        method: 'PUT',
+      });
+      return handleResponse(response);
+    },
+  });
+};
+
+
+// Delete un contentType
+const useDeleteContentType = () => {
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const response = await api(`/contents/${id}`, {
+        method: 'DELETE',
+      });
+      return handleResponse(response);
+    },
   });
 };
 
@@ -85,6 +134,9 @@ export {
   useGetContentTypeById,
   useRegisterContentType,
   useUpdateContentType,
-  useGetContentTypes
+  useGetContentTypes,
+  useDeleteContentType,
+  useRestoreContentType,
+  useArchiveContentType
 }
 

@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import CompositionTable from '@/components/composition/CompositionTable.vue'
 import Button from '@/components/ui/button/Button.vue'
-import { Archive, ArchiveRestore, ClipboardList, MoreHorizontal, Pencil, Plus } from 'lucide-vue-next'
+import { Archive, ArchiveRestore, ClipboardList, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-vue-next'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
 import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue'
 import DropdownMenu from '../../components/ui/dropdown-menu/DropdownMenu.vue'
@@ -14,10 +14,12 @@ import { cn } from '../../lib/utils'
 import Badge from '../../components/ui/badge/Badge.vue'
 import CompositionVerifyButton from '../../components/composition/CompositionVerifyButton.vue'
 import { useRouter } from 'vue-router'
-import { useGetContentsPaginate } from '../../hook/content-type'
+import { useGetContentsPaginate , useArchiveContentType, useRestoreContentType, useDeleteContentType } from '../../hook/content-type'
 import CompositionLoading from '../../components/composition/CompositionLoading.vue'
 import CompositionError from '../../components/composition/CompositionError.vue'
 import type { ContentType } from '../../type/content-type'
+import { showToast } from '../../lib/toast'
+import { handleError } from '../../lib/error'
 
 
 
@@ -36,7 +38,7 @@ const itemsPerPage = ref(10);
 const filterArchiv = ref("all");
 const search = ref('')
 
-
+const router = useRouter()
 
 const filterOptions = [
   { label: 'Actifs', value: 'false' },
@@ -70,6 +72,23 @@ watch([currentPage, itemsPerPage, filterArchiv], () => {
 });
 
 
+
+const {
+  mutateAsync: archiveContentType,
+  isPending: isLoadingArchiveContentType
+} = useArchiveContentType();
+
+
+const {
+  mutateAsync: restoreContentType,
+  isPending: isLoadingRestoreContentType
+} = useRestoreContentType();
+
+
+const {
+  mutateAsync: deleteContentType,
+  isPending: isLoadingDeleteContentType
+} = useDeleteContentType();
 
 
 const filteredData = computed(() => {
@@ -107,11 +126,44 @@ const handleEdit = (row: ContentType) => {
   router.push({ name: 'admin.content-types.edit', params: { id: row.id } })
 }
 
-const handleDelete = (row: ContentType) => {
-  console.log('Delete', row)
+const handleArchive = (id: number) => {
+  archiveContentType(id, {
+    onSuccess: () => {
+      showToast("success", "Type de contenu archivé avec succès");
+      refetchContentTypes();
+    },
+    onError: (error) => {
+      handleError(error)
+    }
+  })
 }
 
-const router = useRouter()
+
+const handleRestore = (id: number) => {
+  restoreContentType(id, {
+    onSuccess: () => {
+      showToast("success", "Type de contenu restauré avec succès");
+      refetchContentTypes();
+    },
+    onError: (error) => {
+      handleError(error)
+    }
+  })
+}
+
+const handleDelete = (id: number) => {
+  deleteContentType(id, {
+    onSuccess: () => {
+      showToast("success", "Type de contenu supprimé avec succès");
+      refetchContentTypes();
+    },
+    onError: (error) => {
+      handleError(error)
+    }
+  })
+}
+
+
 
 const handleCreate = () => {
   router.push({ name: 'admin.content-types.create' })
@@ -121,7 +173,7 @@ const handleCreate = () => {
 
 <template>
 
-  <CompositionLoading v-if="isLoadingContentTypes" />
+  <CompositionLoading v-if="isLoadingContentTypes || isLoadingArchiveContentType || isLoadingRestoreContentType || isLoadingDeleteContentType" />
   <CompositionError v-else-if="isgetErrorContentTypes" :error="getErrorContentTypes?.message" />
 
   <div v-else class="min-h-screen space-y-10">
@@ -195,7 +247,7 @@ const handleCreate = () => {
                 <template #cell-actions="{ row }">
                   <DropdownMenu>
                       <DropdownMenuTrigger as-child>
-                        <Button variant="ghost" size="icon" @click.stop="console.log('Editer', row)">
+                        <Button variant="ghost" size="icon">
                           <MoreHorizontal class="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -204,15 +256,15 @@ const handleCreate = () => {
                         <DropdownMenuSeparator/>
                         <CompositionVerifyButton :if="!row.archive">
                           <DropdownMenuLabel >
-                          <button @click="handleEdit(row)" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
+                          <button @click="handleEdit(row)" class="text-text p-2 flex items-center gap-2 hover:scale-110 hover:text-primary">
                             <Pencil class="w-4 h-4" /> Modifier
                           </button>
                           </DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           <DropdownMenuLabel>
-                            <CompositionConfirmDialog header="Suppression de type de contenu" description="Êtes-vous sûr de vouloir Archiver ?" cancelText="Annuler" actionText="Archiver" >
+                            <CompositionConfirmDialog header="Archivage de type de contenu" description="Êtes-vous sûr de vouloir Archiver ?" cancelText="Annuler" actionText="Archiver" >
                               <template #dialogButton>
-                                <button @click="handleDelete(row)" class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110">
+                                <button @click="handleArchive(row.id)" class="text-text  p-2 flex items-center gap-2 hover:scale-110 hover:text-primary">
                                   <Archive class="w-4 h-4"  /> Archiver
                                 </button>
                               </template>
@@ -223,9 +275,16 @@ const handleCreate = () => {
                           <DropdownMenuLabel>
                             <CompositionConfirmDialog header="Restoration de type de contenu" description="Êtes-vous sûr de vouloir restorer ?" cancelText="Annuler" actionText="Restorer" >
                               <template #dialogButton>
-                                <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110">
+                                <button @click="handleRestore(row.id)" class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-primary">
                                   <ArchiveRestore  class="w-4 h-4"  /> Restorer
                                 </button>
+                                <CompositionConfirmDialog header="Suppression de type de contenu" description="Êtes-vous sûr de vouloir supprimer définitivement ?" cancelText="Annuler" actionText="Supprimer" >
+                                  <template #dialogButton>
+                                    <button @click="handleDelete(row.id)" class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-destructive">
+                                      <Trash2  class="w-4 h-4"  /> Supprimer
+                                    </button>
+                                  </template>
+                                </CompositionConfirmDialog>
                               </template>
                             </CompositionConfirmDialog>
                           </DropdownMenuLabel>

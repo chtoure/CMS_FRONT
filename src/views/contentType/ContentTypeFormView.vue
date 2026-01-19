@@ -664,65 +664,75 @@ const handleCancel = () => {
                     </div>
 
                     <!-- Type TAXONOMY : Choix de la categorie -->
-                    <div v-if="field.type === FieldType.TAXONOMY" class="grid grid-cols-2 gap-4">
-                      <div class="space-y-2">
-                        <Label class="text-xs font-medium text-text">Categorie</Label>
-                        <Select v-model="(field as ITaxonomyConfig).taxonomy_slug">
+                    <div v-if="field.type === FieldType.TAXONOMY">
+                      <div v-if="taxonomies && taxonomies.length > 0" class="grid grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                          <Label class="text-xs font-medium text-text">Categorie</Label>
+                          <Select v-model="(field as ITaxonomyConfig).taxonomy_slug">
+                            <SelectTrigger class="input-custom">
+                              <SelectValue placeholder="Choisir une categorie" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                <SelectItem v-for="taxonomy in taxonomies" :key="taxonomy.id" :value="taxonomy.slug" class="select-item-custom">
+                                  <div class="flex items-center gap-2">
+                                    <span class="font-medium">{{ taxonomy.name }}</span>
+                                  </div>
+                                </SelectItem>
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div class="space-y-2">
+                          <Label class="text-xs font-medium text-text">Mode d'affichage</Label>
+                          <Select v-model="(field as ITaxonomyConfig).renderType">
+                            <SelectTrigger class="input-custom">
+                              <SelectValue placeholder="Choisir un type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup class="font-medium text-text">
+                                <SelectItem value="combobox" class="select-item-custom">
+                                Combobox
+                                </SelectItem>
+                                <SelectItem value="badges" class="select-item-custom">
+                                Badges
+                                </SelectItem>
+                                <SelectItem value="checkbox" class="select-item-custom">
+                                Checkbox
+                                </SelectItem>
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div v-else>
+                        <p class="text-xs font-medium text-text">Aucune taxonomie disponible ou non archivée</p>
+                      </div>
+                    </div>
+
+                    <!-- Type RELATION : Cible du contenu -->
+                    <div v-if="field.type === FieldType.RELATION" class="space-y-3">
+                      <div v-if="contentTypes && contentTypes.length > 0">
+                        <Label class="text-xs font-medium text-text">Cible de la relation (Slug)</Label>
+                        <Select v-model="(field as IRelationConfig).contentTypeId">
                           <SelectTrigger class="input-custom">
-                            <SelectValue placeholder="Choisir une categorie" />
+                            <SelectValue placeholder="Choisir un slug" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectGroup>
-                              <SelectItem v-for="taxonomy in taxonomies" :key="taxonomy.id" :value="taxonomy.slug" class="select-item-custom">
+                              <SelectItem v-for="ft in contentTypes" :key="ft.slug" :value="ft.id" class="select-item-custom">
                                 <div class="flex items-center gap-2">
-                                  <span class="font-medium">{{ taxonomy.name }}</span>
+                                  <span class="font-medium">{{ ft.slug }}</span>
                                 </div>
                               </SelectItem>
                             </SelectGroup>
                           </SelectContent>
                         </Select>
                       </div>
-                      <div class="space-y-2">
-                        <Label class="text-xs font-medium text-text">Mode d'affichage</Label>
-                        <Select v-model="(field as ITaxonomyConfig).renderType">
-                          <SelectTrigger class="input-custom">
-                            <SelectValue placeholder="Choisir un type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectGroup class="font-medium text-text">
-                              <SelectItem value="combobox" class="select-item-custom">
-                              Combobox
-                              </SelectItem>
-                              <SelectItem value="badges" class="select-item-custom">
-                              Badges
-                              </SelectItem>
-                              <SelectItem value="checkbox" class="select-item-custom">
-                              Checkbox
-                              </SelectItem>
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
+                      <div v-else>
+                        <p class="text-xs font-medium text-text">Aucun type de contenu disponible ou non archivé</p>
                       </div>
-                    </div>
-
-                    <!-- Type RELATION : Cible du contenu -->
-                    <div v-if="field.type === FieldType.RELATION" class="space-y-3">
-                      <Label class="text-xs font-medium text-text">Cible de la relation (Slug)</Label>
-                      <Select v-model="(field as IRelationConfig).contentTypeId">
-                        <SelectTrigger class="input-custom">
-                          <SelectValue placeholder="Choisir un slug" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectItem v-for="ft in contentTypes" :key="ft.slug" :value="ft.id" class="select-item-custom">
-                              <div class="flex items-center gap-2">
-                                <span class="font-medium">{{ ft.slug }}</span>
-                              </div>
-                            </SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                      <!-- <Input v-model="(field as IRelationConfig).targetContentTypeSlug" placeholder="ex: articles" class="input-custom" /> -->
                     </div>
 
                     <!-- Multiple pour MEDIA, TAXONOMY, SELECT, RELATION -->
