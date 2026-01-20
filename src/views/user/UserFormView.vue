@@ -21,6 +21,7 @@ import CommandGroup from '../../components/ui/command/CommandGroup.vue';
 import CommandItem from '../../components/ui/command/CommandItem.vue';
 import { useElementSize } from '@vueuse/core';
 import { useGetRolesNoPaginate } from '../../hook/role';
+import { handleError } from '../../lib/error';
 
 
 interface Props {
@@ -100,7 +101,7 @@ const handleSubmitAddUser = () => {
       emit('success');
     },
     onError: (error: Error) => {
-      showToast('error', `Erreur lors de l'ajout de l'utilisateur : ${error.message || 'Erreur inconnue'}`);
+      handleError(error)
     }
   });
 
@@ -129,7 +130,7 @@ const handleSubmitEditUser = () => {
         emit('success');
       },
       onError: (error: Error) => {
-        showToast('error', `Erreur lors de la modification de l'utilisateur : ${error.message || 'Erreur inconnue'}`);
+        handleError(error)
       }
     });
 };

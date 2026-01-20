@@ -10,7 +10,8 @@ import {
   ChevronDown,
   ShieldUser,
   ClipboardList,
-  Trash2
+  Trash2,
+  Tags
 } from 'lucide-vue-next'
 import { useRoute, RouterLink, useRouter } from 'vue-router'
 import { cn } from '../../lib/utils'
@@ -106,6 +107,11 @@ const navItems = computed<NavItem[]>(() =>{
       label: 'Content Types',
       icon: ClipboardList,
       href: 'admin.content-types'
+    },{
+      id: 'taxonomies',
+      label: 'Catégories',
+      icon: Tags,
+      href: 'admin.taxonomies'
     },{
       id: 'corbeille',
       label: 'Corbeille',

@@ -38,10 +38,11 @@ import SelectValue from '../../components/ui/select/SelectValue.vue';
 import SelectContent from '../../components/ui/select/SelectContent.vue';
 import SelectItem from '../../components/ui/select/SelectItem.vue';
 import { watch } from 'vue';
-import { getErrorMessage } from '../../lib/errorMessage';
+// import { getErrorMessage } from '../../lib/errorMessage';
 import CompositionVerifyButton from '../../components/composition/CompositionVerifyButton.vue';
 import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue';
 import Badge from '../../components/ui/badge/Badge.vue';
+import { handleError } from '../../lib/error';
 
 
 
@@ -222,7 +223,7 @@ const roleUpdateData: RoleUpdate = {
       showToast('success', 'Role modifié avec succès');
     },
     onError(errorRoleUpdate){
-      showToast('error', `Erreur lors de la modification de role : ${errorRoleUpdate.message || 'Erreur inconnue'}`);
+      handleError(errorRoleUpdate)
     }
   })
   editingId.value = null;
@@ -294,7 +295,7 @@ const archivedRole = (id: number) => {
         showToast('success', 'Role archivé avec success');
      },
      onError: (error: Error) => {
-        showToast('error', `${getErrorMessage(error)}`);
+      handleError(error)
       }
   })
 }
@@ -309,7 +310,7 @@ const restoredRole = (id: number) => {
         showToast('success', 'Role restoré avec success');
      },
      onError: (error: Error) => {
-        showToast('error', `${getErrorMessage(error)}`);
+      handleError(error)
       }
   })
 }
@@ -327,7 +328,7 @@ const archivedPerms = (id: number) => {
         showToast('success', 'Permission archivé avec success');
      },
      onError: (error: Error) => {
-        showToast('error', `${getErrorMessage(error)}`);
+      handleError(error)
       }
   })
 }
@@ -342,7 +343,7 @@ const restoredPerms = (id: number) => {
         showToast('success', 'Permission restoré avec success');
      },
      onError: (error: Error) => {
-        showToast('error', `${getErrorMessage(error)}`);
+      handleError(error)
       }
   })
 }

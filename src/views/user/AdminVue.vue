@@ -23,11 +23,11 @@ import CompositionConfirmDialog from '../../components/composition/CompositionCo
 import { watch } from 'vue';
 import { useDeleteUser, useRestoreUser } from '../../hook/user';
 import { showToast } from '../../lib/toast';
-import { getErrorMessage } from '../../lib/errorMessage';
 import { userStore } from '../../stores/user';
 import CompositionVerifyButton from '../../components/composition/CompositionVerifyButton.vue';
 import { cn } from '../../lib/utils';
 import Badge from '../../components/ui/badge/Badge.vue';
+import { handleError } from '../../lib/error';
 
 
 
@@ -134,7 +134,7 @@ const archivedUser = (id: number) => {
         showToast('success', 'Utilisateur archivé avec success');
      },
      onError: (error: Error) => {
-        showToast('error', `${getErrorMessage(error)}`);
+      handleError(error)
       }
   })
 }
@@ -148,7 +148,7 @@ const restoredUser = (id: number) => {
         showToast('success', 'Utilisateur restoré avec success');
      },
      onError: (error: Error) => {
-        showToast('error', `${getErrorMessage(error)}`);
+      handleError(error)
       }
   })
 }

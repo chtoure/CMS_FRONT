@@ -23,6 +23,7 @@ import ContentEntryListView from '../views/contentEntry/ContentEntryListView.vue
 import ContentEntryPreviewView from '../views/contentEntry/ContentEntryPreviewView.vue'
 import TaxonomyListView from '../views/Taxonomy/TaxonomyListView.vue'
 import TaxonomyFormView from '../views/Taxonomy/TaxonomyFormView.vue'
+import ContentTypeEditView from '../views/contentType/ContentTypeEditView.vue'
 import ContentEntryCorbeilleView from '../views/contentEntry/ContentEntryCorbeilleView.vue'
 
 
@@ -117,6 +118,11 @@ const router = createRouter({
                           path:"create",
                           name:"admin.content-types.create",
                           component:ContentTypeFormView
+                        },
+                        {
+                          path:"edit/:id",
+                          name:"admin.content-types.edit",
+                          component:ContentTypeEditView
                         }
                       ]
                     },
