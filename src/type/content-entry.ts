@@ -55,7 +55,7 @@ interface UpdateContentEntry {
 }
 
 interface ContentEntryFilter {
-  type?: EntryStatus | null
+  status?: EntryStatus | null
   page?: number
   limit?: number
   search?: string

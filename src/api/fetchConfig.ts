@@ -56,22 +56,46 @@
 
 import router from "../router";
 import { userStore } from "../stores/user";
+import { ApiError, type ApiErrorData } from "./apiError";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
-/**
- * Gère la réponse JSON et les erreurs du Backend
- */
+
+
 export async function handleResponse<T>(response: Response): Promise<T> {
-  const data = await response.json();
+  const text = await response.text();
+  let data: ApiErrorData & T;
+
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {} as ApiErrorData & T;
+  }
 
   if (!response.ok) {
-    // On récupère le message d'erreur envoyé par ton Backend (Joi, etc.)
-    throw new Error(data.message || data.error || "Une erreur est survenue");
+    // Logique de message par défaut intelligente
+    const errorMessage =
+      data.error ||
+      data.message ||
+      (data.erreurs && data.erreurs.length > 0 ? data.erreurs[0] : null) ||
+      `Erreur serveur (${response.status})`;
+
+    throw new ApiError(errorMessage, data, response.status);
   }
 
   return data;
 }
+
+
+// export async function handleResponse<T>(response: Response): Promise<T> {
+//   const data = await response.json();
+
+//   if (!response.ok) {
+//     throw new Error(data.message || data.error || "Une erreur est survenue");
+//   }
+
+//   return data;
+// }
 
 /**
  * Wrapper API personnalisé

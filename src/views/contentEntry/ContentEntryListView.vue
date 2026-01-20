@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { FileText, Plus, MoreHorizontal, Pencil, Trash2 } from 'lucide-vue-next'
+import { FileText, Plus, MoreHorizontal, Pencil, Trash2, Eye, Lock, Archive } from 'lucide-vue-next'
 import { Button } from '../../components/ui/button'
 import { cn } from '../../lib/utils'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
@@ -15,12 +15,12 @@ import {
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu'
 import { Badge } from '../../components/ui/badge'
-import { useGetContentEntryByContentTypeId } from '../../hook/content-entry'
-import { useGetContentType } from '../../hook/content-type'
-import type { EntryStatus } from '../../type/content-entry'
-import CompositionLoading from '../../components/composition/CompositionLoading.vue'
+import { useToggleArchive, useGetContentEntriesBySlug, useSwitchStatus } from '../../hook/content-entry'
+import { useGetContentTypeBySlug } from '../../hook/content-type'
+import { EntryStatus, type IContentEntry } from '../../type/content-entry'
 import CompositionError from '../../components/composition/CompositionError.vue'
 import { getErrorMessage } from '../../lib/errorMessage'
+import { showToast } from '../../lib/toast'
 
 const router = useRouter()
 const search = ref('')
@@ -29,8 +29,8 @@ const currentPage = ref(1)
 const itemsPerPage = ref(10)
 
 
-const id = computed(() => {
-  return (router.currentRoute.value.params.id as unknown) as number
+const slug = computed(() => {
+  return (router.currentRoute.value.params.slug as unknown) as string
 })
 
 const filterOptions = [
@@ -40,7 +40,7 @@ const filterOptions = [
 ]
 
 const filterParams = computed(() => ({
-  type: filterStatus.value === "all" ? undefined : (filterStatus.value as EntryStatus),
+  status: filterStatus.value === "all" ? undefined : (filterStatus.value as EntryStatus),
   page: currentPage.value,
   limit: itemsPerPage.value,
   search: search.value
@@ -48,9 +48,49 @@ const filterParams = computed(() => ({
 
 
 
-const { data: entries, refetch: refetchEntries, isLoading: isLoadingEntries, error: errorEntries } = useGetContentEntryByContentTypeId({id: id.value, filter: filterParams})
-const { data: contentType } = useGetContentType(id.value)
 
+
+const { data: entries, refetch: refetchEntries, isLoading: isLoadingEntries, error: errorEntries } = useGetContentEntriesBySlug(slug.value, filterParams.value)
+const { data: contentType } = useGetContentTypeBySlug(slug.value)
+const { mutate: switchStatusMutation } = useSwitchStatus();
+const { mutate: archiveContentEntryMutation } = useToggleArchive();
+
+const handleSwitchStatus = (contentEntry: IContentEntry) => {
+  const currentStatus = contentEntry?.status;
+  if (!currentStatus) return;
+
+  const nextStatus = currentStatus === EntryStatus.DRAFT
+    ? EntryStatus.PUBLISHED
+    : EntryStatus.DRAFT;
+
+  switchStatusMutation({
+    id: contentEntry.id,
+    status: { status: nextStatus }
+  }, {
+    onSuccess: () => {
+      showToast('success', 'Statut modifié');
+      refetchEntries();
+    },
+    onError: (error) => {
+      showToast('error', getErrorMessage(error));
+    }
+  });
+}
+
+const handleArchiveContentEntry = (contentEntry: IContentEntry) => {
+  archiveContentEntryMutation({
+    id: contentEntry.id,
+    archive: true
+  }, {
+    onSuccess: () => {
+      showToast('success', 'Contenu archivé');
+      refetchEntries();
+    },
+    onError: (error) => {
+      showToast('error', getErrorMessage(error));
+    }
+  });
+}
 
 watch([currentPage, itemsPerPage, filterStatus, search], () => {
   refetchEntries();
@@ -69,12 +109,11 @@ interface ContentEntryStub {
 // 1. Colonnes de la table
 const columns = [
   { key: 'id', label: 'ID', class: 'w-16' },
-  { key: 'title', label: 'Titre' },
-  { key: 'user', label: 'Auteur', class: '' },
-  { key: 'status', label: 'Statut', class: '' },
-  { key: 'actions', label: 'Actions', class: '' },
+  { key: 'title', label: 'Titre' , class: 'w-1/2'},
+  { key: 'user', label: 'Auteur', class: 'w-1/4' },
+  { key: 'status', label: 'Statut', class: 'w-1/4' },
+  { key: 'actions', label: 'Actions', class: 'w-1/4' },
 ]
-
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -91,16 +130,20 @@ const handleRowClick = (row: ContentEntryStub) => {
 }
 
 const navigateToCreate = () => {
-  router.push({ name: 'admin.content-entry.create', params: { id: id.value} })
+  router.push({ name: 'admin.content-entry.create', params: { id: contentType.value?.id} })
 }
 
 const navigateToUpdate = (entryId: number) => {
   router.push({ name: 'admin.content-entry.update', params: { id: entryId } })
 }
+
+const navigateToPreview = (entryId: number) => {
+  router.push({ name: 'admin.content-entry.preview', params: { id: entryId } })
+}
 </script>
 
 <template>
-  <div class="space-y-8">
+  <div class="space-y-8 w-full">
     <CompositionPageHeader>
       <template #content>
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
@@ -133,8 +176,8 @@ const navigateToUpdate = (entryId: number) => {
       <div v-else class="p-0">
         <CompositionTable
           :columns="columns"
-          :data="entries || []"
-          :total="entries?.length || 0"
+          :data="entries?.results || []"
+          :total="entries?.count || 0"
           v-model:current-page="currentPage"
           v-model:limit="itemsPerPage"
 
@@ -147,10 +190,12 @@ const navigateToUpdate = (entryId: number) => {
           :filterOptions="filterOptions"
           filterPlaceholder="Statut"
 
+          :isLoading="isLoadingEntries"
+
           @row-click="handleRowClick"
         >
-          <template v-if="isLoadingEntries">
-            <CompositionLoading />
+          <template #cell-id="{index}">
+            <p>{{ index + 1 }}</p>
           </template>
 
           <template #cell-title="{row}">
@@ -180,6 +225,12 @@ const navigateToUpdate = (entryId: number) => {
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem class=" transition-colors focus:bg-primary/10 focus:text-primary">
+                  <button @click="navigateToPreview(row.id)" class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
+                    <Eye class="w-4 h-4" /> Aperçu
+                  </button>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem class=" transition-colors focus:bg-primary/10 focus:text-primary">
                   <button @click="navigateToUpdate(row.id)" class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
                     <Pencil class="w-4 h-4" /> Modifier
                   </button>
@@ -188,6 +239,18 @@ const navigateToUpdate = (entryId: number) => {
                 <DropdownMenuItem class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
                   <button class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
                     <Trash2 class="w-4 h-4" /> Supprimer
+                  </button>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
+                  <button @click="handleSwitchStatus(row)" class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
+                    <Lock class="w-4 h-4" /> {{ row.status === EntryStatus.PUBLISHED ? 'Brouillon' : 'Publier' }}
+                  </button>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
+                  <button @click="handleArchiveContentEntry(row)" class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
+                    <Archive class="w-4 h-4" /> Archiver
                   </button>
                 </DropdownMenuItem>
               </DropdownMenuContent>

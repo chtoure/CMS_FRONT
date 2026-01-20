@@ -1,60 +1,58 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import api, { handleResponse } from "../api/fetchConfig";
-import type { RegisterContentEntry, UpdateContentEntry, IContentEntry, ContentEntryFilter } from "../type/content-entry";
+import type { RegisterContentEntry, UpdateContentEntry, IContentEntry, ContentEntryFilter, EntryStatus } from "../type/content-entry";
 import type { Pagination } from "../type/pagination";
 import { unref, type Ref } from "vue";
 
-const useGetContentEntries = (params: { contentTypeSlug?: string, page?: number, limit?: number }) => {
-  return useQuery({
-    queryKey: ["content-entries", params],
-    queryFn: async () => {
-      const query = new URLSearchParams();
-      if (params.contentTypeSlug) query.append("contentTypeSlug", params.contentTypeSlug);
-      if (params.page) query.append("page", params.page.toString());
-      if (params.limit) query.append("limit", params.limit.toString());
+/**
+ * Utilitaire pour construire les QueryParams à partir d'un filtre (Ref ou objet)
+ */
+const buildQueryParams = (filter?: Ref<ContentEntryFilter> | ContentEntryFilter) => {
+  const params = unref(filter);
+  const query = new URLSearchParams();
+  if (params?.page) query.append("page", params.page.toString());
+  if (params?.limit) query.append("limit", params.limit.toString());
+  if (params?.status) query.append("status", params.status);
+  if (params?.search) query.append("search", params.search);
+  return query.toString();
+};
 
+// GET /content-entries/slug/:slug (Anciennement getAllEntries)
+const useGetContentEntriesBySlug = (slug: string | Ref<string>, filter?: Ref<ContentEntryFilter> | ContentEntryFilter) => {
+  return useQuery({
+    queryKey: ["content-entries", slug, filter],
+    queryFn: async () => {
+      const targetSlug = unref(slug);
+      const queryString = buildQueryParams(filter);
       return handleResponse<Pagination<IContentEntry>>(
-        await api(`/content-entries?${query.toString()}`)
+        await api(`/content-entries/slug/${targetSlug}?${queryString}`)
       );
     },
+    enabled: !!unref(slug)
   });
 };
 
-const useGetContentEntryByContentTypeId = ({id, filter}: {id: number, filter?: Ref<ContentEntryFilter> | ContentEntryFilter}) => {
+// GET /content-entries/:id
+const useGetContentEntry = (id: number | Ref<number>) => {
   return useQuery({
-    queryKey: ["content-entry", id, filter],
+    queryKey: ["content-entry", id],
     queryFn: async () => {
-      const query = new URLSearchParams();
-      const params = unref(filter)
-      if (params?.type) query.append("type", params.type);
-      if (params?.page) query.append("page", params.page.toString());
-      if (params?.limit) query.append("limit", params.limit.toString());
-      if (params?.search) query.append("search", params.search);
-      return handleResponse<IContentEntry[]>(
-        await api(`/content-entry/content-type/${id}?${query.toString()}`)
-      );
-    },
-  });
-};
-
-const useGetContentEntry = (id: number) => {
-  return useQuery({
-    queryKey: ["content-entry-detail", id],
-    queryFn: async () => {
+      const targetId = unref(id);
       return handleResponse<IContentEntry>(
-        await api(`/content-entry/${id}`)
+        await api(`/content-entries/${targetId}`)
       );
     },
-    enabled: !!id
+    enabled: !!unref(id)
   });
 };
 
+// POST /content-entries/:slug
 const useCreateContentEntry = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({slug, data}: {slug: string, data: RegisterContentEntry}) => {
+    mutationFn: async ({ slug, data }: { slug: string, data: RegisterContentEntry }) => {
       return handleResponse<IContentEntry>(
-        await api(`/content-entry/${slug}`, {
+        await api(`/content-entries/${slug}`, {
           method: "POST",
           body: JSON.stringify(data),
         })
@@ -66,28 +64,102 @@ const useCreateContentEntry = () => {
   });
 };
 
+// PUT /content-entries/:id
 const useUpdateContentEntry = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({id, data}: {id: number, data: UpdateContentEntry}) => {
+    mutationFn: async ({ id, data }: { id: number, data: UpdateContentEntry }) => {
       return handleResponse<IContentEntry>(
-        await api(`/content-entry/${id}`, {
+        await api(`/content-entries/${id}`, {
           method: "PUT",
           body: JSON.stringify(data),
         })
       );
     },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["content-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["content-entry", variables.id] });
+    },
+  });
+};
+
+// PATCH /content-entries/:id/status
+const useSwitchStatus = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: number, status: { status: EntryStatus } }) => {
+      return handleResponse<IContentEntry>(
+        await api(`/content-entries/${id}/status`, {
+          method: "PATCH",
+          body: JSON.stringify(status)
+        })
+      );
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["content-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["content-entry", variables.id] });
+    },
+  });
+};
+
+// PUT /content-entries/:id/archive (Gère Archive et Restauration)
+const useToggleArchive = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, archive }: { id: number, archive: boolean }) => {
+      return handleResponse<IContentEntry>(
+        await api(`/content-entries/${id}/archive`, {
+          method: "PUT",
+          body: JSON.stringify({ archive })
+        })
+      );
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["content-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["archived-content-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["content-entry", variables.id] });
+    },
+  });
+};
+
+// GET /content-entries-archived
+const useGetArchivedContentEntries = (filter?: Ref<ContentEntryFilter> | ContentEntryFilter) => {
+  return useQuery({
+    queryKey: ["archived-content-entries", filter],
+    queryFn: async () => {
+      const queryString = buildQueryParams(filter);
+      return handleResponse<Pagination<IContentEntry>>(
+        await api(`/content-entries-archived?${queryString}`)
+      );
+    },
+  });
+};
+
+// DELETE /content-entries/:id
+const useDeleteContentEntry = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id }: { id: number }) => {
+      return handleResponse<IContentEntry>(
+        await api(`/content-entries/${id}`, {
+          method: "DELETE"
+        })
+      );
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["content-entries"] });
-      queryClient.invalidateQueries({ queryKey: ["content-entry"] });
+      queryClient.invalidateQueries({ queryKey: ["archived-content-entries"] });
     },
   });
 };
 
 export {
-  useGetContentEntries,
+  useGetContentEntriesBySlug,
+  useGetContentEntry,
   useCreateContentEntry,
   useUpdateContentEntry,
-  useGetContentEntryByContentTypeId,
-  useGetContentEntry,
+  useSwitchStatus,
+  useToggleArchive,
+  useGetArchivedContentEntries,
+  useDeleteContentEntry
 };

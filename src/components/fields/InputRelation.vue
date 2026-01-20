@@ -11,8 +11,9 @@ import {
   CommandItem,
   CommandList,
 } from '../../components/ui/command'
-import { useGetContentEntryByContentTypeId } from '../../hook/content-entry'
+import { useGetContentEntriesBySlug } from '../../hook/content-entry'
 import type { IContentEntry } from '../../type/content-entry'
+import { useGetContentType } from '../../hook/content-type'
 
 interface IRelationItem {
   id: number
@@ -31,11 +32,16 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: number | number[] | null): void
 }>()
 
-const { data: entries, isLoading, error: apiError } = useGetContentEntryByContentTypeId(props.config.contentTypeId)
+const { data: contentType } = useGetContentType(props.config.contentTypeId)
+const contentTypeSlug = computed(() => contentType.value?.slug || "");
 
+const { data: entries, isLoading, error: apiError } = useGetContentEntriesBySlug(
+  contentTypeSlug,
+  {}
+);
 
 const mockEntries = computed<IRelationItem[]>(() => {
-  return entries.value?.map((entry: IContentEntry) => ({
+  return entries.value?.results.map((entry: IContentEntry) => ({
     id: entry.id,
     name: (entry.data_json.title as string) || `ID: ${entry.id}`,
   })) || []

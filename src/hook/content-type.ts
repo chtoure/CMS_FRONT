@@ -1,6 +1,8 @@
 import { useQuery, useMutation } from "@tanstack/vue-query";
 import api, { handleResponse } from "../api/fetchConfig";
-import type { ContentType, RegisterContentType, UpdateContentType } from "../type/content-type";
+import type { ContentType, RegisterContentType, UpdateContentType, contentTypeFilter } from "../type/content-type";
+import { unref, type Ref } from "vue";
+import type { Pagination } from "../type/pagination";
 
 const useGetContentType = (id: number) => {
   return useQuery({
@@ -12,6 +14,16 @@ const useGetContentType = (id: number) => {
 };
 
 
+const useGetContentTypeBySlug = (slug: string) => {
+  return useQuery({
+    queryKey: ['content-type', slug],
+    queryFn: async () => {
+      return handleResponse<ContentType>(await api(`/contentsSlug/${slug}`));
+    }
+  });
+}
+
+
 const useGetContentTypes = () => {
   return useQuery({
     queryKey: ['contentTypes'],
@@ -20,6 +32,28 @@ const useGetContentTypes = () => {
     }
   })
 }
+
+
+// Hook get users list
+export const useGetContentsPaginate = (filter: Ref<contentTypeFilter> | contentTypeFilter) => {
+  return useQuery({
+    queryKey: ["contents",filter],
+    queryFn:async () => {
+      const params = unref(filter)
+      const query = new URLSearchParams()
+
+      if (params.archive) query.append('archive', params.archive.toString())
+      if (params.page) query.append('page', params.page.toString())
+      if (params.limit) query.append('limit', params.limit.toString())
+
+
+      const response = await api(`/contents?${query.toString()}`)
+
+      return handleResponse<Pagination<ContentType>>(response)
+    }
+  })
+}
+
 
 
 const useRegisterContentType = () => {
@@ -51,6 +85,7 @@ export {
   useGetContentType,
   useRegisterContentType,
   useUpdateContentType,
-  useGetContentTypes
+  useGetContentTypes,
+  useGetContentTypeBySlug
 }
 

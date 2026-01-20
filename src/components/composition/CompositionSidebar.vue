@@ -9,7 +9,8 @@ import {
   UserStar,
   ChevronDown,
   ShieldUser,
-  ClipboardList
+  ClipboardList,
+  Trash2
 } from 'lucide-vue-next'
 import { useRoute, RouterLink, useRouter } from 'vue-router'
 import { cn } from '../../lib/utils'
@@ -105,6 +106,18 @@ const navItems = computed<NavItem[]>(() =>{
       label: 'Content Types',
       icon: ClipboardList,
       href: 'admin.content-types'
+    },{
+      id: 'corbeille',
+      label: 'Corbeille',
+      icon: Trash2,
+      children: [
+        {
+          id: 'corbeille',
+          label: 'Corbeille des contenus',
+          icon: Trash2,
+          href: 'admin.content-entry.corbeille'
+        }
+      ]
     }
   ];
 
@@ -113,7 +126,7 @@ const navItems = computed<NavItem[]>(() =>{
     label: ct.name,
     icon: Database,
     href: 'admin.content-entry.list',
-    params: { id: ct.id }
+    params: { slug: ct.slug }
   })) : [];
 
   return [...baseItems, ...dynamicItems];

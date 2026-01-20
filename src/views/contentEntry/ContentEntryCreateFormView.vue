@@ -7,7 +7,6 @@ import { Button } from '../../components/ui/button'
 import { Card, CardContent, CardTitle, CardHeader } from '../../components/ui/card'
 import { useGetContentType } from '../../hook/content-type'
 import { useCreateContentEntry } from '../../hook/content-entry'
-import { userStore } from '../../stores/user'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
 import { ArrowLeft, Loader2, Eye, Calendar, Lock } from 'lucide-vue-next'
 import  { EntryStatus, type IContentData, type RegisterContentEntry } from '../../type/content-entry'
@@ -20,7 +19,6 @@ import CompositionLoading from '../../components/composition/CompositionLoading.
 
 const { mutate: createEntry, isPending: isCreating } = useCreateContentEntry()
 
-const store = userStore()
 const router = useRouter()
 
 const contentTypeId = ref<number>(0);
@@ -37,10 +35,8 @@ const { data: contentType, isLoading: isLoadingContentType, error: contentTypeEr
 const formData = ref<IContentData>({})
 const errors = ref<Record<string, string>>({})
 
-// Schéma
 const schema = computed(() => buildZodSchema(contentType.value?.fields_schema || []))
 
-// Initialisation
 watchEffect(() => {
   if (contentType.value?.fields_schema) {
     const newData: IContentData = { ...formData.value }
@@ -79,12 +75,7 @@ const handleSubmit = (status: EntryStatus) => {
     data_json: result.data,
   }
 
-  console.log('submit', {
-    contentTypeId: contentType.value.id,
-    userId: store.userInfo?.id || 0,
-    status: status,
-    data_json: result.data,
-  })
+  console.log('submit',entryData)
 
   createEntry({
     slug: contentType.value.slug,

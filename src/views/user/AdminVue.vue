@@ -70,7 +70,7 @@ const userResults = computed(() => users.value?.results || []);
 const totalItems = computed(() => users.value?.count || 0);
 
 
-  watch([currentPage, itemsPerPage], () => {
+  watch([currentPage, itemsPerPage, filterArchiv], () => {
     refetchUsers();
   });
 
