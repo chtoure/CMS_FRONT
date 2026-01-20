@@ -68,3 +68,35 @@ export const useGetTaxonomy = (id: Ref<number | string | null> | number | string
     enabled: computed(() => !!unref(id))
   });
 };
+
+
+export const useArchiveTaxonomy = () => {
+  return useMutation({
+    mutationFn: async (id: number) => {
+      return handleResponse<Taxonomy>(await api(`/archiveTaxonomies/${id}`, {
+        method: 'PUT'
+      }));
+    }
+  });
+};
+
+export const useRestoreTaxonomy = () => {
+  return useMutation({
+    mutationFn: async (id: number) => {
+      return handleResponse<Taxonomy>(await api(`/restoreTaxonomies/${id}`, {
+        method: 'PUT'
+      }));
+    }
+  });
+};
+
+export const useDeleteTaxonomy = () => {
+  return useMutation({
+    mutationFn: async (id: number) => {
+      return handleResponse<Taxonomy>(await api(`/taxonomies/${id}`, {
+        method: 'DELETE'
+      }));
+    }
+  });
+};
+

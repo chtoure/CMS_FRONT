@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import CompositionTable from '@/components/composition/CompositionTable.vue'
 import Button from '@/components/ui/button/Button.vue'
-import { Archive, ArchiveRestore, Tags, MoreHorizontal, Pencil, Plus } from 'lucide-vue-next'
+import { Archive, ArchiveRestore, Tags, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-vue-next'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
 import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue'
 import DropdownMenu from '../../components/ui/dropdown-menu/DropdownMenu.vue'
@@ -14,10 +14,12 @@ import { cn } from '../../lib/utils'
 import Badge from '../../components/ui/badge/Badge.vue'
 import CompositionVerifyButton from '../../components/composition/CompositionVerifyButton.vue'
 import { useRouter } from 'vue-router'
-import { useGetTaxonomiesPaginate } from '../../hook/taxonomy'
+import { useArchiveTaxonomy, useDeleteTaxonomy, useGetTaxonomiesPaginate, useRestoreTaxonomy } from '../../hook/taxonomy'
 import CompositionLoading from '../../components/composition/CompositionLoading.vue'
 import CompositionError from '../../components/composition/CompositionError.vue'
 import type { Taxonomy } from '../../type/taxonomy'
+import { showToast } from '../../lib/toast'
+import { handleError } from '../../lib/error'
 
 const columns = [
   { key: 'num', label: 'Num', class: 'w-16' },
@@ -55,6 +57,25 @@ const {
 
 const taxonomiesResults = computed(() => dataTaxonomies.value?.results || []);
 const totalItems = computed(() => dataTaxonomies.value?.count || 0);
+
+
+
+const {
+  mutateAsync: archiveTaxonomy,
+  isPending: isLoadingArchiveTaxonomy,
+} = useArchiveTaxonomy();
+
+const {
+  mutateAsync: restoreTaxonomy,
+  isPending: isLoadingRestoreTaxonomy,
+} = useRestoreTaxonomy();
+
+
+const {
+  mutateAsync: deleteTaxonomy,
+  isPending: isLoadingDeleteTaxonomy,
+} = useDeleteTaxonomy();
+
 
 watch([currentPage, itemsPerPage, filterArchiv], () => {
   refetchTaxonomies();
@@ -94,8 +115,43 @@ const handleEdit = (row: Taxonomy) => {
   router.push({ name: 'admin.taxonomies.edit', params: { id: row.id } })
 }
 
-const handleDelete = (row: Taxonomy) => {
-  console.log('Delete', row)
+
+const handleArchive = (id:number) => {
+   archiveTaxonomy(id,{
+    onSuccess: () => {
+      showToast("success", "Catégorie archivée avec succès")
+      refetchTaxonomies();
+    },
+    onError: (error) => {
+      handleError(error);
+    }
+   });
+}
+
+
+const handleRestore = (id:number) => {
+   restoreTaxonomy(id,{
+    onSuccess: () => {
+      showToast("success", "Catégorie restaurée avec succès")
+      refetchTaxonomies();
+    },
+    onError: (error:unknown) => {
+      handleError(error);
+    }
+   });
+}
+
+
+const handleDelete = (id:number) => {
+   deleteTaxonomy(id,{
+    onSuccess: () => {
+      showToast("success", "Catégorie supprimée avec succès")
+      refetchTaxonomies();
+    },
+    onError: (error:unknown) => {
+      handleError(error);
+    }
+   });
 }
 
 const router = useRouter()
@@ -108,10 +164,10 @@ const handleCreate = () => {
 
 <template>
 
-  <CompositionLoading v-if="isLoadingTaxonomies" />
+  <CompositionLoading v-if="isLoadingTaxonomies || isLoadingArchiveTaxonomy || isLoadingDeleteTaxonomy || isLoadingRestoreTaxonomy" />
   <CompositionError v-else-if="isgetErrorTaxonomies" :error="getErrorTaxonomies?.message" />
 
-  <div class="min-h-screen space-y-10">
+  <div v-else class="min-h-screen space-y-10">
     <CompositionPageHeader>
       <template #content>
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
@@ -196,15 +252,15 @@ const handleCreate = () => {
                         <DropdownMenuSeparator/>
                         <CompositionVerifyButton :if="!row.archive">
                           <DropdownMenuLabel >
-                          <button @click="handleEdit(row)" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
+                          <button @click="handleEdit(row)" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-primary">
                             <Pencil class="w-4 h-4" /> Modifier
                           </button>
                           </DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           <DropdownMenuLabel>
-                            <CompositionConfirmDialog header="Suppression de taxonomie" description="Êtes-vous sûr de vouloir Archiver ?" cancelText="Annuler" actionText="Archiver" >
+                            <CompositionConfirmDialog @confirm="handleArchive(row.id)" header="Archivage de taxonomie" description="Êtes-vous sûr de vouloir Archiver ?" cancelText="Annuler" actionText="Archiver" >
                               <template #dialogButton>
-                                <button @click="handleDelete(row)" class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110">
+                                <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-primary">
                                   <Archive class="w-4 h-4"  /> Archiver
                                 </button>
                               </template>
@@ -213,10 +269,17 @@ const handleCreate = () => {
                         </CompositionVerifyButton>
                         <CompositionVerifyButton :if="row.archive">
                           <DropdownMenuLabel>
-                            <CompositionConfirmDialog header="Restoration de taxonomie" description="Êtes-vous sûr de vouloir restorer ?" cancelText="Annuler" actionText="Restorer" >
+                            <CompositionConfirmDialog @confirm="handleRestore(row.id)" header="Restoration de taxonomie" description="Êtes-vous sûr de vouloir restorer ?" cancelText="Annuler" actionText="Restorer" >
                               <template #dialogButton>
-                                <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110">
+                                <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-primary">
                                   <ArchiveRestore  class="w-4 h-4"  /> Restorer
+                                </button>
+                              </template>
+                            </CompositionConfirmDialog>
+                            <CompositionConfirmDialog @confirm="handleDelete(row.id)" header="Suppression de taxonomie" description="Êtes-vous sûr de vouloir supprimer définitivement ?" cancelText="Annuler" actionText="Supprimer" >
+                              <template #dialogButton>
+                                <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-destructive">
+                                  <Trash2  class="w-4 h-4"  /> Supprimer
                                 </button>
                               </template>
                             </CompositionConfirmDialog>

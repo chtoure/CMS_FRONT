@@ -69,6 +69,7 @@ const form = ref({
 const isFieldsExpanded = ref(true)
 
 const messageErrorNameChamp = ref('');
+const messageErrorTypeChamp = ref('');
 
 
 // État des erreurs de validation
@@ -220,6 +221,7 @@ const fieldTypesList = computed(() => {
 
 // Watcher pour initialiser les props quand le type change
 watch(fieldTypesList, (newTypes) => {
+  messageErrorTypeChamp.value = "";
   newTypes.forEach((type, index) => {
     const field = fields.value[index]
     if (!field) return
@@ -236,6 +238,7 @@ watch(fieldTypesList, (newTypes) => {
         taxonomyField.multiple = false
       }
       if (taxonomyField.multiple === undefined) taxonomyField.multiple = false
+
     }
     if (type === FieldType.RELATION) {
       const relationField = field as IRelationConfig
@@ -300,6 +303,26 @@ const cleanedFields = (fieldsArray: IFieldDefinition[]): IFieldDefinition[] => {
       description: f.description,
     }
 
+
+
+    if (f.type===FieldType.RELATION) {
+      if (f.contentTypeId === 0) {
+        messageErrorTypeChamp.value = 'Veuillez selectionner un type de contenu'
+      } else {
+        messageErrorTypeChamp.value = ''
+      }
+    }
+
+
+    if (f.type===FieldType.TAXONOMY) {
+      if (f.taxonomy_slug === '') {
+        messageErrorTypeChamp.value = 'Veuillez selectionner une categorie'
+      } else {
+        messageErrorTypeChamp.value = ''
+      }
+    }
+
+
     switch (f.type) {
       case FieldType.TEXT:
         return { ...base, type: FieldType.TEXT, minLength: (f as ITextConfig).minLength, maxLength: (f as ITextConfig).maxLength, pattern: (f as ITextConfig).pattern, defaultValue: f.defaultValue }
@@ -352,7 +375,16 @@ const handleSubmit = () => {
     return
   }
 
-  const NetoyageFields = cleanedFields(fields.value as IFieldDefinition[])
+
+   const NetoyageFields = cleanedFields(fields.value as IFieldDefinition[])
+
+
+  if (messageErrorTypeChamp.value.length > 0) {
+    showToast('error', messageErrorTypeChamp.value)
+    return
+  }
+
+
 
   const payload = {
     ...form.value,
@@ -657,6 +689,7 @@ const handleCancel = () => {
                               </SelectItem>
                             </SelectContent>
                           </Select>
+                          <span v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</span>
                         </div>
                         <div class="space-y-2">
                           <Label class="text-xs font-medium text-text">Mode d'affichage</Label>
@@ -690,6 +723,7 @@ const handleCancel = () => {
                             </SelectGroup>
                           </SelectContent>
                         </Select>
+                        <span v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</span>
                       </div>
 
                       <!-- Multiple pour MEDIA, TAXONOMY, SELECT, RELATION -->

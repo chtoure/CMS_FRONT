@@ -80,6 +80,7 @@ const fields = ref<any[]>([
 ])
 
 const messageErrorNameChamp = ref('');
+const messageErrorTypeChamp = ref('');
 
 
 const {
@@ -184,6 +185,7 @@ const addField = () => {
   let index = fields.value.length + 1
   let newName = `${baseName}_${index}`
 
+
   // S'assurer que le nom est unique
   while (fields.value.some(f => f.name === newName)) {
     newName = `${baseName}_${++index}`
@@ -212,6 +214,7 @@ const fieldTypesList = computed(() => {
 
 // Watcher pour initialiser les props quand le type change
 watch(fieldTypesList, (newTypes) => {
+  messageErrorTypeChamp.value = "";
   newTypes.forEach((type, index) => {
     const field = fields.value[index]
     if (!field) return
@@ -248,6 +251,8 @@ watch(fieldTypesList, (newTypes) => {
   })
 }, { deep: true })
 
+
+
 // Supprimer un champ
 const removeField = (index: number) => {
   fields.value.splice(index, 1)
@@ -281,6 +286,8 @@ const getFieldTypeLabel = (type: FieldType) => {
 }
 
 
+
+
 // Nettoyage performant des champs pour respecter les interfaces de field.ts
 const cleanedFields = (fields: IFieldDefinition[]): IFieldDefinition[] => {
   return fields.map((f): IFieldDefinition => {
@@ -292,6 +299,25 @@ const cleanedFields = (fields: IFieldDefinition[]): IFieldDefinition[] => {
       placeholder: f.placeholder,
       description: f.description,
     }
+
+
+    if (f.type===FieldType.RELATION) {
+      if (f.contentTypeId === 0) {
+        messageErrorTypeChamp.value = 'Veuillez selectionner un type de contenu'
+      } else {
+        messageErrorTypeChamp.value = ''
+      }
+    }
+
+
+    if (f.type===FieldType.TAXONOMY) {
+      if (f.taxonomy_slug === '') {
+        messageErrorTypeChamp.value = 'Veuillez selectionner une categorie'
+      } else {
+        messageErrorTypeChamp.value = ''
+      }
+    }
+
 
     switch (f.type) {
       case FieldType.TEXT:
@@ -350,9 +376,13 @@ const handleSubmit = () => {
   }
 
 
-// Nettoyage des champs
+  // Nettoyage des champs
   const NetoyageFields = cleanedFields(fields.value as IFieldDefinition[])
 
+  if (messageErrorTypeChamp.value.length > 0) {
+    showToast('error', messageErrorTypeChamp.value)
+    return
+  }
 
   const payload = {
     ...form.value,
@@ -682,6 +712,7 @@ const handleCancel = () => {
                               </SelectGroup>
                             </SelectContent>
                           </Select>
+                          <span v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</span>
                         </div>
                         <div class="space-y-2">
                           <Label class="text-xs font-medium text-text">Mode d'affichage</Label>
@@ -729,6 +760,7 @@ const handleCancel = () => {
                             </SelectGroup>
                           </SelectContent>
                         </Select>
+                        <span v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</span>
                       </div>
                       <div v-else>
                         <p class="text-xs font-medium text-text">Aucun type de contenu disponible ou non archivé</p>

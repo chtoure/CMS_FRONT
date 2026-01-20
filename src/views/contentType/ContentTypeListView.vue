@@ -4,7 +4,6 @@ import CompositionTable from '@/components/composition/CompositionTable.vue'
 import Button from '@/components/ui/button/Button.vue'
 import { Archive, ArchiveRestore, ClipboardList, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-vue-next'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
-import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue'
 import DropdownMenu from '../../components/ui/dropdown-menu/DropdownMenu.vue'
 import DropdownMenuTrigger from '../../components/ui/dropdown-menu/DropdownMenuTrigger.vue'
 import DropdownMenuContent from '../../components/ui/dropdown-menu/DropdownMenuContent.vue'
@@ -20,6 +19,7 @@ import CompositionError from '../../components/composition/CompositionError.vue'
 import type { ContentType } from '../../type/content-type'
 import { showToast } from '../../lib/toast'
 import { handleError } from '../../lib/error'
+import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue'
 
 
 
@@ -262,9 +262,9 @@ const handleCreate = () => {
                           </DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           <DropdownMenuLabel>
-                            <CompositionConfirmDialog header="Archivage de type de contenu" description="Êtes-vous sûr de vouloir Archiver ?" cancelText="Annuler" actionText="Archiver" >
+                            <CompositionConfirmDialog @confirm="handleArchive(row.id)" header="Archivage de type de contenu" description="Êtes-vous sûr de vouloir Archiver ?" cancelText="Annuler" actionText="Archiver" >
                               <template #dialogButton>
-                                <button @click="handleArchive(row.id)" class="text-text  p-2 flex items-center gap-2 hover:scale-110 hover:text-primary">
+                                <button class="text-text  p-2 flex items-center gap-2 hover:scale-110 hover:text-primary">
                                   <Archive class="w-4 h-4"  /> Archiver
                                 </button>
                               </template>
@@ -273,18 +273,18 @@ const handleCreate = () => {
                         </CompositionVerifyButton>
                         <CompositionVerifyButton :if="row.archive">
                           <DropdownMenuLabel>
-                            <CompositionConfirmDialog header="Restoration de type de contenu" description="Êtes-vous sûr de vouloir restorer ?" cancelText="Annuler" actionText="Restorer" >
+                            <CompositionConfirmDialog @confirm="handleRestore(row.id)" header="Restoration de type de contenu" description="Êtes-vous sûr de vouloir restorer ?" cancelText="Annuler" actionText="Restorer" >
                               <template #dialogButton>
-                                <button @click="handleRestore(row.id)" class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-primary">
+                                <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-primary">
                                   <ArchiveRestore  class="w-4 h-4"  /> Restorer
                                 </button>
-                                <CompositionConfirmDialog header="Suppression de type de contenu" description="Êtes-vous sûr de vouloir supprimer définitivement ?" cancelText="Annuler" actionText="Supprimer" >
-                                  <template #dialogButton>
-                                    <button @click="handleDelete(row.id)" class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-destructive">
-                                      <Trash2  class="w-4 h-4"  /> Supprimer
-                                    </button>
-                                  </template>
-                                </CompositionConfirmDialog>
+                              </template>
+                            </CompositionConfirmDialog>
+                            <CompositionConfirmDialog @confirm="handleDelete(row.id)" header="Suppression de type de contenu" description="Êtes-vous sûr de vouloir supprimer définitivement ?" cancelText="Annuler" actionText="Supprimer" >
+                              <template #dialogButton>
+                                <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-destructive">
+                                  <Trash2  class="w-4 h-4"  /> Supprimer
+                                </button>
                               </template>
                             </CompositionConfirmDialog>
                           </DropdownMenuLabel>
