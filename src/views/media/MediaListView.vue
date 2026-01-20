@@ -107,6 +107,7 @@
   }
 
   const columns = [
+    { key: 'id', label: 'ID' , class: 'w-6' },
     { key: 'check', label: 'Check' , class: 'w-6' },
     { key: 'image', label: 'Image' },
     { key: 'alt', label: 'Alt' },
@@ -164,6 +165,10 @@
               </Button>
             </template>
           </CompositionConfirmDialog>
+        </template>
+
+        <template #cell-id="{ index }">
+          <p>{{ index + 1 }}</p>
         </template>
 
         <template #cell-check="{ row }">

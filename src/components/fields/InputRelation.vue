@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Label } from '../../components/ui/label'
-import { X, Plus } from 'lucide-vue-next'
+import { X, Plus, Loader2, AlertCircle } from 'lucide-vue-next'
 import { type IFieldDefinition, type IRelationConfig } from '../../type/field'
 import {
   Command,
@@ -11,15 +11,19 @@ import {
   CommandItem,
   CommandList,
 } from '../../components/ui/command'
+import { useGetContentEntriesBySlug } from '../../hook/content-entry'
+import type { IContentEntry } from '../../type/content-entry'
+import { useGetContentType } from '../../hook/content-type'
 
 interface IRelationItem {
   id: number
   name: string
 }
 
+
 const props = defineProps<{
   config: IFieldDefinition & IRelationConfig
-  modelValue?: number | number[] | null // On ne reçoit plus que des IDs
+  modelValue?: number | number[] | null
   error?: string
   hideLabel?: boolean
 }>()
@@ -28,29 +32,30 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: number | number[] | null): void
 }>()
 
-// Mock local (À remplacer plus tard par un appel API basé sur config.targetModel)
-const mockEntries: IRelationItem[] = [
-  { id: 1, name: 'Article de blog 1' },
-  { id: 2, name: 'Page à propos' },
-  { id: 3, name: 'Contact' },
-  { id: 4, name: 'Services' },
-  { id: 5, name: 'Projets récents' },
-]
+const { data: contentType } = useGetContentType(props.config.contentTypeId)
+const contentTypeSlug = computed(() => contentType.value?.slug || "");
 
-/**
- * Logique de mapping :
- * On transforme les IDs du modelValue en objets IRelationItem
- * pour que le template puisse afficher les noms.
- */
+const { data: entries, isLoading, error: apiError } = useGetContentEntriesBySlug(
+  contentTypeSlug,
+  {}
+);
+
+const mockEntries = computed<IRelationItem[]>(() => {
+  return entries.value?.results.map((entry: IContentEntry) => ({
+    id: entry.id,
+    name: (entry.data_json.title as string) || `ID: ${entry.id}`,
+  })) || []
+})
+
 const selectedItems = computed(() => {
   if (!props.modelValue) return []
   const ids = Array.isArray(props.modelValue) ? props.modelValue : [props.modelValue]
-  return mockEntries.filter(entry => ids.includes(entry.id))
+  return mockEntries.value.filter(entry => ids.includes(entry.id))
 })
 
 const availableEntries = computed(() => {
   const ids = Array.isArray(props.modelValue) ? props.modelValue : (props.modelValue ? [props.modelValue] : [])
-  return mockEntries.filter(entry => !ids.includes(entry.id))
+  return mockEntries.value.filter(entry => !ids.includes(entry.id))
 })
 
 const toggleSelection = (entry: IRelationItem) => {
@@ -90,8 +95,18 @@ const removeRelation = (id: number) => {
       </span>
     </div>
 
-    <div class="border border-border overflow-hidden bg-background">
-      <Command class="rounded-none border-0">
+    <div class="border border-border overflow-hidden bg-background relative min-h-[100px]">
+
+      <div v-if="isLoading" class="absolute inset-0 z-10 bg-background/50 flex items-center justify-center">
+         <Loader2 class="w-6 h-6 animate-spin text-primary" />
+      </div>
+
+       <div v-else-if="apiError" class="p-4 flex flex-col items-center justify-center text-destructive space-y-2">
+          <AlertCircle class="w-6 h-6" />
+          <span class="text-xs font-medium">Erreur de chargement</span>
+      </div>
+
+      <Command v-else class="rounded-none border-0">
         <div class="items-center border-b border-border px-3 bg-background">
           <CommandInput placeholder="Rechercher une entrée..." class="h-10 text-xs border-none focus:ring-0" />
         </div>

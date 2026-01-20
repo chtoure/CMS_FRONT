@@ -4,14 +4,24 @@ import type { ContentType, RegisterContentType, UpdateContentType, contentTypeFi
 import { unref, type Ref } from "vue";
 import type { Pagination } from "../type/pagination";
 
-const useGetContentType = () => {
+const useGetContentType = (id: number) => {
   return useQuery({
-    queryKey: ['content-types'],
+    queryKey: ['content-type', id],
     queryFn: async () => {
-      return handleResponse<ContentType>(await api(`/mock/content-type`));
+      return handleResponse<ContentType>(await api(`/contents/${id}`));
     }
   });
 };
+
+
+const useGetContentTypeBySlug = (slug: string) => {
+  return useQuery({
+    queryKey: ['content-type', slug],
+    queryFn: async () => {
+      return handleResponse<ContentType>(await api(`/contentsSlug/${slug}`));
+    }
+  });
+}
 
 
 const useGetContentTypes = () => {
@@ -75,6 +85,7 @@ export {
   useGetContentType,
   useRegisterContentType,
   useUpdateContentType,
-  useGetContentTypes
+  useGetContentTypes,
+  useGetContentTypeBySlug
 }
 

@@ -16,11 +16,15 @@ import ForgetPasswordView from '../views/auth/ForgetPasswordView.vue'
 import RolesPermissionsView from '../views/user/Roles&PermissionsView.vue'
 import ParameterView from '../views/parameter/ParameterView.vue'
 import ContentTypeListView from '@/views/contentType/ContentTypeListView.vue'
-import ContentEntryFormView from '../views/contentEntry/ContentEntryFormView.vue'
-import ContentEntryListView from '../views/contentEntry/ContentEntryListView.vue'
 import ContentTypeFormView from '../views/contentType/ContentTypeFormView.vue'
+import ContentEntryUpdateFormView from '../views/contentEntry/ContentEntryUpdateFormView.vue'
+import ContentEntryCreateFormView from '../views/contentEntry/ContentEntryCreateFormView.vue'
+import ContentEntryListView from '../views/contentEntry/ContentEntryListView.vue'
+import ContentEntryPreviewView from '../views/contentEntry/ContentEntryPreviewView.vue'
 import TaxonomyListView from '../views/Taxonomy/TaxonomyListView.vue'
 import TaxonomyFormView from '../views/Taxonomy/TaxonomyFormView.vue'
+import ContentEntryCorbeilleView from '../views/contentEntry/ContentEntryCorbeilleView.vue'
+
 
 const router = createRouter({
   history: createWebHistory(),
@@ -120,19 +124,29 @@ const router = createRouter({
                       path: 'content-entry',
                       children: [
                         {
-                          path: '',
-                          name: 'admin.content-entry',
-                          component: ContentEntryListView
-                        },
-                        {
-                          path: 'create',
+                          path: 'create/:id',
                           name: 'admin.content-entry.create',
-                          component: ContentEntryFormView
+                          component: ContentEntryCreateFormView
                         },
                         {
-                          path: 'list',
+                          path: 'list/:slug',
                           name: 'admin.content-entry.list',
                           component: ContentEntryListView
+                        },
+                        {
+                          path: 'update/:id',
+                          name: 'admin.content-entry.update',
+                          component: ContentEntryUpdateFormView
+                        },
+                        {
+                          path: 'preview/:id',
+                          name: 'admin.content-entry.preview',
+                          component: ContentEntryPreviewView
+                        },
+                        {
+                          path: 'corbeille',
+                          name: 'admin.content-entry.corbeille',
+                          component: ContentEntryCorbeilleView
                         }
                       ]
                     },

@@ -12,7 +12,6 @@ const { data: params} = useGetParameters()
 const seoData = computed(() => ({
   title: params.value?.title || "Compositor",
   description: params.value?.description || "Gérez vos actifs visuels avec précision sur la plateforme Compositor.",
-  image: params.value?.logo || ""
 }))
 
 useHead({
@@ -21,7 +20,6 @@ useHead({
     { name: 'description', content: () => seoData.value.description },
     { property: 'og:title', content: () => seoData.value.title },
     { property: 'og:description', content: () => seoData.value.description },
-    { property: 'og:image', content: () => seoData.value.image },
     { name: 'twitter:card', content: 'summary_large_image' },
   ],
 })
@@ -88,7 +86,7 @@ const toggleSidebar = () => {
         :is-sidebar-collapsed="isSidebarCollapsed"
       />
       <main class="flex-1 overflow-y-auto p-4 md:p-6 bg-background custom-scrollbar">
-        <RouterView />
+        <RouterView :key="$route.fullPath"/>
       </main>
     </div>
   </div>
