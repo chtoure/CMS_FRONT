@@ -14,6 +14,7 @@ import SelectValue from '../../components/ui/select/SelectValue.vue'
 import SelectContent from '../../components/ui/select/SelectContent.vue'
 import SelectItem from '../../components/ui/select/SelectItem.vue'
 import CompositionListEmpty from './CompositionListEmpty.vue';
+import CompositionLoading from './CompositionLoading.vue';
 
 interface Column {
   key: string
@@ -42,7 +43,10 @@ interface Props {
   filterable?: boolean
   filterValue?: string
   filterOptions?: FilterOption[]
-  filterPlaceholder?: string
+  filterPlaceholder?: string,
+
+  // Loading
+  isLoading?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -54,7 +58,8 @@ const props = withDefaults(defineProps<Props>(), {
   searchPlaceholder: 'Rechercher...',
   filterable: false,
   filterValue: 'all',
-  filterPlaceholder: 'Filtrer par'
+  filterPlaceholder: 'Filtrer par',
+  isLoading: false,
 })
 
 const emit = defineEmits(['update:currentPage', 'update:limit', 'row-click', 'update:search', 'update:filterValue'])
@@ -63,9 +68,12 @@ const handlePageChange = (val: number) => {
   emit('update:currentPage', val)
 }
 
-const onSearchInput = (e: Event) => {
-  emit('update:search', (e.target as HTMLInputElement).value)
+const onSearchSubmit = (e: Event) => {
+  const value = (e.target as HTMLInputElement).value
+  emit('update:search', value)
 }
+
+
 
 const onFilterChange = (val: string | number | boolean | null | undefined) => {
   emit('update:filterValue', String(val ?? ''))
@@ -74,7 +82,6 @@ const onFilterChange = (val: string | number | boolean | null | undefined) => {
 
 <template>
   <div class="space-y-4">
-    <!-- Header with Search and Filter -->
     <div v-if="searchable || filterable" class="flex flex-col sm:flex-row justify-between items-center gap-4 py-3">
       <div v-if="filterable" class="w-full sm:w-auto">
         <Select :model-value="filterValue" @update:model-value="(val) => onFilterChange(val as string)">
@@ -100,7 +107,7 @@ const onFilterChange = (val: string | number | boolean | null | undefined) => {
         <input
           type="text"
           :value="search"
-          @input="onSearchInput"
+          @keyup.enter="onSearchSubmit"
           :placeholder="searchPlaceholder"
           class="pl-9 input-custom"
         />
@@ -112,7 +119,8 @@ const onFilterChange = (val: string | number | boolean | null | undefined) => {
     </div>
 
     <div class="border border-sidebar-border bg-sidebar/30 backdrop-blur-sm overflow-hidden">
-      <Table class="border-collapse">
+      <CompositionLoading v-if="isLoading" />
+      <Table v-else class="border-collapse">
         <TableHeader class="bg-sidebar-accent">
           <TableRow class="hover:bg-transparent">
             <TableHead
@@ -130,8 +138,11 @@ const onFilterChange = (val: string | number | boolean | null | undefined) => {
           </TableRow>
         </TableHeader>
 
+
         <TableBody>
+
           <TableRow
+
             v-for="(row, rowIndex) in data"
             :key="rowIndex"
             class="group hover:bg-sidebar-accent/30 transition-colors cursor-pointer"

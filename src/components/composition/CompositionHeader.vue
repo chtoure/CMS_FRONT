@@ -5,7 +5,10 @@
         Settings,
         Search,
         X,
-        Menu
+        Menu,
+        Plus,
+        Minimize,
+        Loader
     } from 'lucide-vue-next'
     import CompositionUserDropDown from '@/components/composition/CompositionUserDropDown.vue'
     import CompositionDarkMode from '@/components/composition/CompositionDarkMode.vue';
@@ -21,13 +24,18 @@
     import { userStore } from '../../stores/user';
     import { useRouter } from 'vue-router';
     import { searchItems, type SearchItem } from '../../constants/searchItems';
-
+    import HoverCard from '../ui/hover-card/HoverCard.vue';
+    import HoverCardTrigger from '../ui/hover-card/HoverCardTrigger.vue';
+    import HoverCardContent from '../ui/hover-card/HoverCardContent.vue';
+    import { useGetContentTypes } from '../../hook/content-type.ts';
 
     const props = defineProps<{
         onToggleSidebar?: () => void
         headerClass?: string,
         isSidebarCollapsed?: boolean
     }>()
+
+    const { data: contentTypes, error: contentTypeError, isLoading: contentTypeLoading } = useGetContentTypes();
 
     const router = useRouter();
 
@@ -70,6 +78,8 @@
             input?.focus();
         }
     };
+
+
 
     onMounted(() => {
         window.addEventListener('keydown', handleShortcut);
@@ -115,12 +125,57 @@
         </div>
 
         <div class="flex items-center gap-2">
+            <HoverCard :open-delay="100" :close-delay="200">
+              <HoverCardTrigger as-child>
+                <Button
+                  variant="ghost"
+                  class="text-muted-foreground hover:text-foreground p-1.5 h-8 w-8"
+                >
+                  <Plus class="w-4 h-4" />
+                </Button>
+              </HoverCardTrigger>
+
+              <HoverCardContent
+                align="end"
+                side="bottom"
+                :side-offset="8"
+                class="w-auto min-w-max p-2 bg-background border-border shadow-md"
+              >
+                <div v-if="contentTypeLoading" class="flex items-center justify-center p-4">
+                  <Loader class="w-4 h-4 animate-spin" />
+                </div>
+
+                <div v-else-if="contentTypeError" class="p-2 text-xs text-destructive">
+                  <p>Erreur survenue</p>
+                </div>
+
+                <div v-else>
+                  <div v-if="contentTypes?.length === 0" class="p-2 text-xs text-muted-foreground">
+                    <p>Aucun type</p>
+                  </div>
+
+                  <div v-else class="flex flex-col gap-1">
+                    <div v-for="contentType in contentTypes" :key="contentType.id">
+                      <Button
+                        @click="router.push({ name: 'admin.content-entry.create', params: { id: contentType.id } })"
+                        variant="outline"
+                        class="h-8 w-full justify-start px-2 py-1.5 text-xs font-normal border-none hover:bg-background"
+                      >
+                        {{ contentType.name }}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
+
             <Button
                 variant="ghost"
                 @click="toggleFullscreen"
-                :class="cn('text-muted-foreground hover:text-foreground p-1.5 h-8 w-8')"
+                class="text-muted-foreground hover:text-foreground p-1.5 h-8 w-8"
             >
-                <Maximize class="w-4 h-4" />
+                <Minimize v-if="isFullscreen" class="w-4 h-4" stroke-width="2" />
+                <Maximize v-else class="w-4 h-4" stroke-width="2" />
             </Button>
 
             <Button

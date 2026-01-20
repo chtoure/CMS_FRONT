@@ -60,7 +60,7 @@ const removeItem = (val: string | number) => {
           variant="outline"
           role="combobox"
           :aria-expanded="open"
-          class="justify-between w-full h-auto min-h-10 font-normal bg-white border-border active:ring-1 active:ring-primary"
+          class="justify-between w-full h-auto min-h-10 font-normal bg-transparent border-border active:ring-1 active:ring-primary"
         >
           <div class="flex flex-wrap gap-1 text-left">
             <template v-if="config.multiple && Array.isArray(modelValue) && modelValue.length > 0">
@@ -79,7 +79,7 @@ const removeItem = (val: string | number) => {
               {{ modelValue }}
             </template>
 
-            <span v-else class="text-muted-foreground">
+            <span v-else class="text-text">
               {{ config.placeholder || 'Sélectionner...' }}
             </span>
           </div>

@@ -32,16 +32,16 @@ const useGetMedia = (id : number) => {
 }
 
 
-const useGetMediaList = (filter: Ref<MediaFilter> | MediaFilter) => {
+const useGetMediaList = (filter?: Ref<MediaFilter> | MediaFilter) => {
   return useQuery({
     queryKey: ['medias', filter],
     queryFn: async () => {
       const params = unref(filter)
       const query = new URLSearchParams()
 
-      if (params.type) query.append('type', params.type)
-      if (params.page) query.append('page', params.page.toString())
-      if (params.limit) query.append('limit', params.limit.toString())
+      if (params?.type) query.append('type', params.type)
+      if (params?.page) query.append('page', params.page.toString())
+      if (params?.limit) query.append('limit', params.limit.toString())
 
       console.log(query.toString());
 

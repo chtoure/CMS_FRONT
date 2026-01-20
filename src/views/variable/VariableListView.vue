@@ -252,7 +252,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
 </script>
 
 <template>
-  <div class="flex flex-row  bg-background text-foreground h-screen w-fit overflow-x-auto overflow-hidden antialiased font-mono">
+  <div class="flex flex-row bg-background text-foreground h-[80vh] w-full overflow-hidden antialiased font-mono">
 
     <aside v-if="sidebarOpen" class="w-72 h-full sticky top-0 flex-shrink-0 border-r border-border flex flex-col bg-background">
       <div class="p-6 space-y-6 pl-0">
