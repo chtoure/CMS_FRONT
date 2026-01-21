@@ -18,6 +18,7 @@ import { showToast } from '../../lib/toast'
 import { taxonomySchema, type TaxonomyFormData } from '../../validation/taxonomyValidate'
 import { useRegisterTaxonomy, useUpdateTaxonomy, useGetTaxonomy } from '../../hook/taxonomy'
 import CompositionLoading from '../../components/composition/CompositionLoading.vue'
+import { handleError } from '../../lib/error'
 
 const router = useRouter()
 const route = useRoute()
@@ -113,15 +114,14 @@ const handleSubmit = async () => {
         id: Number(taxonomyId.value),
         ...form.value
       })
-      showToast('success', 'Taxonomie mise à jour')
+      showToast('success', 'categorie mise à jour')
     } else {
       await registerTaxonomy(form.value)
-      showToast('success', 'Taxonomie créée')
+      showToast('success', 'categorie créée')
     }
     router.push({ name: 'admin.taxonomies' })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Une erreur est survenue'
-    showToast('error', message)
+    handleError(error)
   }
 }
 
@@ -143,9 +143,9 @@ const handleCancel = () => {
             </div>
             <div class="space-y-1">
               <h1 class="text-huge font-black tracking-tighter leading-none">
-                <span class="text-primary italic">{{ isEditing ? 'Modifier la taxonomie' : 'Créer une taxonomie' }}</span>
+                <span class="text-primary italic">{{ isEditing ? 'Modifier la Catégorie' : 'Créer une Catégorie' }}</span>
               </h1>
-              <p class="text-background opacity-80 text-lg font-medium">Organisez vos contenus avec des catégories et étiquettes.</p>
+              <p class="text-background opacity-80 text-lg font-medium">Organiser vos groupes de catégories pour trier vos contenus</p>
             </div>
           </div>
 
@@ -164,7 +164,7 @@ const handleCancel = () => {
     </CompositionPageHeader>
 
     <div class="px-4 space-y-8">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
         <!-- Informations Générales (Style UserFormView) -->
         <div class="md:col-span-2 space-y-8 p-8 card rounded-none">
           <div class="space-y-6">
@@ -179,7 +179,7 @@ const handleCancel = () => {
                   <Input
                     id="name"
                     v-model="form.name"
-                    placeholder="Ex: Catégories, Régions..."
+                    placeholder="Ex: Categorie, Régions..."
                     class="input-custom"
                     :class="{ 'border-destructive': errors.name }"
                   />
@@ -206,7 +206,7 @@ const handleCancel = () => {
                 id="description"
                 :rows="4"
                 v-model="form.description"
-                placeholder="Décrivez l'usage de cette taxonomie..."
+                placeholder="Décrivez l'usage de cette categorie..."
                 class="input-custom min-h-[120px]"
                 :class="{ 'border-destructive': errors.description }"
               />
@@ -255,7 +255,7 @@ const handleCancel = () => {
 
             <div class="pt-4 border-t border-border">
               <p class="text-xs text-muted-foreground leading-relaxed">
-                Les termes sont les valeurs possibles pour cette taxonomie (ex: pour "Catégorie", les termes pourraient être "Sport", "Culture", etc).
+                Les termes sont les valeurs possibles pour cette categorie (ex: pour "vehicule", les termes pourraient être "voiture", "moto", "camion", etc).
               </p>
             </div>
           </div>
@@ -269,7 +269,7 @@ const handleCancel = () => {
         </Button>
         <Button @click="handleSubmit" class="rounded-xl h-12 px-10 bg-primary text-white font-bold shadow-lg">
           <Save class="w-4 h-4 mr-2" />
-          {{ isEditing ? 'Mettre à jour' : 'Créer la taxonomie' }}
+          {{ isEditing ? 'Mettre à jour' : 'Créer la categorie' }}
         </Button>
       </div>
     </div>

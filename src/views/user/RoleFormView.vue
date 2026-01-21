@@ -22,6 +22,7 @@ import { Field, useForm } from 'vee-validate';
 import CompositionError from '../../components/composition/CompositionError.vue';
 import { useGetPermissionsNoPaginate } from '../../hook/permission';
 import type { Permission } from '../../type/permission';
+import { handleError } from '../../lib/error';
 
 
 // Initialisation
@@ -81,7 +82,7 @@ const onSubmit = handleSubmit(async (values) => {
       showToast('success', 'Role créer avec succès');
     },
     onError: (errorRole) => {
-      showToast('error', `Erreur lors de la creation de role : ${errorRole.message || 'Erreur inconnue'}`);
+      handleError(errorRole)
     }
   })
 })

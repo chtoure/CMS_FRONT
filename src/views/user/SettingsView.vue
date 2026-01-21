@@ -123,6 +123,7 @@
   import { validationSchemaProfile } from '../../validation/profileValidate';
   import { Field, useForm } from 'vee-validate';
   import { useGetPermissionsRole } from '../../hook/role';
+import { handleError } from '../../lib/error';
 
 
 
@@ -228,7 +229,7 @@ const onSubmit = handleSubmit((formValues) => {
         showToast('success', 'Profil mis à jour avec succès!');
       },
       onError(updateError) {
-        showToast('error', updateError.message || "Erreur lors de la mise à jour");
+        handleError(updateError)
       }
     }
   );
