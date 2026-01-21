@@ -14,6 +14,7 @@ import { showToast } from '../../lib/toast'
 import CompositionError from '../../components/composition/CompositionError.vue'
 import { getErrorMessage } from '../../lib/errorMessage'
 import CompositionLoading from '../../components/composition/CompositionLoading.vue'
+import { handleError } from '../../lib/error'
 
 
 
@@ -86,10 +87,11 @@ const handleSubmit = (status: EntryStatus) => {
       router.push({ name: 'admin.dashboard' })
     },
     onError: (error) => {
-      console.log(error);
+      // console.log(error);
 
-       showToast('error', getErrorMessage(error))
-       console.error(error)
+      //  showToast('error', getErrorMessage(error))
+      //  console.error(error)
+      handleError(error)
     }
   })
 }

@@ -43,7 +43,7 @@ const useGetContentTypes = () => {
 }
 
 
-// Hook get users list
+// Hook get content list
 const useGetContentsPaginate = (filter: Ref<contentTypeFilter> | contentTypeFilter) => {
   return useQuery({
     queryKey: ["contents",filter],
@@ -64,6 +64,18 @@ const useGetContentsPaginate = (filter: Ref<contentTypeFilter> | contentTypeFilt
 }
 
 
+// Hook get content type excepted
+const useGetContentTypesExcepted = (id: number) => {
+  return useQuery({
+    queryKey: ['contentTypesExcepted', id],
+    queryFn: async () => {
+      return handleResponse<ContentType[]>(await api(`/contentsExcepted/${id}`));
+    }
+  })
+}
+
+
+
 
 const useRegisterContentType = () => {
   const queryClient = useQueryClient();
@@ -76,6 +88,7 @@ const useRegisterContentType = () => {
     },
      onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contents"] });
+      queryClient.invalidateQueries({ queryKey: ["contentTypes"] });
     },
   });
 };
@@ -91,6 +104,7 @@ const useUpdateContentType = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contents"] });
+      queryClient.invalidateQueries({ queryKey: ["contentTypes"] });
     },
   });
 };
@@ -100,6 +114,7 @@ const useUpdateContentType = () => {
 
 // Archiver un content type
 const useArchiveContentType = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: number) => {
       const response = await api(`/archiveContents/${id}`, {
@@ -107,12 +122,17 @@ const useArchiveContentType = () => {
       });
       return handleResponse(response);
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contents"] });
+      queryClient.invalidateQueries({ queryKey: ["contentTypes"] });
+    },
   });
 };
 
 
 // Restorer un content type
 const useRestoreContentType = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: number) => {
       const response = await api(`/restoreContents/${id}`, {
@@ -120,18 +140,27 @@ const useRestoreContentType = () => {
       });
       return handleResponse(response);
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contents"] });
+      queryClient.invalidateQueries({ queryKey: ["contentTypes"] });
+    },
   });
 };
 
 
 // Delete un contentType
 const useDeleteContentType = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: number) => {
       const response = await api(`/contents/${id}`, {
         method: 'DELETE',
       });
       return handleResponse(response);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contents"] });
+      queryClient.invalidateQueries({ queryKey: ["contentTypes"] });
     },
   });
 };
@@ -149,6 +178,7 @@ export {
   useRestoreContentType,
   useArchiveContentType,
   useGetContentTypeBySlug,
-  useGetContentsPaginate
+  useGetContentsPaginate,
+  useGetContentTypesExcepted
 }
 

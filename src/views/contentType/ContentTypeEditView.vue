@@ -46,7 +46,7 @@ import BaseSwitch from '../../components/base/BaseSwitch.vue'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs'
 import { showToast } from '../../lib/toast'
 import { contentTypeSchema } from '../../validation/contentTypeValidate'
-import { useUpdateContentType, useGetContentTypeById, useGetContentTypes } from '../../hook/content-type'
+import { useUpdateContentType, useGetContentTypeById, useGetContentTypesExcepted } from '../../hook/content-type'
 import CompositionLoading from '../../components/composition/CompositionLoading.vue'
 import { handleError } from '../../lib/error'
 import {useGetTaxonomiesNoPaginate} from '../../hook/taxonomy'
@@ -68,7 +68,6 @@ const form = ref({
 
 const isFieldsExpanded = ref(true)
 
-const messageErrorNameChamp = ref('');
 const messageErrorTypeChamp = ref('');
 
 
@@ -93,7 +92,7 @@ const {
 const {
   data: contentTypes,
   isPending: isContentTypesLoading,
-} = useGetContentTypes()
+} = useGetContentTypesExcepted(Number(contentTypeId))
 
 
 const {
@@ -127,49 +126,44 @@ const populateForm = (data: ContentType) => {
 
 const visibleFields = computed(() => fields.value.slice(1))
 
-// Changer le nom d'un champ s'il est déjà utilisé
-const handleNameChange = (index: number) => {
-  if (index === 0) return;
 
-  const currentField = fields.value[index];
+// const handleNameChange = (index: number) => {
+//   if (index === 0) return;
 
-  // On aligne juste la saisie sur ce que le backend va faire
-  // pour que la comparaison 'includes' fonctionne à 100%
-  currentField.name = currentField.name.toLowerCase().trim().replace(/\s+/g, '_');
+//   const currentField = fields.value[index];
 
-  // Reseter le message d'erreur
-  messageErrorNameChamp.value = '';
+//   currentField.name = currentField.name.toLowerCase().trim().replace(/\s+/g, '_');
 
-  const otherNames = fields.value
-    .filter((_, i) => i !== index)
-    .map(f => f.name.toLowerCase().trim()); // Sécurité supplémentaire
+//   messageErrorNameChamp.value = '';
+
+//   const otherNames = fields.value
+//     .filter((_, i) => i !== index)
+//     .map(f => f.name.toLowerCase().trim());
 
 
-  if (currentField.name.length === 0) {
-    messageErrorNameChamp.value = "Le nom du champ ne peut pas être vide.";
-    return;
-  }
+//   if (currentField.name.length === 0) {
+//     messageErrorNameChamp.value = "Le nom du champ ne peut pas être vide.";
+//     return;
+//   }
 
-  // L'utilisateur tente d'utiliser "title"
-  if (currentField.name === 'title') {
-    let suffix = 1;
-    let newName = 'title_1';
-    while (otherNames.includes(newName)) {
-      suffix++;
-      newName = `title_${suffix}`;
-    }
-    currentField.name = newName;
-    return;
-  }
+//   if (currentField.name === 'title') {
+//     let suffix = 1;
+//     let newName = 'title_1';
+//     while (otherNames.includes(newName)) {
+//       suffix++;
+//       newName = `title_${suffix}`;
+//     }
+//     currentField.name = newName;
+//     return;
+//   }
 
-  // Doublon avec un autre champ personnalisé
-  if (otherNames.includes(currentField.name)) {
-    messageErrorNameChamp.value = "Ce nom technique est déjà utilisé par un autre champ.";
-  }
+//   if (otherNames.includes(currentField.name)) {
+//     messageErrorNameChamp.value = "Ce nom technique est déjà utilisé par un autre champ.";
+//   }
 
-};
+// };
 
-// Gestion de l'expansion des champs
+  // Gestion de l'expansion des champs
 const expandedFieldIndex = ref<number | null>(null)
 
 const toggleExpand = (index: number) => {
@@ -323,6 +317,15 @@ const cleanedFields = (fieldsArray: IFieldDefinition[]): IFieldDefinition[] => {
     }
 
 
+    if (f.type===FieldType.SELECT) {
+      if (f.options.length === 0) {
+        messageErrorTypeChamp.value = 'Veuillez selectionner des options'
+      } else {
+        messageErrorTypeChamp.value = ''
+      }
+    }
+
+
     switch (f.type) {
       case FieldType.TEXT:
         return { ...base, type: FieldType.TEXT, minLength: (f as ITextConfig).minLength, maxLength: (f as ITextConfig).maxLength, pattern: (f as ITextConfig).pattern, defaultValue: f.defaultValue }
@@ -370,14 +373,7 @@ const handleSubmit = () => {
     return
   }
 
-  if (messageErrorNameChamp.value.length > 0) {
-    showToast('error', 'Veuillez corriger les erreurs dans les champs personnalisés')
-    return
-  }
-
-
-   const NetoyageFields = cleanedFields(fields.value as IFieldDefinition[])
-
+  const NetoyageFields = cleanedFields(fields.value as IFieldDefinition[])
 
   if (messageErrorTypeChamp.value.length > 0) {
     showToast('error', messageErrorTypeChamp.value)
@@ -483,7 +479,7 @@ const handleCancel = () => {
                 :rows="4"
                 v-model="form.description"
                 placeholder="Décrivez à quoi sert ce type de contenu..."
-                class="input-custom"
+                class="input-custom h-20"
                 :class="{ 'border border-destructive': errors.description }"
               />
               <p v-if="errors.description" class="text-xs text-destructive px-1 font-medium italic animate-in slide-in-from-top-1">{{ errors.description }}</p>
@@ -529,7 +525,7 @@ const handleCancel = () => {
           <div class="grid grid-cols-[80px_1fr_1fr_1fr] px-6 py-3 bg-muted/20 border-b border-border text-xs font-bold text-text">
             <div>N°</div>
             <div>Libellé</div>
-            <div>Nom</div>
+            <div>Placeholder</div>
             <div>Type</div>
           </div>
 
@@ -564,7 +560,7 @@ const handleCancel = () => {
                 </div>
 
                 <div class="text-muted-foreground font-medium">
-                  {{ field.name }}
+                  {{ field.placeholder }}
                 </div>
 
                 <div class="flex items-center gap-2">
@@ -618,9 +614,8 @@ const handleCancel = () => {
                           <Input v-model="field.label" placeholder="Texte affiché à l'utilisateur" class="input-custom" />
                         </div>
                         <div class="space-y-2">
-                          <Label class="text-xs font-medium text-text">Identifiant (Name)</Label>
-                          <Input v-model="field.name" @change="handleNameChange(vIndex+1)" placeholder="identifiant_unique" class="input-custom" />
-                          <span v-if="messageErrorNameChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorNameChamp }}</span>
+                          <Label class="text-xs font-medium text-text"> Placeholder </Label>
+                          <Input v-model="field.placeholder" placeholder="Texte affiché en exemple" class="input-custom"/>
                         </div>
                       </div>
                     </div>
@@ -630,6 +625,7 @@ const handleCancel = () => {
                       <div v-if="field.type === FieldType.SELECT" class="space-y-4">
                         <div class="flex items-center justify-between">
                           <Label class="text-xs font-bold text-text">Options de sélection</Label>
+                          <p v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</p>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -726,6 +722,26 @@ const handleCancel = () => {
                         <span v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</span>
                       </div>
 
+                      <!-- Type RICH_TEXT -->
+                      <div v-if="field.type === FieldType.RICH_TEXT" class="space-y-4">
+                        <div class="grid grid-cols-2 sm:grid-cols-2 gap-3">
+                          <div class="space-y-2">
+                            <Label class="text-xs font-medium text-text">Toolbar</Label>
+                            <Select v-model="(field as IRichTextConfig).toolbar">
+                              <SelectTrigger class="input-custom">
+                                <SelectValue placeholder="Choisir un toolbar" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
+                                  <SelectItem value="minimal" class="select-item-custom">minimal</SelectItem>
+                                  <SelectItem value="full" class="select-item-custom">full</SelectItem>
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+
                       <!-- Multiple pour MEDIA, TAXONOMY, SELECT, RELATION -->
                       <div v-if="[FieldType.MEDIA, FieldType.TAXONOMY, FieldType.SELECT, FieldType.RELATION].includes(field.type)" class="space-y-4 p-4 bg-muted/10 rounded-xl border border-border">
                           <div v-if="field.type === FieldType.MEDIA" class="space-y-4 border-border pb-4">
@@ -748,7 +764,7 @@ const handleCancel = () => {
                             </div>
                           </div>
 
-                          <div class="flex items-center justify-between px-2">
+                          <div :class="field.type === FieldType.MEDIA ? 'flex items-center justify-between px-2 border border-border rounded-xl p-4' : 'flex items-center justify-between px-2' ">
                             <div class="space-y-0.5">
                               <Label class="text-xs font-medium text-text">Sélections multiples</Label>
                               <p class="text-xs text-muted-foreground font-medium">Permettre de choisir plusieurs éléments</p>
@@ -795,6 +811,13 @@ const handleCancel = () => {
                               <Input type="number" v-model="(field as INumberConfig).max" placeholder="Valeur Max" class="input-custom" />
                             </div>
                          </div>
+                      </div>
+
+                      <div v-if="field.type === FieldType.MEDIA" class="space-y-4">
+                        <div class="space-y-2">
+                          <Label class="text-xs font-medium text-text">Max Size</Label>
+                          <Input type="number" v-model="(field as IMediaConfig).maxSize" placeholder="Taille Max" class="input-custom" />
+                        </div>
                       </div>
                     </div>
                   </TabsContent>

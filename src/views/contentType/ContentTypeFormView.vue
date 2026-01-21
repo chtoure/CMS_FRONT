@@ -27,7 +27,8 @@ import {
   type IRelationConfig,
   type IMediaConfig,
   type ITextConfig,
-  type INumberConfig
+  type INumberConfig,
+  type IRichTextConfig
 } from '../../type/field'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
 import Button from '../../components/ui/button/Button.vue'
@@ -79,7 +80,6 @@ const fields = ref<any[]>([
   }
 ])
 
-const messageErrorNameChamp = ref('');
 const messageErrorTypeChamp = ref('');
 
 
@@ -101,50 +101,6 @@ const {
 } = useGetTaxonomiesNoPaginate()
 
 const visibleFields = computed(() => fields.value.slice(1))
-
-
-
-// Changer le nom d'un champ s'il est déjà utilisé
-const handleNameChange = (index: number) => {
-  if (index === 0) return;
-
-  const currentField = fields.value[index];
-
-  // On aligne juste la saisie sur ce que le backend va faire
-  // pour que la comparaison 'includes' fonctionne à 100%
-  currentField.name = currentField.name.toLowerCase().trim().replace(/\s+/g, '_');
-
-  // Reseter le message d'erreur
-  messageErrorNameChamp.value = '';
-
-  const otherNames = fields.value
-    .filter((_, i) => i !== index)
-    .map(f => f.name.toLowerCase().trim()); // Sécurité supplémentaire
-
-
-  if (currentField.name.length === 0) {
-    messageErrorNameChamp.value = "Le nom du champ ne peut pas être vide.";
-    return;
-  }
-
-  //  L'utilisateur tente d'utiliser "title"
-  if (currentField.name === 'title') {
-    let suffix = 1;
-    let newName = 'title_1';
-    while (otherNames.includes(newName)) {
-      suffix++;
-      newName = `title_${suffix}`;
-    }
-    currentField.name = newName;
-    return;
-  }
-
-  // Doublon avec un autre champ personnalisé
-  if (otherNames.includes(currentField.name)) {
-    messageErrorNameChamp.value = "Ce nom technique est déjà utilisé par un autre champ.";
-  }
-
-};
 
 
 
@@ -370,12 +326,6 @@ const handleSubmit = () => {
     return
   }
 
-  if (messageErrorNameChamp.value.length > 0) {
-    showToast('error', messageErrorNameChamp.value)
-    return
-  }
-
-
   // Nettoyage des champs
   const NetoyageFields = cleanedFields(fields.value as IFieldDefinition[])
 
@@ -482,7 +432,7 @@ const handleCancel = () => {
                 :rows="4"
                 v-model="form.description"
                 placeholder="Décrivez à quoi sert ce type de contenu..."
-                class="input-custom"
+                class="input-custom h-20"
                 :class="{ 'border border-destructive': errors.description }"
               />
               <p v-if="errors.description" class="text-xs text-destructive px-1 font-medium italic animate-in slide-in-from-top-1">{{ errors.description }}</p>
@@ -635,9 +585,8 @@ const handleCancel = () => {
                         <Input v-model="field.label" placeholder="Texte affiché à l'utilisateur" class="input-custom" />
                       </div>
                       <div class="space-y-2">
-                        <Label class="text-xs font-medium text-text">Identifiant (Name)</Label>
-                        <Input v-model="field.name" @change="handleNameChange(vIndex+1)" placeholder="identifiant_unique" class="input-custom"/>
-                        <span v-if="messageErrorNameChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorNameChamp }}</span>
+                        <Label class="text-xs font-medium text-text"> Placeholder </Label>
+                        <Input v-model="field.placeholder" placeholder="Texte affiché en exemple" class="input-custom"/>
                       </div>
                     </div>
                   </div>
@@ -767,6 +716,29 @@ const handleCancel = () => {
                       </div>
                     </div>
 
+                    <!-- Type RichText -->
+                    <div v-if="field.type === FieldType.RICH_TEXT" class="space-y-4">
+                      <div class="grid grid-cols-2 sm:grid-cols-2 gap-3">
+                        <div class="space-y-2">
+                          <Label class="text-xs font-medium text-text">Toolbar</Label>
+                          <Select v-model="(field as IRichTextConfig).toolbar">
+                            <SelectTrigger class="input-custom">
+                              <SelectValue placeholder="Choisir un toolbar" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                <SelectItem v-for="toolbar in ['minimal', 'full']" :key="toolbar" :value="toolbar" class="select-item-custom">
+                                  <div class="flex items-center gap-2">
+                                    <span class="font-medium">{{ toolbar }}</span>
+                                  </div>
+                                </SelectItem>
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+
                     <!-- Multiple pour MEDIA, TAXONOMY, SELECT, RELATION -->
                     <!-- Options spécifiques : Multiple et Types de Média -->
                     <div v-if="[FieldType.MEDIA, FieldType.TAXONOMY, FieldType.SELECT, FieldType.RELATION].includes(field.type)" class="space-y-4 p-4 bg-muted/10 rounded-xl border border-border">
@@ -840,6 +812,13 @@ const handleCancel = () => {
                             <Input type="number" v-model="(field as INumberConfig).max" placeholder="Valeur Max" class="input-custom" />
                           </div>
                        </div>
+                    </div>
+
+                    <div v-if="field.type === FieldType.MEDIA" class="space-y-4">
+                      <div class="space-y-2">
+                        <Label class="text-xs font-medium text-text">Max Size</Label>
+                        <Input type="number" v-model="(field as IMediaConfig).maxSize" placeholder="Taille Max" class="input-custom" />
+                      </div>
                     </div>
                   </div>
                 </TabsContent>
