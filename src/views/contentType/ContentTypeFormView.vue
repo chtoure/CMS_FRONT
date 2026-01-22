@@ -49,7 +49,7 @@ import { contentTypeSchema } from '../../validation/contentTypeValidate'
 import { useRegisterContentType, useGetContentTypes } from '../../hook/content-type'
 import CompositionLoading from '../../components/composition/CompositionLoading.vue'
 import { handleError } from '../../lib/error'
-import {useGetTaxonomiesNoPaginate} from '../../hook/taxonomy'
+import {useGetTaxonomies} from '../../hook/taxonomy'
 
 
 const router = useRouter()
@@ -94,11 +94,16 @@ const {
   isPending: isContentTypesLoading,
 } = useGetContentTypes()
 
+const resultContentTypes = computed(() => contentTypes.value?.results || [])
+
 
 const {
   data: taxonomies,
   isPending: isTaxonomiesLoading,
-} = useGetTaxonomiesNoPaginate()
+} = useGetTaxonomies()
+
+const resultTaxonomies = computed(() => taxonomies.value?.results || [])
+
 
 const visibleFields = computed(() => fields.value.slice(1))
 
@@ -644,7 +649,7 @@ const handleCancel = () => {
 
                     <!-- Type TAXONOMY : Choix de la categorie -->
                     <div v-if="field.type === FieldType.TAXONOMY">
-                      <div v-if="taxonomies && taxonomies.length > 0" class="grid grid-cols-2 gap-4">
+                      <div v-if="resultTaxonomies && resultTaxonomies.length > 0" class="grid grid-cols-2 gap-4">
                         <div class="space-y-2">
                           <Label class="text-xs font-medium text-text">Categorie</Label>
                           <Select v-model="(field as ITaxonomyConfig).taxonomy_slug">
@@ -653,7 +658,7 @@ const handleCancel = () => {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectGroup>
-                                <SelectItem v-for="taxonomy in taxonomies" :key="taxonomy.id" :value="taxonomy.slug" class="select-item-custom">
+                                <SelectItem v-for="taxonomy in resultTaxonomies" :key="taxonomy.id" :value="taxonomy.slug" class="select-item-custom">
                                   <div class="flex items-center gap-2">
                                     <span class="font-medium">{{ taxonomy.name }}</span>
                                   </div>
@@ -693,7 +698,7 @@ const handleCancel = () => {
 
                     <!-- Type RELATION : Cible du contenu -->
                     <div v-if="field.type === FieldType.RELATION" class="space-y-3">
-                      <div v-if="contentTypes && contentTypes.length > 0">
+                      <div v-if="resultContentTypes && resultContentTypes.length > 0">
                         <Label class="text-xs font-medium text-text">Cible de la relation (Slug)</Label>
                         <Select v-model="(field as IRelationConfig).contentTypeId">
                           <SelectTrigger class="input-custom">
@@ -701,7 +706,7 @@ const handleCancel = () => {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectGroup>
-                              <SelectItem v-for="ft in contentTypes" :key="ft.slug" :value="ft.id" class="select-item-custom">
+                              <SelectItem v-for="ft in resultContentTypes" :key="ft.slug" :value="ft.id" class="select-item-custom">
                                 <div class="flex items-center gap-2">
                                   <span class="font-medium">{{ ft.slug }}</span>
                                 </div>

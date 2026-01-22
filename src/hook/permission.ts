@@ -1,41 +1,36 @@
 
 
-import { useMutation, useQuery } from "@tanstack/vue-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import api, { handleResponse } from "../api/fetchConfig";
 import type { Permission, permsFilter } from "../type/permission";
 import { unref, type Ref } from "vue";
 import type { Pagination } from "../type/pagination";
 
 
-// Hook get permission list avec pagination
-export const useGetPermissions = (filter: Ref<permsFilter> | permsFilter) => {
-  return useQuery({
-    queryKey: ["permissions",filter],
-    queryFn:async () => {
-      const params = unref(filter)
-      const query = new URLSearchParams()
 
-      if (params.archive) query.append('archive', params.archive.toString())
-      if (params.page) query.append('page', params.page.toString())
-      if (params.limit) query.append('limit', params.limit.toString())
+const buildQueryParams = (filter?: Ref<permsFilter> | permsFilter) => {
+  const params = unref(filter)
+  const query = new URLSearchParams()
 
-      console.log(query.toString());
+  if (params?.archive) query.append('archive', params.archive.toString())
+  if (params?.page) query.append('page', params.page.toString())
+  if (params?.limit) query.append('limit', params.limit.toString())
 
-
-      const response = await api(`/permissions?${query.toString()}`)
-
-      return handleResponse<Pagination<Permission>>(response)
-    }
-  })
+  return query.toString()
 }
 
 
-// Hook get role list sans pagination
-export const useGetPermissionsNoPaginate = () => {
+
+
+// Hook get permission list avec pagination
+export const useGetPermissions = (filter?: Ref<permsFilter> | permsFilter) => {
   return useQuery({
-    queryKey: ["permissionsNoPaginate"],
+    queryKey: ["permissions",filter],
     queryFn:async () => {
-      return handleResponse<Permission[]>(await api("/permissionsNoPaginate"));
+      const query = buildQueryParams(filter)
+      const response = await api(`/permissions?${query}`)
+
+      return handleResponse<Pagination<Permission>>(response)
     }
   })
 }
@@ -45,6 +40,7 @@ export const useGetPermissionsNoPaginate = () => {
 
 // Archiver un permission
 export const useDeletePermission = () => {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (idUser: number) => {
       const response = await api(`/archivePermissions/${idUser}`, {
@@ -52,12 +48,16 @@ export const useDeletePermission = () => {
       });
       return handleResponse(response);
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["permissions"] })
+    }
   });
 };
 
 
 // Restorer un permission
 export const useRestorePermission = () => {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (idUser: number) => {
       const response = await api(`/restorePermissions/${idUser}`, {
@@ -65,5 +65,8 @@ export const useRestorePermission = () => {
       });
       return handleResponse(response);
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["permissions"] })
+    }
   });
 };

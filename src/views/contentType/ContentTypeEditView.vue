@@ -49,7 +49,7 @@ import { contentTypeSchema } from '../../validation/contentTypeValidate'
 import { useUpdateContentType, useGetContentTypeById, useGetContentTypesExcepted } from '../../hook/content-type'
 import CompositionLoading from '../../components/composition/CompositionLoading.vue'
 import { handleError } from '../../lib/error'
-import {useGetTaxonomiesNoPaginate} from '../../hook/taxonomy'
+import {useGetTaxonomies} from '../../hook/taxonomy'
 
 
 import type { ContentType } from '../../type/content-type'
@@ -98,7 +98,10 @@ const {
 const {
   data: taxonomies,
   isPending: isTaxonomiesLoading,
-} = useGetTaxonomiesNoPaginate()
+} = useGetTaxonomies()
+
+
+const resultTaxonomies = computed(() => taxonomies.value?.results || [])
 
 
 // Initialisation des données
@@ -680,7 +683,7 @@ const handleCancel = () => {
                               <SelectValue placeholder="Choisir une categorie" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem v-for="(taxonomy, tIdx) in taxonomies" :key="tIdx" :value="taxonomy.slug" class="select-item-custom">
+                              <SelectItem v-for="(taxonomy, tIdx) in resultTaxonomies" :key="tIdx" :value="taxonomy.slug" class="select-item-custom">
                                 {{ taxonomy.name }}
                               </SelectItem>
                             </SelectContent>

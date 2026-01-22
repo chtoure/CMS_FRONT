@@ -266,7 +266,7 @@ const columns = [
 
                       <DropdownMenu>
                         <DropdownMenuTrigger as-child>
-                          <Button variant="ghost" size="icon" @click.stop="console.log('Editer', row)">
+                          <Button variant="ghost" size="icon">
                             <MoreHorizontal class="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>

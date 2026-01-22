@@ -36,6 +36,8 @@ const { data: params} = useGetParameters()
 const storeUser = userStore();
 const { data: contentTypes} = useGetContentTypes();
 
+const resultContentTypes = computed(() => contentTypes.value?.results || [])
+
 
 const {
   mutate: logout,
@@ -127,7 +129,7 @@ const navItems = computed<NavItem[]>(() =>{
     }
   ];
 
-  const dynamicItems = contentTypes.value ? contentTypes.value.map(ct => ({
+  const dynamicItems = resultContentTypes.value ? resultContentTypes.value.map(ct => ({
     id: `content-type-${ct.id}`,
     label: ct.name,
     icon: Database,

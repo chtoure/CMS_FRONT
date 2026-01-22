@@ -1,6 +1,6 @@
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import {  ShieldCheck, Save, ChevronsUpDown, Check, Shield, PencilLine } from 'lucide-vue-next';
 import { Button } from '../../components/ui/button';
 import CompositionLoading from '../../components/composition/CompositionLoading.vue';
@@ -20,9 +20,9 @@ import { useAddRole } from '../../hook/role';
 import { validationSchemaRole } from '../../validation/RoleSchema';
 import { Field, useForm } from 'vee-validate';
 import CompositionError from '../../components/composition/CompositionError.vue';
-import { useGetPermissionsNoPaginate } from '../../hook/permission';
 import type { Permission } from '../../type/permission';
 import { handleError } from '../../lib/error';
+import { useGetPermissions } from '../../hook/permission';
 
 
 // Initialisation
@@ -42,9 +42,13 @@ const emit = defineEmits(['success', 'cancel'])
 
 // Hook listes Permissions
 const {
-  data: dataPermissions,
+  data: permissions,
   isLoading: loadinPermission,
-} = useGetPermissionsNoPaginate()
+} = useGetPermissions()
+
+const resultsPermissions = computed(() => {
+  return permissions.value?.results || []
+})
 
 
 // Hook add Role
@@ -181,7 +185,7 @@ const handleCancel = () =>{
                         <CommandList>
                           <CommandGroup>
                             <CommandItem
-                              v-for="p in dataPermissions"
+                              v-for="p in resultsPermissions"
                               :key="p.id"
                               :value="p.name"
                               class="cursor-pointer data-[highlighted]:bg-primary data-[highlighted]:text-white"

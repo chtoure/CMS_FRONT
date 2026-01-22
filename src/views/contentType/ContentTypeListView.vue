@@ -13,7 +13,7 @@ import { cn } from '../../lib/utils'
 import Badge from '../../components/ui/badge/Badge.vue'
 import CompositionVerifyButton from '../../components/composition/CompositionVerifyButton.vue'
 import { useRouter } from 'vue-router'
-import { useGetContentsPaginate , useArchiveContentType, useRestoreContentType, useDeleteContentType } from '../../hook/content-type'
+import { useGetContentTypes, useArchiveContentType, useRestoreContentType, useDeleteContentType } from '../../hook/content-type'
 import CompositionLoading from '../../components/composition/CompositionLoading.vue'
 import CompositionError from '../../components/composition/CompositionError.vue'
 import type { ContentType } from '../../type/content-type'
@@ -59,7 +59,7 @@ const {
   isError: isgetErrorContentTypes,
   error: getErrorContentTypes,
   refetch: refetchContentTypes
-} = useGetContentsPaginate(filterParams);
+} = useGetContentTypes(filterParams);
 
 
 const contentTypesResults = computed(() => dataContentTypes.value?.results || []);
