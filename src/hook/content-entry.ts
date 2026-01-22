@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import api, { handleResponse } from "../api/fetchConfig";
 import type { RegisterContentEntry, UpdateContentEntry, IContentEntry, ContentEntryFilter, EntryStatus } from "../type/content-entry";
 import type { Pagination } from "../type/pagination";
-import { unref, type Ref } from "vue";
+import { computed, unref, type Ref } from "vue";
 
 /**
  * Utilitaire pour construire les QueryParams à partir d'un filtre (Ref ou objet)
@@ -17,22 +17,27 @@ const buildQueryParams = (filter?: Ref<ContentEntryFilter> | ContentEntryFilter)
   return query.toString();
 };
 
-// GET /content-entries/slug/:slug (Anciennement getAllEntries)
-const useGetContentEntriesBySlug = (slug: string | Ref<string>, filter?: Ref<ContentEntryFilter> | ContentEntryFilter) => {
+
+const useGetContentEntriesBySlug = (slug: string | Ref<string | undefined>, filter?: Ref<ContentEntryFilter> | ContentEntryFilter) => {
   return useQuery({
-    queryKey: ["content-entries", slug, filter],
+
+    queryKey: ["content-entries", computed(() => unref(slug)), filter],
+
     queryFn: async () => {
       const targetSlug = unref(slug);
+      if (!targetSlug) throw new Error("Slug is missing");
+
       const queryString = buildQueryParams(filter);
       return handleResponse<Pagination<IContentEntry>>(
         await api(`/content-entries/slug/${targetSlug}?${queryString}`)
       );
     },
-    enabled: !!unref(slug)
+
+    enabled: () => !!unref(slug)
   });
 };
 
-// GET /content-entries/:id
+
 const useGetContentEntry = (id: number | Ref<number>) => {
   return useQuery({
     queryKey: ["content-entry", id],

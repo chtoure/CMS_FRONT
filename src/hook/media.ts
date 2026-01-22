@@ -39,7 +39,13 @@ const useGetMediaList = (filter?: Ref<MediaFilter> | MediaFilter) => {
       const params = unref(filter)
       const query = new URLSearchParams()
 
-      if (params?.type) query.append('type', params.type)
+      if (params?.type) {
+        const typeValue = Array.isArray(params.type)
+          ? params.type.join(',')
+          : params.type;
+
+        query.append('type', typeValue);
+      }
       if (params?.page) query.append('page', params.page.toString())
       if (params?.limit) query.append('limit', params.limit.toString())
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { FileText, MoreHorizontal, Pencil, Trash2, Eye, RefreshCw } from 'lucide-vue-next'
+import { FileText, MoreHorizontal, Trash2, Eye, RefreshCw } from 'lucide-vue-next'
 import { Button } from '../../components/ui/button'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
 import CompositionTable from '../../components/composition/CompositionTable.vue'
@@ -97,10 +97,6 @@ const handleRowClick = (row: ContentEntryStub) => {
 }
 
 
-const navigateToUpdate = (entryId: number) => {
-  router.push({ name: 'admin.content-entry.update', params: { id: entryId } })
-}
-
 const navigateToPreview = (entryId: number) => {
   router.push({ name: 'admin.content-entry.preview', params: { id: entryId } })
 }
@@ -169,12 +165,6 @@ const navigateToPreview = (entryId: number) => {
                 <DropdownMenuItem class=" transition-colors focus:bg-primary/10 focus:text-primary">
                   <button @click="navigateToPreview(row.id)" class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
                     <Eye class="w-4 h-4" /> Aperçu
-                  </button>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem class=" transition-colors focus:bg-primary/10 focus:text-primary">
-                  <button @click="navigateToUpdate(row.id)" class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
-                    <Pencil class="w-4 h-4" /> Modifier
                   </button>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

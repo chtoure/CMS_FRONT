@@ -1,13 +1,13 @@
 interface Media{
     id : number,
     file_path :   string,
-    type :   'video' | 'image',
+    type :   'video' | 'image' | 'document' | 'archive',
     alt  : string | null
 };
 
 interface MediaPayload{
     file_path :   string,
-    type :   'video' | 'image',
+    type :   'video' | 'image' | 'document' | 'archive',
     alt  : string | null
 }
 
@@ -20,7 +20,7 @@ type AspectRatio = 'free' | '1:1' | '16:9' | '4:3' | '3:2';
 interface Media {
   id: number;
   file_path: string;
-  type: 'video' | 'image';
+  type: 'video' | 'image' | 'document' | 'archive';
   alt: string | null;
 }
 
@@ -60,38 +60,33 @@ interface ImageState {
 interface AppliedModifications {
   transform: Transform;
   filters: Filters;
-  bgRemoved: boolean;
+  bgRemoved?: boolean;
 }
 
 type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se' | 'n' | 's' | 'e' | 'w';
 
-
 interface SaveMediaPayload {
   operations: {
     geometry: {
-      rotation: number; // angle total final
+      rotation: number;
       flipH: boolean;
       flipV: boolean;
       crop: {
-        x: number;     // realX
-        y: number;     // realY
-        width: number; // realWidth
-        height: number;// realHeight
+        x: number;
+        y: number;
+        width: number;
+        height: number;
       };
     };
     adjustments: {
-      brightness: number;
-      contrast: number;
-      saturation: number;
       blur: number;
       grayscale: boolean;
     };
-    bgRemoved: boolean;
   };
 }
 
 interface MediaFilter {
-  type?: 'image' | 'video' | null
+  type?: ('image' | 'video' | 'document' | 'archive')[] | null
   page?: number
   limit?: number
 }

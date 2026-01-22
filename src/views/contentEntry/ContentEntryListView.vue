@@ -35,8 +35,7 @@ const slug = computed(() => {
 
 const filterOptions = [
   { label: 'Publiés', value: 'PUBLISHED' },
-  { label: 'Brouillons', value: 'DRAFT' },
-  { label: 'Archivés', value: 'ARCHIVED' }
+  { label: 'Brouillons', value: 'DRAFT' }
 ]
 
 const filterParams = computed(() => ({
@@ -50,7 +49,7 @@ const filterParams = computed(() => ({
 
 
 
-const { data: entries, refetch: refetchEntries, isLoading: isLoadingEntries, error: errorEntries } = useGetContentEntriesBySlug(slug.value, filterParams.value)
+const { data: entries, refetch: refetchEntries, isLoading: isLoadingEntries, error: errorEntries } = useGetContentEntriesBySlug(slug.value, filterParams)
 const { data: contentType } = useGetContentTypeBySlug(slug.value)
 const { mutate: switchStatusMutation } = useSwitchStatus();
 const { mutate: archiveContentEntryMutation } = useToggleArchive();

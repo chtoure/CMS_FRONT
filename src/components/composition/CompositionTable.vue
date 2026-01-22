@@ -107,6 +107,7 @@ const onFilterChange = (val: string | number | boolean | null | undefined) => {
         <input
           type="text"
           :value="search"
+          @input="$emit('update:search', ($event.target as HTMLInputElement).value)"
           @keyup.enter="onSearchSubmit"
           :placeholder="searchPlaceholder"
           class="pl-9 input-custom"
