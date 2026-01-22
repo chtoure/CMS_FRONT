@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import MediaPreview from '../../components/composition/MediaPreview.vue'
+import CompositionMediaPreview from '../../components/composition/CompositionMediaPreview.vue'
 import { computed } from 'vue'
 import { Label } from '../../components/ui/label'
 import CompositionMediaPicker from '../../components/composition/CompositionMediaPicker.vue'
@@ -65,7 +65,7 @@ const removeMedia = (id: number) => {
     <div class="mt-2 space-y-3">
        <!-- Selected Media Cards -->
        <div v-if="ids.length > 0" class="flex flex-wrap gap-4">
-            <MediaPreview
+            <CompositionMediaPreview
                 v-for="id in ids"
                 :key="id"
                 :media-id="id"

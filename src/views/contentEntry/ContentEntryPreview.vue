@@ -4,7 +4,7 @@ import type { IContentEntry } from '../../type/content-entry'
 import { FieldType } from '../../type/field'
 import { Badge } from '../../components/ui/badge'
 import {Tag, CheckCircle2, XCircle } from 'lucide-vue-next'
-import MediaPreview from '../../components/composition/MediaPreview.vue'
+import CompositionMediaPreview from '../../components/composition/CompositionMediaPreview.vue'
 import ContentEntryCard from './ContentEntryCard.vue'
 
 const props = defineProps<{
@@ -60,7 +60,7 @@ const getFieldValueAsArray = (fieldName: string) => {
             <!-- Media -->
             <div v-else-if="field.type === FieldType.MEDIA" class="flex flex-wrap gap-3">
                 <template v-if="getFieldValue(field.name)">
-                    <MediaPreview v-for="(id, idx) in getFieldValueAsArray(field.name)"
+                    <CompositionMediaPreview v-for="(id, idx) in getFieldValueAsArray(field.name)"
                                   :key="String(id) + idx"
                                   :mediaId="Number(id)" />
                 </template>

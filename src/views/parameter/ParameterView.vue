@@ -93,6 +93,7 @@ const onSave = handleSubmit(async (values) => {
                 <div class="flex flex-row items-end gap-6">
                   <CompositionMediaPicker
                     :model-value="media"
+                    :allowed-types="['image', 'video']"
                     @update:model-value="changeMedia"
                   />
                 </div>

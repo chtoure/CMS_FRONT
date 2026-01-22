@@ -86,7 +86,7 @@ interface SaveMediaPayload {
 }
 
 interface MediaFilter {
-  type?: 'image' | 'video' | 'document' | 'archive' | null
+  type?: ('image' | 'video' | 'document' | 'archive')[] | null
   page?: number
   limit?: number
 }

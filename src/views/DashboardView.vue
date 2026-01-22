@@ -80,9 +80,9 @@ const now = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'nume
       <template #content>
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
           <div class="space-y-2">
-            <h1 class="text-huge font-black text-accent tracking-tighter leading-none">
+            <p class="text-5xl font-black text-accent tracking-tighter leading-none">
               Hello, <span class="text-primary italic">{{ storeUser.userInfo?.full_name }}</span>
-            </h1>
+            </p>
             <p class="text-background opacity-80 text-lg font-medium">Nous sommes le {{ now }}. Prêt à créer ?</p>
           </div>
         </div>

@@ -37,7 +37,7 @@ const filterParams = computed(() => ({
   page: page.value,
   limit: limit.value,
   search: searchQuery.value,
-  type: props.allowedTypes && props.allowedTypes.length === 1 ? props.allowedTypes[0] : undefined
+  type: props.allowedTypes
 }))
 
 const { data: mediaData, isLoading, isError, error, refetch } = useGetMediaList(filterParams)
