@@ -50,6 +50,9 @@ import { useUpdateContentType, useGetContentTypeById, useGetContentTypesExcepted
 import CompositionLoading from '../../components/composition/CompositionLoading.vue'
 import { handleError } from '../../lib/error'
 import {useGetTaxonomies} from '../../hook/taxonomy'
+import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue'
+import CompositionControlledConfirmDialog from '../../components/composition/CompositionControlledConfirmDialog.vue'
+
 
 
 import type { ContentType } from '../../type/content-type'
@@ -57,6 +60,7 @@ import type { ContentType } from '../../type/content-type'
 const router = useRouter()
 const route = useRoute()
 const contentTypeId = route.params.id as string
+const isEntries = ref(false)
 
 // État du formulaire principal
 const form = ref({
@@ -84,6 +88,8 @@ const {
   isPending: isDataLoading,
 } = useGetContentTypeById(contentTypeId)
 
+
+
 const {
   mutateAsync: updateContentType,
   isPending: isUpdating,
@@ -103,7 +109,6 @@ const {
 
 const resultTaxonomies = computed(() => taxonomies.value?.results || [])
 
-
 // Initialisation des données
 onMounted(() => {
   if (contentTypeData.value) {
@@ -114,6 +119,9 @@ onMounted(() => {
 watch(contentTypeData, (newData) => {
   if (newData) {
     populateForm(newData)
+    if (newData.entries && newData.entries.length > 0) {
+      isEntries.value = true
+    }
   }
 })
 
@@ -128,43 +136,6 @@ const populateForm = (data: ContentType) => {
 }
 
 const visibleFields = computed(() => fields.value.slice(1))
-
-
-// const handleNameChange = (index: number) => {
-//   if (index === 0) return;
-
-//   const currentField = fields.value[index];
-
-//   currentField.name = currentField.name.toLowerCase().trim().replace(/\s+/g, '_');
-
-//   messageErrorNameChamp.value = '';
-
-//   const otherNames = fields.value
-//     .filter((_, i) => i !== index)
-//     .map(f => f.name.toLowerCase().trim());
-
-
-//   if (currentField.name.length === 0) {
-//     messageErrorNameChamp.value = "Le nom du champ ne peut pas être vide.";
-//     return;
-//   }
-
-//   if (currentField.name === 'title') {
-//     let suffix = 1;
-//     let newName = 'title_1';
-//     while (otherNames.includes(newName)) {
-//       suffix++;
-//       newName = `title_${suffix}`;
-//     }
-//     currentField.name = newName;
-//     return;
-//   }
-
-//   if (otherNames.includes(currentField.name)) {
-//     messageErrorNameChamp.value = "Ce nom technique est déjà utilisé par un autre champ.";
-//   }
-
-// };
 
   // Gestion de l'expansion des champs
 const expandedFieldIndex = ref<number | null>(null)
@@ -275,8 +246,12 @@ const duplicateField = (index: number) => {
 
   duplicate.name = newName
   duplicate.label = duplicate.label ? `${duplicate.label} (Copie)` : ''
-  fields.value.splice(index + 1, 0, duplicate)
-  expandedFieldIndex.value = index + 1
+
+  // Ajout à la fin du tableau
+  fields.value.push(duplicate)
+
+  // Ouvrir le champ (l'index est maintenant le dernier élément)
+  expandedFieldIndex.value = fields.value.length - 1
 }
 
 // Utilitaires de rendu
@@ -410,6 +385,45 @@ const handleSubmit = () => {
 const handleCancel = () => {
   router.back()
 }
+
+
+const pendingChange = ref<{ field: IFieldDefinition, type: FieldType } | null>(null);
+const isTypeDialogOpen = ref(false);
+
+const handleTypeAttempt = (field: IFieldDefinition, newType: FieldType | null | string) => {
+  // 1. On vérifie si newType est valide et n'est pas null
+  if (!newType) return;
+
+  // 2. On force le cast si on est sûr que c'est un FieldType à ce stade
+  const targetType = newType as FieldType;
+
+  const sensitiveTypes = [
+    FieldType.MEDIA,
+    FieldType.RELATION,
+    FieldType.TAXONOMY,
+    FieldType.SELECT
+  ];
+
+  if (sensitiveTypes.includes(targetType) && field.type !== targetType) {
+    pendingChange.value = { field, type: targetType };
+    isTypeDialogOpen.value = true;
+  } else {
+    field.type = targetType;
+  }
+};
+
+const confirmChange = () => {
+  if (pendingChange.value) {
+    pendingChange.value.field.type = pendingChange.value.type;
+    // Forcer la réactivité
+    fields.value = [...fields.value];
+    pendingChange.value = null;
+  }
+  isTypeDialogOpen.value = false;
+};
+
+
+
 </script>
 
 <template>
@@ -558,7 +572,12 @@ const handleCancel = () => {
                   <div v-if="expandedFieldIndex === fields.indexOf(field)" class="flex items-center gap-3 mt-1 text-[10px] font-bold text-primary animate-in fade-in slide-in-from-left-1">
                      <button @click.stop="duplicateField(fields.indexOf(field))" class="hover:text-primary/70">Dupliquer</button>
                      <span class="text-border">|</span>
-                     <button @click.stop="removeField(fields.indexOf(field))" class="text-destructive hover:text-destructive/70">Supprimer</button>
+                     <CompositionConfirmDialog v-if="isEntries" @confirm="() => removeField(fields.indexOf(field))" header="Suppression d'un champ" description="Êtes-vous sûr de vouloir supprimer cet champs ? Si vous le supprimer vous perdez toutes les données de cet champ." cancelText="Annuler" actionText="supprimer" >
+                        <template #dialogButton>
+                          <button @click.stop class="text-destructive hover:text-destructive/70">Supprimer</button>
+                        </template>
+                     </CompositionConfirmDialog>
+                     <button v-else @click.stop="removeField(fields.indexOf(field))" class="text-destructive hover:text-destructive/70">Supprimer</button>
                   </div>
                 </div>
 
@@ -594,7 +613,22 @@ const handleCancel = () => {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div class="col-span-1 space-y-3">
                         <Label class="text-xs font-medium text-text">Type de champ</Label>
-                        <Select v-model="field.type">
+                        <Select v-if="isEntries" :model-value="field.type" @update:model-value="(val) => handleTypeAttempt(field, val as FieldType)">
+                          <SelectTrigger class="input-custom">
+                            <SelectValue placeholder="Choisir un type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectItem v-for="ft in fieldTypes" :key="ft.type" :value="ft.type" class="select-item-custom">
+                                <div class="flex items-center gap-2">
+                                  <component :is="ft.icon" class="w-4 h-4 text-primary" />
+                                  <span class="font-medium">{{ ft.label }}</span>
+                                </div>
+                              </SelectItem>
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                        <Select v-else v-model="field.type">
                           <SelectTrigger class="input-custom">
                             <SelectValue placeholder="Choisir un type" />
                           </SelectTrigger>
@@ -857,5 +891,18 @@ const handleCancel = () => {
         </div>
       </section>
     </div>
+
+    <!-- Dialogue de confirmation hybride contrôlé par prop pour le changement de type -->
+    <!-- Nouveau composant dédié à l'ouverture contrôlée -->
+    <CompositionControlledConfirmDialog
+      :open="isTypeDialogOpen"
+      @update:open="(val: boolean) => isTypeDialogOpen = val"
+      @confirm="confirmChange"
+      @cancel="isTypeDialogOpen = false"
+      header="Confirmation de changement"
+      description="Êtes-vous sûr de vouloir changer le type de champ ? Si vous le changez, vous pourriez perdre les données de ce champ."
+      cancelText="Annuler"
+      actionText="Changer"
+    />
   </div>
 </template>

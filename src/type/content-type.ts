@@ -1,3 +1,4 @@
+import type { IContentEntry } from "./content-entry";
 import type { IFieldDefinition } from "./field";
 
 interface ContentType {
@@ -10,6 +11,7 @@ interface ContentType {
     updatedAt: Date;
     archive: boolean;
     archivedAt: Date | null;
+    entries?: IContentEntry[]
 }
 
 
