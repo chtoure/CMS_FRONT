@@ -5,7 +5,7 @@ import {
   ToggleLeft, Loader2, Trash2, X, Copy, Edit3,
   Database
 } from "lucide-vue-next"
-import type { Variable, VariableType } from "../../type/Variable"
+import type { Variable, VariableType } from "../../type/variable"
 
 import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue"
 import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue"
@@ -252,7 +252,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
 </script>
 
 <template>
-  <div class="flex flex-row  bg-background text-foreground h-screen w-fit overflow-x-auto overflow-hidden antialiased font-mono">
+  <div class="flex flex-row bg-background text-foreground h-[80vh] w-full overflow-hidden antialiased font-mono">
 
     <aside v-if="sidebarOpen" class="w-72 h-full sticky top-0 flex-shrink-0 border-r border-border flex flex-col bg-background">
       <div class="p-6 space-y-6 pl-0">

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {Save, Loader2, ChevronsUpDown, Check } from 'lucide-vue-next'
+import {Save, Loader2 } from 'lucide-vue-next'
 import Button from '@/components/ui/button/Button.vue'
 import { computed, ref, watch } from 'vue'
 import { useForm, Field } from 'vee-validate'
@@ -9,19 +9,10 @@ import CompositionLoading from '@/components/composition/CompositionLoading.vue'
 import { getErrorMessage } from '../../lib/errorMessage'
 import CompositionError from '@/components/composition/CompositionError.vue'
 import { parameterSchema } from '../../validation/parameterValidate'
-import Popover from '../../components/ui/popover/Popover.vue'
-import PopoverTrigger from '../../components/ui/popover/PopoverTrigger.vue'
 import { useGetMediaList } from '../../hook/media'
-import PopoverContent from '../../components/ui/popover/PopoverContent.vue'
-import Command from '../../components/ui/command/Command.vue'
-import CommandInput from '../../components/ui/command/CommandInput.vue'
-import CommandEmpty from '../../components/ui/command/CommandEmpty.vue'
-import CommandList from '../../components/ui/command/CommandList.vue'
-import CommandGroup from '../../components/ui/command/CommandGroup.vue'
-import CommandItem from '../../components/ui/command/CommandItem.vue'
-import { cn } from '../../lib/utils'
+import CompositionMediaPicker from '../../components/composition/CompositionMediaPicker.vue'
 
-const open = ref(false);
+
 const media = ref<number>();
 const mediaQuery = useGetMediaList({});
 
@@ -100,55 +91,10 @@ const onSave = handleSubmit(async (values) => {
             <Field name="mediaId" v-slot="{ errorMessage }">
               <div class="flex flex-col gap-2">
                 <div class="flex flex-row items-end gap-6">
-                  <Popover v-model:open="open" class="w-full">
-                    <PopoverTrigger as-child>
-                      <Button
-                        ref="triggerRef"
-                        variant="outline"
-                        role="combobox"
-                        :aria-expanded="open"
-                        :class="cn('input-custom justify-between w-full font-normal h-8', { 'border-destructive': errorMessage })"
-                      >
-                        {{ mediaQuery?.data.value?.results?.find((m) => m.id === media)
-                            ? mediaQuery?.data.value?.results?.find((m) => m.id === media)?.alt
-                            : "Sélectionner un media..."
-                        }}
-                        <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-
-                    <PopoverContent >
-                      <Command>
-                        <CommandInput placeholder="Rechercher un media..." />
-                        <CommandEmpty>Aucun media trouvé.</CommandEmpty>
-
-                        <CommandList>
-                          <CommandGroup>
-                            <CommandItem
-                              v-for="m in mediaQuery?.data.value?.results"
-                              :key="m.id"
-                              :value="m.id"
-                              class="select-item-custom cursor-pointer"
-                              @select="() => {
-                                changeMedia(m.id)
-                                open = false
-                              }"
-                            >
-                              <Check
-                                :class="cn(
-                                  'mr-2 h-4 w-4',
-                                  media === m.id ? 'opacity-100' : 'opacity-0'
-                                )"
-                              />
-                              <img v-if="m.type === 'image'" :src="m.file_path" alt="" class="w-12 contain-cover"/>
-                              <video v-else-if="m.type === 'video'" autoplay muted :src="m.file_path" class="w-12 contain-cover" />
-                              {{ m.alt }}
-                            </CommandItem>
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <CompositionMediaPicker
+                    :model-value="media"
+                    @update:model-value="changeMedia"
+                  />
                 </div>
                 <p v-if="errorMessage" class="text-xs text-destructive font-medium italic">{{ errorMessage }}</p>
               </div>

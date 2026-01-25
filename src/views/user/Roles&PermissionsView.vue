@@ -23,7 +23,7 @@ import CompositionLoading from '../../components/composition/CompositionLoading.
 import CompositionError from '../../components/composition/CompositionError.vue';
 import type { Role, RoleUpdate } from '../../type/role';
 import type { Permission } from '../../type/permission';
-import { useDeletePermission, useGetPermissions, useGetPermissionsNoPaginate, useRestorePermission } from '../../hook/permission';
+import { useDeletePermission, useGetPermissions, useRestorePermission } from '../../hook/permission';
 import Button from '../../components/ui/button/Button.vue';
 import { useUpdateRole } from '../../hook/role';
 import { showToast } from '../../lib/toast';
@@ -38,9 +38,11 @@ import SelectValue from '../../components/ui/select/SelectValue.vue';
 import SelectContent from '../../components/ui/select/SelectContent.vue';
 import SelectItem from '../../components/ui/select/SelectItem.vue';
 import { watch } from 'vue';
-import { getErrorMessage } from '../../lib/errorMessage';
+// import { getErrorMessage } from '../../lib/errorMessage';
 import CompositionVerifyButton from '../../components/composition/CompositionVerifyButton.vue';
 import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue';
+import Badge from '../../components/ui/badge/Badge.vue';
+import { handleError } from '../../lib/error';
 
 
 
@@ -51,6 +53,7 @@ const editForm = ref({ name: '', description: '',permissions: [] as Permission[]
 const open = ref(false)
 const triggerRef = ref(null)
 const { width } = useElementSize(triggerRef)
+const isRoleModalOpen = ref(false)
 
 const currentPageRole = ref(1);
 const itemsPerPageRole = ref(10);
@@ -59,6 +62,13 @@ const filterArchivRole = ref("all");
 const currentPagePerms = ref(1);
 const itemsPerPagePerms = ref(10);
 const filterArchivPerms = ref("all");
+const search = ref('')
+
+
+const filterOptions = [
+  { label: 'Actifs', value: 'false' },
+  { label: 'Archivés', value: 'true' }
+]
 
 
 const filterParamsRole = computed(() => ({
@@ -116,6 +126,35 @@ const permissionResults = computed(() => dataPermissions.value?.results || []);
 const totalItemsPermission = computed(() => dataPermissions.value?.count || 0);
 
 
+const filteredData = computed(() => {
+  return permissionResults.value.filter(item =>{
+    const matchesSearch = item.name.toLowerCase().includes(search.value.toLowerCase()) ||
+                          item.description?.toLowerCase().includes(search.value.toLowerCase())
+    let matchesArchive = true;
+    if (filterArchivPerms.value !== 'all') {
+      matchesArchive = item.archive === (filterArchivPerms.value === 'true');
+    }
+    return matchesSearch && matchesArchive;
+  })
+})
+
+
+const getStatusColor = (status: boolean) => {
+  switch (status) {
+    case false: return 'bg-success/20 text-success border-success/30'
+    case true: return 'bg-muted text-muted-foreground border-border'
+  }
+}
+
+const getStatusLabel = (status: boolean) => {
+
+  switch (status) {
+    case false: return 'Actif'
+    case true: return 'Archivé'
+  }
+}
+
+
 
 const filterChangeRole = (val: string ) => {
   filterArchivRole.value = val;
@@ -123,10 +162,10 @@ const filterChangeRole = (val: string ) => {
 }
 
 
-const filterChangePerms = (val: string ) => {
-  filterArchivPerms.value = val;
-  currentPagePerms.value = 1;
-}
+// const filterChangePerms = (val: string ) => {
+//   filterArchivPerms.value = val;
+//   currentPagePerms.value = 1;
+// }
 
 watch([currentPageRole, itemsPerPageRole, filterArchivRole], () => {
   getAllRoles();
@@ -140,7 +179,10 @@ watch([currentPagePerms, itemsPerPagePerms, filterArchivPerms], () => {
 const {
   data:dataPermissionsNoPaginate,
   isLoading: loadingPermissionNoPaginate,
-} = useGetPermissionsNoPaginate()
+} = useGetPermissions()
+
+
+const resultPermissionsNoPaginate = computed(() => dataPermissionsNoPaginate.value?.results || []);
 
 
 // Hook update Role
@@ -184,7 +226,7 @@ const roleUpdateData: RoleUpdate = {
       showToast('success', 'Role modifié avec succès');
     },
     onError(errorRoleUpdate){
-      showToast('error', `Erreur lors de la modification de role : ${errorRoleUpdate.message || 'Erreur inconnue'}`);
+      handleError(errorRoleUpdate)
     }
   })
   editingId.value = null;
@@ -256,7 +298,7 @@ const archivedRole = (id: number) => {
         showToast('success', 'Role archivé avec success');
      },
      onError: (error: Error) => {
-        showToast('error', `${getErrorMessage(error)}`);
+      handleError(error)
       }
   })
 }
@@ -271,7 +313,7 @@ const restoredRole = (id: number) => {
         showToast('success', 'Role restoré avec success');
      },
      onError: (error: Error) => {
-        showToast('error', `${getErrorMessage(error)}`);
+      handleError(error)
       }
   })
 }
@@ -289,7 +331,7 @@ const archivedPerms = (id: number) => {
         showToast('success', 'Permission archivé avec success');
      },
      onError: (error: Error) => {
-        showToast('error', `${getErrorMessage(error)}`);
+      handleError(error)
       }
   })
 }
@@ -304,14 +346,21 @@ const restoredPerms = (id: number) => {
         showToast('success', 'Permission restoré avec success');
      },
      onError: (error: Error) => {
-        showToast('error', `${getErrorMessage(error)}`);
+      handleError(error)
       }
   })
 }
 
 
+const handleRoleSuccess = () => {
+  getAllRoles();
+  getAllPermissions();
+  isRoleModalOpen.value = false;
+};
 
-
+const handleRoleCancel = () => {
+  isRoleModalOpen.value = false;
+}
 
 
 
@@ -341,7 +390,7 @@ const restoredPerms = (id: number) => {
             </div>
           </div>
 
-          <CompositionModal title="Role">
+          <CompositionModal title="Role" v-model:open="isRoleModalOpen">
             <template #trigger>
               <div class="flex items-center gap-4">
                 <Button class=" flex items-center rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95">
@@ -351,7 +400,7 @@ const restoredPerms = (id: number) => {
               </div>
             </template>
             <template #content>
-              <RoleFormView />
+              <RoleFormView @success="handleRoleSuccess" @cancel="handleRoleCancel"/>
             </template>
           </CompositionModal>
         </div>
@@ -463,7 +512,7 @@ const restoredPerms = (id: number) => {
                                   <CommandList>
                                     <CommandGroup>
                                       <CommandItem
-                                        v-for="p in dataPermissionsNoPaginate"
+                                        v-for="p in resultPermissionsNoPaginate"
                                         :key="p.id"
                                         :value="p.name"
                                         class="cursor-pointer data-[highlighted]:bg-primary data-[highlighted]:text-white"
@@ -557,53 +606,44 @@ const restoredPerms = (id: number) => {
 
           <TabsContent value="permission">
 
-          <div class="rounded-none overflow-hidden">
-              <div class="flex items-center justify-between p-4 bg-muted/20">
-                <div>
-                  <h3 class="font-medium text-text">Permissions</h3>
-                </div>
-                  <div class="">
-                    <Select v-model="filterArchivPerms" @update:model-value="(val:any) => filterChangePerms(val as string)">
-                      <SelectTrigger class="input-custom">
-                        <SelectValue placeholder="Filter" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all" class="select-item-custom">Tous</SelectItem>
-                        <SelectItem value="false" class="select-item-custom">Active</SelectItem>
-                        <SelectItem value="true" class="select-item-custom">Achivés</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-              </div>
-            </div>
-
-            <CompositionListEmpty v-if="permissionResults.length === 0" title="Aucune permission" description="Aucune donnée trouvée dans la base de données." :icon="ShieldCheck" />
-            <div v-else>
-
-              <CompositionTable
+            <div class="rounded-none overflow-hidden">
+              <div>
+                <CompositionTable
                   :columns="columns"
-                  :data="permissionResults"
-                  :total="totalItemsPermission"
-                  v-model:current-page="currentPagePerms"
-                  v-model:limit="itemsPerPagePerms"
+                    :data="filteredData"
+                    :total="totalItemsPermission"
+                    v-model:limit="itemsPerPagePerms"
+                    v-model:currentPage="currentPagePerms"
+
+                    searchable
+                    v-model:search="search"
+                    searchPlaceholder="Rechercher par nom ou description..."
+
+                    filterable
+                    v-model:filterValue="filterArchivPerms"
+                    :filterOptions="filterOptions"
+                    filterPlaceholder="Statut"
                 >
 
                   <template #cell-role="{ row }">
                     <div class="flex flex-wrap gap-1">
-                      <span
+                      <Badge
                         v-for="role in row.roles"
+                        variant="outline"
                         :key="role.id"
-                        class="px-2 py-0.5 rounded-full border border-border bg-muted"
+                        class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-warning text-warning border-warning"
                       >
                         {{ role.name }}
-                      </span>
+                      </Badge>
                     </div>
                   </template>
                   <template #cell-status="{ row }">
-                    <td class="p-4">
-                      <span v-if="row.archive" class="px-2 py-0.5 rounded-full border border-border bg-muted"> Archiver </span>
-                      <span v-else class="px-2 py-0.5 rounded-full border border-border bg-muted"> Active </span>
-                    </td>
+                    <Badge
+                      variant="outline"
+                      :class="cn('px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', getStatusColor(row.archive))"
+                    >
+                      {{ getStatusLabel(row.archive) }}
+                    </Badge>
                   </template>
                   <template #cell-actions="{ row }">
 
@@ -632,6 +672,7 @@ const restoredPerms = (id: number) => {
                      </CompositionVerifyButton>
                   </template>
                 </CompositionTable>
+              </div>
             </div>
 
           </TabsContent>

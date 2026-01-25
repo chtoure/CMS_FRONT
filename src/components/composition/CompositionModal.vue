@@ -1,31 +1,48 @@
 <script setup lang="ts">
-  import Dialog from '../ui/dialog/Dialog.vue';
-  import DialogContent from '../ui/dialog/DialogContent.vue';
-  import DialogDescription from '../ui/dialog/DialogDescription.vue';
-  import DialogHeader from '../ui/dialog/DialogHeader.vue';
-  import DialogTitle from '../ui/dialog/DialogTitle.vue';
-  import DialogTrigger from '../ui/dialog/DialogTrigger.vue';
+  import { ref, watch } from 'vue';
+  import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 
-  defineProps<{ title: string, description?: string }>()
+  const props = defineProps<{ title: string, description?: string, open?: boolean }>()
+  const emit = defineEmits(['update:open'])
+
+  const localOpen = ref(false)
+
+  // Sync internal state with prop
+  watch(() => props.open, (newVal) => {
+    if (newVal !== undefined) {
+      localOpen.value = newVal
+    }
+  }, { immediate: true })
+
+  // Sync prop with internal state
+  watch(localOpen, (newVal) => {
+    emit('update:open', newVal)
+  })
+
+  const handleTriggerClick = () => {
+    localOpen.value = true
+  }
 
 </script>
 
 
 <template>
-  <Dialog>
+  <Dialog v-model:open="localOpen">
     <DialogTrigger as-child>
-      <slot name="trigger"></slot>
+      <div @click="handleTriggerClick" class="cursor-pointer w-fit h-fit">
+        <slot name="trigger"></slot>
+      </div>
     </DialogTrigger>
 
     <DialogContent
       class="fixed left-1/2 top-1/2 z-50 flex flex-col -translate-x-1/2 -translate-y-1/2
-             border border-border shadow-2xl bg-background rounded-lg
+             border border-border shadow-2xl bg-background rounded-none
              w-auto h-auto max-w-[90vw] max-h-[90vh] overflow-hidden gap-0 p-0"
     >
       <DialogHeader class="p-6 pb-4 flex-shrink-0 border-b border-border">
-        <DialogTitle>{{ title }}</DialogTitle>
-        <DialogDescription :class="{ 'sr-only': !description }">
-          {{ description || 'Détails de la fenêtre modale' }}
+        <DialogTitle>{{ props.title }}</DialogTitle>
+        <DialogDescription :class="{ 'sr-only': !props.description }">
+          {{ props.description || 'Détails de la fenêtre modale' }}
         </DialogDescription>
       </DialogHeader>
 

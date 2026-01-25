@@ -27,7 +27,7 @@ useHead({
     { property: 'og:description', content: 'Voici votre tableau de bord' },
   ],
 })
-const mediaQuery = useGetMediaList({ limit: 5, page: 1 })
+const mediaQuery = useGetMediaList()
 const userQuery = useGetUsers({});
 const variableQuery = useGetVariables()
 const totalMedia = computed(() => mediaQuery.data.value?.count || 0)

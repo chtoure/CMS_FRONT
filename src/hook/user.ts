@@ -7,6 +7,31 @@ import { unref, type Ref } from "vue";
 import type { Pagination } from "../type/pagination";
 
 
+
+const buildQueryParams = (filter?: Ref<userFilter> | userFilter) => {
+  const params = unref(filter);
+  const query = new URLSearchParams();
+  if (params?.page) query.append("page", params.page.toString());
+  if (params?.limit) query.append("limit", params.limit.toString());
+  if (params?.archive) query.append("archive", params.archive.toString());
+  return query.toString();
+};
+
+
+// Hook get users list
+export const useGetUsers = (filter?: Ref<userFilter> | userFilter) => {
+  return useQuery({
+    queryKey: ["users",filter],
+    queryFn:async () => {
+      const query = buildQueryParams(filter)
+      const response = await api(`/users?${query}`)
+
+      return handleResponse<Pagination<UserProfile>>(response)
+    }
+  })
+}
+
+
 // Hook personnalisé pour la mutation de connexion
 export const useLogin = () => {
   return useMutation({
@@ -61,38 +86,42 @@ export const useUpdateProfile = () => {
 
 
 // Hook get users list
-export const useGetUsers = (filter: Ref<userFilter> | userFilter) => {
-  return useQuery({
-    queryKey: ["users",filter],
-    queryFn:async () => {
-      const params = unref(filter)
-      const query = new URLSearchParams()
+// export const useGetUsers = (filter: Ref<userFilter> | userFilter) => {
+//   return useQuery({
+//     queryKey: ["users",filter],
+//     queryFn:async () => {
+//       const params = unref(filter)
+//       const query = new URLSearchParams()
 
-      if (params.archive) query.append('archive', params.archive.toString())
-      if (params.page) query.append('page', params.page.toString())
-      if (params.limit) query.append('limit', params.limit.toString())
+//       if (params.archive) query.append('archive', params.archive.toString())
+//       if (params.page) query.append('page', params.page.toString())
+//       if (params.limit) query.append('limit', params.limit.toString())
 
-      console.log(query.toString());
+//       console.log(query.toString());
 
 
-      const response = await api(`/users?${query.toString()}`)
+//       const response = await api(`/users?${query.toString()}`)
 
-      return handleResponse<Pagination<UserProfile>>(response)
-    }
-  })
-}
+//       return handleResponse<Pagination<UserProfile>>(response)
+//     }
+//   })
+// }
 
 
 
 
 // Hook addUser
 export const useAddUser = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn:async (newUser: AddUserData) => {
       return handleResponse<AuthResponse>(await api("/register", {
         method: 'POST',
         body: JSON.stringify(newUser)
       }));
+    },
+    onSuccess(){
+      queryClient.invalidateQueries({ queryKey: ["users"] });
     }
   })
 }
@@ -156,6 +185,7 @@ export const useResetPassword = () => {
 
 // Archiver un user
 export const useDeleteUser = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (idUser: number) => {
       const response = await api(`/archiveUsers/${idUser}`, {
@@ -163,12 +193,16 @@ export const useDeleteUser = () => {
       });
       return handleResponse(response);
     },
+    onSuccess(){
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    }
   });
 };
 
 
 // Restorer un user
 export const useRestoreUser = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (idUser: number) => {
       const response = await api(`/restoreUers/${idUser}`, {
@@ -176,5 +210,8 @@ export const useRestoreUser = () => {
       });
       return handleResponse(response);
     },
+    onSuccess(){
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    }
   });
 };

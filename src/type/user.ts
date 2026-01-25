@@ -2,6 +2,7 @@
 
 import type { Role } from "./role";
 
+
 // Interfaces related to user authentication and profile
 
 export interface LoginCredentials {
@@ -13,7 +14,7 @@ export interface UserProfile {
   id: number;
   full_name: string;
   email: string;
-  role: Role | null;
+  role: Role | null ;
   isLoggedIn: boolean;
   initials?: string;
   archive: boolean;

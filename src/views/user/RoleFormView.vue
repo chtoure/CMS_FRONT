@@ -1,6 +1,6 @@
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import {  ShieldCheck, Save, ChevronsUpDown, Check, Shield, PencilLine } from 'lucide-vue-next';
 import { Button } from '../../components/ui/button';
 import CompositionLoading from '../../components/composition/CompositionLoading.vue';
@@ -16,16 +16,18 @@ import CommandEmpty from '../../components/ui/command/CommandEmpty.vue';
 import CommandList from '../../components/ui/command/CommandList.vue';
 import CommandGroup from '../../components/ui/command/CommandGroup.vue';
 import CommandItem from '../../components/ui/command/CommandItem.vue';
-import { useAddRole, useGetRoles } from '../../hook/role';
+import { useAddRole } from '../../hook/role';
 import { validationSchemaRole } from '../../validation/RoleSchema';
 import { Field, useForm } from 'vee-validate';
 import CompositionError from '../../components/composition/CompositionError.vue';
-import { useGetPermissions } from '../../hook/permission';
 import type { Permission } from '../../type/permission';
+import { handleError } from '../../lib/error';
+import { useGetPermissions } from '../../hook/permission';
 
 
 // Initialisation
 const open = ref(false)
+const emit = defineEmits(['success', 'cancel'])
 
   const { handleSubmit,resetForm } = useForm({
     validationSchema: validationSchemaRole,
@@ -40,17 +42,13 @@ const open = ref(false)
 
 // Hook listes Permissions
 const {
-  data: dataPermissions,
+  data: permissions,
   isLoading: loadinPermission,
-  refetch:getPermissions
 } = useGetPermissions()
 
-// Hook listes Roles
-const {
-  isLoading: loadinRole,
-  refetch:getRoles
-} = useGetRoles()
-
+const resultsPermissions = computed(() => {
+  return permissions.value?.results || []
+})
 
 
 // Hook add Role
@@ -84,18 +82,18 @@ const onSubmit = handleSubmit(async (values) => {
     ...values
   },{
     onSuccess(){
-      getRoles();
-      getPermissions();
+      emit('success')
       showToast('success', 'Role créer avec succès');
     },
     onError: (errorRole) => {
-      showToast('error', `Erreur lors de la creation de role : ${errorRole.message || 'Erreur inconnue'}`);
+      handleError(errorRole)
     }
   })
 })
 
 const handleCancel = () =>{
   resetForm()
+  emit('cancel')
 }
 
 </script>
@@ -106,7 +104,7 @@ const handleCancel = () =>{
 
   <div>
 
-    <CompositionLoading v-if=" loadinPermission || pendingAddRole || loadinRole" />
+    <CompositionLoading v-if=" loadinPermission || pendingAddRole" />
     <CompositionError v-else-if="isErrorAddRole" :error="errorRole?.message"/>
     <main v-else>
       <div  class="w-full">
@@ -187,7 +185,7 @@ const handleCancel = () =>{
                         <CommandList>
                           <CommandGroup>
                             <CommandItem
-                              v-for="p in dataPermissions"
+                              v-for="p in resultsPermissions"
                               :key="p.id"
                               :value="p.name"
                               class="cursor-pointer data-[highlighted]:bg-primary data-[highlighted]:text-white"
