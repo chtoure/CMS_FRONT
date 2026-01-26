@@ -140,17 +140,16 @@ const fieldTypes = [
   { type: FieldType.RELATION, label: 'Relation', icon: Link2, description: 'Lien vers un autre type de contenu' },
 ]
 
+
+const generateUniqueName = (baseName: string) => {
+  // Génère une chaîne aléatoire complexe (ex: field_8f9d2b1a)
+  return `${baseName}_${crypto.randomUUID().split('-')[0]}`;
+};
+
 // Ajouter un nouveau champ
 const addField = () => {
   const baseName = 'champ'
-  let index = fields.value.length + 1
-  let newName = `${baseName}_${index}`
-
-
-  // S'assurer que le nom est unique
-  while (fields.value.some(f => f.name === newName)) {
-    newName = `${baseName}_${++index}`
-  }
+  const newName = generateUniqueName(baseName)
 
   const newField: IFieldDefinition = {
     type: FieldType.TEXT,
@@ -225,16 +224,15 @@ const duplicateField = (index: number) => {
   const source = fields.value[index]
   const duplicate = JSON.parse(JSON.stringify(source))
 
-  let newName = `${duplicate.name}_copy`
-  let suffix = 1
-  while (fields.value.some(f => f.name === newName)) {
-    newName = `${duplicate.name}_copy_${suffix++}`
-  }
+  const newName = generateUniqueName(source.name)
 
   duplicate.name = newName
   duplicate.label = duplicate.label ? `${duplicate.label} (Copie)` : ''
-  fields.value.splice(index + 1, 0, duplicate)
-  expandedFieldIndex.value = index + 1
+  // Ajout à la fin du tableau
+  fields.value.push(duplicate)
+
+  // Ouvrir le champ (l'index est maintenant le dernier élément)
+  expandedFieldIndex.value = fields.value.length - 1
 }
 
 // Utilitaires de rendu
@@ -692,7 +690,7 @@ const handleCancel = () => {
                       </div>
 
                       <div v-else>
-                        <p class="text-xs font-medium text-text">Aucune taxonomie disponible ou non archivée</p>
+                        <p class="text-xs font-medium text-text">Aucune categorie disponible ou non archivée</p>
                       </div>
                     </div>
 

@@ -1,3 +1,4 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
 import { ref, watch, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -132,7 +133,16 @@ const populateForm = (data: ContentType) => {
     description: data.description || '',
     archive: !!data.archive
   }
-  fields.value = JSON.parse(JSON.stringify(data.fields_schema || []))
+
+  // Transformation initiale : options en objets pour suivi granulaire
+  const rawFields = JSON.parse(JSON.stringify(data.fields_schema || []));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fields.value = rawFields.map((f: any) => {
+    if (f.type === FieldType.SELECT && Array.isArray(f.options)) {
+      f.options = f.options.map((opt: any) => ({ value: opt }));
+    }
+    return f;
+  });
 }
 
 const visibleFields = computed(() => fields.value.slice(1))
@@ -156,23 +166,24 @@ const fieldTypes = [
   { type: FieldType.RELATION, label: 'Relation', icon: Link2, description: 'Lien vers un autre type de contenu' },
 ]
 
+const generateUniqueName = (baseName: string) => {
+  // Génère une chaîne aléatoire complexe (ex: field_8f9d2b1a)
+  return `${baseName}_${crypto.randomUUID().split('-')[0]}`;
+};
+
 // Ajouter un nouveau champ
 const addField = () => {
   const baseName = 'champ'
-  const index = fields.value.length + 1
-  const newName = `${baseName}_${index}`
+  const newName = generateUniqueName(baseName)
 
-  // while (fields.value.some(f => f.name === newName)) {
-  //   newName = `${baseName}_${++index}`
-  // }
-
-  const newField: IFieldDefinition = {
+  const newField: IFieldDefinition & { _isNew?: boolean } = {
     type: FieldType.TEXT,
     name: newName,
     label: '',
     required: false,
     placeholder: '',
-    description: ''
+    description: '',
+    _isNew: true // Marqueur pour désactiver les confirmations
   }
 
   fields.value.push(newField)
@@ -238,14 +249,11 @@ const duplicateField = (index: number) => {
   const source = fields.value[index]
   const duplicate = JSON.parse(JSON.stringify(source))
 
-  let newName = `${duplicate.name}_copy`
-  let suffix = 1
-  while (fields.value.some(f => f.name === newName)) {
-    newName = `${duplicate.name}_copy_${suffix++}`
-  }
+  const newName = generateUniqueName(source.name)
 
   duplicate.name = newName
   duplicate.label = duplicate.label ? `${duplicate.label} (Copie)` : ''
+  duplicate._isNew = true // Nouveau champ (duplicata)
 
   // Ajout à la fin du tableau
   fields.value.push(duplicate)
@@ -296,7 +304,7 @@ const cleanedFields = (fieldsArray: IFieldDefinition[]): IFieldDefinition[] => {
 
 
     if (f.type===FieldType.SELECT) {
-      if (f.options.length === 0) {
+      if ((f as any).options.length === 0) {
         messageErrorTypeChamp.value = 'Veuillez selectionner des options'
       } else {
         messageErrorTypeChamp.value = ''
@@ -314,7 +322,10 @@ const cleanedFields = (fieldsArray: IFieldDefinition[]): IFieldDefinition[] => {
       case FieldType.TAXONOMY:
         return { ...base, type: FieldType.TAXONOMY, taxonomy_slug: (f as ITaxonomyConfig).taxonomy_slug, multiple: (f as ITaxonomyConfig).multiple, renderType: (f as ITaxonomyConfig).renderType, defaultValue: f.defaultValue }
       case FieldType.SELECT:
-        return { ...base, type: FieldType.SELECT, options: (f as ISelectConfig).options, multiple: (f as ISelectConfig).multiple, defaultValue: f.defaultValue }
+        const selectOptions = (f as any).options.map((opt: any) =>
+          (opt && typeof opt === 'object' && 'value' in opt) ? opt.value : opt
+        );
+        return { ...base, type: FieldType.SELECT, options: selectOptions, multiple: (f as ISelectConfig).multiple, defaultValue: f.defaultValue }
       case FieldType.RICH_TEXT:
         return { ...base, type: FieldType.RICH_TEXT, toolbar: (f as IRichTextConfig).toolbar, defaultValue: f.defaultValue }
       case FieldType.RELATION:
@@ -390,12 +401,17 @@ const handleCancel = () => {
 const pendingChange = ref<{ field: IFieldDefinition, type: FieldType } | null>(null);
 const isTypeDialogOpen = ref(false);
 
-const handleTypeAttempt = (field: IFieldDefinition, newType: FieldType | null | string) => {
-  // 1. On vérifie si newType est valide et n'est pas null
+const handleTypeAttempt = (field: IFieldDefinition & { _isNew?: boolean, _typeConfirmed?: boolean }, newType: FieldType | null | string) => {
   if (!newType) return;
-
-  // 2. On force le cast si on est sûr que c'est un FieldType à ce stade
   const targetType = newType as FieldType;
+
+  // Pas de confirmation si :
+  // 1. C'est un nouveau champ
+  // 2. Le changement de type a déjà été confirmé pour ce champ dans cette session
+  if (field._isNew || field._typeConfirmed) {
+    field.type = targetType;
+    return;
+  }
 
   const sensitiveTypes = [
     FieldType.MEDIA,
@@ -414,7 +430,10 @@ const handleTypeAttempt = (field: IFieldDefinition, newType: FieldType | null | 
 
 const confirmChange = () => {
   if (pendingChange.value) {
-    pendingChange.value.field.type = pendingChange.value.type;
+    const field = pendingChange.value.field as any;
+    field.type = pendingChange.value.type;
+    field._typeConfirmed = true; // Marquer comme confirmé pour la session
+
     // Forcer la réactivité
     fields.value = [...fields.value];
     pendingChange.value = null;
@@ -572,7 +591,7 @@ const confirmChange = () => {
                   <div v-if="expandedFieldIndex === fields.indexOf(field)" class="flex items-center gap-3 mt-1 text-[10px] font-bold text-primary animate-in fade-in slide-in-from-left-1">
                      <button @click.stop="duplicateField(fields.indexOf(field))" class="hover:text-primary/70">Dupliquer</button>
                      <span class="text-border">|</span>
-                     <CompositionConfirmDialog v-if="isEntries" @confirm="() => removeField(fields.indexOf(field))" header="Suppression d'un champ" description="Êtes-vous sûr de vouloir supprimer cet champs ? Si vous le supprimer vous perdez toutes les données de cet champ." cancelText="Annuler" actionText="supprimer" >
+                     <CompositionConfirmDialog v-if="!field._isNew && isEntries" @confirm="() => removeField(fields.indexOf(field))" header="Suppression d'un champ" description="Êtes-vous sûr de vouloir supprimer cet champs ? Si vous le supprimer vous perdez toutes les données de cet champ." cancelText="Annuler" actionText="supprimer" >
                         <template #dialogButton>
                           <button @click.stop class="text-destructive hover:text-destructive/70">Supprimer</button>
                         </template>
@@ -613,7 +632,7 @@ const confirmChange = () => {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div class="col-span-1 space-y-3">
                         <Label class="text-xs font-medium text-text">Type de champ</Label>
-                        <Select v-if="isEntries" :model-value="field.type" @update:model-value="(val) => handleTypeAttempt(field, val as FieldType)">
+                        <Select v-if="!field._isNew && isEntries" :model-value="field.type" @update:model-value="(val) => handleTypeAttempt(field, val as FieldType)">
                           <SelectTrigger class="input-custom">
                             <SelectValue placeholder="Choisir un type" />
                           </SelectTrigger>
@@ -666,23 +685,21 @@ const confirmChange = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            @click="(field as ISelectConfig).options.push('')"
+                            @click="(field as any).options.push({ value: '', _isNew: true })"
                             class="text-text font-bold hover:bg-transparent hover:text-primary"
                           >
                             <Plus class="w-4 h-4 mr-1" /> Ajouter une option
                           </Button>
                         </div>
                         <div class="space-y-2">
-                          <div v-for="(_, oIdx) in (field as ISelectConfig).options" :key="oIdx" class="flex gap-2 items-center">
+                          <div v-for="(option, oIdx) in (field as any).options" :key="oIdx" class="flex gap-2 items-center">
                             <Select
-                              :model-value="typeof (field as ISelectConfig).options[oIdx] === 'number' ? 'number' : 'string'"
+                              :model-value="typeof option.value === 'number' ? 'number' : 'string'"
                               @update:model-value="(val) => {
-                                const options = (field as ISelectConfig).options;
-                                const currentVal = options[oIdx];
                                 if (val === 'number') {
-                                  options[oIdx] = isNaN(Number(currentVal)) ? 0 : Number(currentVal);
+                                  option.value = isNaN(Number(option.value)) ? 0 : Number(option.value);
                                 } else {
-                                  options[oIdx] = String(currentVal);
+                                  option.value = String(option.value);
                                 }
                               }"
                             >
@@ -695,20 +712,20 @@ const confirmChange = () => {
                               </SelectContent>
                             </Select>
                             <Input
-                              :key="oIdx + '-' + typeof (field as ISelectConfig).options[oIdx]"
-                              v-model="(field as ISelectConfig).options[oIdx]"
-                              :type="typeof (field as ISelectConfig).options[oIdx] === 'number' ? 'number' : 'text'"
+                              :key="oIdx + '-' + typeof option.value"
+                              v-model="option.value"
+                              :type="typeof option.value === 'number' ? 'number' : 'text'"
                               placeholder="Valeur de l'option"
                               class="input-custom"
                             />
-                            <CompositionConfirmDialog v-if="pendingChange?.type != FieldType.SELECT && isEntries" @confirm="(field as ISelectConfig).options.splice(oIdx, 1)" header="Suppression d'une option" description="Êtes-vous sûr de vouloir supprimer cette option ? Si vous le supprimer vous perdez toutes les données de cet champ." cancelText="Annuler" actionText="supprimer" >
+                            <CompositionConfirmDialog v-if="!field._isNew && !option._isNew && isEntries" @confirm="(field as any).options.splice(oIdx, 1)" header="Suppression d'une option" description="Êtes-vous sûr de vouloir supprimer cette option ? Si vous la supprimez, vous perdrez toutes les données associées." cancelText="Annuler" actionText="supprimer" >
                               <template #dialogButton>
                                 <Button variant="ghost" size="icon" class="text-destructive">
                                   <X class="w-4 h-4" />
                                 </Button>
                               </template>
                             </CompositionConfirmDialog>
-                            <Button v-else variant="ghost" size="icon" @click="(field as ISelectConfig).options.splice(oIdx, 1)" class="text-destructive">
+                            <Button v-else variant="ghost" size="icon" @click="(field as any).options.splice(oIdx, 1)" class="text-destructive">
                               <X class="w-4 h-4" />
                             </Button>
                           </div>
@@ -716,54 +733,65 @@ const confirmChange = () => {
                       </div>
 
                       <!-- Type TAXONOMY -->
-                      <div v-if="field.type === FieldType.TAXONOMY" class="grid grid-cols-2 gap-4">
-                        <div class="space-y-2">
-                          <Label class="text-xs font-medium text-text">Categorie</Label>
-                          <Select v-model="(field as ITaxonomyConfig).taxonomy_slug">
-                            <SelectTrigger class="input-custom">
-                              <SelectValue placeholder="Choisir une categorie" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem v-for="(taxonomy, tIdx) in resultTaxonomies" :key="tIdx" :value="taxonomy.slug" class="select-item-custom">
-                                {{ taxonomy.name }}
-                              </SelectItem>
+                      <div v-if="field.type === FieldType.TAXONOMY">
+                          <div v-if="resultTaxonomies && resultTaxonomies.length > 0" class="grid grid-cols-2 gap-4">
+                            <div class="space-y-2">
+                              <Label class="text-xs font-medium text-text">Categorie</Label>
+                              <Select v-model="(field as ITaxonomyConfig).taxonomy_slug">
+                                <SelectTrigger class="input-custom">
+                                  <SelectValue placeholder="Choisir une categorie" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem v-for="(taxonomy, tIdx) in resultTaxonomies" :key="tIdx" :value="taxonomy.slug" class="select-item-custom">
+                                    {{ taxonomy.name }}
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <span v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</span>
+                            </div>
+                            <div class="space-y-2">
+                              <Label class="text-xs font-medium text-text">Mode d'affichage</Label>
+                              <Select v-model="(field as ITaxonomyConfig).renderType">
+                                <SelectTrigger class="input-custom">
+                                  <SelectValue placeholder="Choisir un type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectGroup class="font-medium text-text">
+                                    <SelectItem value="combobox" class="select-item-custom">Combobox</SelectItem>
+                                    <SelectItem value="badges" class="select-item-custom">Badges</SelectItem>
+                                    <SelectItem value="checkbox" class="select-item-custom">Checkbox</SelectItem>
+                                  </SelectGroup>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <div v-else>
+                            <p class="text-xs font-medium text-text">Aucune categorie disponible ou non archivée</p>
+                          </div>
+                        </div>
+
+
+                      <!-- Type RELATION -->
+                       <div v-if="field.type === FieldType.RELATION">
+                          <div v-if="contentTypes && contentTypes.length > 0" class="space-y-3">
+                            <Label class="text-xs font-medium text-text">Cible de la relation</Label>
+                            <Select v-model="(field as IRelationConfig).contentTypeId">
+                              <SelectTrigger class="input-custom">
+                                <SelectValue placeholder="Choisir un contenu" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
+                                  <SelectItem v-for="ft in contentTypes" :key="ft.slug" :value="ft.id" class="select-item-custom">
+                                    <span class="font-medium">{{ ft.slug }}</span>
+                                </SelectItem>
+                              </SelectGroup>
                             </SelectContent>
                           </Select>
                           <span v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</span>
                         </div>
-                        <div class="space-y-2">
-                          <Label class="text-xs font-medium text-text">Mode d'affichage</Label>
-                          <Select v-model="(field as ITaxonomyConfig).renderType">
-                            <SelectTrigger class="input-custom">
-                              <SelectValue placeholder="Choisir un type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup class="font-medium text-text">
-                                <SelectItem value="combobox" class="select-item-custom">Combobox</SelectItem>
-                                <SelectItem value="badges" class="select-item-custom">Badges</SelectItem>
-                                <SelectItem value="checkbox" class="select-item-custom">Checkbox</SelectItem>
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
+                        <div v-else>
+                          <p class="text-xs font-medium text-text">Aucun type de  contenu disponible ou non archivé</p>
                         </div>
-                      </div>
-
-                      <!-- Type RELATION -->
-                      <div v-if="field.type === FieldType.RELATION" class="space-y-3">
-                        <Label class="text-xs font-medium text-text">Cible de la relation</Label>
-                        <Select v-model="(field as IRelationConfig).contentTypeId">
-                          <SelectTrigger class="input-custom">
-                            <SelectValue placeholder="Choisir un contenu" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectGroup>
-                              <SelectItem v-for="ft in contentTypes" :key="ft.slug" :value="ft.id" class="select-item-custom">
-                                <span class="font-medium">{{ ft.slug }}</span>
-                              </SelectItem>
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
-                        <span v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</span>
                       </div>
 
                       <!-- Type RICH_TEXT -->
@@ -900,7 +928,6 @@ const confirmChange = () => {
     </div>
 
     <!-- Dialogue de confirmation hybride contrôlé par prop pour le changement de type -->
-    <!-- Nouveau composant dédié à l'ouverture contrôlée -->
     <CompositionControlledConfirmDialog
       :open="isTypeDialogOpen"
       @update:open="(val: boolean) => isTypeDialogOpen = val"
