@@ -43,7 +43,7 @@
   ]
 
   const filterParams = computed(() => ({
-    type: filterType.value === "all" ? undefined : (filterType.value as "image" | "video" | "document" | "archive"),
+    type: filterType.value === "all" ? undefined : [filterType.value as "image" | "video" | "document" | "archive"],
     page: currentPage.value,
     limit: limit.value
   }));
@@ -52,11 +52,6 @@
 
   const mediaCreator = useCreateMedia();
   const mediaDeleter = useDeleteMedia();
-
-  // const filterChange = (val: string ) => {
-  //   filterType.value = val;
-  //   currentPage.value = 1;
-  // }
 
   watch([currentPage, limit, filterType], () => {
     mediaQuery.refetch();

@@ -277,7 +277,12 @@ const onSave = () => {
             <Select v-model="aspectRatio" @update:modelValue="centerCropBox">
               <SelectTrigger class="w-full h-9 shadow-none border-gray-200"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem v-for="(v, k) in ASPECT_RATIOS" :key="k" :value="k">{{ k === 'free' ? 'Libre' : k }}</SelectItem>
+                <SelectItem
+                  v-for="(v, k) in ASPECT_RATIOS"
+                  :key="k"
+                  :value="k"
+                  class="select-item-custom"
+                >{{ k === 'free' ? 'Libre' : k }}</SelectItem>
               </SelectContent>
             </Select>
           </div>

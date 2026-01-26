@@ -5,7 +5,6 @@ import { type IFieldDefinition, type ITaxonomyConfig } from '../../type/field'
 import { cn } from '../../lib/utils'
 
 import Label from '../ui/label/Label.vue';
-import Checkbox from '../ui/checkbox/Checkbox.vue';
 import Badge from '../ui/badge/Badge.vue';
 import { useGetTaxonomyBySlug } from '../../hook/taxonomy';
 import Popover from '../ui/popover/Popover.vue';
@@ -18,6 +17,7 @@ import CommandList from '../ui/command/CommandList.vue';
 import CommandEmpty from '../ui/command/CommandEmpty.vue';
 import CommandGroup from '../ui/command/CommandGroup.vue';
 import CommandItem from '../ui/command/CommandItem.vue';
+import BaseCheckbox from '../base/BaseCheckbox.vue';
 
 const props = defineProps<{
   config: IFieldDefinition & ITaxonomyConfig
@@ -45,8 +45,10 @@ const value = computed({
 })
 
 const toggleOption = (id: number) => {
+  console.log('checker', id);
+
   if (!props.config.multiple) {
-    value.value = id
+    value.value = value.value === id ? null : id
     open.value = false
     return
   }
@@ -81,9 +83,10 @@ const removeOption = (id: number) => {
     <div v-if="isLoading" class="h-10 w-full bg-muted animate-pulse rounded-md" />
 
     <template v-else>
+      <!-- Rendu Checkbox -->
       <div v-if="config.renderType === 'checkbox'" class="flex flex-col gap-2.5 py-1">
         <div v-for="option in options" :key="option.id" class="flex items-center space-x-2">
-          <Checkbox
+          <BaseCheckbox
             :id="`${config.name}-${option.id}`"
             :checked="config.multiple ? (Array.isArray(value) && value.includes(option.id)) : value === option.id"
             @update:checked="toggleOption(option.id)"
@@ -93,6 +96,30 @@ const removeOption = (id: number) => {
           </label>
         </div>
       </div>
+
+      <!-- Rendu Radio -->
+      <!-- <div v-else-if="config.renderType === 'checkbox'" class="py-1">
+        <div v-if="config.multiple" class="text-destructive text-xs mb-2 italic">
+          Le rendu 'checkbox' n'est pas recommandé pour les sélections multiples.
+        </div>
+        <div class="flex flex-col gap-2.5">
+          <div v-for="option in options" :key="option.id" class="flex items-center space-x-2">
+            <input
+              type="radio"
+              :id="`${config.name}-${option.id}`"
+              :name="config.name"
+              :value="option.id"
+              :checked="value === option.id"
+              @change="value = option.id"
+              class="h-4 w-4 border-primary text-primary focus:ring-primary"
+            />
+            <label :for="`${config.name}-${option.id}`" class="text-sm cursor-pointer select-none">
+              {{ option.name }}
+            </label>
+          </div>
+        </div>
+      </div> -->
+
 
       <div v-else class="space-y-3">
         <div v-if="config.renderType === 'badges'" class="flex flex-wrap gap-2 min-h-[32px]">
