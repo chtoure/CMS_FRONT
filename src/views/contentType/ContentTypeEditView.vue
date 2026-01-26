@@ -159,12 +159,12 @@ const fieldTypes = [
 // Ajouter un nouveau champ
 const addField = () => {
   const baseName = 'champ'
-  let index = fields.value.length + 1
-  let newName = `${baseName}_${index}`
+  const index = fields.value.length + 1
+  const newName = `${baseName}_${index}`
 
-  while (fields.value.some(f => f.name === newName)) {
-    newName = `${baseName}_${++index}`
-  }
+  // while (fields.value.some(f => f.name === newName)) {
+  //   newName = `${baseName}_${++index}`
+  // }
 
   const newField: IFieldDefinition = {
     type: FieldType.TEXT,
@@ -701,7 +701,14 @@ const confirmChange = () => {
                               placeholder="Valeur de l'option"
                               class="input-custom"
                             />
-                            <Button variant="ghost" size="icon" @click="(field as ISelectConfig).options.splice(oIdx, 1)" class="text-destructive">
+                            <CompositionConfirmDialog v-if="pendingChange?.type != FieldType.SELECT && isEntries" @confirm="(field as ISelectConfig).options.splice(oIdx, 1)" header="Suppression d'une option" description="Êtes-vous sûr de vouloir supprimer cette option ? Si vous le supprimer vous perdez toutes les données de cet champ." cancelText="Annuler" actionText="supprimer" >
+                              <template #dialogButton>
+                                <Button variant="ghost" size="icon" class="text-destructive">
+                                  <X class="w-4 h-4" />
+                                </Button>
+                              </template>
+                            </CompositionConfirmDialog>
+                            <Button v-else variant="ghost" size="icon" @click="(field as ISelectConfig).options.splice(oIdx, 1)" class="text-destructive">
                               <X class="w-4 h-4" />
                             </Button>
                           </div>
