@@ -2,7 +2,7 @@
   import { computed, ref, watch } from 'vue'
   import CompositionTable from '@/components/composition/CompositionTable.vue'
   import Button from '@/components/ui/button/Button.vue'
-  import { Eye, MoreHorizontal, Pencil, Plus, X } from 'lucide-vue-next'
+  import { Archive, Eye, FileText, MoreHorizontal, Pencil, PlayCircle, Plus, X } from 'lucide-vue-next'
   import { useCreateMedia, useDeleteMedia, useGetMediaList } from '../../hook/media'
   import { showToast } from '../../lib/toast'
   import { getErrorMessage } from '../../lib/errorMessage'
@@ -37,11 +37,13 @@
 
   const filterOptions = [
     { label: 'Images', value: 'image' },
-    { label: 'Vidéos', value: 'video' }
+    { label: 'Vidéos', value: 'video' },
+    { label: 'Documents', value: 'document' },
+    { label: 'Archives', value: 'archive' },
   ]
 
   const filterParams = computed(() => ({
-    type: filterType.value === "all" ? undefined : (filterType.value as "image" | "video"),
+    type: filterType.value === "all" ? undefined : (filterType.value as "image" | "video" | "document" | "archive"),
     page: currentPage.value,
     limit: limit.value
   }));
@@ -136,7 +138,22 @@
           </div>
           <div class="flex items-center gap-4">
 
-            <input ref="fileInput" type="file" class="hidden" multiple accept="video/*,image/*" @change="handleFileUpload" />
+            <input
+              ref="fileInput"
+              type="file"
+              class="hidden"
+              multiple
+              accept="image/*,
+                video/*,
+                application/pdf,
+                application/msword,
+                application/vnd.openxmlformats-officedocument.wordprocessingml.document,
+                application/zip,
+                application/x-zip-compressed,
+                application/x-rar-compressed,
+                text/plain"
+              @change="handleFileUpload"
+            />
             <Button class="rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95" @click="triggerFileInput">
               <Plus class="w-6 h-6 mr-2" />
               Importer
@@ -179,8 +196,40 @@
           />
         </template>
         <template #cell-image="{ row }">
-          <img v-if="row.type === 'image'" :src="row.file_path" alt="" class="h-20 object-cover shadow-sm" />
-          <video v-else :src="row.file_path" autoplay loop muted alt="" class="h-20 object-cover shadow-sm" />
+          <div class="flex items-center justify-center w-24 h-20 overflow-hidden">
+
+            <img
+              v-if="row.type === 'image'"
+              :src="row.file_path"
+              alt="Aperçu"
+              class="w-full h-full object-cover"
+            />
+
+            <div v-else-if="row.type === 'video'" class="relative w-full h-full">
+              <video
+                :src="row.file_path"
+                muted
+                class="w-full h-full object-cover"
+              />
+              <div class="absolute inset-0 flex items-center justify-center">
+                <PlayCircle :size="20" class="text-white drop-shadow-md" />
+              </div>
+            </div>
+
+            <div v-else-if="row.type === 'document'" class="flex flex-col items-center gap-1">
+              <FileText :size="32" class="text-blue-500" />
+            </div>
+
+            <div v-else-if="row.type === 'archive'" class="flex flex-col items-center gap-1">
+              <Archive :size="32" class="text-amber-500" />
+              <span class="text-[10px] font-bold uppercase text-gray-400">ZIP</span>
+            </div>
+
+            <div v-else class="text-gray-300">
+              <FileText :size="32" />
+            </div>
+
+          </div>
         </template>
         <template #cell-actions="{ row }">
           <DropdownMenu>

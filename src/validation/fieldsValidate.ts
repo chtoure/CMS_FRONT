@@ -41,9 +41,14 @@ export const buildZodSchema = (fields: IFieldDefinition[]) => {
             message: "Option invalide"
           });
 
-          validator = config.multiple
-            ? z.array(baseValidator).min(config.required ? 1 : 0, "Sélectionnez au moins une option")
-            : baseValidator;
+          if (config.multiple) {
+            validator = z.preprocess((val) => {
+              if (val === null || val === undefined) return [];
+              return Array.isArray(val) ? val : [val];
+            }, z.array(baseValidator).min(config.required ? 1 : 0, "Sélectionnez au moins une option"));
+          } else {
+            validator = baseValidator;
+          }
         }
         break;
       }
@@ -54,7 +59,10 @@ export const buildZodSchema = (fields: IFieldDefinition[]) => {
         }).positive();
 
         validator = field.multiple
-          ? z.array(mediaIdSchema).min(field.required ? 1 : 0, "Au moins un média est requis")
+          ? z.preprocess((val) => {
+              if (val === null || val === undefined) return [];
+              return Array.isArray(val) ? val : [val];
+            }, z.array(mediaIdSchema).min(field.required ? 1 : 0, "Au moins un média est requis"))
           : mediaIdSchema;
         break;
 
@@ -63,12 +71,29 @@ export const buildZodSchema = (fields: IFieldDefinition[]) => {
         break;
 
       case FieldType.TAXONOMY:
+        const termIdSchema = z.coerce.number({
+          invalid_type_error: "ID de taxonomie doit être un nombre",
+          required_error: "La taxonomie est requise"
+        }).positive("ID de taxonomie invalide");
 
+        if (field.multiple) {
+          validator = z.preprocess((val) => {
+            if (val === null || val === undefined) return [];
+            return Array.isArray(val) ? val : [val];
+          }, z.array(termIdSchema).min(field.required ? 1 : 0, "Au moins une option est requise"));
+        } else {
+          validator = termIdSchema;
+        }
+        break;
 
-      
       case FieldType.RELATION:
         const idSchema = z.union([z.string(), z.number(), z.object({ id: z.number() }).passthrough()]);
-        validator = field.multiple ? z.array(idSchema) : idSchema;
+        validator = field.multiple
+          ? z.preprocess((val) => {
+              if (val === null || val === undefined) return [];
+              return Array.isArray(val) ? val : [val];
+            }, z.array(idSchema).min(field.required ? 1 : 0, "Au moins une relation est requise"))
+          : idSchema;
         break;
 
       default:

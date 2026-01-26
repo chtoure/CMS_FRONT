@@ -3,8 +3,9 @@ import { computed } from 'vue'
 import type { IContentEntry } from '../../type/content-entry'
 import { FieldType } from '../../type/field'
 import { Badge } from '../../components/ui/badge'
-import {Tag, Link2, CheckCircle2, XCircle } from 'lucide-vue-next'
-import MediaPreview from '../../components/composition/MediaPreview.vue'
+import {Tag, CheckCircle2, XCircle } from 'lucide-vue-next'
+import CompositionMediaPreview from '../../components/composition/CompositionMediaPreview.vue'
+import ContentEntryCard from './ContentEntryCard.vue'
 
 const props = defineProps<{
   entry: IContentEntry
@@ -37,14 +38,14 @@ const getFieldValueAsArray = (fieldName: string) => {
     </div>
 
     <div class="grid grid-cols-1 gap-8">
-      <div v-for="field in fields" :key="field.name" class="flex space-x-3 group">
+      <div v-for="field in fields" :key="field.name" class="flex flex-col space-y-3 group">
         <div class="flex items-center gap-2">
             <label class="text-[10px] uppercase font-black">
                 {{ field.label=='' ? 'Titre' : field.label }} :
             </label>
         </div>
 
-        <div class="pl-4">
+        <div class="">
             <!-- Text & Number -->
             <div v-if="field.type === FieldType.TEXT || field.type === FieldType.NUMBER" class="text-foreground leading-relaxed whitespace-pre-wrap">
                 {{ getFieldValue(field.name) || '—' }}
@@ -59,7 +60,7 @@ const getFieldValueAsArray = (fieldName: string) => {
             <!-- Media -->
             <div v-else-if="field.type === FieldType.MEDIA" class="flex flex-wrap gap-3">
                 <template v-if="getFieldValue(field.name)">
-                    <MediaPreview v-for="(id, idx) in getFieldValueAsArray(field.name)"
+                    <CompositionMediaPreview v-for="(id, idx) in getFieldValueAsArray(field.name)"
                                   :key="String(id) + idx"
                                   :mediaId="Number(id)" />
                 </template>
@@ -106,12 +107,12 @@ const getFieldValueAsArray = (fieldName: string) => {
             <!-- Relation -->
             <div v-else-if="field.type === FieldType.RELATION" class="flex flex-wrap gap-2">
                 <template v-if="getFieldValue(field.name)">
-                    <div v-for="(id, idx) in getFieldValueAsArray(field.name)"
-                         :key="String(id) + idx"
-                         class="flex items-center gap-2 px-3 py-1.5 bg-background border border-border rounded text-xs">
-                        <Link2 class="w-3.5 h-3.5 text-primary" />
-                        <span class="font-mono pt-0.5">Entrée #{{ id }}</span>
-                    </div>
+                    <ContentEntryCard v-for="(opt, idx) in getFieldValueAsArray(field.name)"
+                           :entryId="Number(opt)"
+                           :key="String(opt) + idx"
+                           class="px-3 py-1 bg-primary/5 text-primary border-primary/20">
+                        {{ opt }}
+                    </ContentEntryCard>
                 </template>
                 <span v-else class="text-xs italic text-muted-foreground">Aucune relation</span>
             </div>

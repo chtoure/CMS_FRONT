@@ -32,10 +32,10 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: number | number[] | null): void
 }>()
 
-const { data: contentType } = useGetContentType(props.config.contentTypeId)
-const contentTypeSlug = computed(() => contentType.value?.slug || "");
+const { data: contentType, isLoading: isLoadingContentType, error: contentTypeError } = useGetContentType(props.config.contentTypeId)
+const contentTypeSlug = computed(() => contentType.value?.slug);
 
-const { data: entries, isLoading, error: apiError } = useGetContentEntriesBySlug(
+const { data: entries, isLoading: isLoadingEntries, error: apiError } = useGetContentEntriesBySlug(
   contentTypeSlug,
   {}
 );
@@ -97,11 +97,11 @@ const removeRelation = (id: number) => {
 
     <div class="border border-border overflow-hidden bg-background relative min-h-[100px]">
 
-      <div v-if="isLoading" class="absolute inset-0 z-10 bg-background/50 flex items-center justify-center">
+      <div v-if="isLoadingContentType || isLoadingEntries" class="absolute inset-0 z-10 bg-background/50 flex items-center justify-center">
          <Loader2 class="w-6 h-6 animate-spin text-primary" />
       </div>
 
-       <div v-else-if="apiError" class="p-4 flex flex-col items-center justify-center text-destructive space-y-2">
+       <div v-else-if="contentTypeError || apiError" class="p-4 flex flex-col items-center justify-center text-destructive space-y-2">
           <AlertCircle class="w-6 h-6" />
           <span class="text-xs font-medium">Erreur de chargement</span>
       </div>

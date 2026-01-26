@@ -84,7 +84,7 @@ const handleSubmit = (status: EntryStatus) => {
   }, {
     onSuccess: () => {
       showToast('success', 'Contenu enregistré avec succès')
-      router.push({ name: 'admin.dashboard' })
+      router.back()
     },
     onError: (error) => {
       // console.log(error);

@@ -96,3 +96,15 @@ export const useDeleteTaxonomy = () => {
   });
 };
 
+
+export const useGetTaxonomyBySlug = (slug: Ref<string | null> | string | null) => {
+  return useQuery({
+    queryKey: ['taxonomyBySlug', slug],
+    queryFn: async () => {
+      const taxonomySlug = unref(slug);
+      if (!taxonomySlug) return null;
+      return handleResponse<Taxonomy>(await api(`/taxonomiesSlug/${taxonomySlug}`));
+    },
+    enabled: computed(() => !!unref(slug))
+  });
+};
