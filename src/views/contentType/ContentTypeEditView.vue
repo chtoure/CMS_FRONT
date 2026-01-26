@@ -18,7 +18,9 @@ import {
   List,
   Link2,
   Save,
-  Undo2
+  Undo2,
+  ChevronsUpDown,
+  Check
 } from 'lucide-vue-next'
 import {
   FieldType,
@@ -29,7 +31,8 @@ import {
   type IMediaConfig,
   type ITextConfig,
   type INumberConfig,
-  type IRichTextConfig
+  type IRichTextConfig,
+  TypesMedia
 } from '../../type/field'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
 import Button from '../../components/ui/button/Button.vue'
@@ -57,6 +60,16 @@ import CompositionControlledConfirmDialog from '../../components/composition/Com
 
 
 import type { ContentType } from '../../type/content-type'
+import { cn } from '../../lib/utils'
+import Popover from '../../components/ui/popover/Popover.vue'
+import PopoverContent from '../../components/ui/popover/PopoverContent.vue'
+import Command from '../../components/ui/command/Command.vue'
+import CommandInput from '../../components/ui/command/CommandInput.vue'
+import CommandEmpty from '../../components/ui/command/CommandEmpty.vue'
+import CommandList from '../../components/ui/command/CommandList.vue'
+import CommandGroup from '../../components/ui/command/CommandGroup.vue'
+import CommandItem from '../../components/ui/command/CommandItem.vue'
+import PopoverTrigger from '../../components/ui/popover/PopoverTrigger.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -78,6 +91,17 @@ const messageErrorTypeChamp = ref('');
 
 // État des erreurs de validation
 const errors = ref<Record<string, string>>({})
+
+
+const open = ref(false)
+const triggerRef = ref<HTMLElement | null>(null)
+const width = ref(0)
+
+watch(open, (newOpen) => {
+  if (newOpen && triggerRef.value) {
+    width.value = triggerRef.value.offsetWidth
+  }
+})
 
 // Liste des champs (fields_schema)
 // On utilise any[] pour le ref pour éviter l'erreur d'instanciation trop profonde de TS avec Vue + Unions complexes
@@ -153,6 +177,22 @@ const expandedFieldIndex = ref<number | null>(null)
 const toggleExpand = (index: number) => {
   expandedFieldIndex.value = expandedFieldIndex.value === index ? null : index
 }
+
+const toggleType = (field: IMediaConfig, type: TypesMedia) => {
+  // Initialise le tableau s'il n'existe pas
+  if (!field.allowedTypes) {
+    field.allowedTypes = [];
+  }
+
+  const index = field.allowedTypes.indexOf(type);
+  if (index > -1) {
+    // Si le type existe déjà, on le retire
+    field.allowedTypes.splice(index, 1);
+  } else {
+    // Sinon, on l'ajoute
+    field.allowedTypes.push(type);
+  }
+};
 
 // Types de champs disponibles
 const fieldTypes = [
@@ -230,7 +270,7 @@ watch(fieldTypesList, (newTypes) => {
     if (type === FieldType.MEDIA) {
       const mediaField = field as IMediaConfig
       if (!mediaField.allowedTypes) {
-        mediaField.allowedTypes = ['image']
+        mediaField.allowedTypes = [TypesMedia.IMAGE]
         mediaField.multiple = false
       }
       if (mediaField.multiple === undefined) mediaField.multiple = false
@@ -638,9 +678,9 @@ const confirmChange = () => {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectGroup>
-                              <SelectItem v-for="ft in fieldTypes" :key="ft.type" :value="ft.type" class="select-item-custom">
+                              <SelectItem v-for="ft in fieldTypes" :key="ft.type" :value="ft.type" class="select-item-custom text-primary hover:text-white">
                                 <div class="flex items-center gap-2">
-                                  <component :is="ft.icon" class="w-4 h-4 text-primary" />
+                                  <component :is="ft.icon" class="w-4 h-4" />
                                   <span class="font-medium">{{ ft.label }}</span>
                                 </div>
                               </SelectItem>
@@ -653,9 +693,9 @@ const confirmChange = () => {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectGroup>
-                              <SelectItem v-for="ft in fieldTypes" :key="ft.type" :value="ft.type" class="select-item-custom">
+                              <SelectItem v-for="ft in fieldTypes" :key="ft.type" :value="ft.type" class="select-item-custom text-primary hover:text-white">
                                 <div class="flex items-center gap-2">
-                                  <component :is="ft.icon" class="w-4 h-4 text-primary" />
+                                  <component :is="ft.icon" class="w-4 h-4" />
                                   <span class="font-medium">{{ ft.label }}</span>
                                 </div>
                               </SelectItem>
@@ -816,25 +856,58 @@ const confirmChange = () => {
 
                       <!-- Multiple pour MEDIA, TAXONOMY, SELECT, RELATION -->
                       <div v-if="[FieldType.MEDIA, FieldType.TAXONOMY, FieldType.SELECT, FieldType.RELATION].includes(field.type)" class="space-y-4 p-4 bg-muted/10 rounded-xl border border-border">
-                          <div v-if="field.type === FieldType.MEDIA" class="space-y-4 border-border pb-4">
-                            <Label class="text-xs font-medium text-text">Types de fichiers autorisés</Label>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              <div class="flex items-center justify-between p-3 border border-border rounded-xl">
-                                <span class="text-xs font-medium text-text">Images</span>
-                                <BaseSwitch
-                                  :model-value="!!(field as IMediaConfig).allowedTypes.includes('image')"
-                                  @update:model-value="(val) => (field as IMediaConfig).allowedTypes = val ? [...(field as IMediaConfig).allowedTypes, 'image'] : (field as IMediaConfig).allowedTypes.filter((t) => t !== 'image')"
-                                />
-                              </div>
-                              <div class="flex items-center justify-between p-3 border border-border rounded-xl">
-                                <span class="text-xs font-medium text-text">Vidéos</span>
-                                <BaseSwitch
-                                  :model-value="!!(field as IMediaConfig).allowedTypes.includes('video')"
-                                  @update:model-value="(val) => (field as IMediaConfig).allowedTypes = val ? [...(field as IMediaConfig).allowedTypes, 'video'] : (field as IMediaConfig).allowedTypes.filter((t) => t !== 'video')"
-                                />
-                              </div>
-                            </div>
+                          <div v-if="field.type === FieldType.MEDIA" class="grid grid-cols-2 sm:grid-cols-2 gap-3">
+                          <div class="space-y-4">
+                            <Label class="text-xs font-medium text-tex">Types de fichiers autorisés</Label>
+                            <Popover v-model:open="open">
+                              <PopoverTrigger as-child>
+                                <Button
+                                  ref="triggerRef"
+                                  variant="outline"
+                                  role="combobox"
+                                  class="input-custom w-full relative flex items-center justify-center font-normal h-8"
+                                >
+                                  <span class="truncate text-center mx-8">
+                                    {{ field.allowedTypes.length > 0
+                                        ? `${field.allowedTypes.length} type(s) de fichier selectionée(s)`
+                                        : "Choisir les types de fichiers..."
+                                    }}
+                                  </span>
+
+                                  <ChevronsUpDown class="absolute right-3 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+
+                              <PopoverContent :style="{ width: `${width}px` }" class="p-0">
+                                <Command>
+                                  <CommandInput placeholder="Rechercher un type de fichier..." />
+                                  <CommandEmpty>Aucun type de fichier trouvé.</CommandEmpty>
+                                  <CommandList class="group custom-scrollbar">
+                                    <CommandGroup>
+                                      <CommandItem
+                                        v-for="type in Object.values(TypesMedia)"
+                                        :key="type"
+                                        :value="type"
+                                        class="cursor-pointer data-[highlighted]:bg-primary data-[highlighted]:text-white group-hover:data-[highlighted]:bg-transparent group-hover:data-[highlighted]:text-foreground hover:!bg-primary hover:!text-white"
+                                        @select="toggleType(field,type)"
+                                      >
+                                        <Check
+                                          :class="cn(
+                                            'mr-2 h-4 w-4',
+                                            (field as IMediaConfig).allowedTypes.includes(type) ? 'opacity-100' : 'opacity-0'
+                                          )"
+                                        />
+                                        <div class="flex flex-col">
+                                          <span>{{ type }}</span>
+                                        </div>
+                                      </CommandItem>
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                           </div>
+                        </div>
 
                           <div :class="field.type === FieldType.MEDIA ? 'flex items-center justify-between px-2 border border-border rounded-xl p-4' : 'flex items-center justify-between px-2' ">
                             <div class="space-y-0.5">

@@ -235,7 +235,7 @@ const handleCancel = () => {
                   variant="outline"
                   role="combobox"
                   :aria-expanded="open"
-                  class="input-custom justify-between w-full font-normal h-8"
+                  class="input-custom justify-center w-full font-normal h-9"
                 >
                   {{ role
                       ? rolesResults?.find((r) => r.name === role)?.name
@@ -250,13 +250,13 @@ const handleCancel = () => {
                   <CommandInput placeholder="Rechercher un rôle..." />
                   <CommandEmpty>Aucun rôle trouvé.</CommandEmpty>
 
-                  <CommandList>
+                  <CommandList class="group custom-scrollbar">
                     <CommandGroup>
                       <CommandItem
                         v-for="r in rolesResults"
                         :key="r.id"
                         :value="r.name"
-                        class="select-item-custom cursor-pointer"
+                        class="cursor-pointer data-[highlighted]:bg-primary data-[highlighted]:text-white group-hover:data-[highlighted]:bg-transparent group-hover:data-[highlighted]:text-foreground hover:!bg-primary hover:!text-white"
                         @select="() => {
                           role = r.name
                           open = false
