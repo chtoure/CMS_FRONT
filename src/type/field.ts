@@ -45,7 +45,7 @@ interface ITaxonomyConfig {
   type: FieldType.TAXONOMY;
   taxonomy_slug: string;
   multiple: boolean;
-  renderType: 'combobox' | 'badges' | 'checkbox';
+  renderType: 'combobox' | 'badges' | 'checkbox' ;
 }
 
 // interface ISelectOption {
