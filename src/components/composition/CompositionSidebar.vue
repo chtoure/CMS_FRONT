@@ -152,7 +152,7 @@ const activeItem = computed(() => {
     const isSameRoute = item.href === route.name
     const isSameParams = !item.params || Object.entries(item.params).every(([k, v]) => route.params[k] === String(v))
 
-    if (isSameRoute && isSameParams) return item.label
+    if (isSameRoute && isSameParams) return item.id
 
     // Vérification pour les enfants
     if (item.children) {
@@ -161,7 +161,7 @@ const activeItem = computed(() => {
         const childSameParams = !child.params || Object.entries(child.params).every(([k, v]) => route.params[k] === String(v))
         return childSameRoute && childSameParams
       })
-      if (activeChild) return activeChild.label
+      if (activeChild) return activeChild.id
     }
   }
   return ""
@@ -206,38 +206,38 @@ const activeItem = computed(() => {
             'flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-200',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary',
             'relative group overflow-hidden mb-1',
-            activeItem === item.label
+            activeItem === item.id
               ? 'bg-primary text-white shadow-xl shadow-sidebar-primary/30'
               : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary'
           )"
         >
-          <div v-if="activeItem === item.label" class="absolute inset-0 bg-gradient-to-r from-sidebar-primary/40 via-sidebar-primary/20 to-transparent opacity-50 animate-shimmer" />
+          <div v-if="activeItem === item.id" class="absolute inset-0 bg-gradient-to-r from-sidebar-primary/40 via-sidebar-primary/20 to-transparent opacity-50 animate-shimmer" />
 
           <span
             :class="cn(
               'transition-colors duration-200 relative z-10',
-              activeItem === item.label ? 'text-white' : 'text-sidebar-foreground/70 group-hover:text-sidebar-primary'
+              activeItem === item.id ? 'text-white' : 'text-sidebar-foreground/70 group-hover:text-sidebar-primary'
             )"
           >
             <component :is="item.icon" class="w-5 h-5" />
           </span>
 
           <template v-if="isOpen">
-            <span :class="cn('font-semibold text-sm flex-1 relative z-10 truncate capitalize', activeItem === item.label ? 'text-white' : '')">
+            <span :class="cn('font-semibold text-sm flex-1 relative z-10 truncate capitalize', activeItem === item.id ? 'text-white' : '')">
               {{ item.label }}
             </span>
             <span
               v-if="item.badge"
               :class="cn(
                 'text-xs rounded-full px-2.5 py-1 font-bold flex items-center justify-center relative z-10',
-                activeItem === item.label ? 'bg-white/25 text-white backdrop-blur-md' : 'bg-red-500 text-white'
+                activeItem === item.id ? 'bg-white/25 text-white backdrop-blur-md' : 'bg-red-500 text-white'
               )"
             >
               {{ item.badge }}
             </span>
           </template>
 
-          <div v-if="isCollapsed && activeItem !== item.label" class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-sidebar-primary rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div v-if="isCollapsed && activeItem !== item.id" class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-sidebar-primary rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity" />
         </RouterLink>
 
         <div v-else class="space-y-1">
@@ -268,7 +268,7 @@ const activeItem = computed(() => {
                   :to="{ name: child.href }"
                   :class="cn(
                     'flex items-center gap-3 w-full px-2 py-1.5 text-sm transition-colors font-semibold capitalize',
-                    activeItem === child.label ? 'text-sidebar-primary font-bold' : 'text-sidebar-foreground '
+                    activeItem === child.id ? 'text-sidebar-primary font-bold' : 'text-sidebar-foreground '
                   )"
                 >
                   <component :is="child.icon" class="w-4 h-4" />
@@ -319,7 +319,7 @@ const activeItem = computed(() => {
                   :to="{ name: child.href }"
                   :class="cn(
                     'flex items-center gap-3 px-3 py-1.5 rounded-lg transition-all duration-200 text-sm capitalize',
-                    activeItem === child.label
+                    activeItem === child.id
                       ? 'bg-primary/10 text-primary font-bold'
                       : 'text-sidebar-foreground hover:text-sidebar-primary hover:bg-sidebar-accent'
                   )"

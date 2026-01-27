@@ -70,6 +70,7 @@ const removeMedia = (id: number) => {
                 :key="id"
                 :media-id="id"
                 @remove="removeMedia"
+                :close-button="true"
             />
        </div>
 

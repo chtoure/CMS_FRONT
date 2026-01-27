@@ -62,7 +62,8 @@ const getFieldValueAsArray = (fieldName: string) => {
                 <template v-if="getFieldValue(field.name)">
                     <CompositionMediaPreview v-for="(id, idx) in getFieldValueAsArray(field.name)"
                                   :key="String(id) + idx"
-                                  :mediaId="Number(id)" />
+                                  :mediaId="Number(id)"
+                                  :close-button="false"/>
                 </template>
                 <span v-else class="text-xs italic text-muted-foreground">Aucun média</span>
             </div>

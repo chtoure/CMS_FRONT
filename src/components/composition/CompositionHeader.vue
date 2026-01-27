@@ -59,17 +59,37 @@
     const filteredResults = computed(() => {
         if (!searchTerm.value) return [];
         const term = searchTerm.value.toLowerCase();
-        return searchItems.filter(item =>
+
+        // Eléments statiques
+        const staticResults = searchItems.filter(item =>
             item.label.toLowerCase().includes(term) ||
             item.description.toLowerCase().includes(term) ||
             item.category.toLowerCase().includes(term)
-        ).slice(0, 8);
+        );
+
+        // Types de contenu dynamiques
+        const dynamicResults: SearchItem[] = resultContentTypes.value
+            .filter(ct => ct.name.toLowerCase().includes(term))
+            .map(ct => ({
+                id: `dynamic-ct-${ct.id}`,
+                label: ct.name,
+                description: `Gérer les entrées de ${ct.name}`,
+                icon: Plus, // Ou une icone par défaut
+                category: 'Contenus',
+                href: 'admin.content-entry.list',
+                params: { slug: ct.slug }
+            }));
+
+        return [...staticResults, ...dynamicResults].slice(0, 10);
     });
 
     const handleSearchSelect = (item: SearchItem) => {
         searchTerm.value = '';
         if (item.href) {
-            router.push({ name: item.href });
+            router.push({
+                name: item.href,
+                params: item.params || {}
+            });
         }
     };
 

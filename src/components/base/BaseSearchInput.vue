@@ -1,5 +1,5 @@
 <script setup lang="ts">
-    import { ref, onMounted, onUnmounted, watch } from 'vue';
+    import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
     import { cn } from '../../lib/utils';
     import { type SearchItem } from '../../constants/searchItems';
 
@@ -79,6 +79,25 @@
         }
     });
 
+    const groupedResults = computed(() => {
+        const groups: Record<string, SearchItem[]> = {};
+        props.results.forEach(item => {
+            if (!item) return;
+            if (!groups[item.category]) groups[item.category] = [];
+            groups[item.category]?.push(item);
+        });
+        return groups;
+    });
+
+    const isItemSelected = (item: SearchItem) => {
+        const selectedItem = props.results[selectedIndex.value];
+        return selectedItem ? selectedItem.id === item.id : false;
+    };
+
+    const setSelectedIndexFromItem = (item: SearchItem) => {
+        selectedIndex.value = props.results.findIndex(r => r.id === item.id);
+    };
+
     onMounted(() => {
         document.addEventListener('click', onClickOutside);
     });
@@ -123,32 +142,37 @@
         </div>
 
         <div v-if="showDropdown && (results.length > 0 || !modelValue)" :class="dropdownClasses" class="border border-border">
-            <div v-if="results.length > 0" class="p-2 space-y-1">
-                <div v-for="(item, index) in results"
-                    :key="item.id"
-                    @click="selectItem(item)"
-                    @mouseenter="selectedIndex = index"
-                    :class="cn(
-                        'flex items-center gap-4 p-3 rounded-xl transition-all cursor-pointer group',
-                        selectedIndex === index ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]' : 'hover:bg-secondary'
-                    )"
-                >
-                    <div :class="cn(
-                        'p-2 rounded-lg transition-colors',
-                        selectedIndex === index ? 'bg-white/20' : 'bg-primary/10 text-primary'
-                    )">
-                        <component :is="item.icon" class="w-4 h-4" />
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p :class="cn('text-sm font-bold truncate', selectedIndex === index ? 'text-white' : 'text-foreground')">
-                            {{ item.label }}
-                        </p>
-                        <p :class="cn('text-xs truncate', selectedIndex === index ? 'text-white/70' : 'text-muted-foreground')">
-                            {{ item.description }}
-                        </p>
-                    </div>
-                    <div v-if="selectedIndex === index" class="text-[10px] font-black uppercase tracking-widest opacity-50">
-                        Entrer
+            <div v-if="results.length > 0" class="p-2 space-y-4">
+                <div v-for="(group, category) in groupedResults" :key="category" class="space-y-1">
+                    <h3 class="px-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 mb-2">
+                        {{ category }}
+                    </h3>
+                    <div v-for="item in group"
+                        :key="item.id"
+                        @click="selectItem(item)"
+                        @mouseenter="setSelectedIndexFromItem(item)"
+                        :class="cn(
+                            'flex items-center gap-4 p-3 rounded-xl transition-all cursor-pointer group',
+                            isItemSelected(item) ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]' : 'hover:bg-secondary'
+                        )"
+                    >
+                        <div :class="cn(
+                            'p-2 rounded-lg transition-colors',
+                            isItemSelected(item) ? 'bg-white/20' : 'bg-primary/10 text-primary'
+                        )">
+                            <component :is="item.icon" class="w-4 h-4" />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p :class="cn('text-sm font-bold truncate', isItemSelected(item) ? 'text-white' : 'text-foreground')">
+                                {{ item.label }}
+                            </p>
+                            <p :class="cn('text-xs truncate', isItemSelected(item) ? 'text-white/70' : 'text-muted-foreground')">
+                                {{ item.description }}
+                            </p>
+                        </div>
+                        <div v-if="isItemSelected(item)" class="text-[10px] font-black uppercase tracking-widest opacity-50">
+                            Entrer
+                        </div>
                     </div>
                 </div>
             </div>
