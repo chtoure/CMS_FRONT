@@ -14,8 +14,9 @@ export interface SearchItem {
   label: string
   description: string
   icon: Component
-  category: 'Pages' | 'Actions'
+  category: 'Pages' | 'Actions' | 'Contenus'
   href?: string
+  params?: Record<string, string | number>
   action?: string
 }
 

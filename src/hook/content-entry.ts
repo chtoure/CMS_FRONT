@@ -14,6 +14,10 @@ const buildQueryParams = (filter?: Ref<ContentEntryFilter> | ContentEntryFilter)
   if (params?.limit) query.append("limit", params.limit.toString());
   if (params?.status) query.append("status", params.status);
   if (params?.search) query.append("search", params.search);
+  if (params?.sort) query.append("sort", params.sort);
+  if (params?.user_id) query.append("user_id", params.user_id.toString());
+  if (params?.startDate) query.append("startDate", params.startDate);
+  if (params?.endDate) query.append("endDate", params.endDate);
   return query.toString();
 };
 

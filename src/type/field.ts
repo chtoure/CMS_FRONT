@@ -56,11 +56,6 @@ interface ITaxonomyConfig {
   renderType: 'combobox' | 'badges' | 'checkbox' ;
 }
 
-// interface ISelectOption {
-//   label: string;
-//   value: string | number;
-// }
-
 interface ISelectConfig {
   type: FieldType.SELECT;
   options: (string | number)[];
