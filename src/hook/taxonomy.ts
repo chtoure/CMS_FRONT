@@ -13,6 +13,7 @@ const buildQueryParams = (filter?: Ref<taxonomyFilter> | taxonomyFilter) => {
   if (params?.page) query.append("page", params.page.toString());
   if (params?.limit) query.append("limit", params.limit.toString());
   if (params?.archive) query.append("archive", params.archive.toString());
+  if (params?.search) query.append("search", params.search.toString());
   return query.toString();
 };
 

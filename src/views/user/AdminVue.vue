@@ -10,7 +10,6 @@ import { Users, UserPlus, Pencil, MoreHorizontal, Archive, ArchiveRestore } from
 // Composants convertis
 import UserFormView from './UserFormView.vue';
 import CompositionError from '../../components/composition/CompositionError.vue';
-import CompositionLoading from '../../components/composition/CompositionLoading.vue';
 import Button from '@/components/ui/button/Button.vue';
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue';
 import CompositionTable from '../../components/composition/CompositionTable.vue';
@@ -51,6 +50,7 @@ const filterParams = computed(() => ({
     archive: filterArchiv.value,
     page: currentPage.value,
     limit: itemsPerPage.value,
+    search: search.value
 }));
 
 
@@ -63,11 +63,6 @@ const {
   refetch: refetchUsers
 } = useGetUsers(filterParams);
 
-
-
-
-const userResults = computed(() => users.value?.results || []);
-const totalItems = computed(() => users.value?.count || 0);
 
 
   watch([currentPage, itemsPerPage, filterArchiv], () => {
@@ -92,21 +87,6 @@ const {
   error : errorRestor
 
 } = useRestoreUser()
-
-
-
-const filteredData = computed(() => {
-  return userResults.value.filter(item =>{
-    const matchesSearch = item.full_name.toLowerCase().includes(search.value.toLowerCase()) ||
-                          item.email.toLowerCase().includes(search.value.toLowerCase()) ||
-                          item.role?.name.toLowerCase().includes(search.value.toLowerCase())
-    let matchesArchive = true;
-    if (filterArchiv.value !== 'all') {
-      matchesArchive = item.archive === (filterArchiv.value === 'true');
-    }
-    return matchesSearch && matchesArchive;
-  })
-})
 
 
 const getStatusColor = (status: boolean) => {
@@ -185,9 +165,7 @@ const columns = [
 
 <template>
 
-  <CompositionLoading v-if="isLoading || archibePending || restorePending" />
-  <CompositionError v-else-if="isgetError || isArchiveError || isrestorError" :error="getError?.message || errorArchive?.message || errorRestor?.message" />
-
+  <CompositionError v-if="isgetError || isArchiveError || isrestorError" :error="getError?.message || errorArchive?.message || errorRestor?.message" />
 
   <div v-else class="min-h-screen space-y-10 ">
     <CompositionPageHeader>
@@ -234,8 +212,8 @@ const columns = [
                <div class="p-6" >
                   <CompositionTable
                     :columns="columns"
-                    :data="filteredData"
-                    :total="totalItems"
+                    :data="users?.results || []"
+                    :total="users?.count || 0"
                     v-model:limit="itemsPerPage"
                     v-model:currentPage="currentPage"
 
@@ -247,6 +225,8 @@ const columns = [
                     v-model:filterValue="filterArchiv"
                     :filterOptions="filterOptions"
                     filterPlaceholder="Statut"
+
+                    :isLoading="isLoading || archibePending || restorePending"
                   >
 
                     <template #cell-role="{ row }">
@@ -275,7 +255,7 @@ const columns = [
                           <DropdownMenuSeparator/>
                           <CompositionVerifyButton :if="!row.archive">
                             <DropdownMenuLabel >
-                            <button  @click="openEditPage(row)" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
+                            <button  @click="openEditPage(row)" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-primary">
                               <Pencil class="w-4 h-4" /> Modifier
                             </button>
                             </DropdownMenuLabel>
@@ -283,7 +263,7 @@ const columns = [
                             <DropdownMenuLabel>
                               <CompositionConfirmDialog @confirm="archivedUser(row.id)" header="Suppression de l'utilisateur" description="Êtes-vous sûr de vouloir Archiver ?" cancelText="Annuler" actionText="Archiver" >
                                 <template #dialogButton>
-                                  <button v-if="row.id !== storeUser.userInfo?.id" class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110">
+                                  <button v-if="row.id !== storeUser.userInfo?.id" class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-primary">
                                     <Archive class="w-4 h-4"  /> Archiver
                                   </button>
                                 </template>
@@ -294,7 +274,7 @@ const columns = [
                             <DropdownMenuLabel>
                               <CompositionConfirmDialog @confirm="restoredUser(row.id)" header="Restoration de l'utilisateur" description="Êtes-vous sûr de vouloir restorer ?" cancelText="Annuler" actionText="Restorer" >
                                 <template #dialogButton>
-                                  <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110">
+                                  <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-destructive">
                                     <ArchiveRestore  class="w-4 h-4"  /> Restorer
                                   </button>
                                 </template>

@@ -79,9 +79,10 @@ const filterParamsRole = computed(() => ({
 
 
 const filterParamsPerms = computed(() => ({
-   archive: filterArchivPerms.value,
+  archive: filterArchivPerms.value,
   page: currentPagePerms.value,
-  limit: itemsPerPagePerms.value
+  limit: itemsPerPagePerms.value,
+  search: search.value
 }))
 
 const vFocus = {

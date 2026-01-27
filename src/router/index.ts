@@ -25,6 +25,8 @@ import TaxonomyListView from '../views/Taxonomy/TaxonomyListView.vue'
 import TaxonomyFormView from '../views/Taxonomy/TaxonomyFormView.vue'
 import ContentTypeEditView from '../views/contentType/ContentTypeEditView.vue'
 import ContentEntryCorbeilleView from '../views/contentEntry/ContentEntryCorbeilleView.vue'
+import ContentTypeCorbeilleView from '../views/contentType/ContentTypeCorbeilleView.vue'
+import TaxonomyCorbeilleView from '../views/Taxonomy/TaxonomyCorbeilleView.vue'
 
 
 const router = createRouter({
@@ -123,6 +125,11 @@ const router = createRouter({
                           path:"edit/:id",
                           name:"admin.content-types.edit",
                           component:ContentTypeEditView
+                        },
+                        {
+                          path: 'corbeille',
+                          name: 'admin.content-types.corbeille',
+                          component:  ContentTypeCorbeilleView
                         }
                       ]
                     },
@@ -173,6 +180,11 @@ const router = createRouter({
                           path: 'edit/:id',
                           name: 'admin.taxonomies.edit',
                           component: TaxonomyFormView
+                        },
+                        {
+                          path: 'corbeille',
+                          name: 'admin.taxonomies.corbeille',
+                          component: TaxonomyCorbeilleView
                         }
                       ]
                     }

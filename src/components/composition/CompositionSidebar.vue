@@ -120,10 +120,22 @@ const navItems = computed<NavItem[]>(() =>{
       icon: Trash2,
       children: [
         {
-          id: 'corbeille',
+          id: 'corbeille-contentEntry',
           label: 'Corbeille des contenus',
           icon: Trash2,
           href: 'admin.content-entry.corbeille'
+        },
+        {
+          id: 'corbeille-contentType',
+          label: 'Corbeille types contenu',
+          icon: ClipboardList,
+          href: 'admin.content-types.corbeille'
+        },
+        {
+          id: 'corbeille-taxonomy',
+          label: 'Corbeille Des Catégories',
+          icon: Tags,
+          href: 'admin.taxonomies.corbeille'
         }
       ]
     }
