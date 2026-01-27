@@ -10,7 +10,6 @@ import { Users, UserPlus, Pencil, MoreHorizontal, Archive, ArchiveRestore } from
 // Composants convertis
 import UserFormView from './UserFormView.vue';
 import CompositionError from '../../components/composition/CompositionError.vue';
-import CompositionLoading from '../../components/composition/CompositionLoading.vue';
 import Button from '@/components/ui/button/Button.vue';
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue';
 import CompositionTable from '../../components/composition/CompositionTable.vue';
@@ -66,11 +65,6 @@ const {
 
 
 
-
-const userResults = computed(() => users.value?.results || []);
-const totalItems = computed(() => users.value?.count || 0);
-
-
   watch([currentPage, itemsPerPage, filterArchiv], () => {
     refetchUsers();
   });
@@ -93,21 +87,6 @@ const {
   error : errorRestor
 
 } = useRestoreUser()
-
-
-
-// const filteredData = computed(() => {
-//   return userResults.value.filter(item =>{
-//     const matchesSearch = item.full_name.toLowerCase().includes(search.value.toLowerCase()) ||
-//                           item.email.toLowerCase().includes(search.value.toLowerCase()) ||
-//                           item.role?.name.toLowerCase().includes(search.value.toLowerCase())
-//     let matchesArchive = true;
-//     if (filterArchiv.value !== 'all') {
-//       matchesArchive = item.archive === (filterArchiv.value === 'true');
-//     }
-//     return matchesSearch && matchesArchive;
-//   })
-// })
 
 
 const getStatusColor = (status: boolean) => {
@@ -186,9 +165,7 @@ const columns = [
 
 <template>
 
-  <CompositionLoading v-if="isLoading || archibePending || restorePending" />
-  <CompositionError v-else-if="isgetError || isArchiveError || isrestorError" :error="getError?.message || errorArchive?.message || errorRestor?.message" />
-
+  <CompositionError v-if="isgetError || isArchiveError || isrestorError" :error="getError?.message || errorArchive?.message || errorRestor?.message" />
 
   <div v-else class="min-h-screen space-y-10 ">
     <CompositionPageHeader>
@@ -235,8 +212,8 @@ const columns = [
                <div class="p-6" >
                   <CompositionTable
                     :columns="columns"
-                    :data="userResults"
-                    :total="totalItems"
+                    :data="users?.results || []"
+                    :total="users?.count || 0"
                     v-model:limit="itemsPerPage"
                     v-model:currentPage="currentPage"
 
@@ -248,6 +225,8 @@ const columns = [
                     v-model:filterValue="filterArchiv"
                     :filterOptions="filterOptions"
                     filterPlaceholder="Statut"
+
+                    :isLoading="isLoading || archibePending || restorePending"
                   >
 
                     <template #cell-role="{ row }">

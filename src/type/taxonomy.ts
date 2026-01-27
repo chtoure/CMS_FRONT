@@ -46,7 +46,8 @@ export interface UpdateTaxonomy {
 }
 
 export interface taxonomyFilter {
-  archive: string;
+  archive?: string;
   page?: number;
   limit?: number;
+  search?: string;
 }

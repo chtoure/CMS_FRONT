@@ -13,7 +13,6 @@ import { cn } from '../../lib/utils'
 import Badge from '../../components/ui/badge/Badge.vue'
 import { useRouter } from 'vue-router'
 import { useGetContentTypes, useArchiveContentType } from '../../hook/content-type'
-import CompositionLoading from '../../components/composition/CompositionLoading.vue'
 import CompositionError from '../../components/composition/CompositionError.vue'
 import type { ContentType } from '../../type/content-type'
 import { showToast } from '../../lib/toast'
@@ -34,7 +33,6 @@ const columns = [
 
 const currentPage = ref(1);
 const itemsPerPage = ref(10);
-const filterArchiv = ref("all");
 const search = ref('')
 
 const router = useRouter()
@@ -42,9 +40,9 @@ const router = useRouter()
 
 
 const filterParams = computed(() => ({
-    archive: filterArchiv.value,
     page: currentPage.value,
     limit: itemsPerPage.value,
+    search: search.value
 }));
 
 
@@ -58,12 +56,10 @@ const {
 } = useGetContentTypes(filterParams);
 
 
-const contentTypesResults = computed(() => dataContentTypes.value?.results || []);
-const totalItems = computed(() => dataContentTypes.value?.count || 0);
 
 
 
-watch([currentPage, itemsPerPage, filterArchiv], () => {
+watch([currentPage, itemsPerPage], () => {
   refetchContentTypes();
 });
 
@@ -75,35 +71,6 @@ const {
 } = useArchiveContentType();
 
 
-
-
-
-
-const filteredData = computed(() => {
-  return contentTypesResults.value.filter(item => {
-    // Filtrage par recherche
-    const matchesSearch = item.name.toLowerCase().includes(search.value.toLowerCase()) ||
-                          item.slug.toLowerCase().includes(search.value.toLowerCase()) ||
-                          item.description?.toLowerCase().includes(search.value.toLowerCase())
-
-    // Filtrage par statut
-   let matchesArchive = true;
-    if (filterArchiv.value !== 'all') {
-      matchesArchive = item.archive === (filterArchiv.value === 'true');
-    }
-    return matchesSearch && matchesArchive;
-  })
-})
-
-const getStatusColor = () => {
-    return 'bg-success/20 text-success border-success/30'
-   // case true: return 'bg-muted text-muted-foreground border-border'
-}
-
-const getStatusLabel = () => {
-    return 'Actif'
-   // case true: return 'Archivé'
-}
 
 const handleEdit = (row: ContentType) => {
   router.push({ name: 'admin.content-types.edit', params: { id: row.id } })
@@ -135,8 +102,7 @@ const handleCreate = () => {
 
 <template>
 
-  <CompositionLoading v-if="isLoadingContentTypes || isLoadingArchiveContentType " />
-  <CompositionError v-else-if="isgetErrorContentTypes" :error="getErrorContentTypes?.message" />
+  <CompositionError v-if="isgetErrorContentTypes" :error="getErrorContentTypes?.message" />
 
   <div v-else class="min-h-screen space-y-10">
     <CompositionPageHeader>
@@ -166,8 +132,8 @@ const handleCreate = () => {
           <div class="p-6">
               <CompositionTable
                 :columns="columns"
-                :data="filteredData"
-                :total="totalItems"
+                :data="dataContentTypes?.results || []"
+                :total="dataContentTypes?.count || 0"
                 v-model:limit="itemsPerPage"
                 v-model:currentPage="currentPage"
 
@@ -175,6 +141,7 @@ const handleCreate = () => {
                 v-model:search="search"
                 searchPlaceholder="Rechercher par nom ou slug..."
 
+                :isLoading="isLoadingContentTypes || isLoadingArchiveContentType"
 
               >
                 <!-- Custom rendering for Name column -->
@@ -196,9 +163,9 @@ const handleCreate = () => {
                 <template #cell-status="{  }">
                   <Badge
                     variant="outline"
-                    :class="cn('px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', getStatusColor())"
+                    :class="cn('px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-success/20 text-success border-success/30')"
                   >
-                    {{ getStatusLabel() }}
+                    Actif
                   </Badge>
                 </template>
 

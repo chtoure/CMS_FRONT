@@ -33,9 +33,10 @@ interface UpdateContentType {
 }
 
 interface contentTypeFilter {
-  archive: string,
+  archive?: string,
   page?: number
-  limit?: number
+  limit?: number,
+  search?: string
 }
 
 

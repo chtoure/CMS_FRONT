@@ -13,6 +13,8 @@ const buildQueryParams = (filter?: Ref<contentTypeFilter> | contentTypeFilter) =
   if (params?.page) query.append("page", params.page.toString());
   if (params?.limit) query.append("limit", params.limit.toString());
   if (params?.archive) query.append("archive", params.archive.toString());
+  if (params?.search) query.append("search", params.search.toString());
+
   return query.toString();
 };
 
@@ -49,8 +51,9 @@ const useGetContentTypeBySlug = (slug: string) => {
 
 
 const useGetContentTypes = (filter?: Ref<contentTypeFilter> | contentTypeFilter) => {
+
   return useQuery({
-    queryKey: ['contentTypes'],
+    queryKey: ['contentTypes', filter],
     queryFn: async () => {
       const query = buildQueryParams(filter)
       const response = await api(`/contents?${query}`)
@@ -61,18 +64,6 @@ const useGetContentTypes = (filter?: Ref<contentTypeFilter> | contentTypeFilter)
 }
 
 
-
-const useGetContentTypeArchived = (filter?: Ref<contentTypeFilter> | contentTypeFilter) => {
-  return useQuery({
-    queryKey: ['contentTypesArchived'],
-    queryFn: async () => {
-      const query = buildQueryParams(filter)
-      const response = await api(`/contentsArchived?${query}`)
-
-      return handleResponse<Pagination<ContentType>>(response)
-    }
-  })
-}
 
 
 // Hook get content type excepted
@@ -133,6 +124,7 @@ const useArchiveContentType = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contentTypes"] });
+      queryClient.invalidateQueries({ queryKey: ["contentTypesArchived"] });
     },
   });
 };
@@ -150,6 +142,7 @@ const useRestoreContentType = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contentTypes"] });
+      queryClient.invalidateQueries({ queryKey: ["contentTypesArchived"] });
     },
   });
 };
@@ -167,6 +160,7 @@ const useDeleteContentType = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contentTypes"] });
+      queryClient.invalidateQueries({ queryKey: ["contentTypesArchived"] });
     },
   });
 };
@@ -184,7 +178,6 @@ export {
   useRestoreContentType,
   useArchiveContentType,
   useGetContentTypeBySlug,
-  useGetContentTypesExcepted,
-  useGetContentTypeArchived
+  useGetContentTypesExcepted
 }
 

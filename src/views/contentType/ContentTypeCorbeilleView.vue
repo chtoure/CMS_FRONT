@@ -2,18 +2,14 @@
 import { ref, computed, watch } from 'vue'
 import CompositionTable from '@/components/composition/CompositionTable.vue'
 import Button from '@/components/ui/button/Button.vue'
-import { ArchiveRestore, ClipboardList, MoreHorizontal, Plus, Trash2 } from 'lucide-vue-next'
+import { ArchiveRestore, ClipboardList, MoreHorizontal, Trash2 } from 'lucide-vue-next'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
 import DropdownMenu from '../../components/ui/dropdown-menu/DropdownMenu.vue'
 import DropdownMenuTrigger from '../../components/ui/dropdown-menu/DropdownMenuTrigger.vue'
 import DropdownMenuContent from '../../components/ui/dropdown-menu/DropdownMenuContent.vue'
 import DropdownMenuLabel from '../../components/ui/dropdown-menu/DropdownMenuLabel.vue'
 import DropdownMenuSeparator from '../../components/ui/dropdown-menu/DropdownMenuSeparator.vue'
-import { cn } from '../../lib/utils'
-import Badge from '../../components/ui/badge/Badge.vue'
-import { useRouter } from 'vue-router'
-import { useRestoreContentType, useDeleteContentType, useGetContentTypeArchived } from '../../hook/content-type'
-import CompositionLoading from '../../components/composition/CompositionLoading.vue'
+import { useRestoreContentType, useDeleteContentType, useGetContentTypes } from '../../hook/content-type'
 import CompositionError from '../../components/composition/CompositionError.vue'
 import { showToast } from '../../lib/toast'
 import { handleError } from '../../lib/error'
@@ -26,24 +22,20 @@ const columns = [
   { key: 'name', label: 'Nom' },
   { key: 'slug', label: 'Slug' },
   { key: 'description', label: 'Description'},
-  { key: 'status', label: 'Statut', class: 'w-32' },
   { key: 'entriesCount', label: 'Champs Entrées', class: 'text-center' },
   { key: 'actions', label: 'Actions', class: 'w-10' }
 ]
 
 const currentPage = ref(1);
 const itemsPerPage = ref(10);
-const filterArchiv = ref("all");
 const search = ref('')
-
-const router = useRouter()
-
 
 
 const filterParams = computed(() => ({
-    archive: filterArchiv.value,
+    archive: "true",
     page: currentPage.value,
     limit: itemsPerPage.value,
+    search: search.value
 }));
 
 
@@ -54,15 +46,11 @@ const {
   isError: isgetErrorContentTypes,
   error: getErrorContentTypes,
   refetch: refetchContentTypes
-} = useGetContentTypeArchived(filterParams);
-
-
-const contentTypesResults = computed(() => dataContentTypes.value?.results || []);
-const totalItems = computed(() => dataContentTypes.value?.count || 0);
+} = useGetContentTypes(filterParams);
 
 
 
-watch([currentPage, itemsPerPage, filterArchiv], () => {
+watch([currentPage, itemsPerPage], () => {
   refetchContentTypes();
 });
 
@@ -80,29 +68,6 @@ const {
 } = useDeleteContentType();
 
 
-const filteredData = computed(() => {
-  return contentTypesResults.value.filter(item => {
-    // Filtrage par recherche
-    const matchesSearch = item.name.toLowerCase().includes(search.value.toLowerCase()) ||
-                          item.slug.toLowerCase().includes(search.value.toLowerCase()) ||
-                          item.description?.toLowerCase().includes(search.value.toLowerCase())
-
-    // Filtrage par statut
-   let matchesArchive = true;
-    if (filterArchiv.value !== 'all') {
-      matchesArchive = item.archive === (filterArchiv.value === 'true');
-    }
-    return matchesSearch && matchesArchive;
-  })
-})
-
-const getStatusColor = () => {
-  return 'bg-muted text-muted-foreground border-border'
-}
-
-const getStatusLabel = () => {
-   return 'Archivé'
-}
 
 
 
@@ -131,17 +96,11 @@ const handleDelete = (id: number) => {
 }
 
 
-
-const handleCreate = () => {
-  router.push({ name: 'admin.content-types.create' })
-}
-
 </script>
 
 <template>
 
-  <CompositionLoading v-if="isLoadingContentTypes || isLoadingRestoreContentType || isLoadingDeleteContentType" />
-  <CompositionError v-else-if="isgetErrorContentTypes" :error="getErrorContentTypes?.message" />
+  <CompositionError v-if="isgetErrorContentTypes" :error="getErrorContentTypes?.message" />
 
   <div v-else class="min-h-screen space-y-10">
     <CompositionPageHeader>
@@ -150,17 +109,9 @@ const handleCreate = () => {
           <div class="flex items-center gap-4">
             <ClipboardList class="h-6 w-6" />
             <div class="space-y-2">
-              <h1 class="text-huge font-black tracking-tighter leading-none"> <span class="text-primary italic">Gestion des types de contenus</span></h1>
-              <p class="text-background opacity-80 text-lg font-medium">Gérez la structure de vos contenus.</p>
+              <h1 class="text-huge font-black tracking-tighter leading-none"> <span class="text-primary italic">Corbeille des types de contenus</span></h1>
+              <p class="text-background opacity-80 text-lg font-medium">Gérez les types de contenus supprimés.</p>
             </div>
-          </div>
-
-          <div class="flex items-center gap-4">
-
-            <Button @click="handleCreate" class="rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95">
-              <Plus class="w-6 h-6 mr-2" />
-              Ajouter
-            </Button>
           </div>
         </div>
       </template>
@@ -171,8 +122,8 @@ const handleCreate = () => {
           <div class="p-6">
               <CompositionTable
                 :columns="columns"
-                :data="filteredData"
-                :total="totalItems"
+                :data="dataContentTypes?.results || []"
+                :total="dataContentTypes?.count || 0"
                 v-model:limit="itemsPerPage"
                 v-model:currentPage="currentPage"
 
@@ -180,10 +131,8 @@ const handleCreate = () => {
                 v-model:search="search"
                 searchPlaceholder="Rechercher par nom ou slug..."
 
-
+                :isLoading="isLoadingContentTypes || isLoadingRestoreContentType || isLoadingDeleteContentType"
               >
-                <!-- Custom rendering for Name column -->
-
 
                 <template #cell-num="{ index }">
                   {{  index + 1 }}
@@ -197,17 +146,6 @@ const handleCreate = () => {
                   <span class="font-medium text-foreground">{{ row.fields_schema.length-1 }}</span>
                 </template>
 
-
-                <template #cell-status="{  }">
-                  <Badge
-                    variant="outline"
-                    :class="cn('px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', getStatusColor())"
-                  >
-                    {{ getStatusLabel() }}
-                  </Badge>
-                </template>
-
-                <!-- Custom rendering for Actions column -->
                 <template #cell-actions="{ row }">
                   <DropdownMenu>
                       <DropdownMenuTrigger as-child>

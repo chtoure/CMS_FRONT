@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import CompositionTable from '@/components/composition/CompositionTable.vue'
 import Button from '@/components/ui/button/Button.vue'
-import { Archive, ArchiveRestore, Tags, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-vue-next'
+import { Archive, Tags, MoreHorizontal, Pencil, Plus } from 'lucide-vue-next'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
 import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue'
 import DropdownMenu from '../../components/ui/dropdown-menu/DropdownMenu.vue'
@@ -12,10 +12,8 @@ import DropdownMenuLabel from '../../components/ui/dropdown-menu/DropdownMenuLab
 import DropdownMenuSeparator from '../../components/ui/dropdown-menu/DropdownMenuSeparator.vue'
 import { cn } from '../../lib/utils'
 import Badge from '../../components/ui/badge/Badge.vue'
-import CompositionVerifyButton from '../../components/composition/CompositionVerifyButton.vue'
 import { useRouter } from 'vue-router'
-import { useArchiveTaxonomy, useDeleteTaxonomy, useGetTaxonomies, useRestoreTaxonomy } from '../../hook/taxonomy'
-import CompositionLoading from '../../components/composition/CompositionLoading.vue'
+import { useArchiveTaxonomy, useGetTaxonomies } from '../../hook/taxonomy'
 import CompositionError from '../../components/composition/CompositionError.vue'
 import type { Taxonomy } from '../../type/taxonomy'
 import { showToast } from '../../lib/toast'
@@ -33,18 +31,13 @@ const columns = [
 
 const currentPage = ref(1);
 const itemsPerPage = ref(10);
-const filterArchiv = ref("all");
 const search = ref('')
 
-const filterOptions = [
-  { label: 'Actifs', value: 'false' },
-  { label: 'Archivés', value: 'true' }
-]
 
 const filterParams = computed(() => ({
-    archive: filterArchiv.value,
     page: currentPage.value,
     limit: itemsPerPage.value,
+    search: search.value
 }));
 
 const {
@@ -55,9 +48,6 @@ const {
   refetch: refetchTaxonomies
 } = useGetTaxonomies(filterParams);
 
-const taxonomiesResults = computed(() => dataTaxonomies.value?.results || []);
-const totalItems = computed(() => dataTaxonomies.value?.count || 0);
-
 
 
 const {
@@ -65,51 +55,12 @@ const {
   isPending: isLoadingArchiveTaxonomy,
 } = useArchiveTaxonomy();
 
-const {
-  mutateAsync: restoreTaxonomy,
-  isPending: isLoadingRestoreTaxonomy,
-} = useRestoreTaxonomy();
 
-
-const {
-  mutateAsync: deleteTaxonomy,
-  isPending: isLoadingDeleteTaxonomy,
-} = useDeleteTaxonomy();
-
-
-watch([currentPage, itemsPerPage, filterArchiv], () => {
+watch([currentPage, itemsPerPage], () => {
   refetchTaxonomies();
 });
 
-const filteredData = computed(() => {
-  return taxonomiesResults.value.filter(item => {
-    // Filtrage par recherche
-    const matchesSearch = item.name.toLowerCase().includes(search.value.toLowerCase()) ||
-                          item.slug.toLowerCase().includes(search.value.toLowerCase()) ||
-                          item.description?.toLowerCase().includes(search.value.toLowerCase())
 
-    // Filtrage par statut
-    let matchesArchive = true;
-    if (filterArchiv.value !== 'all') {
-      matchesArchive = item.archive === (filterArchiv.value === 'true');
-    }
-    return matchesSearch && matchesArchive;
-  })
-})
-
-const getStatusColor = (status: boolean) => {
-  switch (status) {
-    case false: return 'bg-success/20 text-success border-success/30'
-    case true: return 'bg-muted text-muted-foreground border-border'
-  }
-}
-
-const getStatusLabel = (status: boolean) => {
-  switch (status) {
-    case false: return 'Actif'
-    case true: return 'Archivé'
-  }
-}
 
 const handleEdit = (row: Taxonomy) => {
   router.push({ name: 'admin.taxonomies.edit', params: { id: row.id } })
@@ -129,30 +80,7 @@ const handleArchive = (id:number) => {
 }
 
 
-const handleRestore = (id:number) => {
-   restoreTaxonomy(id,{
-    onSuccess: () => {
-      showToast("success", "Catégorie restaurée avec succès")
-      refetchTaxonomies();
-    },
-    onError: (error:unknown) => {
-      handleError(error);
-    }
-   });
-}
 
-
-const handleDelete = (id:number) => {
-   deleteTaxonomy(id,{
-    onSuccess: () => {
-      showToast("success", "Catégorie supprimée avec succès")
-      refetchTaxonomies();
-    },
-    onError: (error:unknown) => {
-      handleError(error);
-    }
-   });
-}
 
 const router = useRouter()
 
@@ -164,8 +92,7 @@ const handleCreate = () => {
 
 <template>
 
-  <CompositionLoading v-if="isLoadingTaxonomies || isLoadingArchiveTaxonomy || isLoadingDeleteTaxonomy || isLoadingRestoreTaxonomy" />
-  <CompositionError v-else-if="isgetErrorTaxonomies" :error="getErrorTaxonomies?.message" />
+  <CompositionError v-if="isgetErrorTaxonomies" :error="getErrorTaxonomies?.message" />
 
   <div v-else class="min-h-screen space-y-10">
     <CompositionPageHeader>
@@ -195,8 +122,8 @@ const handleCreate = () => {
           <div class="p-6">
               <CompositionTable
                 :columns="columns"
-                :data="filteredData"
-                :total="totalItems"
+                :data="dataTaxonomies?.results || []"
+                :total="dataTaxonomies?.count || 0"
                 v-model:limit="itemsPerPage"
                 v-model:currentPage="currentPage"
 
@@ -204,10 +131,7 @@ const handleCreate = () => {
                 v-model:search="search"
                 searchPlaceholder="Rechercher par nom ou slug..."
 
-                filterable
-                v-model:filterValue="filterArchiv"
-                :filterOptions="filterOptions"
-                filterPlaceholder="Statut"
+                :isLoading="isLoadingTaxonomies || isLoadingArchiveTaxonomy"
               >
                 <!-- Custom rendering for Name column -->
 
@@ -230,12 +154,12 @@ const handleCreate = () => {
                       </Badge>
                 </template>
 
-                <template #cell-status="{ row }">
+                <template #cell-status="{ }">
                   <Badge
                     variant="outline"
-                    :class="cn('px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', getStatusColor(row.archive))"
+                    :class="cn('px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-success/20 text-success border-success/30')"
                   >
-                    {{ getStatusLabel(row.archive) }}
+                    Actif
                   </Badge>
                 </template>
 
@@ -250,7 +174,6 @@ const handleCreate = () => {
                       <DropdownMenuContent>
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator/>
-                        <CompositionVerifyButton :if="!row.archive">
                           <DropdownMenuLabel >
                           <button @click="handleEdit(row)" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-primary">
                             <Pencil class="w-4 h-4" /> Modifier
@@ -266,25 +189,6 @@ const handleCreate = () => {
                               </template>
                             </CompositionConfirmDialog>
                           </DropdownMenuLabel>
-                        </CompositionVerifyButton>
-                        <CompositionVerifyButton :if="row.archive">
-                          <DropdownMenuLabel>
-                            <CompositionConfirmDialog @confirm="handleRestore(row.id)" header="Restoration de taxonomie" description="Êtes-vous sûr de vouloir restorer ?" cancelText="Annuler" actionText="Restorer" >
-                              <template #dialogButton>
-                                <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-primary">
-                                  <ArchiveRestore  class="w-4 h-4"  /> Restorer
-                                </button>
-                              </template>
-                            </CompositionConfirmDialog>
-                            <CompositionConfirmDialog @confirm="handleDelete(row.id)" header="Suppression de taxonomie" description="Êtes-vous sûr de vouloir supprimer définitivement ?" cancelText="Annuler" actionText="Supprimer" >
-                              <template #dialogButton>
-                                <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-destructive">
-                                  <Trash2  class="w-4 h-4"  /> Supprimer
-                                </button>
-                              </template>
-                            </CompositionConfirmDialog>
-                          </DropdownMenuLabel>
-                        </CompositionVerifyButton>
                       </DropdownMenuContent>
                     </DropdownMenu>
                 </template>
