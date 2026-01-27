@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import   {User,
-    FileText,
-    LogOut,
-    Settings,
+import {
+  User,
+  LogOut,
+  Settings,
 } from 'lucide-vue-next'
 import { useLogout } from "../../hook/user";
 import { userStore } from '../../stores/user';
@@ -64,9 +64,9 @@ const handleLogout = () => {
         <!-- <a href="#" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-primary hover:text-white rounded-lg transition-all duration-200">
             <User class="w-4 h-4" /> Profile
         </a> -->
-        <a href="#" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-primary hover:text-white rounded-lg transition-all duration-200">
+        <!-- <a href="#" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-primary hover:text-white rounded-lg transition-all duration-200">
             <FileText class="w-4 h-4" /> Reports
-        </a>
+        </a> -->
         <RouterLink :to="{ name: 'admin.parameter' }" class="flex items-center gap-2 p-2 text-sm text-foreground hover:bg-primary hover:text-white rounded-lg transition-all duration-200">
             <Settings class="w-4 h-4" /> Settings
         </RouterLink>

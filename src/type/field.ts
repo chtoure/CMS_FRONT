@@ -15,14 +15,8 @@ enum FieldType {
 enum TypesMedia {
   IMAGE = 'image',
   VIDEO = 'video',
-  PDF = 'pdf',
-  MSWORD = 'msword',
-  OFFICEDOCUMENT = 'officedocument',
-  TEXT = 'text/',
-  ZIP = 'zip',
-  RAR = 'x-rar',
-  TAR = 'tar',
-  COMRESSED = 'compressed'
+  DOCUMENT = 'document',
+  ARCHIVE = 'archive'
 }
 
 interface IBaseField {
@@ -59,13 +53,8 @@ interface ITaxonomyConfig {
   type: FieldType.TAXONOMY;
   taxonomy_slug: string;
   multiple: boolean;
-  renderType: 'combobox' | 'badges' | 'checkbox';
+  renderType: 'combobox' | 'badges' | 'checkbox' ;
 }
-
-// interface ISelectOption {
-//   label: string;
-//   value: string | number;
-// }
 
 interface ISelectConfig {
   type: FieldType.SELECT;

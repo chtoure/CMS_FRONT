@@ -1,6 +1,6 @@
 <script setup lang="ts" generic="T">
 import { cn } from '../../lib/utils';
-import { List, Search } from 'lucide-vue-next';
+import { List, Search, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-vue-next';
 import Table from '../ui/table/Table.vue';
 import TableBody from '../ui/table/TableBody.vue';
 import TableCell from '../ui/table/TableCell.vue';
@@ -20,6 +20,7 @@ interface Column {
   key: string
   label: string
   class?: string
+  sortable?: boolean
 }
 
 interface FilterOption {
@@ -47,6 +48,10 @@ interface Props {
 
   // Loading
   isLoading?: boolean
+
+  // Sort
+  sortKey?: string
+  sortOrder?: 'ASC' | 'DESC'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -62,7 +67,7 @@ const props = withDefaults(defineProps<Props>(), {
   isLoading: false,
 })
 
-const emit = defineEmits(['update:currentPage', 'update:limit', 'row-click', 'update:search', 'update:filterValue'])
+const emit = defineEmits(['update:currentPage', 'update:limit', 'row-click', 'update:search', 'update:filterValue', 'sort'])
 
 const handlePageChange = (val: number) => {
   emit('update:currentPage', val)
@@ -127,14 +132,23 @@ const onFilterChange = (val: string | number | boolean | null | undefined) => {
             <TableHead
               v-for="(col, idx) in columns"
               :key="col.key"
+              @click="col.sortable !== false && emit('sort', col.key)"
               :class="cn(
-                'font-bold text-sidebar-foreground h-12 px-4',
+                'font-bold text-sidebar-foreground h-12 px-4 select-none',
+                col.sortable !== false ? 'cursor-pointer hover:bg-sidebar-accent/50 transition-colors' : '',
                 'border-b border-sidebar-border',
                 idx < columns.length - 1 ? 'border-r border-sidebar-border' : '',
                 col.class
               )"
             >
-              {{ col.label }}
+              <div class="flex items-center gap-2">
+                {{ col.label }}
+                <div v-if="col.sortable !== false && col.sortable !== undefined" class="flex flex-col">
+                  <ArrowUp v-if="sortKey === col.key && sortOrder === 'ASC'" class="h-3 w-3" />
+                  <ArrowDown v-else-if="sortKey === col.key && sortOrder === 'DESC'" class="h-3 w-3" />
+                  <ArrowUpDown v-else class="h-3 w-3 opacity-30" />
+                </div>
+              </div>
             </TableHead>
           </TableRow>
         </TableHeader>

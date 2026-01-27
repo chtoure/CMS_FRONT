@@ -59,6 +59,10 @@ interface ContentEntryFilter {
   page?: number
   limit?: number
   search?: string
+  sort?: string
+  user_id?: number
+  startDate?: string
+  endDate?: string
 }
 
 

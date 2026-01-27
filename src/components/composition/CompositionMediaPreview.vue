@@ -6,7 +6,8 @@ import { X, Image as ImageIcon, Loader2, FileText, Archive, File } from 'lucide-
 import Button from '@/components/ui/button/Button.vue'
 
 const props = defineProps<{
-  mediaId: number
+  mediaId: number,
+  closeButton?: boolean
 }>()
 
 defineEmits(['remove'])
@@ -54,7 +55,7 @@ const isArchive = computed(() => media.value?.type === 'archive')
             <File :size="32" class="text-muted-foreground/40" />
         </div>
 
-        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-start justify-end p-2 z-10">
+        <div v-if="closeButton" class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-start justify-end p-2 z-10">
              <Button
                 variant="outline"
                 size="icon"

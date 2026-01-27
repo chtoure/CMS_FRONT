@@ -18,7 +18,7 @@
 </script>
 
 <template>
-  <div class="relative flex items-center justify-center w-5 h-5 shrink-0 rounded">
+  <div class="relative flex items-center justify-center w-5 h-5 shrink-0 rounded border border-border">
     <input
       type="checkbox"
       :id="id"
