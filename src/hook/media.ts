@@ -28,6 +28,7 @@ const useGetMedia = (id : number) => {
       );
     },
     staleTime: 1000 * 60,
+    enabled: !!id
    })
 }
 

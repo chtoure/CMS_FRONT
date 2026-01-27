@@ -65,13 +65,13 @@ const removeMedia = (id: number) => {
     <div class="mt-2 space-y-3">
        <!-- Selected Media Cards -->
        <div v-if="ids.length > 0" class="flex flex-wrap gap-4">
-            <CompositionMediaPreview
-                v-for="id in ids"
-                :key="id"
-                :media-id="id"
-                @remove="removeMedia"
-                :close-button="true"
-            />
+            <div v-for="id in ids" :key="id" class="w-24 h-24 sm:w-32 sm:h-32">
+                <CompositionMediaPreview
+                    :media-id="id"
+                    @remove="removeMedia"
+                    :close-button="true"
+                />
+            </div>
        </div>
 
       <CompositionMediaPicker

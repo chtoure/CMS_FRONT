@@ -1,28 +1,32 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useGetMedia } from '../../hook/media'
-// Ajout des icônes spécifiques
 import { X, Image as ImageIcon, Loader2, FileText, Archive, File } from 'lucide-vue-next'
 import Button from '@/components/ui/button/Button.vue'
+import type { Media } from '../../type/media';
 
 const props = defineProps<{
-  mediaId: number,
-  closeButton?: boolean
+  mediaId?: number,
+  closeButton?: boolean,
+  media?: Media
 }>()
 
 defineEmits(['remove'])
 
-const { data: media, isLoading } = useGetMedia(props.mediaId)
+const { data: fetchedMedia, isLoading: isFetching } = useGetMedia(props.mediaId as number)
 
-// Logique de détection du type
+const media = computed(() => props.media || fetchedMedia.value)
+const isLoading = computed(() => !props.media && isFetching.value)
+
 const isImage = computed(() => media.value?.type === 'image')
 const isVideo = computed(() => media.value?.type === 'video')
 const isDocument = computed(() => media.value?.type === 'document')
 const isArchive = computed(() => media.value?.type === 'archive')
+const effectiveId = computed(() => props.media?.id || props.mediaId)
 </script>
 
 <template>
-  <div class="relative group overflow-hidden border border-border bg-muted w-24 h-24 sm:w-32 sm:h-32 flex items-center justify-center flex-shrink-0 shadow-sm transition-all hover:border-primary/50">
+  <div class="relative group overflow-hidden border border-border bg-muted w-full h-full flex items-center justify-center flex-shrink-0 transition-all">
 
     <div v-if="isLoading" class="p-2 text-muted-foreground flex flex-col items-center">
         <Loader2 class="w-4 h-4 animate-spin mb-1"/>
@@ -60,7 +64,7 @@ const isArchive = computed(() => media.value?.type === 'archive')
                 variant="outline"
                 size="icon"
                 class="h-8 w-8 bg-muted"
-                @click.prevent.stop="$emit('remove', mediaId)"
+                @click.prevent.stop="$emit('remove', effectiveId)"
                 type="button"
             >
                 <X class="w-4 h-4" />
