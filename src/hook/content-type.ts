@@ -26,6 +26,8 @@ const useGetContentType = (id: number) => {
   });
 };
 
+
+
 const useGetContentTypeById = (id: number | string) => {
   return useQuery({
     queryKey: ['content-types', id],
@@ -58,6 +60,19 @@ const useGetContentTypes = (filter?: Ref<contentTypeFilter> | contentTypeFilter)
   })
 }
 
+
+
+const useGetContentTypeArchived = (filter?: Ref<contentTypeFilter> | contentTypeFilter) => {
+  return useQuery({
+    queryKey: ['contentTypesArchived'],
+    queryFn: async () => {
+      const query = buildQueryParams(filter)
+      const response = await api(`/contentsArchived?${query}`)
+
+      return handleResponse<Pagination<ContentType>>(response)
+    }
+  })
+}
 
 
 // Hook get content type excepted
@@ -169,6 +184,7 @@ export {
   useRestoreContentType,
   useArchiveContentType,
   useGetContentTypeBySlug,
-  useGetContentTypesExcepted
+  useGetContentTypesExcepted,
+  useGetContentTypeArchived
 }
 

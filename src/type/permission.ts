@@ -12,5 +12,6 @@ export interface Permission {
 export interface permsFilter {
   archive: string,
   page?: number,
-  limit?: number
+  limit?: number,
+  search?: string
 }

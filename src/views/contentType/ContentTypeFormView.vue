@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Plus,
@@ -63,6 +63,9 @@ import CommandGroup from '../../components/ui/command/CommandGroup.vue'
 import CommandItem from '../../components/ui/command/CommandItem.vue'
 import CommandInput from '../../components/ui/command/CommandInput.vue'
 import CommandList from '../../components/ui/command/CommandList.vue'
+import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue'
+import CompositionControlledConfirmDialog from '../../components/composition/CompositionControlledConfirmDialog.vue'
+import { onMounted } from 'vue'
 
 
 const router = useRouter()
@@ -120,11 +123,44 @@ const resultTaxonomies = computed(() => taxonomies.value?.results || [])
 
 const visibleFields = computed(() => fields.value.slice(1))
 
+const isSlugCustom = ref(false);
+const isChangePageByUrl = ref(false);
+let resolveNavigation: (value: boolean) => void;
 
+
+let unregisterGuard: () => void;
+
+// Initialisation des données
+onMounted(() => {
+  unregisterGuard = router.beforeEach(async (to, from) => {
+    if (to.name !== from.name && EnregistrerBrouillon.value) {
+      isChangePageByUrl.value = true;
+
+      const userConfirmed = await new Promise<boolean>((resolve) => {
+        resolveNavigation = resolve;
+      });
+
+      return userConfirmed;
+    }
+    return true;
+  });
+})
+
+// On supprime la garde quand on quitte le composant
+onUnmounted(() => {
+  if (unregisterGuard) unregisterGuard();
+});
+
+
+
+// Cette fonction sera liée à l'événement @input de ton champ slug
+const handleSlugInput = () => {
+  isSlugCustom.value = true;
+};
 
 // Auto-générer le slug à partir du nom
 watch(() => form.value.name, (newName) => {
-  if (newName) {
+  if (newName && !isSlugCustom.value) {
     form.value.slug = newName
       .toLowerCase()
       .trim()
@@ -342,6 +378,35 @@ const cleanedFields = (fields: IFieldDefinition[]): IFieldDefinition[] => {
 
 
 
+const EnregistrerBrouillon = computed(() => {
+
+  const result = contentTypeSchema.safeParse(form.value)
+  const resultFields = fields.value.length > 1
+
+  if (result.success || resultFields) {
+    return true
+  } else {
+    return false
+  }
+})
+
+
+
+
+
+// Fonctions appelées par les événements du dialogue
+const confirmChangePageByUrl = () => {
+  isChangePageByUrl.value = false;
+  if (resolveNavigation) resolveNavigation(true);
+};
+
+const cancelChangePageByUrl = () => {
+  isChangePageByUrl.value = false;
+  if (resolveNavigation) resolveNavigation(false);
+};
+
+
+
 
 // Soumission
 const handleSubmit = () => {
@@ -425,7 +490,15 @@ const handleCancel = () => {
           </div>
 
           <div class="flex items-center gap-3">
-            <Button variant="outline" @click="handleCancel" class="rounded-xl h-12 px-6 font-bold hover:bg-muted active:scale-95">
+            <CompositionConfirmDialog v-if="EnregistrerBrouillon" @confirm="handleCancel" header="Quitter sans enregistrer" description="Êtes-vous sûr de vouloir quitter sans enregistrer ? Si vous le faite le formulaire sera reinitialiser." cancelText="Annuler" actionText="Quitter">
+             <template #dialogButton>
+              <Button variant="outline" class="rounded-xl h-12 px-6 font-bold hover:bg-muted active:scale-95">
+                <Undo2 class="w-4 h-4 mr-2" />
+                Annuler
+              </Button>
+             </template>
+            </CompositionConfirmDialog>
+            <Button v-else variant="outline" @click="handleCancel" class="rounded-xl h-12 px-6 font-bold hover:bg-muted active:scale-95">
               <Undo2 class="w-4 h-4 mr-2" />
               Annuler
             </Button>
@@ -438,7 +511,7 @@ const handleCancel = () => {
       </template>
     </CompositionPageHeader>
 
-    <div class="px-4 space-y-8">
+    <div class="space-y-8">
       <!-- Section Configuration de Base -->
       <section class="grid grid-cols-1 md:grid-cols-3 gap-2">
         <div class="md:col-span-2 space-y-6 p-8 card rounded-none">
@@ -461,6 +534,7 @@ const handleCancel = () => {
                   id="slug"
                   v-model="form.slug"
                   placeholder="identifiant-unique"
+                  @input="handleSlugInput"
                   class="input-custom"
                   :class="{ 'border border-destructive': errors.slug }"
                 />
@@ -932,6 +1006,16 @@ const handleCancel = () => {
         </div>
       </section>
     </div>
+     <!-- Dialogue de confirmation hybride contrôlé par prop pour quitter la page par url -->
+    <CompositionControlledConfirmDialog
+      :open="isChangePageByUrl"
+      @confirm="confirmChangePageByUrl"
+      @cancel="cancelChangePageByUrl"
+      header="Confirmation de changement"
+      description="Êtes-vous sûr de vouloir changer de page ? Vous pourriez perdre vos modifications en cours."
+      cancelText="Annuler"
+      actionText="Changer"
+    />
   </div>
 </template>
 

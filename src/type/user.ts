@@ -23,7 +23,8 @@ export interface UserProfile {
 export interface userFilter {
   archive: string,
   page?: number
-  limit?: number
+  limit?: number,
+  search?: string
 }
 
 export interface AuthResponse {

@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import CompositionTable from '@/components/composition/CompositionTable.vue'
 import Button from '@/components/ui/button/Button.vue'
-import { Archive, ArchiveRestore, ClipboardList, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-vue-next'
+import { Archive, ClipboardList, MoreHorizontal, Pencil, Plus } from 'lucide-vue-next'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
 import DropdownMenu from '../../components/ui/dropdown-menu/DropdownMenu.vue'
 import DropdownMenuTrigger from '../../components/ui/dropdown-menu/DropdownMenuTrigger.vue'
@@ -11,9 +11,8 @@ import DropdownMenuLabel from '../../components/ui/dropdown-menu/DropdownMenuLab
 import DropdownMenuSeparator from '../../components/ui/dropdown-menu/DropdownMenuSeparator.vue'
 import { cn } from '../../lib/utils'
 import Badge from '../../components/ui/badge/Badge.vue'
-import CompositionVerifyButton from '../../components/composition/CompositionVerifyButton.vue'
 import { useRouter } from 'vue-router'
-import { useGetContentTypes, useArchiveContentType, useRestoreContentType, useDeleteContentType } from '../../hook/content-type'
+import { useGetContentTypes, useArchiveContentType } from '../../hook/content-type'
 import CompositionLoading from '../../components/composition/CompositionLoading.vue'
 import CompositionError from '../../components/composition/CompositionError.vue'
 import type { ContentType } from '../../type/content-type'
@@ -40,10 +39,7 @@ const search = ref('')
 
 const router = useRouter()
 
-const filterOptions = [
-  { label: 'Actifs', value: 'false' },
-  { label: 'Archivés', value: 'true' }
-]
+
 
 const filterParams = computed(() => ({
     archive: filterArchiv.value,
@@ -79,16 +75,8 @@ const {
 } = useArchiveContentType();
 
 
-const {
-  mutateAsync: restoreContentType,
-  isPending: isLoadingRestoreContentType
-} = useRestoreContentType();
 
 
-const {
-  mutateAsync: deleteContentType,
-  isPending: isLoadingDeleteContentType
-} = useDeleteContentType();
 
 
 const filteredData = computed(() => {
@@ -107,19 +95,14 @@ const filteredData = computed(() => {
   })
 })
 
-const getStatusColor = (status: boolean) => {
-  switch (status) {
-    case false: return 'bg-success/20 text-success border-success/30'
-    case true: return 'bg-muted text-muted-foreground border-border'
-  }
+const getStatusColor = () => {
+    return 'bg-success/20 text-success border-success/30'
+   // case true: return 'bg-muted text-muted-foreground border-border'
 }
 
-const getStatusLabel = (status: boolean) => {
-
-  switch (status) {
-    case false: return 'Actif'
-    case true: return 'Archivé'
-  }
+const getStatusLabel = () => {
+    return 'Actif'
+   // case true: return 'Archivé'
 }
 
 const handleEdit = (row: ContentType) => {
@@ -139,29 +122,8 @@ const handleArchive = (id: number) => {
 }
 
 
-const handleRestore = (id: number) => {
-  restoreContentType(id, {
-    onSuccess: () => {
-      showToast("success", "Type de contenu restauré avec succès");
-      refetchContentTypes();
-    },
-    onError: (error) => {
-      handleError(error)
-    }
-  })
-}
 
-const handleDelete = (id: number) => {
-  deleteContentType(id, {
-    onSuccess: () => {
-      showToast("success", "Type de contenu supprimé avec succès");
-      refetchContentTypes();
-    },
-    onError: (error) => {
-      handleError(error)
-    }
-  })
-}
+
 
 
 
@@ -173,7 +135,7 @@ const handleCreate = () => {
 
 <template>
 
-  <CompositionLoading v-if="isLoadingContentTypes || isLoadingArchiveContentType || isLoadingRestoreContentType || isLoadingDeleteContentType" />
+  <CompositionLoading v-if="isLoadingContentTypes || isLoadingArchiveContentType " />
   <CompositionError v-else-if="isgetErrorContentTypes" :error="getErrorContentTypes?.message" />
 
   <div v-else class="min-h-screen space-y-10">
@@ -213,10 +175,7 @@ const handleCreate = () => {
                 v-model:search="search"
                 searchPlaceholder="Rechercher par nom ou slug..."
 
-                filterable
-                v-model:filterValue="filterArchiv"
-                :filterOptions="filterOptions"
-                filterPlaceholder="Statut"
+
               >
                 <!-- Custom rendering for Name column -->
 
@@ -234,12 +193,12 @@ const handleCreate = () => {
                 </template>
 
 
-                <template #cell-status="{ row }">
+                <template #cell-status="{  }">
                   <Badge
                     variant="outline"
-                    :class="cn('px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', getStatusColor(row.archive))"
+                    :class="cn('px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', getStatusColor())"
                   >
-                    {{ getStatusLabel(row.archive) }}
+                    {{ getStatusLabel() }}
                   </Badge>
                 </template>
 
@@ -254,8 +213,7 @@ const handleCreate = () => {
                       <DropdownMenuContent>
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator/>
-                        <CompositionVerifyButton :if="!row.archive">
-                          <DropdownMenuLabel >
+                        <DropdownMenuLabel >
                           <button @click="handleEdit(row)" class="text-text p-2 flex items-center gap-2 hover:scale-110 hover:text-primary">
                             <Pencil class="w-4 h-4" /> Modifier
                           </button>
@@ -270,26 +228,7 @@ const handleCreate = () => {
                               </template>
                             </CompositionConfirmDialog>
                           </DropdownMenuLabel>
-                        </CompositionVerifyButton>
-                        <CompositionVerifyButton :if="row.archive">
-                          <DropdownMenuLabel>
-                            <CompositionConfirmDialog @confirm="handleRestore(row.id)" header="Restoration de type de contenu" description="Êtes-vous sûr de vouloir restorer ?" cancelText="Annuler" actionText="Restorer" >
-                              <template #dialogButton>
-                                <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-primary">
-                                  <ArchiveRestore  class="w-4 h-4"  /> Restorer
-                                </button>
-                              </template>
-                            </CompositionConfirmDialog>
-                            <CompositionConfirmDialog @confirm="handleDelete(row.id)" header="Suppression de type de contenu" description="Êtes-vous sûr de vouloir supprimer définitivement ?" cancelText="Annuler" actionText="Supprimer" >
-                              <template #dialogButton>
-                                <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-destructive">
-                                  <Trash2  class="w-4 h-4"  /> Supprimer
-                                </button>
-                              </template>
-                            </CompositionConfirmDialog>
-                          </DropdownMenuLabel>
-                        </CompositionVerifyButton>
-                      </DropdownMenuContent>
+                        </DropdownMenuContent>
                     </DropdownMenu>
                 </template>
               </CompositionTable>
