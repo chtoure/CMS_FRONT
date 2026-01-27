@@ -113,9 +113,9 @@ const navigateToPreview = (entryId: number) => {
             </div>
             <div class="space-y-1">
               <h1 class="text-huge font-black tracking-tighter leading-none">
-                <span class="text-primary italic">Entrées de contenu </span>
+                <span class="text-primary italic">Corbeille des contenus </span>
               </h1>
-              <p class="text-background text-sm font-medium">Gérez l'ensemble de vos contenus dynamiques.</p>
+              <p class="text-background text-sm font-medium">Gérez l'ensemble de vos contenus supprimés.</p>
             </div>
           </div>
 

@@ -60,10 +60,12 @@ const getFieldValueAsArray = (fieldName: string) => {
             <!-- Media -->
             <div v-else-if="field.type === FieldType.MEDIA" class="flex flex-wrap gap-3">
                 <template v-if="getFieldValue(field.name)">
-                    <CompositionMediaPreview v-for="(id, idx) in getFieldValueAsArray(field.name)"
-                                  :key="String(id) + idx"
-                                  :mediaId="Number(id)"
-                                  :close-button="false"/>
+                    <div v-for="(id, idx) in getFieldValueAsArray(field.name)" :key="String(id) + idx" class="w-24 h-24 sm:w-32 sm:h-32">
+                        <CompositionMediaPreview
+                            :mediaId="Number(id)"
+                            :close-button="false"
+                        />
+                    </div>
                 </template>
                 <span v-else class="text-xs italic text-muted-foreground">Aucun média</span>
             </div>

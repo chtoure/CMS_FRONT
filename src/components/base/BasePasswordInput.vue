@@ -47,7 +47,7 @@ const handleInput = (event: Event) => {
             <button
                 type="button"
                 @click="showPassword = !showPassword"
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-text opacity-50 hover:opacity-100 transition-colors focus:outline-none"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-text opacity-50 hover:opacity-100 focus:outline-none"
             >
                 <Eye v-if="showPassword" class="size-5" />
                 <EyeOff v-else class="size-5" />

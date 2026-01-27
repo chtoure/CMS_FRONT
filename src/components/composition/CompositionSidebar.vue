@@ -185,7 +185,7 @@ const activeItem = computed(() => {
 
   <aside
     :class="cn(
-      'bg-sidebar border-r border-sidebar-border flex flex-col h-screen transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-2xl z-30',
+      'bg-sidebar border-r border-sidebar-border flex flex-col h-screen ease-[cubic-bezier(0.4,0,0.2,1)] shadow-2xl z-30',
       props.isCollapsed ? 'w-20' : 'w-72'
     )"
   >
@@ -194,7 +194,7 @@ const activeItem = computed(() => {
 
       <div
         :class="cn(
-          'flex items-center gap-3 transition-all duration-300 relative z-10',
+          'flex items-center gap-3 relative z-10',
           isOpen ? 'opacity-100' : 'hidden'
         )"
       >
@@ -203,7 +203,7 @@ const activeItem = computed(() => {
 
       </div>
 
-      <div v-if="isCollapsed" class="w-12 h-12 flex items-center justify-center relative z-10 transition-all">
+      <div v-if="isCollapsed" class="w-12 h-12 flex items-center justify-center relative z-10">
         <img v-if="params?.media?.type === 'image'" :src="params?.media?.file_path" alt="logo" class="object-contain">
         <video v-else-if="params?.media?.type === 'video'" autoplay loop muted :src="params?.media?.file_path" alt="logo" class="w-full  object-contain"></video>
       </div>
@@ -215,7 +215,7 @@ const activeItem = computed(() => {
           v-if="!item.children"
           :to="{ name: item.href, params: item.params }"
           :class="cn(
-            'flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-200',
+            'flex items-center gap-4 px-4 py-2 rounded-xl duration-200',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary',
             'relative group overflow-hidden mb-1',
             activeItem === item.id
@@ -227,7 +227,7 @@ const activeItem = computed(() => {
 
           <span
             :class="cn(
-              'transition-colors duration-200 relative z-10',
+              'relative z-10',
               activeItem === item.id ? 'text-white' : 'text-sidebar-foreground/70 group-hover:text-sidebar-primary'
             )"
           >
@@ -258,7 +258,7 @@ const activeItem = computed(() => {
             <DropdownMenuTrigger as-child>
               <button
                 :class="cn(
-                  'w-full flex items-center justify-center h-10 rounded-xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary',
+                  'w-full flex items-center justify-center h-10 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary',
                   isParentActive(item)
                     ? 'bg-primary text-white shadow-lg shadow-sidebar-primary/30'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary'
@@ -279,7 +279,7 @@ const activeItem = computed(() => {
                 <RouterLink
                   :to="{ name: child.href }"
                   :class="cn(
-                    'flex items-center gap-3 w-full px-2 py-1.5 text-sm transition-colors font-semibold capitalize',
+                    'flex items-center gap-3 w-full px-2 py-1.5 text-sm font-semibold capitalize',
                     activeItem === child.id ? 'text-sidebar-primary font-bold' : 'text-sidebar-foreground '
                   )"
                 >
@@ -294,7 +294,7 @@ const activeItem = computed(() => {
             <button
               @click="toggleMenu(item.id)"
               :class="cn(
-                'w-full flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-200',
+                'w-full flex items-center gap-4 px-4 py-2 rounded-xl',
                 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary',
                 isParentActive(item) && !openMenus[item.id] ? 'bg-sidebar-accent/50' : ''
               )"
@@ -330,7 +330,7 @@ const activeItem = computed(() => {
                   :key="child.id"
                   :to="{ name: child.href }"
                   :class="cn(
-                    'flex items-center gap-3 px-3 py-1.5 rounded-lg transition-all duration-200 text-sm capitalize',
+                    'flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm capitalize',
                     activeItem === child.id
                       ? 'bg-primary/10 text-primary font-bold'
                       : 'text-sidebar-foreground hover:text-sidebar-primary hover:bg-sidebar-accent'
@@ -357,7 +357,7 @@ const activeItem = computed(() => {
         :disabled="isLoggingOut"
         variant="ghost"
         :class="cn(
-          'w-full h-10 flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200',
+          'w-full h-10 flex items-center gap-4 px-4 py-3 rounded-xl',
           'text-destructive hover:bg-destructive hover:opacity-50 hover:text-white',
           'font-semibold text-sm'
         )"

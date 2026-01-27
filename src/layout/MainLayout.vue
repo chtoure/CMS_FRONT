@@ -58,7 +58,7 @@ const toggleSidebar = () => {
 </script>
 
 <template>
-  <div class="flex h-screen bg-background overflow-hidden relative">
+  <div class="flex h-screen bg-background overflow-hidden">
 
     <div
       :class="cn(
@@ -75,7 +75,7 @@ const toggleSidebar = () => {
 
     <div
       v-if="!isSidebarCollapsed && isMobile"
-      class="fixed inset-0 bg-black/50 z-40 lg:hidden animate-in fade-in duration-300"
+      class="fixed inset-0 bg-black/50 z-40 lg:hidden transition-all duration-500 ease-in-out"
       @click="toggleSidebar"
     ></div>
 
