@@ -1,3 +1,4 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
 import { ref, watch, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -17,7 +18,9 @@ import {
   List,
   Link2,
   Save,
-  Undo2
+  Undo2,
+  ChevronsUpDown,
+  Check
 } from 'lucide-vue-next'
 import {
   FieldType,
@@ -28,7 +31,8 @@ import {
   type IMediaConfig,
   type ITextConfig,
   type INumberConfig,
-  type IRichTextConfig
+  type IRichTextConfig,
+  TypesMedia
 } from '../../type/field'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
 import Button from '../../components/ui/button/Button.vue'
@@ -46,17 +50,31 @@ import BaseSwitch from '../../components/base/BaseSwitch.vue'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs'
 import { showToast } from '../../lib/toast'
 import { contentTypeSchema } from '../../validation/contentTypeValidate'
-import { useUpdateContentType, useGetContentTypeById, useGetContentTypes } from '../../hook/content-type'
+import { useUpdateContentType, useGetContentTypeById, useGetContentTypesExcepted } from '../../hook/content-type'
 import CompositionLoading from '../../components/composition/CompositionLoading.vue'
 import { handleError } from '../../lib/error'
-import {useGetTaxonomiesNoPaginate} from '../../hook/taxonomy'
+import {useGetTaxonomies} from '../../hook/taxonomy'
+import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue'
+import CompositionControlledConfirmDialog from '../../components/composition/CompositionControlledConfirmDialog.vue'
+
 
 
 import type { ContentType } from '../../type/content-type'
+import { cn } from '../../lib/utils'
+import Popover from '../../components/ui/popover/Popover.vue'
+import PopoverContent from '../../components/ui/popover/PopoverContent.vue'
+import Command from '../../components/ui/command/Command.vue'
+import CommandInput from '../../components/ui/command/CommandInput.vue'
+import CommandEmpty from '../../components/ui/command/CommandEmpty.vue'
+import CommandList from '../../components/ui/command/CommandList.vue'
+import CommandGroup from '../../components/ui/command/CommandGroup.vue'
+import CommandItem from '../../components/ui/command/CommandItem.vue'
+import PopoverTrigger from '../../components/ui/popover/PopoverTrigger.vue'
 
 const router = useRouter()
 const route = useRoute()
 const contentTypeId = route.params.id as string
+const isEntries = ref(false)
 
 // État du formulaire principal
 const form = ref({
@@ -68,12 +86,22 @@ const form = ref({
 
 const isFieldsExpanded = ref(true)
 
-const messageErrorNameChamp = ref('');
 const messageErrorTypeChamp = ref('');
 
 
 // État des erreurs de validation
 const errors = ref<Record<string, string>>({})
+
+
+const open = ref(false)
+const triggerRef = ref<HTMLElement | null>(null)
+const width = ref(0)
+
+watch(open, (newOpen) => {
+  if (newOpen && triggerRef.value) {
+    width.value = triggerRef.value.offsetWidth
+  }
+})
 
 // Liste des champs (fields_schema)
 // On utilise any[] pour le ref pour éviter l'erreur d'instanciation trop profonde de TS avec Vue + Unions complexes
@@ -85,6 +113,8 @@ const {
   isPending: isDataLoading,
 } = useGetContentTypeById(contentTypeId)
 
+
+
 const {
   mutateAsync: updateContentType,
   isPending: isUpdating,
@@ -93,14 +123,16 @@ const {
 const {
   data: contentTypes,
   isPending: isContentTypesLoading,
-} = useGetContentTypes()
+} = useGetContentTypesExcepted(Number(contentTypeId))
 
 
 const {
   data: taxonomies,
   isPending: isTaxonomiesLoading,
-} = useGetTaxonomiesNoPaginate()
+} = useGetTaxonomies()
 
+
+const resultTaxonomies = computed(() => taxonomies.value?.results || [])
 
 // Initialisation des données
 onMounted(() => {
@@ -112,6 +144,9 @@ onMounted(() => {
 watch(contentTypeData, (newData) => {
   if (newData) {
     populateForm(newData)
+    if (newData.entries && newData.entries.length > 0) {
+      isEntries.value = true
+    }
   }
 })
 
@@ -122,59 +157,42 @@ const populateForm = (data: ContentType) => {
     description: data.description || '',
     archive: !!data.archive
   }
-  fields.value = JSON.parse(JSON.stringify(data.fields_schema || []))
+
+  // Transformation initiale : options en objets pour suivi granulaire
+  const rawFields = JSON.parse(JSON.stringify(data.fields_schema || []));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fields.value = rawFields.map((f: any) => {
+    if (f.type === FieldType.SELECT && Array.isArray(f.options)) {
+      f.options = f.options.map((opt: any) => ({ value: opt }));
+    }
+    return f;
+  });
 }
 
 const visibleFields = computed(() => fields.value.slice(1))
 
-// Changer le nom d'un champ s'il est déjà utilisé
-const handleNameChange = (index: number) => {
-  if (index === 0) return;
-
-  const currentField = fields.value[index];
-
-  // On aligne juste la saisie sur ce que le backend va faire
-  // pour que la comparaison 'includes' fonctionne à 100%
-  currentField.name = currentField.name.toLowerCase().trim().replace(/\s+/g, '_');
-
-  // Reseter le message d'erreur
-  messageErrorNameChamp.value = '';
-
-  const otherNames = fields.value
-    .filter((_, i) => i !== index)
-    .map(f => f.name.toLowerCase().trim()); // Sécurité supplémentaire
-
-
-  if (currentField.name.length === 0) {
-    messageErrorNameChamp.value = "Le nom du champ ne peut pas être vide.";
-    return;
-  }
-
-  // L'utilisateur tente d'utiliser "title"
-  if (currentField.name === 'title') {
-    let suffix = 1;
-    let newName = 'title_1';
-    while (otherNames.includes(newName)) {
-      suffix++;
-      newName = `title_${suffix}`;
-    }
-    currentField.name = newName;
-    return;
-  }
-
-  // Doublon avec un autre champ personnalisé
-  if (otherNames.includes(currentField.name)) {
-    messageErrorNameChamp.value = "Ce nom technique est déjà utilisé par un autre champ.";
-  }
-
-};
-
-// Gestion de l'expansion des champs
+  // Gestion de l'expansion des champs
 const expandedFieldIndex = ref<number | null>(null)
 
 const toggleExpand = (index: number) => {
   expandedFieldIndex.value = expandedFieldIndex.value === index ? null : index
 }
+
+const toggleType = (field: IMediaConfig, type: TypesMedia) => {
+  // Initialise le tableau s'il n'existe pas
+  if (!field.allowedTypes) {
+    field.allowedTypes = [];
+  }
+
+  const index = field.allowedTypes.indexOf(type);
+  if (index > -1) {
+    // Si le type existe déjà, on le retire
+    field.allowedTypes.splice(index, 1);
+  } else {
+    // Sinon, on l'ajoute
+    field.allowedTypes.push(type);
+  }
+};
 
 // Types de champs disponibles
 const fieldTypes = [
@@ -188,23 +206,24 @@ const fieldTypes = [
   { type: FieldType.RELATION, label: 'Relation', icon: Link2, description: 'Lien vers un autre type de contenu' },
 ]
 
+const generateUniqueName = (baseName: string) => {
+  // Génère une chaîne aléatoire complexe (ex: field_8f9d2b1a)
+  return `${baseName}_${crypto.randomUUID().split('-')[0]}`;
+};
+
 // Ajouter un nouveau champ
 const addField = () => {
   const baseName = 'champ'
-  let index = fields.value.length + 1
-  let newName = `${baseName}_${index}`
+  const newName = generateUniqueName(baseName)
 
-  while (fields.value.some(f => f.name === newName)) {
-    newName = `${baseName}_${++index}`
-  }
-
-  const newField: IFieldDefinition = {
+  const newField: IFieldDefinition & { _isNew?: boolean } = {
     type: FieldType.TEXT,
     name: newName,
     label: '',
     required: false,
     placeholder: '',
-    description: ''
+    description: '',
+    _isNew: true // Marqueur pour désactiver les confirmations
   }
 
   fields.value.push(newField)
@@ -251,7 +270,7 @@ watch(fieldTypesList, (newTypes) => {
     if (type === FieldType.MEDIA) {
       const mediaField = field as IMediaConfig
       if (!mediaField.allowedTypes) {
-        mediaField.allowedTypes = ['image']
+        mediaField.allowedTypes = [TypesMedia.IMAGE]
         mediaField.multiple = false
       }
       if (mediaField.multiple === undefined) mediaField.multiple = false
@@ -270,16 +289,17 @@ const duplicateField = (index: number) => {
   const source = fields.value[index]
   const duplicate = JSON.parse(JSON.stringify(source))
 
-  let newName = `${duplicate.name}_copy`
-  let suffix = 1
-  while (fields.value.some(f => f.name === newName)) {
-    newName = `${duplicate.name}_copy_${suffix++}`
-  }
+  const newName = generateUniqueName(source.name)
 
   duplicate.name = newName
   duplicate.label = duplicate.label ? `${duplicate.label} (Copie)` : ''
-  fields.value.splice(index + 1, 0, duplicate)
-  expandedFieldIndex.value = index + 1
+  duplicate._isNew = true // Nouveau champ (duplicata)
+
+  // Ajout à la fin du tableau
+  fields.value.push(duplicate)
+
+  // Ouvrir le champ (l'index est maintenant le dernier élément)
+  expandedFieldIndex.value = fields.value.length - 1
 }
 
 // Utilitaires de rendu
@@ -323,6 +343,15 @@ const cleanedFields = (fieldsArray: IFieldDefinition[]): IFieldDefinition[] => {
     }
 
 
+    if (f.type===FieldType.SELECT) {
+      if ((f as any).options.length === 0) {
+        messageErrorTypeChamp.value = 'Veuillez selectionner des options'
+      } else {
+        messageErrorTypeChamp.value = ''
+      }
+    }
+
+
     switch (f.type) {
       case FieldType.TEXT:
         return { ...base, type: FieldType.TEXT, minLength: (f as ITextConfig).minLength, maxLength: (f as ITextConfig).maxLength, pattern: (f as ITextConfig).pattern, defaultValue: f.defaultValue }
@@ -333,7 +362,10 @@ const cleanedFields = (fieldsArray: IFieldDefinition[]): IFieldDefinition[] => {
       case FieldType.TAXONOMY:
         return { ...base, type: FieldType.TAXONOMY, taxonomy_slug: (f as ITaxonomyConfig).taxonomy_slug, multiple: (f as ITaxonomyConfig).multiple, renderType: (f as ITaxonomyConfig).renderType, defaultValue: f.defaultValue }
       case FieldType.SELECT:
-        return { ...base, type: FieldType.SELECT, options: (f as ISelectConfig).options, multiple: (f as ISelectConfig).multiple, defaultValue: f.defaultValue }
+        const selectOptions = (f as any).options.map((opt: any) =>
+          (opt && typeof opt === 'object' && 'value' in opt) ? opt.value : opt
+        );
+        return { ...base, type: FieldType.SELECT, options: selectOptions, multiple: (f as ISelectConfig).multiple, defaultValue: f.defaultValue }
       case FieldType.RICH_TEXT:
         return { ...base, type: FieldType.RICH_TEXT, toolbar: (f as IRichTextConfig).toolbar, defaultValue: f.defaultValue }
       case FieldType.RELATION:
@@ -370,14 +402,7 @@ const handleSubmit = () => {
     return
   }
 
-  if (messageErrorNameChamp.value.length > 0) {
-    showToast('error', 'Veuillez corriger les erreurs dans les champs personnalisés')
-    return
-  }
-
-
-   const NetoyageFields = cleanedFields(fields.value as IFieldDefinition[])
-
+  const NetoyageFields = cleanedFields(fields.value as IFieldDefinition[])
 
   if (messageErrorTypeChamp.value.length > 0) {
     showToast('error', messageErrorTypeChamp.value)
@@ -411,6 +436,53 @@ const handleSubmit = () => {
 const handleCancel = () => {
   router.back()
 }
+
+
+const pendingChange = ref<{ field: IFieldDefinition, type: FieldType } | null>(null);
+const isTypeDialogOpen = ref(false);
+
+const handleTypeAttempt = (field: IFieldDefinition & { _isNew?: boolean, _typeConfirmed?: boolean }, newType: FieldType | null | string) => {
+  if (!newType) return;
+  const targetType = newType as FieldType;
+
+  // Pas de confirmation si :
+  // 1. C'est un nouveau champ
+  // 2. Le changement de type a déjà été confirmé pour ce champ dans cette session
+  if (field._isNew || field._typeConfirmed) {
+    field.type = targetType;
+    return;
+  }
+
+  const sensitiveTypes = [
+    FieldType.MEDIA,
+    FieldType.RELATION,
+    FieldType.TAXONOMY,
+    FieldType.SELECT
+  ];
+
+  if (sensitiveTypes.includes(targetType) && field.type !== targetType) {
+    pendingChange.value = { field, type: targetType };
+    isTypeDialogOpen.value = true;
+  } else {
+    field.type = targetType;
+  }
+};
+
+const confirmChange = () => {
+  if (pendingChange.value) {
+    const field = pendingChange.value.field as any;
+    field.type = pendingChange.value.type;
+    field._typeConfirmed = true; // Marquer comme confirmé pour la session
+
+    // Forcer la réactivité
+    fields.value = [...fields.value];
+    pendingChange.value = null;
+  }
+  isTypeDialogOpen.value = false;
+};
+
+
+
 </script>
 
 <template>
@@ -483,7 +555,7 @@ const handleCancel = () => {
                 :rows="4"
                 v-model="form.description"
                 placeholder="Décrivez à quoi sert ce type de contenu..."
-                class="input-custom"
+                class="input-custom h-20"
                 :class="{ 'border border-destructive': errors.description }"
               />
               <p v-if="errors.description" class="text-xs text-destructive px-1 font-medium italic animate-in slide-in-from-top-1">{{ errors.description }}</p>
@@ -529,7 +601,7 @@ const handleCancel = () => {
           <div class="grid grid-cols-[80px_1fr_1fr_1fr] px-6 py-3 bg-muted/20 border-b border-border text-xs font-bold text-text">
             <div>N°</div>
             <div>Libellé</div>
-            <div>Nom</div>
+            <div>Placeholder</div>
             <div>Type</div>
           </div>
 
@@ -559,12 +631,17 @@ const handleCancel = () => {
                   <div v-if="expandedFieldIndex === fields.indexOf(field)" class="flex items-center gap-3 mt-1 text-[10px] font-bold text-primary animate-in fade-in slide-in-from-left-1">
                      <button @click.stop="duplicateField(fields.indexOf(field))" class="hover:text-primary/70">Dupliquer</button>
                      <span class="text-border">|</span>
-                     <button @click.stop="removeField(fields.indexOf(field))" class="text-destructive hover:text-destructive/70">Supprimer</button>
+                     <CompositionConfirmDialog v-if="!field._isNew && isEntries" @confirm="() => removeField(fields.indexOf(field))" header="Suppression d'un champ" description="Êtes-vous sûr de vouloir supprimer cet champs ? Si vous le supprimer vous perdez toutes les données de cet champ." cancelText="Annuler" actionText="supprimer" >
+                        <template #dialogButton>
+                          <button @click.stop class="text-destructive hover:text-destructive/70">Supprimer</button>
+                        </template>
+                     </CompositionConfirmDialog>
+                     <button v-else @click.stop="removeField(fields.indexOf(field))" class="text-destructive hover:text-destructive/70">Supprimer</button>
                   </div>
                 </div>
 
                 <div class="text-muted-foreground font-medium">
-                  {{ field.name }}
+                  {{ field.placeholder }}
                 </div>
 
                 <div class="flex items-center gap-2">
@@ -595,15 +672,30 @@ const handleCancel = () => {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div class="col-span-1 space-y-3">
                         <Label class="text-xs font-medium text-text">Type de champ</Label>
-                        <Select v-model="field.type">
+                        <Select v-if="!field._isNew && isEntries" :model-value="field.type" @update:model-value="(val) => handleTypeAttempt(field, val as FieldType)">
                           <SelectTrigger class="input-custom">
                             <SelectValue placeholder="Choisir un type" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectGroup>
-                              <SelectItem v-for="ft in fieldTypes" :key="ft.type" :value="ft.type" class="select-item-custom">
+                              <SelectItem v-for="ft in fieldTypes" :key="ft.type" :value="ft.type" class="select-item-custom text-primary hover:text-white">
                                 <div class="flex items-center gap-2">
-                                  <component :is="ft.icon" class="w-4 h-4 text-primary" />
+                                  <component :is="ft.icon" class="w-4 h-4" />
+                                  <span class="font-medium">{{ ft.label }}</span>
+                                </div>
+                              </SelectItem>
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                        <Select v-else v-model="field.type">
+                          <SelectTrigger class="input-custom">
+                            <SelectValue placeholder="Choisir un type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectItem v-for="ft in fieldTypes" :key="ft.type" :value="ft.type" class="select-item-custom text-primary hover:text-white">
+                                <div class="flex items-center gap-2">
+                                  <component :is="ft.icon" class="w-4 h-4" />
                                   <span class="font-medium">{{ ft.label }}</span>
                                 </div>
                               </SelectItem>
@@ -618,9 +710,8 @@ const handleCancel = () => {
                           <Input v-model="field.label" placeholder="Texte affiché à l'utilisateur" class="input-custom" />
                         </div>
                         <div class="space-y-2">
-                          <Label class="text-xs font-medium text-text">Identifiant (Name)</Label>
-                          <Input v-model="field.name" @change="handleNameChange(vIndex+1)" placeholder="identifiant_unique" class="input-custom" />
-                          <span v-if="messageErrorNameChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorNameChamp }}</span>
+                          <Label class="text-xs font-medium text-text"> Placeholder </Label>
+                          <Input v-model="field.placeholder" placeholder="Texte affiché en exemple" class="input-custom"/>
                         </div>
                       </div>
                     </div>
@@ -630,26 +721,25 @@ const handleCancel = () => {
                       <div v-if="field.type === FieldType.SELECT" class="space-y-4">
                         <div class="flex items-center justify-between">
                           <Label class="text-xs font-bold text-text">Options de sélection</Label>
+                          <p v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</p>
                           <Button
                             variant="ghost"
                             size="sm"
-                            @click="(field as ISelectConfig).options.push('')"
+                            @click="(field as any).options.push({ value: '', _isNew: true })"
                             class="text-text font-bold hover:bg-transparent hover:text-primary"
                           >
                             <Plus class="w-4 h-4 mr-1" /> Ajouter une option
                           </Button>
                         </div>
                         <div class="space-y-2">
-                          <div v-for="(_, oIdx) in (field as ISelectConfig).options" :key="oIdx" class="flex gap-2 items-center">
+                          <div v-for="(option, oIdx) in (field as any).options" :key="oIdx" class="flex gap-2 items-center">
                             <Select
-                              :model-value="typeof (field as ISelectConfig).options[oIdx] === 'number' ? 'number' : 'string'"
+                              :model-value="typeof option.value === 'number' ? 'number' : 'string'"
                               @update:model-value="(val) => {
-                                const options = (field as ISelectConfig).options;
-                                const currentVal = options[oIdx];
                                 if (val === 'number') {
-                                  options[oIdx] = isNaN(Number(currentVal)) ? 0 : Number(currentVal);
+                                  option.value = isNaN(Number(option.value)) ? 0 : Number(option.value);
                                 } else {
-                                  options[oIdx] = String(currentVal);
+                                  option.value = String(option.value);
                                 }
                               }"
                             >
@@ -662,13 +752,20 @@ const handleCancel = () => {
                               </SelectContent>
                             </Select>
                             <Input
-                              :key="oIdx + '-' + typeof (field as ISelectConfig).options[oIdx]"
-                              v-model="(field as ISelectConfig).options[oIdx]"
-                              :type="typeof (field as ISelectConfig).options[oIdx] === 'number' ? 'number' : 'text'"
+                              :key="oIdx + '-' + typeof option.value"
+                              v-model="option.value"
+                              :type="typeof option.value === 'number' ? 'number' : 'text'"
                               placeholder="Valeur de l'option"
                               class="input-custom"
                             />
-                            <Button variant="ghost" size="icon" @click="(field as ISelectConfig).options.splice(oIdx, 1)" class="text-destructive">
+                            <CompositionConfirmDialog v-if="!field._isNew && !option._isNew && isEntries" @confirm="(field as any).options.splice(oIdx, 1)" header="Suppression d'une option" description="Êtes-vous sûr de vouloir supprimer cette option ? Si vous la supprimez, vous perdrez toutes les données associées." cancelText="Annuler" actionText="supprimer" >
+                              <template #dialogButton>
+                                <Button variant="ghost" size="icon" class="text-destructive">
+                                  <X class="w-4 h-4" />
+                                </Button>
+                              </template>
+                            </CompositionConfirmDialog>
+                            <Button v-else variant="ghost" size="icon" @click="(field as any).options.splice(oIdx, 1)" class="text-destructive">
                               <X class="w-4 h-4" />
                             </Button>
                           </div>
@@ -676,79 +773,143 @@ const handleCancel = () => {
                       </div>
 
                       <!-- Type TAXONOMY -->
-                      <div v-if="field.type === FieldType.TAXONOMY" class="grid grid-cols-2 gap-4">
-                        <div class="space-y-2">
-                          <Label class="text-xs font-medium text-text">Categorie</Label>
-                          <Select v-model="(field as ITaxonomyConfig).taxonomy_slug">
-                            <SelectTrigger class="input-custom">
-                              <SelectValue placeholder="Choisir une categorie" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem v-for="(taxonomy, tIdx) in taxonomies" :key="tIdx" :value="taxonomy.slug" class="select-item-custom">
-                                {{ taxonomy.name }}
-                              </SelectItem>
+                      <div v-if="field.type === FieldType.TAXONOMY">
+                          <div v-if="resultTaxonomies && resultTaxonomies.length > 0" class="grid grid-cols-2 gap-4">
+                            <div class="space-y-2">
+                              <Label class="text-xs font-medium text-text">Categorie</Label>
+                              <Select v-model="(field as ITaxonomyConfig).taxonomy_slug">
+                                <SelectTrigger class="input-custom">
+                                  <SelectValue placeholder="Choisir une categorie" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem v-for="(taxonomy, tIdx) in resultTaxonomies" :key="tIdx" :value="taxonomy.slug" class="select-item-custom">
+                                    {{ taxonomy.name }}
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <span v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</span>
+                            </div>
+                            <div class="space-y-2">
+                              <Label class="text-xs font-medium text-text">Mode d'affichage</Label>
+                              <Select v-model="(field as ITaxonomyConfig).renderType">
+                                <SelectTrigger class="input-custom">
+                                  <SelectValue placeholder="Choisir un type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectGroup class="font-medium text-text">
+                                    <SelectItem value="combobox" class="select-item-custom">Combobox</SelectItem>
+                                    <SelectItem value="badges" class="select-item-custom">Badges</SelectItem>
+                                    <SelectItem value="checkbox" class="select-item-custom">Checkbox</SelectItem>
+                                  </SelectGroup>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <div v-else>
+                            <p class="text-xs font-medium text-text">Aucune categorie disponible ou non archivée</p>
+                          </div>
+                        </div>
+
+
+                      <!-- Type RELATION -->
+                       <div v-if="field.type === FieldType.RELATION">
+                          <div v-if="contentTypes && contentTypes.length > 0" class="space-y-3">
+                            <Label class="text-xs font-medium text-text">Cible de la relation</Label>
+                            <Select v-model="(field as IRelationConfig).contentTypeId">
+                              <SelectTrigger class="input-custom">
+                                <SelectValue placeholder="Choisir un contenu" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
+                                  <SelectItem v-for="ft in contentTypes" :key="ft.slug" :value="ft.id" class="select-item-custom">
+                                    <span class="font-medium">{{ ft.slug }}</span>
+                                </SelectItem>
+                              </SelectGroup>
                             </SelectContent>
                           </Select>
                           <span v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</span>
                         </div>
-                        <div class="space-y-2">
-                          <Label class="text-xs font-medium text-text">Mode d'affichage</Label>
-                          <Select v-model="(field as ITaxonomyConfig).renderType">
-                            <SelectTrigger class="input-custom">
-                              <SelectValue placeholder="Choisir un type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup class="font-medium text-text">
-                                <SelectItem value="combobox" class="select-item-custom">Combobox</SelectItem>
-                                <SelectItem value="badges" class="select-item-custom">Badges</SelectItem>
-                                <SelectItem value="checkbox" class="select-item-custom">Checkbox</SelectItem>
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
+                        <div v-else>
+                          <p class="text-xs font-medium text-text">Aucun type de  contenu disponible ou non archivé</p>
                         </div>
                       </div>
 
-                      <!-- Type RELATION -->
-                      <div v-if="field.type === FieldType.RELATION" class="space-y-3">
-                        <Label class="text-xs font-medium text-text">Cible de la relation</Label>
-                        <Select v-model="(field as IRelationConfig).contentTypeId">
-                          <SelectTrigger class="input-custom">
-                            <SelectValue placeholder="Choisir un contenu" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectGroup>
-                              <SelectItem v-for="ft in contentTypes" :key="ft.slug" :value="ft.id" class="select-item-custom">
-                                <span class="font-medium">{{ ft.slug }}</span>
-                              </SelectItem>
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
-                        <span v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</span>
+                      <!-- Type RICH_TEXT -->
+                      <div v-if="field.type === FieldType.RICH_TEXT" class="space-y-4">
+                        <div class="grid grid-cols-2 sm:grid-cols-2 gap-3">
+                          <div class="space-y-2">
+                            <Label class="text-xs font-medium text-text">Toolbar</Label>
+                            <Select v-model="(field as IRichTextConfig).toolbar">
+                              <SelectTrigger class="input-custom">
+                                <SelectValue placeholder="Choisir un toolbar" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
+                                  <SelectItem value="minimal" class="select-item-custom">minimal</SelectItem>
+                                  <SelectItem value="full" class="select-item-custom">full</SelectItem>
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
                       </div>
 
                       <!-- Multiple pour MEDIA, TAXONOMY, SELECT, RELATION -->
                       <div v-if="[FieldType.MEDIA, FieldType.TAXONOMY, FieldType.SELECT, FieldType.RELATION].includes(field.type)" class="space-y-4 p-4 bg-muted/10 rounded-xl border border-border">
-                          <div v-if="field.type === FieldType.MEDIA" class="space-y-4 border-border pb-4">
-                            <Label class="text-xs font-medium text-text">Types de fichiers autorisés</Label>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              <div class="flex items-center justify-between p-3 border border-border rounded-xl">
-                                <span class="text-xs font-medium text-text">Images</span>
-                                <BaseSwitch
-                                  :model-value="!!(field as IMediaConfig).allowedTypes.includes('image')"
-                                  @update:model-value="(val) => (field as IMediaConfig).allowedTypes = val ? [...(field as IMediaConfig).allowedTypes, 'image'] : (field as IMediaConfig).allowedTypes.filter((t) => t !== 'image')"
-                                />
-                              </div>
-                              <div class="flex items-center justify-between p-3 border border-border rounded-xl">
-                                <span class="text-xs font-medium text-text">Vidéos</span>
-                                <BaseSwitch
-                                  :model-value="!!(field as IMediaConfig).allowedTypes.includes('video')"
-                                  @update:model-value="(val) => (field as IMediaConfig).allowedTypes = val ? [...(field as IMediaConfig).allowedTypes, 'video'] : (field as IMediaConfig).allowedTypes.filter((t) => t !== 'video')"
-                                />
-                              </div>
-                            </div>
-                          </div>
+                          <div v-if="field.type === FieldType.MEDIA" class="grid grid-cols-2 sm:grid-cols-2 gap-3">
+                          <div class="space-y-4">
+                            <Label class="text-xs font-medium text-tex">Types de fichiers autorisés</Label>
+                            <Popover v-model:open="open">
+                              <PopoverTrigger as-child>
+                                <Button
+                                  ref="triggerRef"
+                                  variant="outline"
+                                  role="combobox"
+                                  class="input-custom w-full relative flex items-center justify-center font-normal h-8"
+                                >
+                                  <span class="truncate text-center mx-8">
+                                    {{ field.allowedTypes.length > 0
+                                        ? `${field.allowedTypes.length} type(s) de fichier selectionée(s)`
+                                        : "Choisir les types de fichiers..."
+                                    }}
+                                  </span>
 
-                          <div class="flex items-center justify-between px-2">
+                                  <ChevronsUpDown class="absolute right-3 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+
+                              <PopoverContent :style="{ width: `${width}px` }" class="p-0">
+                                <Command>
+                                  <CommandInput placeholder="Rechercher un type de fichier..." />
+                                  <CommandEmpty>Aucun type de fichier trouvé.</CommandEmpty>
+                                  <CommandList class="group custom-scrollbar">
+                                    <CommandGroup>
+                                      <CommandItem
+                                        v-for="type in Object.values(TypesMedia)"
+                                        :key="type"
+                                        :value="type"
+                                        class="cursor-pointer data-[highlighted]:bg-primary data-[highlighted]:text-white group-hover:data-[highlighted]:bg-transparent group-hover:data-[highlighted]:text-foreground hover:!bg-primary hover:!text-white"
+                                        @select="toggleType(field,type)"
+                                      >
+                                        <Check
+                                          :class="cn(
+                                            'mr-2 h-4 w-4',
+                                            (field as IMediaConfig).allowedTypes.includes(type) ? 'opacity-100' : 'opacity-0'
+                                          )"
+                                        />
+                                        <div class="flex flex-col">
+                                          <span>{{ type }}</span>
+                                        </div>
+                                      </CommandItem>
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        </div>
+
+                          <div :class="field.type === FieldType.MEDIA ? 'flex items-center justify-between px-2 border border-border rounded-xl p-4' : 'flex items-center justify-between px-2' ">
                             <div class="space-y-0.5">
                               <Label class="text-xs font-medium text-text">Sélections multiples</Label>
                               <p class="text-xs text-muted-foreground font-medium">Permettre de choisir plusieurs éléments</p>
@@ -796,6 +957,13 @@ const handleCancel = () => {
                             </div>
                          </div>
                       </div>
+
+                      <div v-if="field.type === FieldType.MEDIA" class="space-y-4">
+                        <div class="space-y-2">
+                          <Label class="text-xs font-medium text-text">Max Size</Label>
+                          <Input type="number" v-model="(field as IMediaConfig).maxSize" placeholder="Taille Max" class="input-custom" />
+                        </div>
+                      </div>
                     </div>
                   </TabsContent>
                 </Tabs>
@@ -831,5 +999,17 @@ const handleCancel = () => {
         </div>
       </section>
     </div>
+
+    <!-- Dialogue de confirmation hybride contrôlé par prop pour le changement de type -->
+    <CompositionControlledConfirmDialog
+      :open="isTypeDialogOpen"
+      @update:open="(val: boolean) => isTypeDialogOpen = val"
+      @confirm="confirmChange"
+      @cancel="isTypeDialogOpen = false"
+      header="Confirmation de changement"
+      description="Êtes-vous sûr de vouloir changer le type de champ ? Si vous le changez, vous pourriez perdre les données de ce champ."
+      cancelText="Annuler"
+      actionText="Changer"
+    />
   </div>
 </template>

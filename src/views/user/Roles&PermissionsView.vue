@@ -23,7 +23,7 @@ import CompositionLoading from '../../components/composition/CompositionLoading.
 import CompositionError from '../../components/composition/CompositionError.vue';
 import type { Role, RoleUpdate } from '../../type/role';
 import type { Permission } from '../../type/permission';
-import { useDeletePermission, useGetPermissions, useGetPermissionsNoPaginate, useRestorePermission } from '../../hook/permission';
+import { useDeletePermission, useGetPermissions, useRestorePermission } from '../../hook/permission';
 import Button from '../../components/ui/button/Button.vue';
 import { useUpdateRole } from '../../hook/role';
 import { showToast } from '../../lib/toast';
@@ -179,7 +179,10 @@ watch([currentPagePerms, itemsPerPagePerms, filterArchivPerms], () => {
 const {
   data:dataPermissionsNoPaginate,
   isLoading: loadingPermissionNoPaginate,
-} = useGetPermissionsNoPaginate()
+} = useGetPermissions()
+
+
+const resultPermissionsNoPaginate = computed(() => dataPermissionsNoPaginate.value?.results || []);
 
 
 // Hook update Role
@@ -506,13 +509,13 @@ const handleRoleCancel = () => {
                                 <Command>
                                   <CommandInput placeholder="Rechercher une permission..." />
                                   <CommandEmpty>Aucune permission trouvée.</CommandEmpty>
-                                  <CommandList>
+                                  <CommandList class="group custom-scrollbar">
                                     <CommandGroup>
                                       <CommandItem
-                                        v-for="p in dataPermissionsNoPaginate"
+                                        v-for="p in resultPermissionsNoPaginate"
                                         :key="p.id"
                                         :value="p.name"
-                                        class="cursor-pointer data-[highlighted]:bg-primary data-[highlighted]:text-white"
+                                        class="cursor-pointer data-[highlighted]:bg-primary data-[highlighted]:text-white group-hover:data-[highlighted]:bg-transparent group-hover:data-[highlighted]:text-foreground hover:!bg-primary hover:!text-white"
                                         @select="togglePermission(p)"
                                       >
                                         <Check

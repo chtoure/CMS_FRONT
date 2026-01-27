@@ -11,6 +11,20 @@ enum FieldType {
   RELATION = 'relation'
 }
 
+
+enum TypesMedia {
+  IMAGE = 'image',
+  VIDEO = 'video',
+  PDF = 'pdf',
+  MSWORD = 'msword',
+  OFFICEDOCUMENT = 'officedocument',
+  TEXT = 'text/',
+  ZIP = 'zip',
+  RAR = 'x-rar',
+  TAR = 'tar',
+  COMRESSED = 'compressed'
+}
+
 interface IBaseField {
   name: string;
   label: string;
@@ -36,7 +50,7 @@ interface INumberConfig {
 
 interface IMediaConfig {
   type: FieldType.MEDIA;
-  allowedTypes: ('image' | 'video')[];
+  allowedTypes: TypesMedia[];
   multiple: boolean;
   maxSize?: number;
 }
@@ -98,5 +112,6 @@ export {
   type IBooleanConfig,
   type IRichTextConfig,
   type IRelationConfig,
-  type IFieldDefinition
+  type IFieldDefinition,
+  TypesMedia
 }

@@ -1,6 +1,6 @@
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import  type { AddUserData, UpdateProfileData, UserProfile } from '../../type/user';
 import {  ArrowLeft,  ShieldCheck, Mail, User, Save, ChevronsUpDown, Check } from 'lucide-vue-next';
 import { Button } from '../../components/ui/button';
@@ -20,7 +20,7 @@ import CommandList from '../../components/ui/command/CommandList.vue';
 import CommandGroup from '../../components/ui/command/CommandGroup.vue';
 import CommandItem from '../../components/ui/command/CommandItem.vue';
 import { useElementSize } from '@vueuse/core';
-import { useGetRolesNoPaginate } from '../../hook/role';
+import { useGetRoles } from '../../hook/role';
 import { handleError } from '../../lib/error';
 
 
@@ -66,7 +66,10 @@ const {
   data: dataRoles,
   isLoading: loadingRole,
   refetch: getAllRoles
-} = useGetRolesNoPaginate()
+} = useGetRoles()
+
+const rolesResults = computed(() => dataRoles.value?.results || []);
+
 
 // --- Validation ---
 const validate = () => {
@@ -232,10 +235,10 @@ const handleCancel = () => {
                   variant="outline"
                   role="combobox"
                   :aria-expanded="open"
-                  class="input-custom justify-between w-full font-normal h-8"
+                  class="input-custom justify-center w-full font-normal h-9"
                 >
                   {{ role
-                      ? dataRoles?.find((r) => r.name === role)?.name
+                      ? rolesResults?.find((r) => r.name === role)?.name
                       : "Sélectionner un rôle..."
                   }}
                   <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -247,13 +250,13 @@ const handleCancel = () => {
                   <CommandInput placeholder="Rechercher un rôle..." />
                   <CommandEmpty>Aucun rôle trouvé.</CommandEmpty>
 
-                  <CommandList>
+                  <CommandList class="group custom-scrollbar">
                     <CommandGroup>
                       <CommandItem
-                        v-for="r in dataRoles"
+                        v-for="r in rolesResults"
                         :key="r.id"
                         :value="r.name"
-                        class="select-item-custom cursor-pointer"
+                        class="cursor-pointer data-[highlighted]:bg-primary data-[highlighted]:text-white group-hover:data-[highlighted]:bg-transparent group-hover:data-[highlighted]:text-foreground hover:!bg-primary hover:!text-white"
                         @select="() => {
                           role = r.name
                           open = false
@@ -302,11 +305,3 @@ const handleCancel = () => {
     </form>
   </div>
 </template>
-
-
-          <!-- <Loader2 v-if="isPending" class="size-4 animate-spin" />
-          <template v-else>
-            <Save v-if="isEditing" class="size-4" />
-            <UserPlus v-else class="size-4" />
-          </template>
-          {{ isEditing ? 'Mettre à jour le profil' : 'Finaliser la création' }} -->

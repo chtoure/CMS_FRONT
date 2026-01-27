@@ -4,31 +4,27 @@ import type { Taxonomy, RegisterTaxonomy, UpdateTaxonomy, taxonomyFilter } from 
 import { unref, type Ref, computed } from "vue";
 import type { Pagination } from "../type/pagination";
 
-// Hook get taxonomies list with pagination
-export const useGetTaxonomiesPaginate = (filter: Ref<taxonomyFilter> | taxonomyFilter) => {
+
+const buildQueryParams = (filter?: Ref<taxonomyFilter> | taxonomyFilter) => {
+
+  const params = unref(filter);
+  const query = new URLSearchParams();
+
+  if (params?.page) query.append("page", params.page.toString());
+  if (params?.limit) query.append("limit", params.limit.toString());
+  if (params?.archive) query.append("archive", params.archive.toString());
+  return query.toString();
+};
+
+
+
+export const useGetTaxonomies = (filter?: Ref<taxonomyFilter> | taxonomyFilter) => {
   return useQuery({
     queryKey: ["taxonomies", filter],
     queryFn: async () => {
-      const params = unref(filter)
-      const query = new URLSearchParams()
-
-      if (params.archive) query.append('archive', params.archive.toString())
-      if (params.page) query.append('page', params.page.toString())
-      if (params.limit) query.append('limit', params.limit.toString())
-
-      const response = await api(`/taxonomies?${query.toString()}`)
-
+      const query = buildQueryParams(filter)
+      const response = await api(`/taxonomies?${query}`)
       return handleResponse<Pagination<Taxonomy>>(response)
-    }
-  })
-}
-
-export const useGetTaxonomiesNoPaginate = () => {
-  return useQuery({
-    queryKey: ["taxonomiesNoPaginate"],
-    queryFn: async () => {
-      const response = await api(`/taxonomiesNoPaginate`)
-      return handleResponse<Taxonomy[]>(response)
     }
   })
 }

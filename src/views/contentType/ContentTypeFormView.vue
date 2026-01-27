@@ -17,7 +17,9 @@ import {
   List,
   Link2,
   Save,
-  Undo2
+  Undo2,
+  ChevronsUpDown,
+  Check
 } from 'lucide-vue-next'
 import {
   FieldType,
@@ -27,7 +29,9 @@ import {
   type IRelationConfig,
   type IMediaConfig,
   type ITextConfig,
-  type INumberConfig
+  type INumberConfig,
+  type IRichTextConfig,
+  TypesMedia
 } from '../../type/field'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
 import Button from '../../components/ui/button/Button.vue'
@@ -48,7 +52,17 @@ import { contentTypeSchema } from '../../validation/contentTypeValidate'
 import { useRegisterContentType, useGetContentTypes } from '../../hook/content-type'
 import CompositionLoading from '../../components/composition/CompositionLoading.vue'
 import { handleError } from '../../lib/error'
-import {useGetTaxonomiesNoPaginate} from '../../hook/taxonomy'
+import {useGetTaxonomies} from '../../hook/taxonomy'
+import Popover from '../../components/ui/popover/Popover.vue'
+import PopoverTrigger from '../../components/ui/popover/PopoverTrigger.vue'
+import PopoverContent from '../../components/ui/popover/PopoverContent.vue'
+import { cn } from '../../lib/utils'
+import Command from '../../components/ui/command/Command.vue'
+import CommandEmpty from '../../components/ui/command/CommandEmpty.vue'
+import CommandGroup from '../../components/ui/command/CommandGroup.vue'
+import CommandItem from '../../components/ui/command/CommandItem.vue'
+import CommandInput from '../../components/ui/command/CommandInput.vue'
+import CommandList from '../../components/ui/command/CommandList.vue'
 
 
 const router = useRouter()
@@ -79,7 +93,6 @@ const fields = ref<any[]>([
   }
 ])
 
-const messageErrorNameChamp = ref('');
 const messageErrorTypeChamp = ref('');
 
 
@@ -94,57 +107,18 @@ const {
   isPending: isContentTypesLoading,
 } = useGetContentTypes()
 
+const resultContentTypes = computed(() => contentTypes.value?.results || [])
+
 
 const {
   data: taxonomies,
   isPending: isTaxonomiesLoading,
-} = useGetTaxonomiesNoPaginate()
+} = useGetTaxonomies()
+
+const resultTaxonomies = computed(() => taxonomies.value?.results || [])
+
 
 const visibleFields = computed(() => fields.value.slice(1))
-
-
-
-// Changer le nom d'un champ s'il est déjà utilisé
-const handleNameChange = (index: number) => {
-  if (index === 0) return;
-
-  const currentField = fields.value[index];
-
-  // On aligne juste la saisie sur ce que le backend va faire
-  // pour que la comparaison 'includes' fonctionne à 100%
-  currentField.name = currentField.name.toLowerCase().trim().replace(/\s+/g, '_');
-
-  // Reseter le message d'erreur
-  messageErrorNameChamp.value = '';
-
-  const otherNames = fields.value
-    .filter((_, i) => i !== index)
-    .map(f => f.name.toLowerCase().trim()); // Sécurité supplémentaire
-
-
-  if (currentField.name.length === 0) {
-    messageErrorNameChamp.value = "Le nom du champ ne peut pas être vide.";
-    return;
-  }
-
-  //  L'utilisateur tente d'utiliser "title"
-  if (currentField.name === 'title') {
-    let suffix = 1;
-    let newName = 'title_1';
-    while (otherNames.includes(newName)) {
-      suffix++;
-      newName = `title_${suffix}`;
-    }
-    currentField.name = newName;
-    return;
-  }
-
-  // Doublon avec un autre champ personnalisé
-  if (otherNames.includes(currentField.name)) {
-    messageErrorNameChamp.value = "Ce nom technique est déjà utilisé par un autre champ.";
-  }
-
-};
 
 
 
@@ -179,17 +153,16 @@ const fieldTypes = [
   { type: FieldType.RELATION, label: 'Relation', icon: Link2, description: 'Lien vers un autre type de contenu' },
 ]
 
+
+const generateUniqueName = (baseName: string) => {
+  // Génère une chaîne aléatoire complexe (ex: field_8f9d2b1a)
+  return `${baseName}_${crypto.randomUUID().split('-')[0]}`;
+};
+
 // Ajouter un nouveau champ
 const addField = () => {
   const baseName = 'champ'
-  let index = fields.value.length + 1
-  let newName = `${baseName}_${index}`
-
-
-  // S'assurer que le nom est unique
-  while (fields.value.some(f => f.name === newName)) {
-    newName = `${baseName}_${++index}`
-  }
+  const newName = generateUniqueName(baseName)
 
   const newField: IFieldDefinition = {
     type: FieldType.TEXT,
@@ -203,6 +176,16 @@ const addField = () => {
   fields.value.push(newField)
   expandedFieldIndex.value = fields.value.length - 1
 }
+
+const open = ref(false)
+const triggerRef = ref<HTMLElement | null>(null)
+const width = ref(0)
+
+watch(open, (newOpen) => {
+  if (newOpen && triggerRef.value) {
+    width.value = triggerRef.value.offsetWidth
+  }
+})
 
 const fieldTypesList = computed(() => {
   const types: FieldType[] = []
@@ -243,7 +226,7 @@ watch(fieldTypesList, (newTypes) => {
     if (type === FieldType.MEDIA) {
       const mediaField = field as IMediaConfig
       if (!mediaField.allowedTypes) {
-        mediaField.allowedTypes = ['image']
+        mediaField.allowedTypes = [TypesMedia.IMAGE]
         mediaField.multiple = false
       }
       if (mediaField.multiple === undefined) mediaField.multiple = false
@@ -251,6 +234,22 @@ watch(fieldTypesList, (newTypes) => {
   })
 }, { deep: true })
 
+
+const toggleType = (field: IMediaConfig, type: TypesMedia) => {
+  // Initialise le tableau s'il n'existe pas
+  if (!field.allowedTypes) {
+    field.allowedTypes = [];
+  }
+
+  const index = field.allowedTypes.indexOf(type);
+  if (index > -1) {
+    // Si le type existe déjà, on le retire
+    field.allowedTypes.splice(index, 1);
+  } else {
+    // Sinon, on l'ajoute
+    field.allowedTypes.push(type);
+  }
+};
 
 
 // Supprimer un champ
@@ -264,16 +263,15 @@ const duplicateField = (index: number) => {
   const source = fields.value[index]
   const duplicate = JSON.parse(JSON.stringify(source))
 
-  let newName = `${duplicate.name}_copy`
-  let suffix = 1
-  while (fields.value.some(f => f.name === newName)) {
-    newName = `${duplicate.name}_copy_${suffix++}`
-  }
+  const newName = generateUniqueName(source.name)
 
   duplicate.name = newName
   duplicate.label = duplicate.label ? `${duplicate.label} (Copie)` : ''
-  fields.value.splice(index + 1, 0, duplicate)
-  expandedFieldIndex.value = index + 1
+  // Ajout à la fin du tableau
+  fields.value.push(duplicate)
+
+  // Ouvrir le champ (l'index est maintenant le dernier élément)
+  expandedFieldIndex.value = fields.value.length - 1
 }
 
 // Utilitaires de rendu
@@ -370,12 +368,6 @@ const handleSubmit = () => {
     return
   }
 
-  if (messageErrorNameChamp.value.length > 0) {
-    showToast('error', messageErrorNameChamp.value)
-    return
-  }
-
-
   // Nettoyage des champs
   const NetoyageFields = cleanedFields(fields.value as IFieldDefinition[])
 
@@ -390,6 +382,7 @@ const handleSubmit = () => {
   }
 
   console.log('Payload nettoyé:', payload)
+
   registerContentType(
     payload,{
       onSuccess: () => {
@@ -482,7 +475,7 @@ const handleCancel = () => {
                 :rows="4"
                 v-model="form.description"
                 placeholder="Décrivez à quoi sert ce type de contenu..."
-                class="input-custom"
+                class="input-custom h-20"
                 :class="{ 'border border-destructive': errors.description }"
               />
               <p v-if="errors.description" class="text-xs text-destructive px-1 font-medium italic animate-in slide-in-from-top-1">{{ errors.description }}</p>
@@ -529,7 +522,7 @@ const handleCancel = () => {
         <div class="grid grid-cols-[80px_1fr_1fr_1fr] px-6 py-3 bg-muted/20 border-b border-border text-xs font-bold text-text">
           <div>N°</div>
           <div>Libellé</div>
-          <div>Nom</div>
+          <div>Placeholder</div>
           <div>Type</div>
         </div>
 
@@ -564,25 +557,21 @@ const handleCancel = () => {
                 </span>
                 <!-- Mini actions au survol ou si déplié -->
                 <div v-if="expandedFieldIndex === fields.indexOf(field)" class="flex items-center gap-3 mt-1 text-[10px] font-bold text-primary animate-in fade-in slide-in-from-left-1">
-                   <!-- <button @click.stop="toggleExpand(fields.indexOf(field))" class="hover:text-primary/70">Modifier</button>
-                   <span class="text-border">|</span> -->
                    <button @click.stop="duplicateField(fields.indexOf(field))" class="hover:text-primary/70">Dupliquer</button>
                    <span class="text-border">|</span>
-                   <!-- <button class="hover:text-primary/70 cursor-move">Déplacer</button>
-                   <span class="text-border">|</span> -->
                    <button @click.stop="removeField(fields.indexOf(field))" class="text-destructive hover:text-destructive/70">Supprimer</button>
                 </div>
               </div>
 
-              <!-- Nom (Identifiant) -->
+              <!-- Placeholder -->
               <div class="text-muted-foreground font-medium">
-                {{ field.name }}
+                {{ field.placeholder }}
               </div>
 
               <!-- Type -->
               <div class="flex items-center gap-2">
                 <div class="p-1.5 rounded-full border border-primary/20 bg-primary/5 flex items-center justify-center">
-                  <component :is="getFieldTypeIcon(field.type)" class="w-3.5 h-3.5 text-primary/60" />
+                  <component :is="getFieldTypeIcon(field.type)" class="w-3.5 h-3.5 text-primary" />
                 </div>
                 <span class="text-sm font-medium text-muted-foreground">
                   {{ getFieldTypeLabel(field.type) }}
@@ -617,9 +606,9 @@ const handleCancel = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectItem v-for="ft in fieldTypes" :key="ft.type" :value="ft.type" class="select-item-custom">
+                            <SelectItem v-for="ft in fieldTypes" :key="ft.type" :value="ft.type" class="select-item-custom text-primary hover:text-white">
                               <div class="flex items-center gap-2">
-                                <component :is="ft.icon" class="w-4 h-4 text-primary" />
+                                <component :is="ft.icon" class="w-4 h-4" />
                                 <span class="font-medium">{{ ft.label }}</span>
                               </div>
                             </SelectItem>
@@ -635,9 +624,8 @@ const handleCancel = () => {
                         <Input v-model="field.label" placeholder="Texte affiché à l'utilisateur" class="input-custom" />
                       </div>
                       <div class="space-y-2">
-                        <Label class="text-xs font-medium text-text">Identifiant (Name)</Label>
-                        <Input v-model="field.name" @change="handleNameChange(vIndex+1)" placeholder="identifiant_unique" class="input-custom"/>
-                        <span v-if="messageErrorNameChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorNameChamp }}</span>
+                        <Label class="text-xs font-medium text-text"> Placeholder </Label>
+                        <Input v-model="field.placeholder" placeholder="Texte affiché en exemple" class="input-custom"/>
                       </div>
                     </div>
                   </div>
@@ -695,7 +683,7 @@ const handleCancel = () => {
 
                     <!-- Type TAXONOMY : Choix de la categorie -->
                     <div v-if="field.type === FieldType.TAXONOMY">
-                      <div v-if="taxonomies && taxonomies.length > 0" class="grid grid-cols-2 gap-4">
+                      <div v-if="resultTaxonomies && resultTaxonomies.length > 0" class="grid grid-cols-2 gap-4">
                         <div class="space-y-2">
                           <Label class="text-xs font-medium text-text">Categorie</Label>
                           <Select v-model="(field as ITaxonomyConfig).taxonomy_slug">
@@ -704,7 +692,7 @@ const handleCancel = () => {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectGroup>
-                                <SelectItem v-for="taxonomy in taxonomies" :key="taxonomy.id" :value="taxonomy.slug" class="select-item-custom">
+                                <SelectItem v-for="taxonomy in resultTaxonomies" :key="taxonomy.id" :value="taxonomy.slug" class="select-item-custom">
                                   <div class="flex items-center gap-2">
                                     <span class="font-medium">{{ taxonomy.name }}</span>
                                   </div>
@@ -738,13 +726,13 @@ const handleCancel = () => {
                       </div>
 
                       <div v-else>
-                        <p class="text-xs font-medium text-text">Aucune taxonomie disponible ou non archivée</p>
+                        <p class="text-xs font-medium text-text">Aucune categorie disponible ou non archivée</p>
                       </div>
                     </div>
 
                     <!-- Type RELATION : Cible du contenu -->
                     <div v-if="field.type === FieldType.RELATION" class="space-y-3">
-                      <div v-if="contentTypes && contentTypes.length > 0">
+                      <div v-if="resultContentTypes && resultContentTypes.length > 0">
                         <Label class="text-xs font-medium text-text">Cible de la relation (Slug)</Label>
                         <Select v-model="(field as IRelationConfig).contentTypeId">
                           <SelectTrigger class="input-custom">
@@ -752,7 +740,7 @@ const handleCancel = () => {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectGroup>
-                              <SelectItem v-for="ft in contentTypes" :key="ft.slug" :value="ft.id" class="select-item-custom">
+                              <SelectItem v-for="ft in resultContentTypes" :key="ft.slug" :value="ft.id" class="select-item-custom">
                                 <div class="flex items-center gap-2">
                                   <span class="font-medium">{{ ft.slug }}</span>
                                 </div>
@@ -767,27 +755,83 @@ const handleCancel = () => {
                       </div>
                     </div>
 
+                    <!-- Type RichText -->
+                    <div v-if="field.type === FieldType.RICH_TEXT" class="space-y-4">
+                      <div class="grid grid-cols-2 sm:grid-cols-2 gap-3">
+                        <div class="space-y-2">
+                          <Label class="text-xs font-medium text-text">Toolbar</Label>
+                          <Select v-model="(field as IRichTextConfig).toolbar">
+                            <SelectTrigger class="input-custom">
+                              <SelectValue placeholder="Choisir un toolbar" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                <SelectItem v-for="toolbar in ['minimal', 'full']" :key="toolbar" :value="toolbar" class="select-item-custom">
+                                  <div class="flex items-center gap-2">
+                                    <span class="font-medium">{{ toolbar }}</span>
+                                  </div>
+                                </SelectItem>
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+
                     <!-- Multiple pour MEDIA, TAXONOMY, SELECT, RELATION -->
                     <!-- Options spécifiques : Multiple et Types de Média -->
                     <div v-if="[FieldType.MEDIA, FieldType.TAXONOMY, FieldType.SELECT, FieldType.RELATION].includes(field.type)" class="space-y-4 p-4 bg-muted/10 rounded-xl border border-border">
                         <!-- Section Média (Uniquement pour type MEDIA) -->
-                        <div v-if="field.type === FieldType.MEDIA" class="space-y-4  border-border pb-4">
-                          <Label class="text-xs font-medium text-tex">Types de fichiers autorisés</Label>
-                          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div class="flex items-center justify-between p-3 border border-border rounded-xl">
-                              <span class="text-xs font-medium text-text">Images</span>
-                              <BaseSwitch
-                                :model-value="!!(field as IMediaConfig).allowedTypes.includes('image')"
-                                @update:model-value="(val) => (field as IMediaConfig).allowedTypes = val ? [...(field as IMediaConfig).allowedTypes, 'image'] : (field as IMediaConfig).allowedTypes.filter((t) => t !== 'image')"
-                              />
-                            </div>
-                            <div class="flex items-center justify-between p-3 border border-border rounded-xl">
-                              <span class="text-xs font-medium text-text">Vidéos</span>
-                              <BaseSwitch
-                                :model-value="!!(field as IMediaConfig).allowedTypes.includes('video')"
-                                @update:model-value="(val) => (field as IMediaConfig).allowedTypes = val ? [...(field as IMediaConfig).allowedTypes, 'video'] : (field as IMediaConfig).allowedTypes.filter((t) => t !== 'video')"
-                              />
-                            </div>
+                        <div v-if="field.type === FieldType.MEDIA" class="grid grid-cols-2 sm:grid-cols-2 gap-3">
+                          <div class="space-y-4">
+                            <Label class="text-xs font-medium text-tex">Types de fichiers autorisés</Label>
+                            <Popover v-model:open="open">
+                              <PopoverTrigger as-child>
+                                <Button
+                                  ref="triggerRef"
+                                  variant="outline"
+                                  role="combobox"
+                                  class="input-custom w-full relative flex items-center justify-center font-normal h-8"
+                                >
+                                  <span class="truncate text-center mx-8">
+                                    {{ field.allowedTypes.length > 0
+                                        ? `${field.allowedTypes.length} type(s) de fichier selectionée(s)`
+                                        : "Choisir les types de fichiers..."
+                                    }}
+                                  </span>
+
+                                  <ChevronsUpDown class="absolute right-3 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+
+                              <PopoverContent :style="{ width: `${width}px` }" class="p-0">
+                                <Command>
+                                  <CommandInput placeholder="Rechercher un type de fichier..." />
+                                  <CommandEmpty>Aucun type de fichier trouvé.</CommandEmpty>
+                                  <CommandList class="group custom-scrollbar">
+                                    <CommandGroup>
+                                      <CommandItem
+                                        v-for="type in Object.values(TypesMedia)"
+                                        :key="type"
+                                        :value="type"
+                                        class="cursor-pointer data-[highlighted]:bg-primary data-[highlighted]:text-white group-hover:data-[highlighted]:bg-transparent group-hover:data-[highlighted]:text-foreground hover:!bg-primary hover:!text-white"
+                                        @select="toggleType(field,type)"
+                                      >
+                                        <Check
+                                          :class="cn(
+                                            'mr-2 h-4 w-4',
+                                            (field as IMediaConfig).allowedTypes.includes(type) ? 'opacity-100' : 'opacity-0'
+                                          )"
+                                        />
+                                        <div class="flex flex-col">
+                                          <span>{{ type }}</span>
+                                        </div>
+                                      </CommandItem>
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                           </div>
                         </div>
 
@@ -840,6 +884,13 @@ const handleCancel = () => {
                             <Input type="number" v-model="(field as INumberConfig).max" placeholder="Valeur Max" class="input-custom" />
                           </div>
                        </div>
+                    </div>
+
+                    <div v-if="field.type === FieldType.MEDIA" class="space-y-4">
+                      <div class="space-y-2">
+                        <Label class="text-xs font-medium text-text">Max Size</Label>
+                        <Input type="number" v-model="(field as IMediaConfig).maxSize" placeholder="Taille Max" class="input-custom" />
+                      </div>
                     </div>
                   </div>
                 </TabsContent>

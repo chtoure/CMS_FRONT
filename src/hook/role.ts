@@ -1,5 +1,5 @@
 
-import { useMutation, useQuery } from "@tanstack/vue-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import api, { handleResponse } from "../api/fetchConfig";
 import type { AddRole, Role, roleFilter } from "../type/role";
 import type { RoleUpdate } from "../type/role";
@@ -8,22 +8,26 @@ import { unref, type Ref } from "vue";
 import type { Pagination } from "../type/pagination";
 
 
-// Hook get role list Avec pagination
-export const useGetRoles = (filter: Ref<roleFilter> | roleFilter) => {
+
+const buildQueryParams = (filter?: Ref<roleFilter> | roleFilter) => {
+  const params = unref(filter)
+  const query = new URLSearchParams()
+
+  if (params?.archive) query.append('archive', params.archive.toString())
+  if (params?.page) query.append('page', params.page.toString())
+  if (params?.limit) query.append('limit', params.limit.toString())
+
+  return query.toString()
+}
+
+
+
+export const useGetRoles = (filter?: Ref<roleFilter> | roleFilter) => {
   return useQuery({
     queryKey: ["roles",filter],
     queryFn:async () => {
-      const params = unref(filter)
-      const query = new URLSearchParams()
-
-      if (params.archive) query.append('archive', params.archive.toString())
-      if (params.page) query.append('page', params.page.toString())
-      if (params.limit) query.append('limit', params.limit.toString())
-
-      console.log(query.toString());
-
-
-      const response = await api(`/roles?${query.toString()}`)
+      const query = buildQueryParams(filter)
+      const response = await api(`/roles?${query}`)
 
       return handleResponse<Pagination<Role>>(response)
     }
@@ -31,19 +35,11 @@ export const useGetRoles = (filter: Ref<roleFilter> | roleFilter) => {
 }
 
 
-// Hook get role list sans pagination
-export const useGetRolesNoPaginate = () => {
-  return useQuery({
-    queryKey: ["rolesNoPaginate"],
-    queryFn:async () => {
-      return handleResponse<Role[]>(await api("/rolesNoPaginate"));
-    }
-  })
-}
 
 
 // Hook update role
 export const useUpdateRole = () => {
+  const queryClient = useQueryClient()
   return useMutation ({
     mutationFn: async (dataRoles:{
       dataRole : RoleUpdate;
@@ -53,6 +49,9 @@ export const useUpdateRole = () => {
         method: 'PUT',
         body: JSON.stringify(dataRoles.dataRole)
       }));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["roles"] })
     }
   })
 }
@@ -87,6 +86,7 @@ export const useGetPermissionsRole = (id : number) => {
 
 // Archiver un role
 export const useDeleteRole = () => {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (idUser: number) => {
       const response = await api(`/archiveRoles/${idUser}`, {
@@ -94,12 +94,16 @@ export const useDeleteRole = () => {
       });
       return handleResponse(response);
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["roles"] })
+    }
   });
 };
 
 
 // Restorer un role
 export const useRestoreRole = () => {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (idUser: number) => {
       const response = await api(`/restoreRoles/${idUser}`, {
@@ -107,5 +111,8 @@ export const useRestoreRole = () => {
       });
       return handleResponse(response);
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["roles"] })
+    }
   });
 };

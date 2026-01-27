@@ -37,6 +37,8 @@
 
     const { data: contentTypes, error: contentTypeError, isLoading: contentTypeLoading } = useGetContentTypes();
 
+    const resultContentTypes = computed(() => contentTypes.value?.results || [])
+
     const router = useRouter();
 
     const isFullscreen = ref(false)
@@ -150,12 +152,12 @@
                 </div>
 
                 <div v-else>
-                  <div v-if="contentTypes?.length === 0" class="p-2 text-xs text-muted-foreground">
+                  <div v-if="resultContentTypes?.length === 0" class="p-2 text-xs text-muted-foreground">
                     <p>Aucun type</p>
                   </div>
 
                   <div v-else class="flex flex-col gap-1">
-                    <div v-for="contentType in contentTypes" :key="contentType.id">
+                    <div v-for="contentType in resultContentTypes" :key="contentType.id">
                       <Button
                         @click="router.push({ name: 'admin.content-entry.create', params: { id: contentType.id } })"
                         variant="outline"

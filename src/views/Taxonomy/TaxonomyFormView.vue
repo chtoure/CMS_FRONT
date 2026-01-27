@@ -207,7 +207,7 @@ const handleCancel = () => {
                 :rows="4"
                 v-model="form.description"
                 placeholder="Décrivez l'usage de cette categorie..."
-                class="input-custom min-h-[120px]"
+                class="input-custom min-h-20"
                 :class="{ 'border-destructive': errors.description }"
               />
               <p v-if="errors.description" class="text-xs text-destructive px-1 font-medium italic">{{ errors.description }}</p>
@@ -217,7 +217,7 @@ const handleCancel = () => {
 
         <!-- Sidebar - Gestion des Termes -->
         <div class="space-y-6">
-          <div class="p-6 space-y-6 card rounded-none border-l-4 border-border">
+          <div class="p-6 space-y-6 card rounded-none border border-border">
             <h3 class="font-bold flex items-center gap-2 text-text">
               <Tag class="w-5 h-5" />
               Termes associés

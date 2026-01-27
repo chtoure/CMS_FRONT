@@ -14,7 +14,7 @@ import { cn } from '../../lib/utils'
 import Badge from '../../components/ui/badge/Badge.vue'
 import CompositionVerifyButton from '../../components/composition/CompositionVerifyButton.vue'
 import { useRouter } from 'vue-router'
-import { useArchiveTaxonomy, useDeleteTaxonomy, useGetTaxonomiesPaginate, useRestoreTaxonomy } from '../../hook/taxonomy'
+import { useArchiveTaxonomy, useDeleteTaxonomy, useGetTaxonomies, useRestoreTaxonomy } from '../../hook/taxonomy'
 import CompositionLoading from '../../components/composition/CompositionLoading.vue'
 import CompositionError from '../../components/composition/CompositionError.vue'
 import type { Taxonomy } from '../../type/taxonomy'
@@ -53,7 +53,7 @@ const {
   isError: isgetErrorTaxonomies,
   error: getErrorTaxonomies,
   refetch: refetchTaxonomies
-} = useGetTaxonomiesPaginate(filterParams);
+} = useGetTaxonomies(filterParams);
 
 const taxonomiesResults = computed(() => dataTaxonomies.value?.results || []);
 const totalItems = computed(() => dataTaxonomies.value?.count || 0);
