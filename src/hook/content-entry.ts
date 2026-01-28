@@ -77,9 +77,11 @@ const useCreateContentEntry = () => {
 const useUpdateContentEntry = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, data }: { id: number, data: UpdateContentEntry }) => {
+    mutationFn: async ({ id, data, slug }: { id: number, data: UpdateContentEntry, slug: string }) => {
+      console.log(id, slug);
+
       return handleResponse<IContentEntry>(
-        await api(`/content-entries/${id}`, {
+        await api(`/content-entries/${id}/${slug}`, {
           method: "PUT",
           body: JSON.stringify(data),
         })
