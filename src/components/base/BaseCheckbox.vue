@@ -18,7 +18,7 @@
 </script>
 
 <template>
-  <div class="relative flex items-center justify-center w-5 h-5 shrink-0">
+  <div class="relative flex items-center justify-center w-5 h-5 shrink-0 rounded border border-border">
     <input
       type="checkbox"
       :id="id"
@@ -26,10 +26,10 @@
       @change="handleChange"
       class="
         /* Reset et Taille */
-        appearance-none w-full h-full cursor-pointer rounded-sm
+        appearance-none w-full h-full cursor-pointer
 
         /* Style Bordure et Fond (Décoché) */
-        border border-primary bg-background
+        bg-background rounded
 
         /* État Coché : Fond bleu + Icône SVG blanche */
         checked:bg-primary

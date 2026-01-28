@@ -1,598 +1,338 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, reactive } from 'vue'
-import Button from '@/components/ui/button/Button.vue'
-import Select from '@/components/ui/select/Select.vue'
-import SelectTrigger from '@/components/ui/select/SelectTrigger.vue'
-import SelectValue from '@/components/ui/select/SelectValue.vue'
-import SelectContent from '@/components/ui/select/SelectContent.vue'
-import SelectItem from '@/components/ui/select/SelectItem.vue'
-import { Crop, Wand2, Pencil, RotateCcwSquare, Contrast, Grid3x3, RotateCw, RotateCcw, FlipHorizontal2, Minus, Plus, RefreshCcw } from 'lucide-vue-next'
-import { useRoute } from 'vue-router'
-import { useGetMedia } from '../../hook/media'
+import { ref, reactive, watch, nextTick } from 'vue';
+import { Scissors, RotateCw, Image as ImageIcon, FlipHorizontal, FlipVertical, RotateCcw, Check, ArrowLeft, Loader2 } from 'lucide-vue-next';
+import { useRoute } from 'vue-router';
+import { useGetMedia, useUpdateMedia } from '../../hook/media';
+import router from '../../router';
+import { showToast } from '../../lib/toast';
+import { getErrorMessage } from '../../lib/errorMessage';
+import Select from '../../components/ui/select/Select.vue';
+import SelectTrigger from '../../components/ui/select/SelectTrigger.vue';
+import SelectContent from '../../components/ui/select/SelectContent.vue';
+import SelectItem from '../../components/ui/select/SelectItem.vue';
+import type { Media, SaveMediaPayload } from '../../type/media';
+import SelectValue from '../../components/ui/select/SelectValue.vue';
+import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue';
 
-// --- INIT ---
-const route = useRoute()
-const id = Number(route.params.id)
-const { data: media } = useGetMedia(id)
+const ASPECT_RATIOS: Record<string, number | null> = { 'free': null, '1:1': 1, '16:9': 16/9, '4:3': 4/3, '3:2': 3/2 };
 
-const currentTab = ref<string>('remove-bg')
-const canvasRef = ref<HTMLCanvasElement | null>(null)
-const imageObj = new Image()
+const route = useRoute();
+const id = Number(route.params.id);
+const { data: mediaData } = useGetMedia(id);
+const { mutate: updateMedia, isPending: isSaving } = useUpdateMedia();
 
-// --- ETATS ---
-const brushSize = ref(50)
-const hardness = ref(60)
-const opacity = ref(100)
-const rotation = ref(0)
-const zoom = ref(100)
-const aspectRatio = ref('Free')
+const canvasRef = ref<HTMLCanvasElement | null>(null);
+const imageElement = ref<HTMLImageElement | null>(null);
+const aspectRatio = ref('free');
 
-const filters = reactive({
-  blur: 0,
-  grayscale: false,
-  brightness: 1,
-})
+const state = reactive({
+  transform: { rotate: 0, flipH: false, flipV: false },
+  filters: { blur: 0, grayscale: false },
+  crop: { x: 0, y: 0, width: 200, height: 200, realX: 0, realY: 0, realW: 0, realH: 0 },
+  canvas: { w: 0, h: 0 }
+});
 
-const cropState = reactive({
-  realX: 0, realY: 0, realW: 0, realH: 0, // Pixels Sharp
-  x: 0, y: 0, width: 100, height: 100,     // Pixels Ecran
-})
+const interaction = reactive({
+  active: false,
+  type: 'move' as 'move' | 'resize',
+  startX: 0, startY: 0,
+  startCrop: { x: 0, y: 0, w: 0, h: 0 }
+});
 
-// --- RENDU CANVAS ---
+const startInteraction = (e: MouseEvent, type: 'move' | 'resize') => {
+  e.stopPropagation();
+  interaction.active = true;
+  interaction.type = type;
+  interaction.startX = e.clientX;
+  interaction.startY = e.clientY;
+  interaction.startCrop = { ...state.crop, w: state.crop.width, h: state.crop.height };
+  window.addEventListener('mousemove', handleInteraction);
+  window.addEventListener('mouseup', stopInteraction);
+};
 
-const renderCanvas = () => {
-  const canvas = canvasRef.value
-  if (!canvas || !imageObj.complete) return
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return
+const handleInteraction = (e: MouseEvent) => {
+  if (!interaction.active) return;
+  const dx = e.clientX - interaction.startX;
+  const dy = e.clientY - interaction.startY;
 
-  // 1. Déterminer les dimensions du canvas
-  if (currentTab.value === 'crop') {
-    canvas.width = imageObj.width
-    canvas.height = imageObj.height
-  } else {
-    canvas.width = cropState.realW || imageObj.width
-    canvas.height = cropState.realH || imageObj.height
-  }
+  if (interaction.type === 'move') {
+    state.crop.x = Math.max(0, Math.min(state.canvas.w - state.crop.width, interaction.startCrop.x + dx));
+    state.crop.y = Math.max(0, Math.min(state.canvas.h - state.crop.height, interaction.startCrop.y + dy));
+  } else if (interaction.type === 'resize') {
+    let newW = Math.max(50, interaction.startCrop.w + dx);
+    let newH = Math.max(50, interaction.startCrop.h + dy);
 
-  // 2. Nettoyer
-  ctx.clearRect(0, 0, canvas.width, canvas.height)
+    if (interaction.startCrop.x + newW > state.canvas.w) newW = state.canvas.w - interaction.startCrop.x;
+    if (interaction.startCrop.y + newH > state.canvas.h) newH = state.canvas.h - interaction.startCrop.y;
 
-  // 3. Appliquer les filtres AVANT de dessiner
-  let s = ''
-  if (filters.grayscale) s += 'grayscale(100%) '
-  if (filters.blur > 0) s += `blur(${filters.blur}px) `
-  ctx.filter = s.trim() || 'none'
-
-  // 4. Dessiner l'image
-  if (currentTab.value === 'crop') {
-    ctx.drawImage(imageObj, 0, 0)
-  } else {
-    ctx.drawImage(
-      imageObj,
-      cropState.realX, cropState.realY, cropState.realW, cropState.realH,
-      0, 0, canvas.width, canvas.height
-    )
-  }
-}
-
-// --- CALCULS COORDINATION ---
-
-const getDisplayData = () => {
-  const canvas = canvasRef.value
-  if (!canvas) return null
-  const rect = canvas.getBoundingClientRect()
-  return {
-    scale: rect.width / canvas.width,
-    rect: rect,
-  }
-}
-
-const syncCropToDisplay = () => {
-  const data = getDisplayData()
-  if (!data) return
-
-  // Calculer la position et taille écran à partir du "réel"
-  // au lieu de forcer à 0, 0
-  cropState.x = cropState.realX * data.scale
-  cropState.y = cropState.realY * data.scale
-  cropState.width = cropState.realW * data.scale
-  cropState.height = cropState.realH * data.scale
-}
-
-const updateRealCoords = () => {
-  const data = getDisplayData()
-  if (!data) return
-  const internalScale = 1 / data.scale
-  cropState.realX = Math.max(0, cropState.x * internalScale)
-  cropState.realY = Math.max(0, cropState.y * internalScale)
-  cropState.realW = Math.min(imageObj.width - cropState.realX, cropState.width * internalScale)
-  cropState.realH = Math.min(imageObj.height - cropState.realY, cropState.height * internalScale)
-}
-
-// --- MOUSE EVENTS ---
-
-const isDragging = ref(false)
-const currentHandle = ref<string | null>(null)
-const startPos = { x: 0, y: 0, cropX: 0, cropY: 0, cropW: 0, cropH: 0 }
-
-const startDrag = (e: MouseEvent) => {
-  if (currentHandle.value) return
-  isDragging.value = true
-  startPos.x = e.clientX; startPos.y = e.clientY
-  startPos.cropX = cropState.x; startPos.cropY = cropState.y
-  window.addEventListener('mousemove', onDrag)
-  window.addEventListener('mouseup', stopInteraction)
-}
-
-const onDrag = (e: MouseEvent) => {
-  const data = getDisplayData()
-  if (!data) return
-  const dx = e.clientX - startPos.x
-  const dy = e.clientY - startPos.y
-  cropState.x = Math.max(0, Math.min(startPos.cropX + dx, data.rect.width - cropState.width))
-  cropState.y = Math.max(0, Math.min(startPos.cropY + dy, data.rect.height - cropState.height))
-  updateRealCoords()
-}
-
-const startResize = (handle: string, e: MouseEvent) => {
-  e.stopPropagation()
-  currentHandle.value = handle
-  startPos.x = e.clientX; startPos.y = e.clientY
-  startPos.cropX = cropState.x; startPos.cropY = cropState.y
-  startPos.cropW = cropState.width; startPos.cropH = cropState.height
-  window.addEventListener('mousemove', onResize)
-  window.addEventListener('mouseup', stopInteraction)
-}
-
-const onResize = (e: MouseEvent) => {
-  const data = getDisplayData()
-  if (!data || !currentHandle.value) return
-  const dx = e.clientX - startPos.x
-  const dy = e.clientY - startPos.y
-
-  let nW = startPos.cropW, nH = startPos.cropH, nX = startPos.cropX, nY = startPos.cropY
-  const handle = currentHandle.value
-
-  // Calcul des dimensions de base
-  if (handle.includes('e')) nW = startPos.cropW + dx
-  if (handle.includes('w')) { nX = startPos.cropX + dx; nW = startPos.cropW - dx }
-  if (handle.includes('s')) nH = startPos.cropH + dy
-  if (handle.includes('n')) { nY = startPos.cropY + dy; nH = startPos.cropH - dy }
-
-  // Gestion du ratio avec sécurité TypeScript
-  if (aspectRatio.value !== 'Free') {
-    const parts = aspectRatio.value.split(':')
-    if (parts.length === 2) {
-      const rw = Number(parts[0])
-      const rh = Number(parts[1])
-
-      // On vérifie que les nombres sont valides (pas NaN et rh > 0)
-      if (!isNaN(rw) && !isNaN(rh) && rh !== 0) {
-        const r = rw / rh
-
-        // Si on redimensionne par les côtés Est/Ouest, on ajuste la hauteur
-        // Sinon (Nord/Sud), on ajuste la largeur
-        if (handle.includes('e') || handle.includes('w')) {
-          nH = nW / r
-        } else {
-          nW = nH * r
-        }
+    const ratio = ASPECT_RATIOS[aspectRatio.value];
+    if (ratio) {
+      const adjustedH = newW / ratio;
+      if (interaction.startCrop.y + adjustedH <= state.canvas.h) {
+        newH = adjustedH;
+      } else {
+        newH = state.canvas.h - interaction.startCrop.y;
+        newW = newH * ratio;
       }
     }
+    state.crop.width = newW;
+    state.crop.height = newH;
   }
-
-  // Validation des limites (Boundaries check)
-  // On s'assure que le cadre ne sort pas de l'image (data.rect)
-  if (nX >= 0 && nY >= 0 && nX + nW <= data.rect.width && nY + nH <= data.rect.height) {
-    cropState.x = nX
-    cropState.y = nY
-    cropState.width = Math.max(20, nW) // Minimum 20px pour éviter de "perdre" le cadre
-    cropState.height = Math.max(20, nH)
-    updateRealCoords()
-  }
-}
+  updateRealCoords();
+};
 
 const stopInteraction = () => {
-  isDragging.value = false; currentHandle.value = null
-  window.removeEventListener('mousemove', onDrag)
-  window.removeEventListener('mousemove', onResize)
-  window.removeEventListener('mouseup', stopInteraction)
-}
+  interaction.active = false;
+  window.removeEventListener('mousemove', handleInteraction);
+  window.removeEventListener('mouseup', stopInteraction);
+};
 
-// --- WATCHERS (Crucial pour les filtres et le rendu) ---
+const loadMediaImage = (media: Media) => {
+  if (!media?.file_path) return;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.src = media.file_path;
+  img.onload = () => {
+    imageElement.value = img;
+    const containerRatio = Math.min(800 / img.naturalWidth, 500 / img.naturalHeight);
+    state.canvas.w = img.naturalWidth * containerRatio;
+    state.canvas.h = img.naturalHeight * containerRatio;
+    nextTick(() => { render(); centerCropBox(); });
+  };
+};
 
-// 1. Quand l'image charge
-watch(media, (newVal) => {
-  if (newVal?.file_path) {
-    imageObj.crossOrigin = 'anonymous'
-    imageObj.src = `${newVal.file_path}?t=${Date.now()}`
-    imageObj.onload = () => {
-      cropState.realW = imageObj.width
-      cropState.realH = imageObj.height
-      renderCanvas()
+const handleRotate = (deg: number) => {
+  state.transform.rotate += deg;
+  const oldW = state.canvas.w;
+  state.canvas.w = state.canvas.h;
+  state.canvas.h = oldW;
+
+  nextTick(() => {
+    centerCropBox();
+    render();
+  });
+};
+
+const centerCropBox = () => {
+  const ratio = ASPECT_RATIOS[aspectRatio.value];
+  state.crop.width = state.canvas.w * 0.6;
+  state.crop.height = ratio ? state.crop.width / ratio : state.canvas.h * 0.6;
+
+  if (state.crop.height > state.canvas.h) {
+    state.crop.height = state.canvas.h;
+    state.crop.width = ratio ? state.crop.height * ratio : state.crop.width;
+  }
+  state.crop.x = (state.canvas.w - state.crop.width) / 2;
+  state.crop.y = (state.canvas.h - state.crop.height) / 2;
+  updateRealCoords();
+};
+
+const render = () => {
+  const canvas = canvasRef.value;
+  if (!canvas || !imageElement.value) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  canvas.width = state.canvas.w;
+  canvas.height = state.canvas.h;
+
+  ctx.save();
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate((state.transform.rotate * Math.PI) / 180);
+  ctx.scale(state.transform.flipH ? -1 : 1, state.transform.flipV ? -1 : 1);
+
+  const filters: string[] = [];
+  if (state.filters.blur > 0) filters.push(`blur(${state.filters.blur}px)`);
+  if (state.filters.grayscale) filters.push(`grayscale(100%)`);
+  ctx.filter = filters.join(' ') || 'none';
+
+  const angle = ((state.transform.rotate % 360) + 360) % 360;
+  const isVertical = angle === 90 || angle === 270;
+
+  const drawW = isVertical ? state.canvas.h : state.canvas.w;
+  const drawH = isVertical ? state.canvas.w : state.canvas.h;
+
+  ctx.drawImage(imageElement.value, -drawW / 2, -drawH / 2, drawW, drawH);
+  ctx.restore();
+};
+
+const updateRealCoords = () => {
+  if (!imageElement.value) return;
+
+  const img = imageElement.value;
+  const cw = state.canvas.w;
+  const ch = state.canvas.h;
+  const nw = img.naturalWidth;
+  const nh = img.naturalHeight;
+
+  const angle = ((state.transform.rotate % 360) + 360) % 360;
+  const isVertical = angle === 90 || angle === 270;
+
+  const scaleX = (isVertical ? nh : nw) / cw;
+  const scaleY = (isVertical ? nw : nh) / ch;
+
+  let x = state.crop.x;
+  let y = state.crop.y;
+
+  if (state.transform.flipH) {
+    x = cw - (x + state.crop.width);
+  }
+  if (state.transform.flipV) {
+    y = ch - (y + state.crop.height);
+  }
+
+  let finalX, finalY, finalW, finalH;
+  const w = state.crop.width;
+  const h = state.crop.height;
+
+  if (angle === 90) {
+    finalX = y * scaleX;
+    finalY = (cw - (x + w)) * scaleY;
+    finalW = h * scaleX;
+    finalH = w * scaleY;
+  } else if (angle === 180) {
+    finalX = (cw - (x + w)) * scaleX;
+    finalY = (ch - (y + h)) * scaleY;
+    finalW = w * scaleX;
+    finalH = h * scaleY;
+  } else if (angle === 270) {
+    finalX = (ch - (y + h)) * scaleX;
+    finalY = x * scaleY;
+    finalW = h * scaleX;
+    finalH = w * scaleY;
+  } else {
+    finalX = x * scaleX;
+    finalY = y * scaleY;
+    finalW = w * scaleX;
+    finalH = h * scaleY;
+  }
+
+  state.crop.realX = Math.round(finalX);
+  state.crop.realY = Math.round(finalY);
+  state.crop.realW = Math.round(finalW);
+  state.crop.realH = Math.round(finalH);
+};
+
+watch([() => state.filters, () => state.transform], render, { deep: true });
+watch(mediaData, (val) => val && loadMediaImage(val), { immediate: true });
+
+const onSave = () => {
+  updateRealCoords();
+  const payload: SaveMediaPayload = {
+    operations: {
+      geometry: {
+        rotation: state.transform.rotate,
+        flipH: state.transform.flipH,
+        flipV: state.transform.flipV,
+        crop: { x: state.crop.realX, y: state.crop.realY, width: state.crop.realW, height: state.crop.realH }
+      },
+      adjustments: state.filters
     }
-  }
-}, { immediate: true })
-
-// 2. Quand on change d'onglet (Refresh auto du crop)
-watch(currentTab, async (tab) => {
-  renderCanvas()
-  if (tab === 'crop') {
-    await nextTick()
-    requestAnimationFrame(() => {
-      syncCropToDisplay()
-    })
-  }
-})
-
-// 3. Quand on touche aux curseurs de filtres (Blur, Grayscale)
-watch(filters, () => {
-  renderCanvas()
-}, { deep: true })
-
-// 4. Quand on change le ratio, on force une mise à jour des coordonnées réelles
-watch(aspectRatio, () => {
-  if (aspectRatio.value !== 'Free') {
-    const parts = aspectRatio.value.split(':')
-
-    // On vérifie que le format est bien X:Y
-    if (parts.length === 2) {
-      const rw = Number(parts[0])
-      const rh = Number(parts[1])
-
-      // On vérifie que ce sont des nombres valides et que rh n'est pas 0
-      if (!isNaN(rw) && !isNaN(rh) && rh !== 0) {
-        const ratio = rw / rh
-        cropState.height = cropState.width / ratio
-
-        // Optionnel : s'assurer que le nouveau cadre ne dépasse pas du canvas
-        const data = getDisplayData()
-        if (data && (cropState.y + cropState.height > data.rect.height)) {
-            // Si ça dépasse en bas, on réduit la largeur pour compenser
-            cropState.height = data.rect.height - cropState.y
-            cropState.width = cropState.height * ratio
-        }
-
-        updateRealCoords()
-      }
-    }
-  }
-})
-
-const handleApply = () => {
-  console.log('Données Sharp pour le backend:', {
-    left: Math.round(cropState.realX),
-    top: Math.round(cropState.realY),
-    width: Math.round(cropState.realW),
-    height: Math.round(cropState.realH),
-    filters: filters
-  })
-}
+  };
+  updateMedia({ payload, mediaId: id }, {
+    onSuccess: () => { showToast('success', 'Image mise à jour'); router.back(); },
+    onError: (err) => showToast('error', getErrorMessage(err))
+  });
+};
 </script>
 
 <template>
-  <div class="border border-border bg-card overflow-hidden flex flex-col rounded-lg">
-    <!-- Header -->
-    <div class="border-b border-border px-6 py-4 flex justify-between items-center">
-      <h2 class="huge font-semibold text-text">Edit image</h2>
-    </div>
-
-    <!-- Main content -->
-    <div class="flex flex-1 overflow-hidden">
-      <!-- Left sidebar - Tool icons -->
-      <div class="w-20 bg-card border-r border-border flex flex-col items-center py-4 space-y-4">
-        <button
-          @click="currentTab = 'remove-bg'"
-          :class="[
-            'w-12 h-12 rounded-md flex items-center justify-center transition-all',
-            currentTab === 'remove-bg'
-              ? 'bg-accent text-white shadow-md'
-              : 'bg-input text-muted-foreground hover:bg-accent/20',
-          ]"
-          title="Remove BG"
-        >
-          <Wand2  />
-        </button>
-        <button
-          @click="currentTab = 'crop'"
-          :class="[
-            'w-12 h-12 rounded-md flex items-center justify-center transition-all',
-            currentTab === 'crop'
-              ? 'bg-accent text-white shadow-md'
-              : 'bg-input text-muted-foreground hover:bg-accent/20',
-          ]"
-          title="Crop"
-        >
-          <Crop  />
-        </button>
-        <button
-          @click="currentTab = 'refine'"
-          :class="[
-            'w-12 h-12 rounded-md flex items-center justify-center transition-all',
-            currentTab === 'refine'
-              ? 'bg-accent text-white shadow-md'
-              : 'bg-input text-muted-foreground hover:bg-accent/20',
-          ]"
-          title="Refine"
-        >
-          <Pencil  />
-        </button>
-        <button
-          @click="currentTab = 'rotate'"
-          :class="[
-            'w-12 h-12 rounded-md flex items-center justify-center transition-all',
-            currentTab === 'rotate'
-              ? 'bg-accent text-white shadow-md'
-              : 'bg-input text-muted-foreground hover:bg-accent/20',
-          ]"
-          title="Rotate"
-        >
-          <RotateCcwSquare  />
-        </button>
-        <button
-          @click="currentTab = 'adjust'"
-          :class="[
-            'w-12 h-12 rounded-md flex items-center justify-center transition-all',
-            currentTab === 'adjust'
-              ? 'bg-accent text-white shadow-md'
-              : 'bg-input text-muted-foreground hover:bg-accent/20',
-          ]"
-          title="Adjust"
-        >
-          <Contrast  />
-        </button>
-        <button
-          @click="currentTab = 'filters'"
-          :class="[
-            'w-12 h-12 rounded-md flex items-center justify-center transition-all',
-            currentTab === 'filters'
-              ? 'bg-accent text-white shadow-md'
-              : 'bg-input text-muted-foreground hover:bg-accent/20',
-          ]"
-          title="Filters"
-        >
-          <Grid3x3  />
-        </button>
-      </div>
-
-      <!-- Center control panel -->
-      <div class="w-72 bg-card border-r border-border p-6 overflow-y-auto custom-scrollbar">
-        <!-- Remove BG -->
-        <div v-if="currentTab === 'remove-bg'" class="space-y-6">
-          <div>
-            <h3 class="p13 font-semibold text-text mb-4">Refine</h3>
-            <div class="flex gap-2 mb-4">
-              <button
-                class="flex-1 px-3 py-2 bg-card border-2 border-accent rounded p13 text-accent font-medium"
-              >
-                Restore
-              </button>
-              <button
-                class="flex-1 px-3 py-2 bg-input border border-border rounded p13 text-text hover:bg-accent/10"
-              >
-                Erase
-              </button>
+  <div class="space-y-8 w-fit min-w-full">
+    <CompositionPageHeader>
+      <template #content>
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+          <div class="flex gap-4 items-center">
+            <div class="hover:cursor-pointer hover:text-primary" @click="$router.back()">
+              <ArrowLeft />
             </div>
-          </div>
-
-          <div>
-            <label class="p13 font-medium text-text block mb-2">Brush size</label>
-            <input
-              v-model.number="brushSize"
-              type="range"
-              min="1"
-              max="100"
-              class="w-full h-2 bg-border rounded appearance-none cursor-pointer accent-accent"
-            />
-            <span class="p11 text-muted-foreground">{{ brushSize }}px</span>
-          </div>
-
-          <div>
-            <label class="p13 font-medium text-text block mb-2">Hardness</label>
-            <input
-              v-model.number="hardness"
-              type="range"
-              min="0"
-              max="100"
-              class="w-full h-2 bg-border rounded appearance-none cursor-pointer accent-accent"
-            />
-            <span class="p11 text-muted-foreground">{{ hardness }}%</span>
-          </div>
-
-          <div>
-            <label class="p13 font-medium text-text block mb-2">Opacity</label>
-            <input
-              v-model.number="opacity"
-              type="range"
-              min="0"
-              max="100"
-              class="w-full h-2 bg-border rounded appearance-none cursor-pointer accent-accent"
-            />
-            <span class="p11 text-muted-foreground">{{ opacity }}%</span>
-          </div>
-
-          <div>
-            <label class="p13 font-medium text-text block mb-3">Background</label>
-            <div class="flex gap-2">
-              <button
-                class="w-10 h-10 rounded border-2 border-border flex items-center justify-center text-muted-foreground hover:border-accent"
-              >
-                ⊙
-              </button>
-              <div class="w-10 h-10 rounded bg-gradient-to-r from-red-400 to-blue-400 cursor-pointer hover:opacity-80"></div>
+            <div class="space-y-2">
+              <h1 class="text-huge font-black tracking-tighter leading-none"> <span class="text-primary italic">Médiathèque Galerie</span></h1>
+              <p class="text-background opacity-80 text-lg font-medium">Gérez vos contenus visuels avec une précision chirurgicale.</p>
             </div>
-            <button class="text-accent p13 font-medium mt-3">See more backgrounds</button>
           </div>
         </div>
+      </template>
+    </CompositionPageHeader>
 
-        <!-- Crop -->
-        <div v-else-if="currentTab === 'crop'" class="space-y-6">
-          <div>
-            <label class="p11 font-semibold text-muted-foreground uppercase tracking-wide block mb-2"
-              >Aspect ratio</label
-            >
-            <Select v-model="aspectRatio">
-              <SelectTrigger class="h-8 text-p13 !border-border bg-input">
-                <SelectValue placeholder="Aspect ratio" />
-              </SelectTrigger>
+    <div class="flex flex-col max-h-screen overflow-hidden card rounded-none w-fit min-w-full">
+      <header class="border-b px-6 py-3 flex justify-between items-center bg-white z-20 shrink-0">
+        <h1 class="text-lg font-bold tracking-tight text-gray-900">Éditeur</h1>
+        <div class="flex gap-2">
+          <button @click="router.back()" class="px-4 py-2 text-sm font-medium hover:bg-gray-100 rounded-md text-gray-600">Annuler</button>
+          <button @click="onSave" :disabled="isSaving" class="px-4 py-2 bg-primary text-white text-sm font-medium rounded-md flex items-center gap-2 shadow-sm hover:bg-primary/90 disabled:opacity-50 transition-all">
+            <Loader2 v-if="isSaving" class="w-4 h-4 animate-spin" />
+            <Check v-else class="w-4 h-4" />
+            Enregistrer
+          </button>
+        </div>
+      </header>
+
+      <div class="flex flex-1 overflow-hidden">
+        <aside class="w-72 border-r p-6 overflow-y-auto bg-white space-y-10 shrink-0">
+          <div class="space-y-4">
+            <div class="flex items-center gap-2 text-primary">
+              <Scissors :size="16" />
+              <h2 class="text-xs font-bold capitalize tracking-widest">Recadrage</h2>
+            </div>
+            <Select v-model="aspectRatio" @update:modelValue="centerCropBox">
+              <SelectTrigger class="w-full h-9 shadow-none border-gray-200"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="Free">Free</SelectItem>
-                <SelectItem value="1:1">1:1</SelectItem>
-                <SelectItem value="16:9">16:9</SelectItem>
-                <SelectItem value="4:3">4:3</SelectItem>
-                <SelectItem value="3:2">3:2</SelectItem>
+                <SelectItem
+                  v-for="(v, k) in ASPECT_RATIOS"
+                  :key="k"
+                  :value="k"
+                  class="select-item-custom"
+                >{{ k === 'free' ? 'Libre' : k }}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div>
-            <h3 class="p13 font-semibold text-text mb-3">Rotate</h3>
-            <div class="flex gap-2">
-              <Button variant="secondary" class="flex-1 px-3 py-2 h-8">
-                <RotateCcw class="size-16" />
-              </Button>
-              <Button variant="secondary" class="flex-1 px-3 py-2 h-8">
-                <RotateCw class="size-16" />
-              </Button>
+          <div class="space-y-4">
+            <div class="flex items-center gap-2 text-primary">
+              <RotateCw :size="16" />
+              <h2 class="text-xs font-bold capitalize tracking-widest">Orientation</h2>
+            </div>
+            <div class="grid grid-cols-4 gap-2">
+              <button @click="handleRotate(-90)" class="border h-9 flex items-center justify-center rounded-md hover:bg-gray-50 text-gray-600"><RotateCcw :size="14"/></button>
+              <button @click="handleRotate(90)" class="border h-9 flex items-center justify-center rounded-md hover:bg-gray-50 text-gray-600"><RotateCw :size="14"/></button>
+              <button @click="state.transform.flipH = !state.transform.flipH" :class="['border h-9 flex items-center justify-center rounded-md', state.transform.flipH ? 'bg-primary/10 border-primary text-primary' : '']"><FlipHorizontal :size="14"/></button>
+              <button @click="state.transform.flipV = !state.transform.flipV" :class="['border h-9 flex items-center justify-center rounded-md', state.transform.flipV ? 'bg-primary/10 border-primary text-primary' : '']"><FlipVertical :size="14"/></button>
             </div>
           </div>
 
-          <div>
-            <h3 class="p13 font-semibold text-text mb-3">Flip</h3>
-            <div class="flex gap-2">
-              <Button variant="secondary" class="flex-1 px-3 py-2 h-8">
-                <FlipHorizontal2 class="size-16" />
-              </Button>
-              <Button variant="secondary" class="flex-1 px-3 py-2 h-8">⊣</Button>
+          <div class="space-y-4">
+            <div class="flex items-center gap-2 text-primary">
+              <ImageIcon :size="16" />
+              <h2 class="text-xs font-bold capitalize tracking-widest">Filtres</h2>
+            </div>
+            <div class="space-y-4">
+              <div class="space-y-2">
+                <label class="text-[10px] text-gray-400 font-bold">Flou: {{ state.filters.blur }}px</label>
+                <input type="range" v-model.number="state.filters.blur" min="0" max="15" class="w-full h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-primary">
+              </div>
+              <label class="flex items-center justify-between p-3 border border-gray-100 rounded-lg cursor-pointer hover:bg-gray-50">
+                <span class="text-xs font-medium">Noir et Blanc</span>
+                <input type="checkbox" v-model="state.filters.grayscale" class="w-4 h-4 rounded text-primary">
+              </label>
             </div>
           </div>
-        </div>
+        </aside>
 
-        <!-- Refine -->
-        <div v-else-if="currentTab === 'refine'" class="space-y-4">
-          <p class="p13 text-muted-foreground">Refine tool controls</p>
-        </div>
-
-        <!-- Rotate -->
-        <div v-else-if="currentTab === 'rotate'" class="space-y-4">
-          <div>
-            <label class="p13 font-medium text-text block mb-2">Rotation angle</label>
-            <input
-              v-model.number="rotation"
-              type="range"
-              min="0"
-              max="360"
-              class="w-full h-2 bg-border rounded appearance-none cursor-pointer accent-accent"
-            />
-            <span class="p13 text-muted-foreground">{{ rotation }}°</span>
-          </div>
-        </div>
-
-        <!-- Adjust -->
-        <div v-else-if="currentTab === 'adjust'" class="space-y-4">
-          <p class="p13 text-muted-foreground">Adjust tool controls</p>
-        </div>
-
-        <!-- Filters -->
-        <div v-else-if="currentTab === 'filters'" class="space-y-4">
-          <div>
-            <label class="p13 font-medium text-text block mb-2">Blur</label>
-            <input
-              v-model.number="filters.blur"
-              type="range"
-              min="0"
-              max="20"
-              step="0.5"
-              class="w-full h-2 bg-border rounded appearance-none cursor-pointer accent-accent"
-            />
-            <span class="p11 text-muted-foreground">{{ filters.blur }}px</span>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <input
-              v-model="filters.grayscale"
-              type="checkbox"
-              id="gray-check"
-              class="w-4 h-4 accent-accent"
-            />
-            <label for="gray-check" class="p13 text-text">Grayscale</label>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right preview area -->
-      <div class="flex-1 bg-input p-6 flex flex-col items-center justify-center overflow-hidden">
-        <div class="relative group h-full flex items-center justify-center bg-checkerboard rounded overflow-hidden flex-1">
-          <div class="relative">
-            <canvas
-              ref="canvasRef"
-              class="max-w-full max-h-full shadow-lg object-contain block"
-            ></canvas>
-
-            <!-- Crop overlay -->
+        <main class="flex-1 bg-gray-50 flex items-center justify-center p-8 overflow-hidden relative">
+          <div class="relative shadow-2xl bg-white select-none transition-all duration-300" :style="{ width: state.canvas.w + 'px', height: state.canvas.h + 'px' }">
+            <canvas ref="canvasRef" class="w-full h-full block" />
             <div
-              v-if="currentTab === 'crop'"
-              class="absolute border-2 border-accent bg-accent/10 cursor-move z-30"
-              :style="{
-                left: cropState.x + 'px',
-                top: cropState.y + 'px',
-                width: cropState.width + 'px',
-                height: cropState.height + 'px',
-              }"
-              @mousedown="startDrag"
-            >
-              <div
-                class="absolute -top-1.5 -left-1.5 w-3 h-3 bg-accent cursor-nw-resize"
-                @mousedown="startResize('nw', $event)"
-              ></div>
-
-              <div
-                class="absolute -top-1.5 -right-1.5 w-3 h-3 bg-accent cursor-ne-resize"
-                @mousedown="startResize('ne', $event)"
-              ></div>
-
-              <div
-                class="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-accent cursor-sw-resize"
-                @mousedown="startResize('sw', $event)"
-              ></div>
-
-              <div
-                class="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-accent cursor-se-resize"
-                @mousedown="startResize('se', $event)"
-              ></div>
+              @mousedown="startInteraction($event, 'move')"
+              class="absolute border-2 border-primary shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] cursor-move"
+              :style="{ left: state.crop.x + 'px', top: state.crop.y + 'px', width: state.crop.width + 'px', height: state.crop.height + 'px' }">
+              <div class="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none opacity-40">
+                <div v-for="i in 9" :key="i" class="border-[0.5px] border-white"></div>
+              </div>
+              <div @mousedown="startInteraction($event, 'resize')" class="absolute -right-2 -bottom-2 w-5 h-5 bg-primary border-2 border-white rounded-full cursor-nwse-resize shadow-lg z-30"></div>
             </div>
           </div>
-        </div>
-
-        <!-- Zoom controls -->
-        <div class="flex items-center gap-4 mt-6 text-accent">
-          <button class="p-2 hover:text-accent/80">
-            <RefreshCcw class="size-18" />
-          </button>
-          <button class="p-2 hover:text-accent/80">
-            <Minus class="size-18" />
-          </button>
-          <span class="p13 w-12 text-center">{{ zoom }}%</span>
-          <button class="p-2 hover:text-accent/80">
-            <Plus class="size-18" />
-          </button>
-        </div>
+        </main>
       </div>
-    </div>
-
-    <!-- Footer -->
-    <div class="border-t border-border px-6 py-4 flex justify-end gap-3 bg-card">
-      <button class="px-6 py-2 p13 text-text border border-border rounded-lg hover:bg-input">
-        Cancel
-      </button>
-      <button
-        @click="handleApply"
-        class="px-6 py-2 p13 bg-accent text-white rounded-lg hover:bg-accent/90 font-medium"
-      >
-        Apply
-      </button>
     </div>
   </div>
 </template>
-

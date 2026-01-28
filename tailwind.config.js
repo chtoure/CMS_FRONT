@@ -44,6 +44,8 @@ export default {
         background: "var(--background)",
         foreground: "var(--foreground)",
         text: "var(--text)",
+        'text-muted': "var(--text-muted)",
+        'pagination-item-text': "var(--pagination-item-text)",
         primary: {
           DEFAULT: "var(--primary)",
           foreground: "var(--primary-foreground)",

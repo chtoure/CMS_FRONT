@@ -1,262 +1,270 @@
 <script setup lang="ts">
-  import { ref, computed } from "vue"
+  import { computed, ref, watch } from 'vue'
+  import CompositionTable from '@/components/composition/CompositionTable.vue'
+  import Button from '@/components/ui/button/Button.vue'
+  import { Archive, Eye, FileText, MoreHorizontal, Pencil, PlayCircle, Plus, X } from 'lucide-vue-next'
+  import { useCreateMedia, useDeleteMedia, useGetMediaList } from '../../hook/media'
+  import { showToast } from '../../lib/toast'
+  import { getErrorMessage } from '../../lib/errorMessage'
+  import BaseCheckbox from '../../components/base/BaseCheckbox.vue'
+  import CompositionLoading from '../../components/composition/CompositionLoading.vue'
+  import CompositionError from '../../components/composition/CompositionError.vue'
+  import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
+  import DropdownMenu from '../../components/ui/dropdown-menu/DropdownMenu.vue'
+  import DropdownMenuTrigger from '../../components/ui/dropdown-menu/DropdownMenuTrigger.vue'
+  import DropdownMenuContent from '../../components/ui/dropdown-menu/DropdownMenuContent.vue'
+  import DropdownMenuLabel from '../../components/ui/dropdown-menu/DropdownMenuLabel.vue'
+  import DropdownMenuSeparator from '../../components/ui/dropdown-menu/DropdownMenuSeparator.vue'
+  import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue'
+  import CompositionVideoImageModal from '../../components/composition/CompositionVideoImageModal.vue'
+  import { useHead } from '@vueuse/head'
 
-  import { Plus, Pencil, X, Eye } from "lucide-vue-next"
-  import Button from "@/components/ui/button/Button.vue"
-  import Select from "@/components/ui/select/Select.vue"
-  import SelectTrigger from "@/components/ui/select/SelectTrigger.vue"
-  import SelectValue from "@/components/ui/select/SelectValue.vue"
-  import SelectContent from "@/components/ui/select/SelectContent.vue"
-  import SelectItem from "@/components/ui/select/SelectItem.vue"
-
-  import BaseCheckbox from "@/components/base/BaseCheckbox.vue"
-  import CompositionConfirmDialog from "@/components/composition/CompositionConfirmDialog.vue"
-  import { showToast } from "../../lib/toast"
-  import { useCreateMedia, useDeleteMedia, useGetMediaList } from "../../hook/media"
-  import CompositionLoading from "@/components/composition/CompositionLoading.vue"
-  import CompositionError from "@/components/composition/CompositionError.vue"
-  import CompositionVideoImageModal from "@/components/composition/CompositionVideoImageModal.vue"
-import CompositionListEmpty from "../../components/composition/CompositionListEmpty.vue"
-
-  const filterType = ref("all");
-
-  const {
-    mutateAsync: createMediaAsync,
-    isError: isCreateMediaError,
-    isPending: isCreateMediaLoading,
-    error: createMediaError
-  } = useCreateMedia();
-
-  const {
-    mutate: deleteMedia,
-    isPending: isDeleteMediaLoading,
-  } = useDeleteMedia();
-
-  const filterParams = computed(() => ({
-    type: filterType.value === "all" ? undefined : filterType.value as "image" | "video"
-  }));
-
-  const {
-    data: mediaList,
-    isLoading: isMediaListLoading,
-    isError: isMediaListError,
-    error: mediaListError,
-    refetch: refreshMediaList
-  } = useGetMediaList(filterParams);
-
-  const filterChange = (val: string) => {
-    filterType.value = val;
-  }
+  useHead({
+    meta: [
+      { name: 'description', content: 'Gérez vos actifs visuels avec précision sur la plateforme Compositor.' },
+      { property: 'og:title', content:'Médiathèque' },
+      { property: 'og:description', content: 'Gérez vos actifs visuels avec précision sur la plateforme Compositor.' },
+    ],
+  })
 
   const selectedItems = ref<Set<number>>(new Set());
   const showRemoveButton = ref(false);
   const fileInput = ref<HTMLElement | null>(null);
 
+  const currentPage = ref(1);
+  const limit = ref(10);
+  const filterType = ref("all");
+
+  const filterOptions = [
+    { label: 'Images', value: 'image' },
+    { label: 'Vidéos', value: 'video' },
+    { label: 'Documents', value: 'document' },
+    { label: 'Archives', value: 'archive' },
+  ]
+
+  const filterParams = computed(() => ({
+    type: filterType.value === "all" ? undefined : [filterType.value as "image" | "video" | "document" | "archive"],
+    page: currentPage.value,
+    limit: limit.value
+  }));
+
+  const mediaQuery = useGetMediaList(filterParams);
+
+  const mediaCreator = useCreateMedia();
+  const mediaDeleter = useDeleteMedia();
+
+  watch([currentPage, limit, filterType], () => {
+    mediaQuery.refetch();
+  });
 
 
   const deleteSelectedItems = (id?: number) => {
     const payload = id ? id : Array.from(selectedItems.value);
-
-    deleteMedia(payload, {
+    mediaDeleter.mutate(payload, {
       onSuccess: async () => {
-        await refreshMediaList();
-        
+        await mediaQuery.refetch();
         if (!id) {
           selectedItems.value.clear();
           showRemoveButton.value = false;
         }
-        
-        showToast('success', 'Données supprimées avec succès!');
+        showToast('success', 'Éléments supprimés de l\'Eldorado');
       },
       onError: (error: Error) => {
-        showToast('error', `Erreur lors de la suppression: ${error.message}`);
+        showToast('error', `${getErrorMessage(error)}`);
       }
     });
   }
 
   const toggleSelection = (id: number, checked: boolean) => {
-    console.log("Clicked:", id, checked);
-
     const next = new Set(selectedItems.value);
-
-    if (checked) {
-      next.add(id);
-    } else {
-      next.delete(id);
-    }
-
+    if (checked) next.add(id); else next.delete(id);
     selectedItems.value = next;
-
-    if (selectedItems.value.size > 0) {
-      showRemoveButton.value = true;
-    } else {
-      showRemoveButton.value = false;
-    }
+    showRemoveButton.value = selectedItems.value.size > 0;
   }
 
-  const triggerFileInput = () => {
-    fileInput.value?.click();
-  }
+  const triggerFileInput = () => fileInput.value?.click();
 
   const handleFileUpload = async (event: Event) => {
     const input = event.target as HTMLInputElement;
-
     if (!input.files) return;
-
     const files = Array.from(input.files);
-
     try {
-
-      const uploadFile= files.map((file)=>{
+      const uploadFile = files.map((file) => {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('alt', file.name);
-        return createMediaAsync(formData);
+        return mediaCreator.mutateAsync(formData);
       })
-
       await Promise.all(uploadFile);
-
-      await refreshMediaList();
-      showToast('success', 'Données supprimées avec succès!');
-      
+      await mediaQuery.refetch();
+      showToast('success', 'Médias importés avec succès');
     } catch (error) {
-      showToast('error', `Erreur lors de la suppression: ${error}`);
+      showToast('error', `${getErrorMessage(error)}`);
     }
-
   }
 
+  const columns = [
+    { key: 'id', label: 'ID' , class: 'w-6' },
+    { key: 'check', label: 'Check' , class: 'w-6' },
+    { key: 'image', label: 'Image' },
+    { key: 'alt', label: 'Alt' },
+    { key: 'actions', label: 'Actions', class: 'w-10' },
+  ]
+
+  const mediaResults = computed(() => mediaQuery.data.value?.results || []);
+  const totalItems = computed(() => mediaQuery.data.value?.count || 0);
 </script>
 
 <template>
-  <CompositionLoading v-if="isCreateMediaLoading || isMediaListLoading || isDeleteMediaLoading" />
+  <CompositionLoading v-if="mediaCreator.isPending.value || mediaDeleter.isPending.value || (mediaQuery.isLoading.value && !mediaQuery.data.value)" />
 
-  <CompositionError 
-    v-else-if="isCreateMediaError || isMediaListError" 
-    :error="isCreateMediaError ? createMediaError?.message : mediaListError?.message"
+  <CompositionError
+    v-else-if="mediaCreator.isError.value || mediaQuery.isError.value"
+    :error="mediaCreator.isError.value ? mediaCreator.error.value?.message : mediaQuery.error.value?.message"
   />
 
-  <div v-else class="p-6">
-    <div class="mb-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-xl font-semibold text-foreground mb-1">Médiathèque</h1>
-          <p class="text-[13px] text-muted-foreground">Gérez vos images et vidéos</p>
-        </div>
-        <input
-          ref="fileInput"
-          type="file"
-          class="hidden"
-          multiple
-          accept="video/*,image/*"
-          @change="handleFileUpload"
-        />
-        <Button
-          size="sm"
-          class="text-primary-foreground"
-          @click="triggerFileInput"
-        >
-          <Plus class="w-4 h-4" />
-          Ajouter media
-        </Button>
-      </div>
-    </div>
-
-    <div class="">
-      <div class="mb-4">
-        <label class="text-[11px] font-semibold text-text uppercase tracking-wide mb-2 block">Filtrer</label>
-        <div class="flex gap-2">
-          <div class="w-40">
-            <Select :default-value="filterType" @update:modelValue="filterChange">
-              <SelectTrigger class="h-8 text-[13px] !border-border bg-input">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous</SelectItem>
-                <SelectItem value="image">Images</SelectItem>
-                <SelectItem value="video">Videos</SelectItem>
-              </SelectContent>
-            </Select>
+  <div v-else :class="['space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700', mediaQuery.isFetching.value ? 'opacity-50 pointer-events-none transition-opacity' : '']">
+    <CompositionPageHeader>
+      <template #content>
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+          <div class="space-y-2">
+            <h1 class="text-huge font-black tracking-tighter leading-none"> <span class="text-primary italic">Médiathèque Galerie</span></h1>
+            <p class="text-background text-sm font-medium">Gérez vos contenus visuels avec une précision chirurgicale.</p>
           </div>
-          <CompositionConfirmDialog
-            v-if="showRemoveButton"
-            header="Confirmer la suppresion"
-            description="Êtes-vous sûr de vouloir supprimer les éléments sélectionnés ? Cette action est irréversible."
-            cancelText="Annuler"
-            actionText="Supprimer"
-            @confirm="deleteSelectedItems"
-          >
+          <div class="flex items-center gap-4">
+
+            <input
+              ref="fileInput"
+              type="file"
+              class="hidden"
+              multiple
+              accept="image/*,
+                video/*,
+                application/pdf,
+                application/msword,
+                application/vnd.openxmlformats-officedocument.wordprocessingml.document,
+                application/zip,
+                application/x-zip-compressed,
+                application/x-rar-compressed,
+                text/plain"
+              @change="handleFileUpload"
+            />
+            <Button class="rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95" @click="triggerFileInput">
+              <Plus class="w-6 h-6 mr-2" />
+              Importer
+            </Button>
+          </div>
+        </div>
+      </template>
+    </CompositionPageHeader>
+    <div class="card rounded-none p-6" >
+      <CompositionTable
+        :columns="columns"
+        :data="mediaResults"
+        :total="totalItems"
+        v-model:current-page="currentPage"
+        v-model:limit="limit"
+        filterable
+        v-model:filterValue="filterType"
+        :filterOptions="filterOptions"
+        filterPlaceholder="Tous les médias"
+      >
+        <template #extra-header>
+          <CompositionConfirmDialog v-if="showRemoveButton" header="Nettoyage de l'Eldorado" description="Êtes-vous sûr de vouloir supprimer ces actifs ?" @confirm="deleteSelectedItems" cancelText="Annuler" actionText="Supprimer">
             <template #dialogButton>
-              <Button size="sm" variant="destructive">
-                Supprimer ({{ selectedItems.size }})
+              <Button variant="destructive" class="rounded px-6 font-black shadow-lg shadow-destructive/20 animate-in zoom-in h-9 text-xs">
+                Nettoyer ({{ selectedItems.size }})
               </Button>
             </template>
           </CompositionConfirmDialog>
-        </div>
-      </div>
+        </template>
 
-      <CompositionListEmpty v-if="!mediaList?.length" label="Aucune donnée trouvée" />
+        <template #cell-id="{ index }">
+          <p>{{ index + 1 }}</p>
+        </template>
 
-      <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-        <div v-for="item in mediaList" :key="item.id" class="group relative">
-          <div class="aspect-square overflow-hidden relative rounded-lg border border-border bg-muted hover:border-primary/50 transition-all">
-            <div class="absolute bottom-2 left-2 z-10">
-              <BaseCheckbox
-                :checked="selectedItems.has(item.id)"
-                @update:checked="(val: boolean) => toggleSelection(item.id, val)"
-              />
-            </div>
-
-            <div class="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <CompositionVideoImageModal :type="item.type" :href="item.file_path" :alt="item.alt">
-                <template #trigger>
-
-                  <button
-                    class="group/btn w-7 h-7 bg-background rounded-md flex items-center justify-center shadow-sm hover:bg-muted transition-colors border border-border">
-                    <Eye class="w-3.5 h-3.5 text-muted-foreground group-hover/btn:text-foreground" />
-                  </button>
-
-                </template>
-
-              </CompositionVideoImageModal>
-
-              <button
-                v-if="item.type === 'image'"
-                class="group/btn w-7 h-7 bg-background rounded-md flex items-center justify-center shadow-sm hover:bg-muted transition-colors border border-border"
-                @click="$router.push({ name: 'admin.media.update', params: { id: item.id } })">
-                <Pencil class="w-3.5 h-3.5 text-muted-foreground group-hover/btn:text-foreground" />
-              </button>
-              <CompositionConfirmDialog
-                :header="'Confirmer la suppresion'"
-                :description="'Êtes-vous sûr de vouloir supprimer ? Cette action est irréversible.'"
-                :cancelText="'Annuler'"
-                :actionText="'Supprimer'"
-                @confirm="() => deleteSelectedItems(item.id)"
-              >
-                <template #dialogButton>
-                  <button
-                    class="group/btn w-7 h-7 bg-background rounded-md flex items-center justify-center shadow-sm hover:bg-destructive transition-colors border border-border hover:border-destructive"
-                  >
-                    <X class="w-3.5 h-3.5 text-muted-foreground group-hover/btn:text-destructive-foreground" />
-                  </button>
-                </template>
-              </CompositionConfirmDialog>
-            </div>
+        <template #cell-check="{ row }">
+          <BaseCheckbox
+            :checked="selectedItems.has(row.id)"
+            @update:checked="(v:boolean) => toggleSelection(row.id, v)"
+            class="w-3 h-3 rounded border border-border bg-background backdrop-blur-sm data-[state=checked]:bg-primary data-[state=checked]:border-primary shadow-lg"
+          />
+        </template>
+        <template #cell-image="{ row }">
+          <div class="flex items-center justify-center w-24 h-20 overflow-hidden">
 
             <img
-              v-if="item.type === 'image'"
-              :src="item.file_path || '/placeholder.svg'"
-              :alt="item.alt || 'Media Image'"
+              v-if="row.type === 'image'"
+              :src="row.file_path"
+              alt="Aperçu"
               class="w-full h-full object-cover"
             />
-            <video
-              v-else
-              :src="item.file_path || '/placeholder.svg'"
-              :alt="item.alt || 'Media Image'"
-              class="w-full h-full object-cover"
-            />
+
+            <div v-else-if="row.type === 'video'" class="relative w-full h-full">
+              <video
+                :src="row.file_path"
+                muted
+                class="w-full h-full object-cover"
+              />
+              <div class="absolute inset-0 flex items-center justify-center">
+                <PlayCircle :size="20" class="text-white drop-shadow-md" />
+              </div>
+            </div>
+
+            <div v-else-if="row.type === 'document'" class="flex flex-col items-center gap-1">
+              <FileText :size="32" class="text-blue-500" />
+            </div>
+
+            <div v-else-if="row.type === 'archive'" class="flex flex-col items-center gap-1">
+              <Archive :size="32" class="text-amber-500" />
+              <span class="text-[10px] font-bold uppercase text-gray-400">ZIP</span>
+            </div>
+
+            <div v-else class="text-gray-300">
+              <FileText :size="32" />
+            </div>
+
           </div>
-        </div>
-      </div>
+        </template>
+        <template #cell-actions="{ row }">
+          <DropdownMenu>
+            <DropdownMenuTrigger as-child>
+              <Button variant="ghost" size="icon" @click.stop="">
+                <MoreHorizontal class="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>
+                <CompositionVideoImageModal :type="row.type" :href="row.file_path" :alt="row.alt">
+                  <template #trigger>
+                    <button class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
+                      <Eye class="w-4 h-4" /> Visualiser
+                    </button>
+                  </template>
+                </CompositionVideoImageModal>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel v-if="row.type === 'image'">
+                <button  @click="$router.push({ name: 'admin.media.update', params: { id: row.id } })" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
+                  <Pencil class="w-4 h-4" /> Modifier
+                </button>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator v-if="row.type === 'image'" />
+              <DropdownMenuLabel>
+                <CompositionConfirmDialog @confirm="deleteSelectedItems(row.id)" header="Suppression de l'actif" description="Êtes-vous sûr de vouloir supprimer ce média ?" cancelText="Annuler" actionText="Supprimer" >
+                  <template #dialogButton>
+                    <button class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
+                      <X class="w-4 h-4" /> Supprimer
+                    </button>
+                  </template>
+                </CompositionConfirmDialog>
+              </DropdownMenuLabel>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </template>
+      </CompositionTable>
     </div>
   </div>
 </template>

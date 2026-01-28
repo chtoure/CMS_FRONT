@@ -1,13 +1,14 @@
 <script setup lang="ts">
-    import {
-        ref
-    } from 'vue'
-
+    import { computed, ref, onMounted, onUnmounted } from 'vue'
     import {
         Maximize,
         Settings,
-        PanelLeftClose,
-        PanelLeftOpen
+        Search,
+        X,
+        Menu,
+        Plus,
+        Minimize,
+        Loader
     } from 'lucide-vue-next'
     import CompositionUserDropDown from '@/components/composition/CompositionUserDropDown.vue'
     import CompositionDarkMode from '@/components/composition/CompositionDarkMode.vue';
@@ -20,13 +21,25 @@
     import AvatarImage from '@/components/ui/avatar/AvatarImage.vue';
     import AvatarFallback from '@/components/ui/avatar/AvatarFallback.vue';
     import DropdownMenuContent  from '@/components/ui/dropdown-menu/DropdownMenuContent.vue';
-
+    import { userStore } from '../../stores/user';
+    import { useRouter } from 'vue-router';
+    import { searchItems, type SearchItem } from '../../constants/searchItems';
+    import HoverCard from '../ui/hover-card/HoverCard.vue';
+    import HoverCardTrigger from '../ui/hover-card/HoverCardTrigger.vue';
+    import HoverCardContent from '../ui/hover-card/HoverCardContent.vue';
+    import { useGetContentTypes } from '../../hook/content-type.ts';
 
     const props = defineProps<{
         onToggleSidebar?: () => void
         headerClass?: string,
         isSidebarCollapsed?: boolean
     }>()
+
+    const { data: contentTypes, error: contentTypeError, isLoading: contentTypeLoading } = useGetContentTypes();
+
+    const resultContentTypes = computed(() => contentTypes.value?.results || [])
+
+    const router = useRouter();
 
     const isFullscreen = ref(false)
 
@@ -40,50 +53,155 @@
         }
     }
 
-    const SearchIcon = { template: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>' };
-    const CommandIcon = { template: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0 3 3 3 3 0 0 0 3-3z"/></svg>' };
-
     const searchTerm = ref('');
+    const storeUser = userStore();
+
+    const filteredResults = computed(() => {
+        if (!searchTerm.value) return [];
+        const term = searchTerm.value.toLowerCase();
+
+        // Eléments statiques
+        const staticResults = searchItems.filter(item =>
+            item.label.toLowerCase().includes(term) ||
+            item.description.toLowerCase().includes(term) ||
+            item.category.toLowerCase().includes(term)
+        );
+
+        // Types de contenu dynamiques
+        const dynamicResults: SearchItem[] = resultContentTypes.value
+            .filter(ct => ct.name.toLowerCase().includes(term))
+            .map(ct => ({
+                id: `dynamic-ct-${ct.id}`,
+                label: ct.name,
+                description: `Gérer les entrées de ${ct.name}`,
+                icon: Plus, // Ou une icone par défaut
+                category: 'Contenus',
+                href: 'admin.content-entry.list',
+                params: { slug: ct.slug }
+            }));
+
+        return [...staticResults, ...dynamicResults].slice(0, 10);
+    });
+
+    const handleSearchSelect = (item: SearchItem) => {
+        searchTerm.value = '';
+        if (item.href) {
+            router.push({
+                name: item.href,
+                params: item.params || {}
+            });
+        }
+    };
+
+    const handleShortcut = (e: KeyboardEvent) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+            e.preventDefault();
+            const input = document.getElementById('global-search-input');
+            input?.focus();
+        }
+    };
+
+
+
+    onMounted(() => {
+        window.addEventListener('keydown', handleShortcut);
+    });
+
+    onUnmounted(() => {
+        window.removeEventListener('keydown', handleShortcut);
+    });
 
 
 </script>
 
 <template>
     <header :class="cn(
-        'h-14 border-b border-border bg-background flex items-center justify-between px-4 gap-3',
+        'h-16 sticky top-0 z-40 border-b border-border bg-background backdrop-blur-xl flex items-center justify-between px-6 gap-4', // Effet de verre (glassmorphism) et hauteur augmentée
         headerClass
     )" >
 
-        <div class="flex items-center gap-3 flex-1">
+        <div class="flex items-center gap-4 flex-1">
             <button
                 @click="props.onToggleSidebar"
-                class="flex items-center justify-center p-1.5 rounded-md transition-all duration-150 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none"
+                class="flex items-center justify-center p-2 rounded-xl transition-all duration-200 text-muted-foreground hover:bg-secondary hover:text-foreground hover:scale-110 active:scale-95"
             >
-                <PanelLeftOpen v-if="props.isSidebarCollapsed" class="w-4 h-4" />
-                <PanelLeftClose v-else class="w-4 h-4" />
+                <Menu v-if="props.isSidebarCollapsed" class="w-5 h-5" />
+                <X v-else class="w-5 h-5" />
             </button>
 
-            <BaseSearchInput v-model="searchTerm" placeholder="Search..." containerClass="max-w-sm">
+            <BaseSearchInput
+                id="global-search-input"
+                v-model="searchTerm"
+                :results="filteredResults"
+                @select="handleSearchSelect"
+                placeholder="Rechercher une fonctionnalité (Cmd + K)..."
+                containerClass="max-w-md hidden md:flex"
+            >
                 <template v-slot:iconLeft>
-                    <SearchIcon class="w-3.5 h-3.5" />
+                    <Search class="w-4 h-4" />
                 </template>
                 <template v-slot:shortcutRight>
-                    <CommandIcon class="w-3 h-3" />
-                    <span class="text-[11px]">K</span>
+                    <span class="text-[10px] font-black opacity-50">⌘ K</span>
                 </template>
             </BaseSearchInput>
         </div>
 
         <div class="flex items-center gap-2">
+            <HoverCard :open-delay="100" :close-delay="200">
+              <HoverCardTrigger as-child>
+                <Button
+                  variant="ghost"
+                  class="text-muted-foreground hover:text-foreground p-1.5 h-8 w-8"
+                >
+                  <Plus class="w-4 h-4" />
+                </Button>
+              </HoverCardTrigger>
+
+              <HoverCardContent
+                align="end"
+                side="bottom"
+                :side-offset="8"
+                class="w-auto min-w-max p-2 bg-background border-border shadow-md"
+              >
+                <div v-if="contentTypeLoading" class="flex items-center justify-center p-4">
+                  <Loader class="w-4 h-4 animate-spin" />
+                </div>
+
+                <div v-else-if="contentTypeError" class="p-2 text-xs text-destructive">
+                  <p>Erreur survenue</p>
+                </div>
+
+                <div v-else>
+                  <div v-if="resultContentTypes?.length === 0" class="p-2 text-xs text-muted-foreground">
+                    <p>Aucun type</p>
+                  </div>
+
+                  <div v-else class="flex flex-col gap-1">
+                    <div v-for="contentType in resultContentTypes" :key="contentType.id">
+                      <Button
+                        @click="router.push({ name: 'admin.content-entry.create', params: { id: contentType.id } })"
+                        variant="outline"
+                        class="h-8 w-full justify-start px-2 py-1.5 text-xs font-normal border-none hover:bg-background"
+                      >
+                        {{ contentType.name }}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
+
             <Button
                 variant="ghost"
                 @click="toggleFullscreen"
-                :class="cn('text-muted-foreground hover:text-foreground p-1.5 h-8 w-8')"
+                class="text-muted-foreground hover:text-foreground p-1.5 h-8 w-8"
             >
-                <Maximize class="w-4 h-4" />
+                <Minimize v-if="isFullscreen" class="w-4 h-4" stroke-width="2" />
+                <Maximize v-else class="w-4 h-4" stroke-width="2" />
             </Button>
 
             <Button
+              @click="router.push({ name: 'admin.parameter' })"
               variant="ghost"
               :class="cn('text-muted-foreground hover:text-foreground p-1.5 h-8 w-8')">
                 <Settings class="w-4 h-4" />
@@ -96,14 +214,25 @@
                 <Button class="relative h-8 w-8 rounded-full overflow-hidden hover:opacity-80 transition-all duration-150 hover:ring-2 hover:ring-primary/30">
                   <Avatar>
                     <AvatarImage src="userIcon.png"/>
-                    <AvatarFallback>JS</AvatarFallback>
+                    <AvatarFallback>{{ storeUser.userInfo?.initials }}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" class="mt-2">
+              <DropdownMenuContent align="end" class="mt-2 bg-transparent border-none shadow-none">
                 <CompositionUserDropDown />
               </DropdownMenuContent>
             </DropdownMenu>
         </div>
     </header>
 </template>
+
+
+
+
+
+
+
+
+
+
+
