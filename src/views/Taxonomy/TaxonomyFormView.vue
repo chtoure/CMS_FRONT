@@ -62,12 +62,14 @@ watch(existingTaxonomy, (data) => {
 
 // Auto-génération du slug
 watch(() => form.value.name, (newName) => {
-    form.value.slug = newName
+    if (!isEditing.value) {
+      form.value.slug = newName
       .toLowerCase()
       .trim()
       .replace(/[^\w\s-]/g, '')
       .replace(/[\s_-]+/g, '-')
       .replace(/^-+|-+$/g, '')
+    }
 })
 
 // Gestion des termes
@@ -193,7 +195,8 @@ const handleCancel = () => {
                   id="slug"
                   v-model="form.slug"
                   placeholder="identifiant-unique"
-                  class="input-custom"
+                  class="input-custom cursor-not-allowed"
+                  :disabled="isEditing"
                   :class="{ 'border-destructive': errors.slug }"
                 />
                 <p v-if="errors.slug" class="text-xs text-destructive px-1 font-medium italic">{{ errors.slug }}</p>

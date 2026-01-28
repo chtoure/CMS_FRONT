@@ -79,6 +79,7 @@ const form = ref({
 })
 
 const isFieldsExpanded = ref(true)
+const confirmDialogUrl = ref(true)
 
 // État des erreurs de validation
 const errors = ref<Record<string, string>>({})
@@ -133,7 +134,7 @@ let unregisterGuard: () => void;
 // Initialisation des données
 onMounted(() => {
   unregisterGuard = router.beforeEach(async (to, from) => {
-    if (to.name !== from.name && EnregistrerBrouillon.value) {
+    if (to.name !== from.name && EnregistrerBrouillon.value && confirmDialogUrl.value) {
       isChangePageByUrl.value = true;
 
       const userConfirmed = await new Promise<boolean>((resolve) => {
@@ -244,8 +245,8 @@ watch(fieldTypesList, (newTypes) => {
     }
     if (type === FieldType.TAXONOMY) {
       const taxonomyField = field as ITaxonomyConfig
-      if (!taxonomyField.taxonomy_slug) {
-        taxonomyField.taxonomy_slug = ''
+      if (!taxonomyField.taxonomyIds) {
+        taxonomyField.taxonomyIds = []
         taxonomyField.renderType = 'combobox'
         taxonomyField.multiple = false
       }
@@ -287,6 +288,22 @@ const toggleType = (field: IMediaConfig, type: TypesMedia) => {
   }
 };
 
+
+const toggleTaxonomy = (field: ITaxonomyConfig, taxonomyId: number) => {
+  // Initialise le tableau s'il n'existe pas
+  if (!field.taxonomyIds) {
+    field.taxonomyIds = [];
+  }
+
+  const index = field.taxonomyIds.indexOf(taxonomyId);
+  if (index > -1) {
+    // Si le type existe déjà, on le retire
+    field.taxonomyIds.splice(index, 1);
+  } else {
+    // Sinon, on l'ajoute
+    field.taxonomyIds.push(taxonomyId);
+  }
+};
 
 // Supprimer un champ
 const removeField = (index: number) => {
@@ -345,7 +362,7 @@ const cleanedFields = (fields: IFieldDefinition[]): IFieldDefinition[] => {
 
 
     if (f.type===FieldType.TAXONOMY) {
-      if (f.taxonomy_slug === '') {
+      if (f.taxonomyIds.length === 0) {
         messageErrorTypeChamp.value = 'Veuillez selectionner une categorie'
       } else {
         messageErrorTypeChamp.value = ''
@@ -361,7 +378,7 @@ const cleanedFields = (fields: IFieldDefinition[]): IFieldDefinition[] => {
       case FieldType.MEDIA:
         return { ...base, type: FieldType.MEDIA, allowedTypes: f.allowedTypes, multiple: f.multiple, maxSize: f.maxSize, defaultValue: f.defaultValue }
       case FieldType.TAXONOMY:
-        return { ...base, type: FieldType.TAXONOMY, taxonomy_slug: f.taxonomy_slug, multiple: f.multiple, renderType: f.renderType, defaultValue: f.defaultValue }
+        return { ...base, type: FieldType.TAXONOMY, taxonomyIds: f.taxonomyIds, multiple: f.multiple, renderType: f.renderType, defaultValue: f.defaultValue }
       case FieldType.SELECT:
         return { ...base, type: FieldType.SELECT, options: f.options, multiple: f.multiple, defaultValue: f.defaultValue }
       case FieldType.RICH_TEXT:
@@ -447,11 +464,11 @@ const handleSubmit = () => {
   }
 
   console.log('Payload nettoyé:', payload)
-
   registerContentType(
     payload,{
       onSuccess: () => {
         showToast('success', 'Type de contenu créé avec succès')
+        confirmDialogUrl.value = false;
         router.push({name: 'admin.content-types'})
       },
       onError: (error) => {
@@ -463,6 +480,7 @@ const handleSubmit = () => {
 }
 
 const handleCancel = () => {
+  confirmDialogUrl.value = false;
   router.back()
 }
 
@@ -760,20 +778,53 @@ const handleCancel = () => {
                       <div v-if="resultTaxonomies && resultTaxonomies.length > 0" class="grid grid-cols-2 gap-4">
                         <div class="space-y-2">
                           <Label class="text-xs font-medium text-text">Categorie</Label>
-                          <Select v-model="(field as ITaxonomyConfig).taxonomy_slug">
-                            <SelectTrigger class="input-custom">
-                              <SelectValue placeholder="Choisir une categorie" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                <SelectItem v-for="taxonomy in resultTaxonomies" :key="taxonomy.id" :value="taxonomy.slug" class="select-item-custom">
-                                  <div class="flex items-center gap-2">
-                                    <span class="font-medium">{{ taxonomy.name }}</span>
-                                  </div>
-                                </SelectItem>
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
+                          <Popover v-model:open="open">
+                              <PopoverTrigger as-child>
+                                <Button
+                                  ref="triggerRef"
+                                  variant="outline"
+                                  role="combobox"
+                                  class="input-custom w-full relative flex items-center justify-center font-normal h-8"
+                                >
+                                  <span class="truncate text-center mx-8">
+                                    {{ field.taxonomyIds.length > 0
+                                        ? `${field.taxonomyIds.length} categorie(s) selectionée(s)`
+                                        : "Choisir les categories ..."
+                                    }}
+                                  </span>
+
+                                  <ChevronsUpDown class="absolute right-3 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+
+                              <PopoverContent :style="{ width: `${width}px` }" class="p-0">
+                                <Command>
+                                  <CommandInput placeholder="Rechercher une categorie..." />
+                                  <CommandEmpty>Aucun categorie trouvé.</CommandEmpty>
+                                  <CommandList class="group custom-scrollbar">
+                                    <CommandGroup>
+                                      <CommandItem
+                                        v-for="taxonomy in resultTaxonomies"
+                                        :key="taxonomy.id"
+                                        :value="taxonomy.id "
+                                        class="cursor-pointer data-[highlighted]:bg-primary data-[highlighted]:text-white group-hover:data-[highlighted]:bg-transparent group-hover:data-[highlighted]:text-foreground hover:!bg-primary hover:!text-white"
+                                        @select="toggleTaxonomy(field,taxonomy.id)"
+                                      >
+                                        <Check
+                                          :class="cn(
+                                            'mr-2 h-4 w-4',
+                                            (field as ITaxonomyConfig).taxonomyIds.includes(taxonomy.id) ? 'opacity-100' : 'opacity-0'
+                                          )"
+                                        />
+                                        <div class="flex flex-col">
+                                          <span>{{ taxonomy.name }}</span>
+                                        </div>
+                                      </CommandItem>
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                          </Popover>
                           <span v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</span>
                         </div>
                         <div class="space-y-2">
