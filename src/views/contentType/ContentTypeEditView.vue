@@ -75,6 +75,8 @@ const router = useRouter()
 const route = useRoute()
 const contentTypeId = route.params.id as string
 const isEntries = ref(false)
+const confirmDialogUrl = ref(true)
+
 
 // État du formulaire principal
 const form = ref({
@@ -141,7 +143,7 @@ onMounted(() => {
     populateForm(contentTypeData.value)
   }
   unregisterGuard = router.beforeEach(async (to, from) => {
-    if (to.name !== from.name && EnregistrerBrouillon.value) {
+    if (to.name !== from.name && EnregistrerBrouillon.value && confirmDialogUrl.value) {
       isChangePageByUrl.value = true;
 
       const userConfirmed = await new Promise<boolean>((resolve) => {
@@ -215,6 +217,24 @@ const toggleType = (field: IMediaConfig, type: TypesMedia) => {
   }
 };
 
+
+const toggleTaxonomy = (field: ITaxonomyConfig, taxonomyId: number) => {
+  // Initialise le tableau s'il n'existe pas
+  if (!field.taxonomyIds) {
+    field.taxonomyIds = [];
+  }
+
+  const index = field.taxonomyIds.indexOf(taxonomyId);
+  if (index > -1) {
+    // Si le type existe déjà, on le retire
+    field.taxonomyIds.splice(index, 1);
+  } else {
+    // Sinon, on l'ajoute
+    field.taxonomyIds.push(taxonomyId);
+  }
+};
+
+
 // Types de champs disponibles
 const fieldTypes = [
   { type: FieldType.TEXT, label: 'Texte', icon: Type, description: 'Champ de texte court' },
@@ -272,8 +292,8 @@ watch(fieldTypesList, (newTypes) => {
     }
     if (type === FieldType.TAXONOMY) {
       const taxonomyField = field as ITaxonomyConfig
-      if (!taxonomyField.taxonomy_slug) {
-        taxonomyField.taxonomy_slug = ''
+      if (!taxonomyField.taxonomyIds) {
+        taxonomyField.taxonomyIds = []
         taxonomyField.renderType = 'combobox'
         taxonomyField.multiple = false
       }
@@ -356,7 +376,7 @@ const cleanedFields = (fieldsArray: IFieldDefinition[]): IFieldDefinition[] => {
 
 
     if (f.type===FieldType.TAXONOMY) {
-      if (f.taxonomy_slug === '') {
+      if (f.taxonomyIds.length === 0) {
         messageErrorTypeChamp.value = 'Veuillez selectionner une categorie'
       } else {
         messageErrorTypeChamp.value = ''
@@ -381,7 +401,7 @@ const cleanedFields = (fieldsArray: IFieldDefinition[]): IFieldDefinition[] => {
       case FieldType.MEDIA:
         return { ...base, type: FieldType.MEDIA, allowedTypes: (f as IMediaConfig).allowedTypes, multiple: (f as IMediaConfig).multiple, maxSize: (f as IMediaConfig).maxSize, defaultValue: f.defaultValue }
       case FieldType.TAXONOMY:
-        return { ...base, type: FieldType.TAXONOMY, taxonomy_slug: (f as ITaxonomyConfig).taxonomy_slug, multiple: (f as ITaxonomyConfig).multiple, renderType: (f as ITaxonomyConfig).renderType, defaultValue: f.defaultValue }
+        return { ...base, type: FieldType.TAXONOMY, taxonomyIds: (f as ITaxonomyConfig).taxonomyIds, multiple: (f as ITaxonomyConfig).multiple, renderType: (f as ITaxonomyConfig).renderType, defaultValue: f.defaultValue }
       case FieldType.SELECT:
         const selectOptions = (f as any).options.map((opt: any) =>
           (opt && typeof opt === 'object' && 'value' in opt) ? opt.value : opt
@@ -476,6 +496,7 @@ const handleSubmit = () => {
     },{
       onSuccess: () => {
         showToast('success', 'Type de contenu mis à jour avec succès')
+        confirmDialogUrl.value = false;
         router.push({name: 'admin.content-types'})
       },
       onError: (error) => {
@@ -486,6 +507,7 @@ const handleSubmit = () => {
 }
 
 const handleCancel = () => {
+  confirmDialogUrl.value = false;
   router.back()
 }
 
@@ -494,6 +516,7 @@ const pendingChange = ref<{ field: IFieldDefinition, type: FieldType } | null>(n
 const isTypeDialogOpen = ref(false);
 
 const handleTypeAttempt = (field: IFieldDefinition & { _isNew?: boolean, _typeConfirmed?: boolean }, newType: FieldType | null | string) => {
+
   if (!newType) return;
   const targetType = newType as FieldType;
 
@@ -838,7 +861,7 @@ const confirmChange = () => {
                           <div v-if="resultTaxonomies && resultTaxonomies.length > 0" class="grid grid-cols-2 gap-4">
                             <div class="space-y-2">
                               <Label class="text-xs font-medium text-text">Categorie</Label>
-                              <Select v-model="(field as ITaxonomyConfig).taxonomy_slug">
+                              <!-- <Select v-model="(field as ITaxonomyConfig).taxonomy_slug">
                                 <SelectTrigger class="input-custom">
                                   <SelectValue placeholder="Choisir une categorie" />
                                 </SelectTrigger>
@@ -847,7 +870,54 @@ const confirmChange = () => {
                                     {{ taxonomy.name }}
                                   </SelectItem>
                                 </SelectContent>
-                              </Select>
+                              </Select> -->
+                              <Popover v-model:open="open">
+                                  <PopoverTrigger as-child>
+                                    <Button
+                                      ref="triggerRef"
+                                      variant="outline"
+                                      role="combobox"
+                                      class="input-custom w-full relative flex items-center justify-center font-normal h-8"
+                                    >
+                                      <span class="truncate text-center mx-8">
+                                        {{ field.taxonomyIds.length > 0
+                                            ? `${field.taxonomyIds.length} categorie(s) selectionée(s)`
+                                            : "Choisir les categories ..."
+                                        }}
+                                      </span>
+
+                                      <ChevronsUpDown class="absolute right-3 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                  </PopoverTrigger>
+
+                                  <PopoverContent :style="{ width: `${width}px` }" class="p-0">
+                                    <Command>
+                                      <CommandInput placeholder="Rechercher une categorie..." />
+                                      <CommandEmpty>Aucun categorie trouvé.</CommandEmpty>
+                                      <CommandList class="group custom-scrollbar">
+                                        <CommandGroup>
+                                          <CommandItem
+                                            v-for="taxonomy in resultTaxonomies"
+                                            :key="taxonomy.id"
+                                            :value="taxonomy.id "
+                                            class="cursor-pointer data-[highlighted]:bg-primary data-[highlighted]:text-white group-hover:data-[highlighted]:bg-transparent group-hover:data-[highlighted]:text-foreground hover:!bg-primary hover:!text-white"
+                                            @select="toggleTaxonomy(field,taxonomy.id)"
+                                          >
+                                            <Check
+                                              :class="cn(
+                                                'mr-2 h-4 w-4',
+                                                (field as ITaxonomyConfig).taxonomyIds.includes(taxonomy.id) ? 'opacity-100' : 'opacity-0'
+                                              )"
+                                            />
+                                            <div class="flex flex-col">
+                                              <span>{{ taxonomy.name }}</span>
+                                            </div>
+                                          </CommandItem>
+                                        </CommandGroup>
+                                      </CommandList>
+                                    </Command>
+                                  </PopoverContent>
+                              </Popover>
                               <span v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</span>
                             </div>
                             <div class="space-y-2">

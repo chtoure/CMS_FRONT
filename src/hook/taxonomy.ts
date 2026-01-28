@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/vue-query";
 import api, { handleResponse } from "../api/fetchConfig";
-import type { Taxonomy, RegisterTaxonomy, UpdateTaxonomy, taxonomyFilter } from "../type/taxonomy";
+import type { Taxonomy, RegisterTaxonomy, UpdateTaxonomy, taxonomyFilter, TaxonomyTerm } from "../type/taxonomy";
 import { unref, type Ref, computed } from "vue";
 import type { Pagination } from "../type/pagination";
 
@@ -107,5 +107,18 @@ export const useGetTaxonomyBySlug = (slug: Ref<string | null> | string | null) =
       return handleResponse<Taxonomy>(await api(`/taxonomiesSlug/${taxonomySlug}`));
     },
     enabled: computed(() => !!unref(slug))
+  });
+};
+
+
+export const getTaxonomyTermsByTaxonomyIds = (taxonomyIds: Ref<number[] | null> | number[] | null) => {
+  return useQuery({
+    queryKey: ['taxonomyTermsByTaxonomyIds', taxonomyIds],
+    queryFn: async () => {
+      const idsTaxonomy = unref(taxonomyIds);
+      if (!idsTaxonomy) return null;
+      return handleResponse<TaxonomyTerm[]>(await api(`/taxonomiesTerms/${idsTaxonomy.join(',')}`));
+    },
+    enabled: computed(() => !!unref(taxonomyIds))
   });
 };
