@@ -73,6 +73,7 @@ const handleSubmit = (status: EntryStatus) => {
   updateEntry({
     id: contentEntry.value.id,
     data: updateData,
+    slug: contentEntry.value.contentType.slug
   }, {
     onSuccess: () => {
       showToast('success', 'Contenu mis à jour avec succès')
