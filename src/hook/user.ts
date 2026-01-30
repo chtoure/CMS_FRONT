@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import api, { handleResponse } from "../api/fetchConfig";
-import type { LoginCredentials, AuthResponse, UserProfile, AddUserData, ChangePasswordData,UpdateProfileData, VerifyCode, userFilter } from "../type/user";
+import type { LoginCredentials, AuthResponse, AddUserData, ChangePasswordData,UpdateProfileData, VerifyCode, userFilter, User } from "../type/user";
 import { unref, type Ref } from "vue";
 import type { Pagination } from "../type/pagination";
 
@@ -27,7 +27,7 @@ export const useGetUsers = (filter?: Ref<userFilter> | userFilter) => {
       const query = buildQueryParams(filter)
       const response = await api(`/users?${query}`)
 
-      return handleResponse<Pagination<UserProfile>>(response)
+      return handleResponse<Pagination<User>>(response)
     }
   })
 }
@@ -208,6 +208,24 @@ export const useRestoreUser = () => {
     mutationFn: async (idUser: number) => {
       const response = await api(`/restoreUers/${idUser}`, {
         method: 'PUT',
+      });
+      return handleResponse(response);
+    },
+    onSuccess(){
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    }
+  });
+};
+
+
+
+// Resend confirmation email
+export const useResendConfirmEmail = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (idUser: number) => {
+      const response = await api(`/sendConfirmEmail/${idUser}`, {
+        method: 'POST',
       });
       return handleResponse(response);
     },

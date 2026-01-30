@@ -20,6 +20,23 @@ export interface UserProfile {
   archive: boolean;
 }
 
+
+
+
+export interface User {
+  id: number;
+  full_name: string;
+  email: string;
+  role: Role | null ;
+  isLoggedIn: boolean;
+  initials?: string;
+  archive: boolean;
+  status: string;
+  isActiveAt: Date | null;
+  archivedAt: Date | null;
+  isPendingAt: Date | null;
+}
+
 export interface userFilter {
   archive: string,
   page?: number
