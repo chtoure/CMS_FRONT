@@ -190,8 +190,6 @@ const resultPermissionsNoPaginate = computed(() => dataPermissionsNoPaginate.val
 const {
   mutate:updateRole,
   isPending:updateLoading,
-  isError:isErrorRole,
-  error:errorRoleUpdate
 }= useUpdateRole()
 
 
@@ -248,19 +246,14 @@ const togglePermission = (permission: Permission) => {
 // Hook Role Restore & Archive
 const {
   mutate : archiveRole,
-  isPending: archibePendingRole,
-  isError : isArchiveErrorRole,
-  error : errorArchiveRole
-
+  isPending: archibePendingRole
 } = useDeleteRole()
 
 
 
 const {
   mutate : restoreRole,
-  isPending: restorePendingRole,
-  isError : isrestorErrorRole,
-  error : errorRestorRle
+  isPending: restorePendingRole
 
 } = useRestoreRole()
 
@@ -269,9 +262,7 @@ const {
 // Hook Perms Restore & Archive
 const {
   mutate : archivePerms,
-  isPending: archibePendingPerms,
-  isError : isArchiveErrorPerms,
-  error : errorArchivePerms
+  isPending: archibePendingPerms
 
 } = useDeletePermission()
 
@@ -279,9 +270,7 @@ const {
 
 const {
   mutate : restorePerms,
-  isPending: restorePendingPerms,
-  isError : isrestorErrorPerms,
-  error : errorRestorPerms
+  isPending: restorePendingPerms
 
 } = useRestorePermission()
 
@@ -374,8 +363,8 @@ const handleRoleCancel = () => {
   <CompositionLoading v-if="loadingRole || loadingPermission || updateLoading || loadingPermissionNoPaginate || archibePendingRole || restorePendingRole || archibePendingPerms || restorePendingPerms" />
 
   <CompositionError
-    v-else-if="ErrorRole || ErrorPermission || isErrorRole || isArchiveErrorRole || isrestorErrorRole || isArchiveErrorPerms || isrestorErrorPerms"
-    :error="errorRole?.message || errorPermission?.message || errorRoleUpdate?.message || errorArchiveRole?.message || errorRestorRle?.message || errorArchivePerms?.message || errorRestorPerms?.message"
+    v-else-if="ErrorRole || ErrorPermission"
+    :error="errorRole?.message || errorPermission?.message"
   />
 
   <div v-else class="min-h-screen space-y-10">

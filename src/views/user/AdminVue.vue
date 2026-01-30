@@ -2,9 +2,9 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useGetUsers } from '../../hook/user';
-import type { UserProfile } from '../../type/user';
-import { Users, UserPlus, Pencil, MoreHorizontal, Archive, ArchiveRestore } from 'lucide-vue-next';
+import { useArchiveUser, useGetUsers, useResendConfirmEmail } from '../../hook/user';
+import type { User, UserProfile } from '../../type/user';
+import { Users, UserPlus, Pencil, MoreHorizontal, Archive, ArchiveRestore, Send, Trash2 } from 'lucide-vue-next';
 
 
 // Composants convertis
@@ -27,6 +27,7 @@ import CompositionVerifyButton from '../../components/composition/CompositionVer
 import { cn } from '../../lib/utils';
 import Badge from '../../components/ui/badge/Badge.vue';
 import { handleError } from '../../lib/error';
+import CompositionLoading from '../../components/composition/CompositionLoading.vue';
 
 
 
@@ -73,37 +74,48 @@ const {
 const {
   mutate : archiveUser,
   isPending: archibePending,
-  isError : isArchiveError,
-  error : errorArchive
+} = useArchiveUser()
 
+
+const {
+  mutate : deleteUser,
+  isPending: deletePending,
 } = useDeleteUser()
-
 
 
 const {
   mutate : restoreUser,
   isPending: restorePending,
-  isError : isrestorError,
-  error : errorRestor
-
 } = useRestoreUser()
 
 
-const getStatusColor = (status: boolean) => {
+const {
+  mutate : resendConfirmEmail,
+  isPending: resendConfirmEmailPending,
+} = useResendConfirmEmail()
+
+
+const getStatusColor = (status: string) => {
   switch (status) {
-    case false: return 'bg-success/20 text-success border-success/30'
-    case true: return 'bg-muted text-muted-foreground border-border'
+    case 'ACTIVE': return 'bg-success/20 text-success border-success/30'
+    case 'EN_ATTENTE': return 'bg-warning/20 text-warning border-warning/30'
+    case 'INACTIVE': return 'bg-muted text-muted-foreground border-border'
   }
 }
 
-const getStatusLabel = (status: boolean) => {
+const getStatusLabel = (row: User) => {
+  if(row.status === 'ACTIVE' && row.archive === false) return 'Actif'
+  if(row.status === 'EN_ATTENTE' && row.archive === false) return 'En attente'
+  if(row.archive === true) return 'Archivé'
 
-  switch (status) {
-    case false: return 'Actif'
-    case true: return 'Archivé'
-  }
 }
 
+
+const getDateLabel =(row: User) => {
+  if(row.status === 'ACTIVE' && row.archive === false) return row.isActiveAt
+  if(row.status === 'EN_ATTENTE' && row.archive === false) return row.isPendingAt
+  if(row.archive === true) return row.archivedAt
+}
 
 
 
@@ -126,6 +138,32 @@ const restoredUser = (id: number) => {
      onSuccess: async () => {
        refetchUsers();
         showToast('success', 'Utilisateur restoré avec success');
+     },
+     onError: (error: Error) => {
+      handleError(error)
+      }
+  })
+}
+
+
+const deletedUser = (id: number) => {
+  deleteUser(id,{
+     onSuccess: async () => {
+       refetchUsers();
+        showToast('success', 'Utilisateur supprimé avec success');
+     },
+     onError: (error: Error) => {
+      handleError(error)
+      }
+  })
+}
+
+
+const resendConfirmEmailUser = (id: number) => {
+  resendConfirmEmail(id,{
+     onSuccess: async () => {
+       refetchUsers();
+        showToast('success', 'Email de confirmation re-envoyé avec success');
      },
      onError: (error: Error) => {
       handleError(error)
@@ -157,15 +195,46 @@ const columns = [
   { key: 'email', label: 'Email' },
   { key: 'role', label: 'Role' },
   { key: 'status', label: 'Status' },
+  { key: 'date', label: 'Durée' },
   { key: 'actions', label: 'Actions', class: 'w-10' },
 ]
 
+
+const convertDateInTemps = (dateInput: Date | string | null | undefined) => {
+  if (!dateInput) return '-';
+
+  // Conversion forcée en objet Date (si c'est une string, ça crée une Date, si c'est déjà une Date, ça la clone)
+  const date = new Date(dateInput);
+
+  // Vérification si la date est valide (pour éviter NaN)
+  if (isNaN(date.getTime())) return '-';
+
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 60) {
+    return `${diffInSeconds} s`;
+  } else if (diffInSeconds < 3600) {
+    return `${Math.floor(diffInSeconds / 60)} min`;
+  } else if (diffInSeconds < 86400) {
+    return `${Math.floor(diffInSeconds / 3600)} h`;
+  } else if (diffInSeconds < 604800) {
+    return `${Math.floor(diffInSeconds / 86400)} j`;
+  } else if (diffInSeconds < 2592000) {
+    return `${Math.floor(diffInSeconds / 604800)} sem`;
+  } else if (diffInSeconds < 31536000) {
+    return `${Math.floor(diffInSeconds / 2592000)} mois`;
+  } else {
+    return `${Math.floor(diffInSeconds / 31536000)} ans`;
+  }
+}
 
 </script>
 
 <template>
 
-  <CompositionError v-if="isgetError || isArchiveError || isrestorError" :error="getError?.message || errorArchive?.message || errorRestor?.message" />
+  <CompositionError v-if="isgetError" :error="getError?.message" />
+  <CompositionLoading v-else-if="isLoading || archibePending || restorePending || resendConfirmEmailPending || deletePending" />
 
   <div v-else class="min-h-screen space-y-10 ">
     <CompositionPageHeader>
@@ -236,10 +305,14 @@ const columns = [
                    <template #cell-status="{ row }">
                     <Badge
                       variant="outline"
-                      :class="cn('px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', getStatusColor(row.archive))"
+                      :class="cn('px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', getStatusColor(row.status))"
                     >
-                      {{ getStatusLabel(row.archive) }}
+                      {{ getStatusLabel(row) }}
                     </Badge>
+                  </template>
+
+                  <template #cell-date="{ row }">
+                    {{ convertDateInTemps(getDateLabel(row)) }}
                   </template>
 
                     <template #cell-actions="{ row }">
@@ -270,12 +343,22 @@ const columns = [
                               </CompositionConfirmDialog>
                             </DropdownMenuLabel>
                           </CompositionVerifyButton>
-                          <CompositionVerifyButton :if="row.archive">
+                          <CompositionVerifyButton :if="row.archive || row.status === 'EN_ATTENTE'">
                             <DropdownMenuLabel>
-                              <CompositionConfirmDialog @confirm="restoredUser(row.id)" header="Restoration de l'utilisateur" description="Êtes-vous sûr de vouloir restorer ?" cancelText="Annuler" actionText="Restorer" >
+                              <CompositionConfirmDialog v-if="row.archive" @confirm="restoredUser(row.id)" header="Restoration de l'utilisateur" description="Êtes-vous sûr de vouloir restorer ?" cancelText="Annuler" actionText="Restorer" >
+                                <template #dialogButton>
+                                  <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-primary">
+                                    <ArchiveRestore  class="w-4 h-4"  /> Restorer
+                                  </button>
+                                </template>
+                              </CompositionConfirmDialog>
+                              <button v-if="row.status==='EN_ATTENTE'"  @click="resendConfirmEmailUser(row.id)" class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-primary">
+                                <Send class="w-4 h-4"  /> Renvoyer la confirmation
+                              </button>
+                              <CompositionConfirmDialog @confirm="deletedUser(row.id)" header="Suppression de l'utilisateur" description="Êtes-vous sûr de vouloir supprimer ?" cancelText="Annuler" actionText="Supprimer" >
                                 <template #dialogButton>
                                   <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-destructive">
-                                    <ArchiveRestore  class="w-4 h-4"  /> Restorer
+                                    <Trash2  class="w-4 h-4"  /> Supprimer
                                   </button>
                                 </template>
                               </CompositionConfirmDialog>
