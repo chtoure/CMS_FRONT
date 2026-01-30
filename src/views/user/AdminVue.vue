@@ -2,9 +2,9 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useGetUsers, useResendConfirmEmail } from '../../hook/user';
+import { useArchiveUser, useGetUsers, useResendConfirmEmail } from '../../hook/user';
 import type { User, UserProfile } from '../../type/user';
-import { Users, UserPlus, Pencil, MoreHorizontal, Archive, ArchiveRestore, Send } from 'lucide-vue-next';
+import { Users, UserPlus, Pencil, MoreHorizontal, Archive, ArchiveRestore, Send, Trash2 } from 'lucide-vue-next';
 
 
 // Composants convertis
@@ -74,8 +74,13 @@ const {
 const {
   mutate : archiveUser,
   isPending: archibePending,
-} = useDeleteUser()
+} = useArchiveUser()
 
+
+const {
+  mutate : deleteUser,
+  isPending: deletePending,
+} = useDeleteUser()
 
 
 const {
@@ -141,6 +146,19 @@ const restoredUser = (id: number) => {
 }
 
 
+const deletedUser = (id: number) => {
+  deleteUser(id,{
+     onSuccess: async () => {
+       refetchUsers();
+        showToast('success', 'Utilisateur supprimé avec success');
+     },
+     onError: (error: Error) => {
+      handleError(error)
+      }
+  })
+}
+
+
 const resendConfirmEmailUser = (id: number) => {
   resendConfirmEmail(id,{
      onSuccess: async () => {
@@ -177,7 +195,7 @@ const columns = [
   { key: 'email', label: 'Email' },
   { key: 'role', label: 'Role' },
   { key: 'status', label: 'Status' },
-  { key: 'date', label: 'Temps' },
+  { key: 'date', label: 'Durée' },
   { key: 'actions', label: 'Actions', class: 'w-10' },
 ]
 
@@ -216,7 +234,7 @@ const convertDateInTemps = (dateInput: Date | string | null | undefined) => {
 <template>
 
   <CompositionError v-if="isgetError" :error="getError?.message" />
-  <CompositionLoading v-else-if="isLoading || archibePending || restorePending || resendConfirmEmailPending" />
+  <CompositionLoading v-else-if="isLoading || archibePending || restorePending || resendConfirmEmailPending || deletePending" />
 
   <div v-else class="min-h-screen space-y-10 ">
     <CompositionPageHeader>
@@ -327,9 +345,9 @@ const convertDateInTemps = (dateInput: Date | string | null | undefined) => {
                           </CompositionVerifyButton>
                           <CompositionVerifyButton :if="row.archive || row.status === 'EN_ATTENTE'">
                             <DropdownMenuLabel>
-                              <CompositionConfirmDialog @confirm="restoredUser(row.id)" header="Restoration de l'utilisateur" description="Êtes-vous sûr de vouloir restorer ?" cancelText="Annuler" actionText="Restorer" >
+                              <CompositionConfirmDialog v-if="row.archive" @confirm="restoredUser(row.id)" header="Restoration de l'utilisateur" description="Êtes-vous sûr de vouloir restorer ?" cancelText="Annuler" actionText="Restorer" >
                                 <template #dialogButton>
-                                  <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-destructive">
+                                  <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-primary">
                                     <ArchiveRestore  class="w-4 h-4"  /> Restorer
                                   </button>
                                 </template>
@@ -337,6 +355,13 @@ const convertDateInTemps = (dateInput: Date | string | null | undefined) => {
                               <button v-if="row.status==='EN_ATTENTE'"  @click="resendConfirmEmailUser(row.id)" class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-primary">
                                 <Send class="w-4 h-4"  /> Renvoyer la confirmation
                               </button>
+                              <CompositionConfirmDialog @confirm="deletedUser(row.id)" header="Suppression de l'utilisateur" description="Êtes-vous sûr de vouloir supprimer ?" cancelText="Annuler" actionText="Supprimer" >
+                                <template #dialogButton>
+                                  <button class="text-text  p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-destructive">
+                                    <Trash2  class="w-4 h-4"  /> Supprimer
+                                  </button>
+                                </template>
+                              </CompositionConfirmDialog>
                             </DropdownMenuLabel>
                           </CompositionVerifyButton>
                         </DropdownMenuContent>

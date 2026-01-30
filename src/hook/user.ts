@@ -185,7 +185,7 @@ export const useResetPassword = () => {
 
 
 // Archiver un user
-export const useDeleteUser = () => {
+export const useArchiveUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (idUser: number) => {
@@ -201,6 +201,8 @@ export const useDeleteUser = () => {
 };
 
 
+
+
 // Restorer un user
 export const useRestoreUser = () => {
   const queryClient = useQueryClient();
@@ -208,6 +210,23 @@ export const useRestoreUser = () => {
     mutationFn: async (idUser: number) => {
       const response = await api(`/restoreUers/${idUser}`, {
         method: 'PUT',
+      });
+      return handleResponse(response);
+    },
+    onSuccess(){
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    }
+  });
+};
+
+
+// Supprimer un user
+export const useDeleteUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (idUser: number) => {
+      const response = await api(`/deleteUsers/${idUser}`, {
+        method: 'DELETE',
       });
       return handleResponse(response);
     },
