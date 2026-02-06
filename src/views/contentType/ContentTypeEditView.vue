@@ -141,6 +141,9 @@ let unregisterGuard: () => void;
 onMounted(() => {
   if (contentTypeData.value) {
     populateForm(contentTypeData.value)
+    if (contentTypeData.value.entries && contentTypeData.value.entries.length > 0) {
+      isEntries.value = true
+    }
   }
   unregisterGuard = router.beforeEach(async (to, from) => {
     if (to.name !== from.name && EnregistrerBrouillon.value && confirmDialogUrl.value) {
@@ -527,6 +530,8 @@ const handleTypeAttempt = (field: IFieldDefinition & { _isNew?: boolean, _typeCo
     field.type = targetType;
     return;
   }
+
+  console.log(field.type,targetType)
 
   const sensitiveTypes = [
     FieldType.MEDIA,
