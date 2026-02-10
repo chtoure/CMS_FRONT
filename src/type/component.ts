@@ -33,7 +33,7 @@ type ResponsiveProp<T = string> = T | {
 
 // types/styles.ts
 
-export interface CommonStyles {
+interface CommonStyles {
   marginTop?: ResponsiveProp<number | string>;
   marginBottom?: ResponsiveProp<number | string>;
   padding?: ResponsiveProp<number | string>;
@@ -45,7 +45,7 @@ export interface CommonStyles {
 }
 
 // Famille : Container
-export interface ContainerStyles extends CommonStyles {
+interface ContainerStyles extends CommonStyles {
   columns?: ResponsiveProp<number>;
   gap?: ResponsiveProp<number>;
   direction?: ResponsiveProp<'horizontal' | 'vertical'>;
@@ -55,7 +55,7 @@ export interface ContainerStyles extends CommonStyles {
 }
 
 // Famille : Static (Texte, etc.)
-export interface StaticStyles extends CommonStyles {
+interface StaticStyles extends CommonStyles {
   fontSize?: ResponsiveProp<string>;
   fontWeight?: ResponsiveProp<string>;
   textAlign?: ResponsiveProp<'left' | 'center' | 'right'>;
@@ -63,10 +63,13 @@ export interface StaticStyles extends CommonStyles {
 }
 
 // Famille : Interactive (Boutons, liens)
-export interface InteractiveStyles extends CommonStyles {
+interface InteractiveStyles extends CommonStyles {
   variant?: string;
   size?: string;
 }
+
+// types/component.ts
+type AllStyles = ContainerStyles | StaticStyles | InteractiveStyles | CommonStyles;
 
 
 
@@ -92,11 +95,6 @@ interface ComponentDefinition<T = CommonStyles> {
   defaultProps: ComponentProps<T>;
 }
 
-
-
-
-
-
 interface Component <T = CommonStyles> {
   name: string;
   tag: string;
@@ -106,8 +104,20 @@ interface Component <T = CommonStyles> {
   defaultProps:  ComponentProps<T>;
 }
 
+type AnyComponent = 
+  | Component<ContainerStyles>
+  | Component<StaticStyles>
+  | Component<InteractiveStyles>
+  | Component<CommonStyles>;
 
 
+
+interface AnyComponentInstance extends Omit<Component<AllStyles>, 'defaultProps'> {
+  id: string;
+  styles: AllStyles;
+  data: Record<string, unknown>;
+  children: AnyComponentInstance[]; // <--- C'est ici que la magie opère !
+}
 
 export type {
   NavigateAction,
@@ -118,7 +128,14 @@ export type {
   ResponsiveProp,
   JsonValue,
   ComponentDefinition,
-  Component
+  Component,
+  AnyComponent,
+  AnyComponentInstance,
+  CommonStyles,
+  ContainerStyles,
+  StaticStyles,
+  InteractiveStyles,
+  AllStyles
 }
 
 export {

@@ -3,8 +3,9 @@ import * as Icons from 'lucide-vue-next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import CompositionDarkMode from '../../components/composition/CompositionDarkMode.vue';
 import { useGetComponents } from '../../hook/component';
-import { type Component as VueComponent } from 'vue';
+import { type ComponentInstance, type Component as VueComponent } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
+import type { AllStyles, AnyComponentInstance, Component } from '../../type/component';
 
 const { data: components, isLoading } = useGetComponents();
 
@@ -19,6 +20,22 @@ const getIcon = (name: string): VueComponent => {
   }
   
   return (Icons.HelpCircle as unknown) as VueComponent;
+};
+
+
+const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<T> => {
+  const instance = {
+    id: crypto.randomUUID(),
+    name: element.name,
+    tag: element.tag,
+    icon: element.icon,
+    family: element.family,
+    supportedActions: element.supportedActions,
+    styles: { ...element.defaultProps.styles } as T,
+    data: { ...element.defaultProps.data },
+    children: [] as AnyComponentInstance[]
+  };
+  return instance as ComponentInstance<T>;
 };
 </script>
 
@@ -49,7 +66,7 @@ const getIcon = (name: string): VueComponent => {
                 :animation="150"
                 :group="{ name: 'blocks', pull: 'clone', put: false }"
                 :sort="false"
-                :clone="() => (console.log('clonage'))"
+                :clone="onClone" 
                 class="grid grid-cols-2 gap-2"
               >
                 <div 
