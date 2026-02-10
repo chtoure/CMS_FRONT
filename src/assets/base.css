@@ -53,6 +53,10 @@
   --sidebar-border: #dfdfdf;
   --sidebar-ring: #0c8ce9;
 
+  --builder-bar-background: #e9ecef;
+  --builder-bar-text:  #545454;
+  --builder-background: #FFFFFF;
+
   --pagination-item-text: #000000;
 
   --border-width: 1px;
@@ -104,6 +108,11 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #373737;
   --sidebar-ring: #0c8ce9;
+
+  --builder-bar-background: #020617;
+  --builder-bar-text: #f1f5f9;
+
+
 
   --pagination-item-text: #ffffff;
 

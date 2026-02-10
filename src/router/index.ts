@@ -27,6 +27,8 @@ import ContentTypeEditView from '../views/contentType/ContentTypeEditView.vue'
 import ContentEntryCorbeilleView from '../views/contentEntry/ContentEntryCorbeilleView.vue'
 import ContentTypeCorbeilleView from '../views/contentType/ContentTypeCorbeilleView.vue'
 import TaxonomyCorbeilleView from '../views/Taxonomy/TaxonomyCorbeilleView.vue'
+import BuilderView from '../views/builder/BuilderView.vue'
+import BuilderLayout from '../layout/BuilderLayout.vue'
 
 
 const router = createRouter({
@@ -190,6 +192,18 @@ const router = createRouter({
                     }
                 ]
             },
+            {
+              path: 'builder',
+              component: BuilderLayout,
+              children:[
+                  {
+                    path: '',
+                    name: 'admin.builder',
+                    component: BuilderView
+                  }
+                ]
+              }
+
 
         ]
     },
