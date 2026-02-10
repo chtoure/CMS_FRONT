@@ -2,12 +2,14 @@ import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import syncComponentsPlugin from './src/components/config/sync-component-pulgin'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
 export default defineConfig({
   plugins: [
     vue(),
     vueDevTools(),
+    syncComponentsPlugin()
   ],
   resolve: {
     alias: {
