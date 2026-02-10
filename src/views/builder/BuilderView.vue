@@ -1,22 +1,54 @@
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { ref, watch, provide } from 'vue';
 import CanvaView from './CanvaView.vue';
 import ComponentView from './ComponentView.vue';
 import PropritiesView from './PropritiesView.vue';
 import { X, Menu } from 'lucide-vue-next';
 import Button from '../../components/ui/button/Button.vue';
+import type { AnyComponentInstance } from '../../type/component';
 
 const showComponentView = ref(true);
-const showPropertiesView = ref(true);
+const showPropertiesView = ref(false);
+
+const pageTree = ref<AnyComponentInstance[]>([]);
+const selectedId = ref<string | null>(null);
+
+const selectComponent = (id: string | null) => {
+  selectedId.value = id;
+};
+
+// Automatisme de la barre de propriétés
+watch(selectedId, (newId) => {
+  showPropertiesView.value = !!newId;
+});
+
+provide('builderState', {
+  pageTree,
+  selectedId,
+  selectComponent
+});
+
+// Ancien provide pour compatibilité descendante immédiate si nécessaire
+provide('builderSelector', {
+  selectedId,
+  selectComponent
+});
 </script>
 
 <template>
   <div class="relative h-screen w-screen overflow-hidden bg-builder-background">
 
-    <main class="absolute inset-0 z-0 w-full h-full">
+    <main 
+      class="absolute inset-y-0 z-0 transition-all duration-300 ease-in-out"
+      :style="{ 
+        left: showComponentView ? '16rem' : '0', 
+        right: showPropertiesView ? '16rem' : '0' 
+      }"
+    >
       <CanvaView />
     </main>
 
+    <!-- Sidebar Composants -->
     <aside
       class="absolute top-0 left-0 h-full w-64 bg-builder-bar-background border-r border-border z-10 transform transition-transform duration-300 ease-in-out shadow-xl"
       :class="showComponentView ? 'translate-x-0' : '-translate-x-full'"
@@ -27,44 +59,34 @@ const showPropertiesView = ref(true);
           <X class="h-4 w-4" />
         </Button>
       </div>
-      <div class="h-[calc(100%-60px)] overflow-y-auto  w-full bg-builder-bar-background px-4 py-2">
+      <div class="h-[calc(100%-60px)] overflow-y-auto w-full bg-builder-bar-background px-4 py-2">
         <ComponentView />
       </div>
     </aside>
 
+    <!-- Sidebar Propriétés -->
     <aside
-      class="absolute top-0 right-0 h-full w-80 bg-builder-background/95 backdrop-blur-sm border-l border-gray-700 z-10 transform transition-transform duration-300 ease-in-out shadow-xl"
+      class="absolute top-0 right-0 h-full w-64 bg-builder-bar-background border-l border-border z-10 transform transition-transform duration-300 ease-in-out shadow-xl"
       :class="showPropertiesView ? 'translate-x-0' : 'translate-x-full'"
     >
-      <div class="flex items-center justify-between p-4 border-b border-gray-700">
-        <h2 class="font-bold text-white tracking-wide">Propriétés</h2>
-        <button @click="showPropertiesView = false" class="text-gray-400 hover:text-white transition-colors">
+      <div class="flex items-center justify-between p-4 border-b border-border">
+        <h2 class="font-bold text-builder-bar-text tracking-wide">Propriétés</h2>
+        <Button @click="selectComponent(null)" class="text-white">
           <X class="h-4 w-4" />
-        </button>
+        </Button>
       </div>
       <div class="h-[calc(100%-60px)] overflow-y-auto">
         <PropritiesView />
       </div>
     </aside>
 
+    <!-- Bouton Toggle Composants -->
     <div class="absolute top-4 left-4 z-20 transition-all duration-300" :class="{ 'translate-x-64': showComponentView }">
        <Button
         v-if="!showComponentView"
-        @click="showComponentView = true; showPropertiesView = false"
+        @click="showComponentView = true"
         class="flex items-center justify-center p-2 text-white shadow-lg transition-all"
         title="Ouvrir les composants"
-      >
-        <Menu class="h-5 w-5" />
-      </Button>
-
-    </div>
-
-    <div class="absolute top-4 right-4 z-20 transition-all duration-300" :class="{ '-translate-x-80': showPropertiesView }">
-       <Button
-        v-if="!showPropertiesView"
-        @click="showPropertiesView = true; showComponentView = false"
-        class="flex items-center justify-center p-2 text-white shadow-lg transition-all"
-        title="Ouvrir les propriétés"
       >
         <Menu class="h-5 w-5" />
       </Button>

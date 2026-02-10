@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { FAMILY_CAPABILITIES, type AnyComponentInstance } from '../../type/component';
+
+defineOptions({
+  name: 'BlocRender'
+});
 import { VueDraggable } from 'vue-draggable-plus';
 import { COMPONENT_MAP } from '../../registry/component_registry';
+import { buildLayoutStyles } from '../../lib/styleProcessor';
 
 interface Props {
   element: AnyComponentInstance;
@@ -26,10 +31,40 @@ const childrenModel = computed({
 });
 
 const componentToRender = COMPONENT_MAP[props.element.tag];
+
+const selector = inject<{ selectedId: { value: string | null }, selectComponent: (id: string) => void }>('builderSelector');
+
+const isSelected = computed(() => selector?.selectedId.value === props.element.id);
+
+const handleSelect = (e: MouseEvent) => {
+  e.stopPropagation();
+  selector?.selectComponent(props.element.id);
+};
+
+const layoutClasses = computed(() => {
+  return buildLayoutStyles(props.element.styles as Record<string, unknown>);
+});
+
+console.log('BlocRender mounting:', {
+  id: props.element.id,
+  tag: props.element.tag,
+  componentFound: !!componentToRender
+});
 </script>
 
 <template>
-  <div class="relative w-full h-full group/renderer">
+  <div 
+    class="relative w-full h-full group/renderer transition-all duration-200"
+    :class="{ 'ring-2 ring-gray-400 ring-inset z-10': isSelected, 'hover:ring-1 hover:ring-gray-300': !isSelected }"
+    @click="handleSelect"
+  >
+    <div 
+      v-if="isSelected"
+      class="absolute -top-5 left-0 bg-gray-400 text-white text-[9px] px-2 py-0.5 rounded-t-sm font-bold uppercase z-50 shadow-md"
+    >
+      {{ element.name }}
+    </div>
+
     <component 
       v-if="componentToRender"
       :is="componentToRender" 
@@ -37,23 +72,30 @@ const componentToRender = COMPONENT_MAP[props.element.tag];
       :data="element.data"
     >
       <template v-if="FAMILY_CAPABILITIES[element.family].canHaveChildren">
-        <VueDraggable
-          v-model="childrenModel"
-          group="blocks"
-          :animation="150"
-          class="min-h-[60px] w-full p-2 border-2 border-dashed border-gray-100 rounded-lg"
-        >
-          <BlocRender 
-            v-for="(child, index) in childrenModel" 
-            :key="child.id" 
-            :element="child"
-            @update:element="(newChild: AnyComponentInstance) => childrenModel[index] = newChild"
-          />
+        <div class="relative w-full h-full"> 
+          <VueDraggable
+            v-model="childrenModel"
+            :group="{ name: 'blocks', put: true, pull: true }"
+            :animation="150"
+            class="min-h-[20px] w-full pb-8"
+            :class="layoutClasses"
+          >
+            <BlocRender 
+              v-for="(child, index) in childrenModel" 
+              :key="child.id" 
+              :element="child"
+              @update:element="(newChild: AnyComponentInstance) => {
+                const newChildren = [...childrenModel];
+                newChildren[index] = newChild;
+                childrenModel = newChildren;
+              }"
+            />
+          </VueDraggable>
           
-          <div v-if="childrenModel.length === 0" class="py-8 text-center text-gray-400">
-            <span class="text-[9px] font-bold uppercase">Zone de dépôt</span>
+          <div v-if="childrenModel.length === 0" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <span class="text-[9px] font-bold uppercase text-gray-400">Zone de dépôt</span>
           </div>
-        </VueDraggable>
+        </div>
       </template>
     </component>
   </div>

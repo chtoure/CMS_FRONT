@@ -19,7 +19,7 @@ const mockComponents: AnyComponent[] = [
     defaultProps: {
       styles: {
         padding: 10,
-        bg: "white",
+        bg: "#CA2C2C",
         direction: "vertical"
       },
       data: {}
@@ -35,7 +35,8 @@ const mockComponents: AnyComponent[] = [
       styles: {
         variant: "default",
         rounded: "md",
-        bg: "indigo-600"
+        bg: "#CA2C2C",
+        padding: 10,
       },
       data: {
         content: "Cliquez ici",
@@ -57,10 +58,94 @@ const mockComponents: AnyComponent[] = [
         padding: 6,
         rounded: "xl",
         shadow: "md",
-        bg: "white",
-        border: "slate-200"
+        bg: "#CA2C2C",
+        border: "#CA2C2C",
+        display:"flex",
+        align: "center",
+        justify: "between"
       },
       data: {}
+    }
+  },
+  {
+    name: "Texte",
+    tag: "TextBuilder",
+    icon: "Type",
+    family: "static",
+    supportedActions: ACTIONS_BY_FAMILY['static'],
+    defaultProps: {
+      styles: {
+        fontSize: { default: "base", md: "lg" },
+        textColor: "#CA2C2C",
+        textAlign: "left",
+        marginBottom: 4
+      },
+      data: {
+        content: "Ceci est un texte par défaut",
+        tag: "p"
+      }
+    }
+  },
+  {
+    name: "Image",
+    tag: "ImageBuilder",
+    icon: "Image",
+    family: "static",
+    supportedActions: ACTIONS_BY_FAMILY['static'],
+    defaultProps: {
+      styles: {
+        rounded: "lg",
+        shadow: "sm",
+        display: "block",
+        marginBottom: 4
+      },
+      data: {
+        src: "https://images.unsplash.com/photo-1707343843437-caacff5cfa74?q=80&w=2912&auto=format&fit=crop",
+        alt: "Image de démonstration",
+        width: "100%",
+        height: 300,
+        objectFit: "cover"
+      }
+    }
+  },
+  {
+    name: "Icône",
+    tag: "IconBuilder",
+    icon: "Sparkles",
+    family: "static",
+    supportedActions: ACTIONS_BY_FAMILY['static'],
+    defaultProps: {
+      styles: {
+        textColor: "#CA2C2C",
+        marginBottom: 2
+      },
+      data: {
+        icon: "Star",
+        size: 32,
+        strokeWidth: 2
+      }
+    }
+  },
+  {
+    name: "Champ Saisie",
+    tag: "InputBuilder",
+    icon: "FormInput",
+    family: "input",
+    supportedActions: ACTIONS_BY_FAMILY['input'],
+    defaultProps: {
+      styles: {
+        marginBottom: 4,
+        border: "#CA2C2C",
+        rounded: "md",
+        padding: 2
+      },
+      data: {
+        type: "text",
+        label: "Votre nom",
+        placeholder: "Entrez votre nom...",
+        name: "username",
+        required: true
+      }
     }
   }
 ];
@@ -76,93 +161,3 @@ export const useGetComponents = () => {
 };
 
 
-
-
-// import { useQuery } from "@tanstack/vue-query";
-
-// // Simulation de la structure que Prisma retournerait (BlocTemplate[])
-// const mockData = [
-//   {
-//     id: "section-1",
-//     name: "Hero Section",
-//     family: "container",
-//     tag: "SectionBuilder",
-//     styles: {
-//       padding: 10,
-//       bg: "slate-50",
-//       marginTop: 0,
-//     },
-//     data: {},
-//     children: [
-//       {
-//         id: "grid-1",
-//         name: "Main Grid",
-//         family: "container",
-//         tag: "GridBuilder",
-//         styles: {
-//           columns: { default: 1, md: 3 },
-//           gap: 6,
-//           padding: 4
-//         },
-//         data: {},
-//         children: [
-//           // Colonne 1 : Une Card avec un bouton
-//           {
-//             id: "card-1",
-//             tag: "CardBuilder",
-//             family: "container",
-//             styles: {
-//               bg: "white",
-//               shadow: "xl",
-//               rounded: "2xl",
-//               padding: 6,
-//               border: "slate-100"
-//             },
-//             data: {},
-//             children: [
-//               {
-//                 id: "btn-1",
-//                 tag: "ButtonBuilder",
-//                 family: "interactive",
-//                 styles: {
-//                   variant: "default",
-//                   rounded: "full",
-//                   bg: "indigo-600"
-//                 },
-//                 data: {
-//                   content: "Démarrer l'aventure",
-//                   cliquable: {
-//                     action: "SHOW_ALERT",
-//                     action_params: { message: "Bienvenue dans le Builder !" }
-//                   }
-//                 }
-//               }
-//             ]
-//           },
-//           {
-//             id: "card-2",
-//             tag: "CardBuilder",
-//             family: "container",
-//             styles: {
-//               bg: "indigo-50",
-//               padding: 6,
-//               rounded: "xl"
-//             },
-//             data: {},
-//             children: [] 
-//           }
-//         ]
-//       }
-//     ]
-//   }
-// ];
-
-// export const useGetComponents = () => {
-//   return useQuery({
-//     queryKey: ['page-blocks'],
-//     queryFn: async () => {
-//       await new Promise(resolve => setTimeout(resolve, 500));
-//       return mockData;
-//     }
-//   });
-// };
