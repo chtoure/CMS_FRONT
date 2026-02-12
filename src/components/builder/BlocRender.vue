@@ -59,6 +59,11 @@ console.log('BlocRender mounting:', {
     @click="handleSelect"
   >
     <div 
+      v-if="!FAMILY_CAPABILITIES[element.family].canHaveChildren" 
+      class="absolute inset-0 z-[5] cursor-pointer"
+    />
+
+    <div 
       v-if="isSelected"
       class="absolute -top-5 left-0 bg-gray-400 text-white text-[9px] px-2 py-0.5 rounded-t-sm font-bold uppercase z-50 shadow-md"
     >
@@ -71,13 +76,14 @@ console.log('BlocRender mounting:', {
       :styles="element.styles" 
       :data="element.data"
     >
+
       <template v-if="FAMILY_CAPABILITIES[element.family].canHaveChildren">
-        <div class="relative w-full h-full"> 
+        <div class="relative w-full"> 
           <VueDraggable
             v-model="childrenModel"
             :group="{ name: 'blocks', put: true, pull: true }"
             :animation="150"
-            class="min-h-[20px] w-full pb-8"
+            class="min-h-[100px] w-full pb-2"
             :class="layoutClasses"
           >
             <BlocRender 
@@ -92,9 +98,7 @@ console.log('BlocRender mounting:', {
             />
           </VueDraggable>
           
-          <div v-if="childrenModel.length === 0" class="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span class="text-[9px] font-bold uppercase text-gray-400">Zone de dépôt</span>
-          </div>
+          <div v-if="childrenModel.length === 0" class="absolute inset-0 flex items-center justify-center pointer-events-none bg-gray-50/50 border border-dashed border-gray-300"/>
         </div>
       </template>
     </component>

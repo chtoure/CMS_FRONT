@@ -1,5 +1,5 @@
 import type { 
-  CommonStyles, 
+  BaseStyles, 
   ComponentFamily, 
   ContainerStyles, 
   StaticStyles,
@@ -39,7 +39,7 @@ const formatColor = (prefix: string, v: unknown) => {
   return `${prefix}-[${hex}]`;
 };
 
-const COMMON_MAPPER: StyleMapper<CommonStyles> = {
+const BASE_MAPPER: StyleMapper<BaseStyles> = {
   marginTop: (v) => formatDimension('mt', v),
   marginBottom: (v) => formatDimension('mb', v),
   padding: (v) => formatDimension('p', v),
@@ -48,6 +48,8 @@ const COMMON_MAPPER: StyleMapper<CommonStyles> = {
   shadow: (v) => (v === 'none' || v === 'default') ? (v === 'none' ? 'shadow-none' : 'shadow') : `shadow-${v}`,
   opacity: (v) => isNumeric(v) ? `opacity-[${v}]` : `opacity-${v}`,
   display: (v) => v,
+  width: (v) => `w-[${v}px]`,
+  height: (v) => `h-[${v}px]`,
 };
 
 const CONTAINER_MAPPER: StyleMapper<ContainerStyles> = {
@@ -106,7 +108,7 @@ export function buildStyles(
   };
 
   // Traitement séquentiel : Commun + Spécifique à la famille
-  processMapper(COMMON_MAPPER);
+  processMapper(BASE_MAPPER);
 
   if (family === 'container') processMapper(CONTAINER_MAPPER);
   else if (family === 'static') processMapper(STATIC_MAPPER);
@@ -131,7 +133,7 @@ export function buildLayoutStyles(styles?: Record<string, unknown>): string {
 
   // Only layout properties
   processMapper({
-    display: COMMON_MAPPER.display
+    display: BASE_MAPPER.display
   });
   processMapper(CONTAINER_MAPPER);
 
@@ -229,8 +231,17 @@ export function buildInlineStyles(
     }
   }
 
-  // Font Size (pour les static)
-  if (family === 'static' && styles.fontSize !== undefined) {
+  // Grid Columns (pour GridBuilder via container family)
+  if (family === 'container' && styles.columns !== undefined) {
+    const colsValue = getValue(styles.columns);
+    if (typeof colsValue === 'number' && colsValue > 0) {
+      inlineStyles.gridTemplateColumns = `repeat(${colsValue}, minmax(0, 1fr))`;
+      inlineStyles.display = 'grid'; // Force display grid if columns are defined
+    }
+  }
+
+  // Font Size (pour static, input et interactive)
+  if (['static', 'input', 'interactive'].includes(family) && styles.fontSize !== undefined) {
     const fontSizeValue = getValue(styles.fontSize);
     if (typeof fontSizeValue === 'number') {
       inlineStyles.fontSize = `${fontSizeValue}px`;

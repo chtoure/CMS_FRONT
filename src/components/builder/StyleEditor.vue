@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { inject, computed, ref } from 'vue';
-import type { AnyComponentInstance, AllStyles, StaticStyles, ContainerStyles, InteractiveStyles } from '../../type/component';
+import type { AnyComponentInstance, AllStyles, ContainerStyles, InteractiveStyles } from '../../type/component';
 import Label from '../../components/ui/label/Label.vue';
 import Input from '../../components/ui/input/Input.vue';
 import Select from '../../components/ui/select/Select.vue';
@@ -36,11 +36,8 @@ const getHexValue = (val: unknown): string => {
   const raw = getRawValue(val);
   if (!raw || typeof raw !== 'string') return 'FFFFFF';
   
-  // Si c'est déjà un format JIT [#FFFFFF] ou bg-[#FFFFFF]
   const jitMatch = raw.match(/\[#([0-9A-Fa-f]{6})\]/);
   if (jitMatch && jitMatch[1]) return jitMatch[1];
-
-  // Si c'est déjà un hex brut (6 caractères hexadécimaux)
   if (/^[0-9A-Fa-f]{6}$/.test(raw)) return raw;
   
   const tailwindMap: Record<string, string> = {
@@ -55,9 +52,7 @@ const getHexValue = (val: unknown): string => {
 
 const updateStyle = (key: string, value: string | number | boolean | undefined) => {
   if (!builderState) return;
-  
   const newStyles = { ...props.element.styles, [key]: value };
-  
   const updateNode = (nodes: AnyComponentInstance[]): AnyComponentInstance[] => {
     return nodes.map((node: AnyComponentInstance): AnyComponentInstance => {
       if (node.id === props.element.id) {
@@ -69,14 +64,8 @@ const updateStyle = (key: string, value: string | number | boolean | undefined) 
       return node;
     });
   };
-
   builderState.pageTree.value = updateNode(builderState.pageTree.value);
 };
-
-// Casts pour accès aux styles spécifiques
-const staticStyles = computed(() => props.element.styles as StaticStyles);
-const containerStyles = computed(() => props.element.styles as ContainerStyles);
-const interactiveStyles = computed(() => props.element.styles as InteractiveStyles);
 
 // Options
 const roundedOptions = [
@@ -125,19 +114,25 @@ const fontWeightOptions = [
   { label: 'Semibold', value: 'semibold' },
   { label: 'Bold', value: 'bold' },
 ];
+
+// Computed pour accès typé
+const styles = computed(() => props.element.styles as any);
+const containerStyles = computed(() => props.element.styles as ContainerStyles);
+const interactiveStyles = computed(() => props.element.styles as InteractiveStyles);
+
+const hasTypography = computed(() => ['static', 'interactive', 'input'].includes(props.element.family));
 </script>
 
 <template>
   <div class="space-y-6 pb-20 p-1">
     
-    <!-- Section: Mise en page (Layout) -->
+    <!-- Section: Mise en page -->
     <div class="space-y-3">
-      <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Mise en page</h4>
-      
+      <h4 class="text-[10px] tracking-wider text-primary font-black border-b border-white/10 pb-1">Mise en page</h4>
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Display</Label>
-          <Select :model-value="(getRawValue(element.styles.display) as string)" @update:model-value="(val) => val && updateStyle('display', val as string)">
+          <Select :model-value="(getRawValue(styles.display) as string)" @update:model-value="(val) => val && updateStyle('display', val as string)">
             <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
               <SelectValue placeholder="Display" />
             </SelectTrigger>
@@ -148,26 +143,38 @@ const fontWeightOptions = [
         </div>
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Padding</Label>
-          <Input type="number" :model-value="getRawValue(element.styles.padding)" @update:model-value="(val) => updateStyle('padding', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
+          <Input type="number" :model-value="getRawValue(styles.padding)" @update:model-value="(val) => updateStyle('padding', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
         </div>
       </div>
-
       <div class="grid grid-cols-4 gap-2">
         <div class="space-y-1.5 col-span-2">
           <Label class="text-[11px] text-gray-400">Marge Haut</Label>
-          <Input type="number" :model-value="getRawValue(element.styles.marginTop)" @update:model-value="(val) => updateStyle('marginTop', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
+          <Input type="number" :model-value="getRawValue(styles.marginTop)" @update:model-value="(val) => updateStyle('marginTop', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
         </div>
         <div class="space-y-1.5 col-span-2">
           <Label class="text-[11px] text-gray-400">Marge Bas</Label>
-          <Input type="number" :model-value="getRawValue(element.styles.marginBottom)" @update:model-value="(val) => updateStyle('marginBottom', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
+          <Input type="number" :model-value="getRawValue(styles.marginBottom)" @update:model-value="(val) => updateStyle('marginBottom', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
         </div>
       </div>
     </div>
 
-    <!-- Section: Conteneur (Spécifique Container) -->
+    <div class="space-y-3">
+      <h4 class="text-[10px] tracking-wider text-primary font-black border-b border-white/10 pb-1">Dimension</h4>
+      <div class="grid grid-cols-4 gap-2">
+        <div class="space-y-1.5 col-span-2">
+          <Label class="text-[11px] text-gray-400">Hauteur</Label>
+          <Input type="number" :model-value="getRawValue(styles.height)" @update:model-value="(val) => updateStyle('height', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
+        </div>
+        <div class="space-y-1.5 col-span-2">
+          <Label class="text-[11px] text-gray-400">Largeur</Label>
+          <Input type="number" :model-value="getRawValue(styles.width)" @update:model-value="(val) => updateStyle('width', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Section: Conteneur -->
     <div v-if="element.family === 'container'" class="space-y-3">
       <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Réglages Conteneur</h4>
-      
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Colonnes</Label>
@@ -178,7 +185,6 @@ const fontWeightOptions = [
           <Input type="number" :model-value="getRawValue(containerStyles.gap)" @update:model-value="(val) => updateStyle('gap', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
         </div>
       </div>
-
       <div class="space-y-1.5">
         <Label class="text-[11px] text-gray-400">Direction</Label>
         <Select :model-value="(getRawValue(containerStyles.direction) as string)" @update:model-value="(val) => val && updateStyle('direction', val as string)">
@@ -186,12 +192,11 @@ const fontWeightOptions = [
             <SelectValue placeholder="Direction" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="vertical">Vertical (Stack)</SelectItem>
-            <SelectItem value="horizontal">Horizontal (Row)</SelectItem>
+            <SelectItem value="vertical">Vertical</SelectItem>
+            <SelectItem value="horizontal">Horizontal</SelectItem>
           </SelectContent>
         </Select>
       </div>
-
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Justify</Label>
@@ -218,35 +223,33 @@ const fontWeightOptions = [
       </div>
     </div>
 
-    <!-- Section: Typographie (Spécifique Static) -->
-    <div v-if="element.family === 'static'" class="space-y-3">
+    <!-- Section: Typographie -->
+    <div v-if="hasTypography" class="space-y-3">
       <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Typographie</h4>
-      
       <div class="space-y-2">
         <Label class="text-[11px] text-gray-400">Couleur du texte</Label>
         <CompositionColorPicker 
           :is-open="activePicker === 'text'"
-          :initial-color="'#' + getHexValue(staticStyles.textColor)"
+          :initial-color="'#' + getHexValue(styles.textColor)"
           @close="activePicker = null"
           @color-change="(hex) => updateStyle('textColor', hex)"
         >
           <template #trigger>
-            <button @click="activePicker = 'text'" class="w-full h-8 px-2 flex items-center gap-2 bg-black/20 border border-border/50 rounded text-xs hover:bg-white/5">
-              <div class="w-4 h-4 rounded-sm border border-white/20" :style="{ backgroundColor: '#' + getHexValue(staticStyles.textColor) }"></div>
-              <span class="text-gray-300 font-mono">{{ getRawValue(staticStyles.textColor) || 'Inherit' }}</span>
+            <button @click="activePicker = 'text'" class="w-full h-8 px-2 flex items-center gap-2 bg-black/20 border border-border/50 rounded text-xs hover:bg-white/5 transition-colors">
+              <div class="w-4 h-4 rounded-sm border border-white/20" :style="{ backgroundColor: '#' + getHexValue(styles.textColor) }"></div>
+              <span class="text-gray-300 font-mono">{{ getRawValue(styles.textColor) || 'Inherit' }}</span>
             </button>
           </template>
         </CompositionColorPicker>
       </div>
-
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
-          <Label class="text-[11px] text-gray-400">Taille</Label>
-          <Input :model-value="getRawValue(staticStyles.fontSize)" @update:model-value="(val) => updateStyle('fontSize', val)" class="h-8 text-xs bg-black/20 border-border/50" placeholder="ex: lg" />
+          <Label class="text-[11px] text-gray-400">Taille (px)</Label>
+          <Input :model-value="getRawValue(styles.fontSize)" @update:model-value="(val) => updateStyle('fontSize', val)" class="h-8 text-xs bg-black/20 border-border/50" />
         </div>
         <div class="space-y-1.5">
-          <Label class="text-[11px] text-gray-400">Épaisseur</Label>
-          <Select :model-value="(getRawValue(staticStyles.fontWeight) as string)" @update:model-value="(val) => updateStyle('fontWeight', val as string)">
+          <Label class="text-[11px] text-gray-400">Poids</Label>
+          <Select :model-value="(getRawValue(styles.fontWeight) as string)" @update:model-value="(val) => updateStyle('fontWeight', val as string)">
             <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
               <SelectValue placeholder="Poids" />
             </SelectTrigger>
@@ -256,12 +259,11 @@ const fontWeightOptions = [
           </Select>
         </div>
       </div>
-
-      <div class="space-y-1.5">
+      <div v-if="element.family !== 'input'" class="space-y-1.5">
         <Label class="text-[11px] text-gray-400">Alignement</Label>
-        <Select :model-value="(getRawValue(staticStyles.textAlign) as string)" @update:model-value="(val) => updateStyle('textAlign', val as string)">
+        <Select :model-value="(getRawValue(styles.textAlign) as string)" @update:model-value="(val) => updateStyle('textAlign', val as string)">
           <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
-            <SelectValue placeholder="Alignement" />
+            <SelectValue placeholder="Align" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="left">Gauche</SelectItem>
@@ -272,31 +274,29 @@ const fontWeightOptions = [
       </div>
     </div>
 
-    <!-- Section: Apparence (Appearance) -->
+    <!-- Section: Apparence -->
     <div class="space-y-3">
       <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Apparence</h4>
-      
       <div class="space-y-2">
-        <Label class="text-[11px] text-gray-400">Couleur de fond</Label>
+        <Label class="text-[11px] text-gray-400">Fond</Label>
         <CompositionColorPicker 
           :is-open="activePicker === 'bg'"
-          :initial-color="'#' + getHexValue(element.styles.bg)"
+          :initial-color="'#' + getHexValue(styles.bg)"
           @close="activePicker = null"
           @color-change="(hex) => updateStyle('bg', hex)"
         >
           <template #trigger>
-            <button @click="activePicker = 'bg'" class="w-full h-8 px-2 flex items-center gap-2 bg-black/20 border border-border/50 rounded text-xs hover:bg-white/5">
-              <div class="w-4 h-4 rounded-sm border border-white/20" :style="{ backgroundColor: '#' + getHexValue(element.styles.bg) }"></div>
-              <span class="text-gray-300 font-mono">{{ getRawValue(element.styles.bg) || 'Transparent' }}</span>
+            <button @click="activePicker = 'bg'" class="w-full h-8 px-2 flex items-center gap-2 bg-black/20 border border-border/50 rounded text-xs hover:bg-white/5 transition-colors">
+              <div class="w-4 h-4 rounded-sm border border-white/20" :style="{ backgroundColor: '#' + getHexValue(styles.bg) }"></div>
+              <span class="text-gray-300 font-mono">{{ getRawValue(styles.bg) || 'Transparent' }}</span>
             </button>
           </template>
         </CompositionColorPicker>
       </div>
-
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Arrondis</Label>
-          <Select :model-value="(getRawValue(element.styles.rounded) as string)" @update:model-value="(val) => updateStyle('rounded', val as string)">
+          <Select :model-value="(getRawValue(styles.rounded) as string)" @update:model-value="(val) => updateStyle('rounded', val as string)">
             <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
               <SelectValue placeholder="Arrondis" />
             </SelectTrigger>
@@ -307,7 +307,9 @@ const fontWeightOptions = [
         </div>
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Ombre</Label>
-          <Select :model-value="(getRawValue(element.styles.shadow) as string)" @update:model-value="(val) => updateStyle('shadow', val as string)">
+          <!-- <Input type="number" :model-value="getRawValue(styles.shadow)" @update:model-value="(val) => updateStyle('shadow', val)" class="h-8 text-xs bg-black/20 border-border/50" /> -->
+
+          <Select :model-value="(getRawValue(styles.shadow) as string)" @update:model-value="(val) => updateStyle('shadow', val as string)">
             <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
               <SelectValue placeholder="Ombre" />
             </SelectTrigger>
@@ -317,28 +319,26 @@ const fontWeightOptions = [
           </Select>
         </div>
       </div>
-
       <div class="space-y-1.5">
-        <Label class="text-[11px] text-gray-400">Opacité ({{ Math.round((Number(getRawValue(element.styles.opacity)) || 1) * 100) }}%)</Label>
-        <input type="range" min="0" max="1" step="0.05" :value="getRawValue(element.styles.opacity) || 1" @input="(e) => updateStyle('opacity', parseFloat((e.target as HTMLInputElement).value))" class="w-full h-1.5 bg-border rounded-lg appearance-none cursor-pointer accent-primary" />
+        <Label class="text-[11px] text-gray-400">Opacité ({{ Math.round((Number(getRawValue(styles.opacity)) || 1) * 100) }}%)</Label>
+        <input type="range" min="0" max="1" step="0.05" :value="getRawValue(styles.opacity) || 1" @input="(e) => updateStyle('opacity', parseFloat((e.target as HTMLInputElement).value))" class="w-full h-1.5 bg-border appearance-none cursor-pointer accent-primary rounded-lg" />
       </div>
     </div>
 
-    <!-- Section: Interactif (Spécifique Interactive) -->
+    <!-- Section: Interactif -->
     <div v-if="element.family === 'interactive'" class="space-y-3">
-      <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Réglages Interactifs</h4>
+      <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Interactif</h4>
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Variante</Label>
-          <Input :model-value="getRawValue(interactiveStyles.variant)" @update:model-value="(val) => updateStyle('variant', val)" class="h-8 text-xs bg-black/20 border-border/50" placeholder="ex: outline" />
+          <Input :model-value="getRawValue(interactiveStyles.variant)" @update:model-value="(val) => updateStyle('variant', val)" class="h-8 text-xs bg-black/20 border-border/50" />
         </div>
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Taille</Label>
-          <Input :model-value="getRawValue(interactiveStyles.size)" @update:model-value="(val) => updateStyle('size', val)" class="h-8 text-xs bg-black/20 border-border/50" placeholder="ex: sm, lg" />
+          <Input :model-value="getRawValue(interactiveStyles.size)" @update:model-value="(val) => updateStyle('size', val)" class="h-8 text-xs bg-black/20 border-border/50" />
         </div>
       </div>
     </div>
-
   </div>
 </template>
 

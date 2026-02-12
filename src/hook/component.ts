@@ -35,7 +35,7 @@ const mockComponents: AnyComponent[] = [
       styles: {
         variant: "default",
         rounded: "md",
-        bg: "#CA2C2C",
+        bg: "#BDACAC",
         padding: 10,
       },
       data: {
@@ -76,7 +76,7 @@ const mockComponents: AnyComponent[] = [
     defaultProps: {
       styles: {
         fontSize: { default: "base", md: "lg" },
-        textColor: "#CA2C2C",
+        textColor: "#060505",
         textAlign: "left",
         marginBottom: 4
       },

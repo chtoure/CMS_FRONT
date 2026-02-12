@@ -22,12 +22,5 @@ const computedInlineStyles = computed(() => {
 <template>
   <div :class="['relative transition-all duration-200 overflow-hidden', computedClasses]" :style="computedInlineStyles">
     <slot />
-
-    <div 
-      v-if="!$slots.default" 
-      class="w-full min-h-[100px] border-2 border-dashed border-gray-300 flex items-center justify-center rounded-lg"
-    >
-      <span class="text-gray-400 text-sm">Zone de dépôt (Carte)</span>
-    </div>
   </div>
 </template>

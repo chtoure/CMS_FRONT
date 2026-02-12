@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { CommonStyles } from '../../type/component';
-import { buildStyles } from '../../lib/styleProcessor';
+import type { InputStyles } from '../../type/component';
+import { buildStyles, buildInlineStyles } from '../../lib/styleProcessor';
 
 interface Props {
-  styles?: CommonStyles;
+  styles?: InputStyles;
   data?: {
     type?: 'text' | 'email' | 'password' | 'number' | 'search' | 'tel' | 'url';
     placeholder?: string;
@@ -21,6 +21,10 @@ const props = defineProps<Props>();
 
 const computedClasses = computed(() => {
   return buildStyles('input', props.styles as Record<string, unknown>);
+});
+
+const computedInlineStyles = computed(() => {
+  return buildInlineStyles('input', props.styles as Record<string, unknown>);
 });
 </script>
 
@@ -42,9 +46,13 @@ const computedClasses = computed(() => {
       :required="props.data?.required"
       :disabled="props.data?.disabled"
       :class="[
-        'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+        'flex h-10 w-full rounded-md border border-input ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all',
+        !props.styles?.bg && 'bg-background',
+        !props.styles?.padding && 'px-3 py-2',
+        !props.styles?.fontSize && 'text-sm',
         computedClasses
       ]"
+      :style="computedInlineStyles"
     />
   </div>
 </template>

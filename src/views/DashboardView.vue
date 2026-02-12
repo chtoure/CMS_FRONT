@@ -96,7 +96,7 @@ const now = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'nume
     </CompositionPageHeader>
 
     <!-- Statistiques Compactes -->
-    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <DashboardStatCard
         v-for="stat in stats"
         :key="stat.title"
