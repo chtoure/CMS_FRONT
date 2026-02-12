@@ -1,12 +1,26 @@
 <script lang="ts" setup>
-import { ref, computed } from 'vue';
+import { ref, computed, inject, watch } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import { type AnyComponentInstance } from '../../type/component';
 import { ZoomIn, ZoomOut, Maximize, MousePointer2 } from 'lucide-vue-next';
 import BlocRender from '../../components/builder/BlocRender.vue';
 
-const pageTree = ref<AnyComponentInstance[]>([]);
-const selectedId = ref<string | null>(null);
+// Injection de l'état global
+const builderState = inject<{
+  pageTree: { value: AnyComponentInstance[] };
+  selectedId: { value: string | null };
+  selectComponent: (id: string | null) => void;
+}>('builderState');
+
+// Fallback pour la sécurité
+const pageTree = computed({
+  get: () => builderState?.pageTree.value || [],
+  set: (val) => { if (builderState) builderState.pageTree.value = val; }
+});
+
+const selectComponent = (id: string | null) => {
+  builderState?.selectComponent(id);
+};
 
 // --- Logique de Zoom ---
 const scale = ref(1);
@@ -14,25 +28,34 @@ const zoomIn = () => { if (scale.value < 2) scale.value += 0.1; };
 const zoomOut = () => { if (scale.value > 0.5) scale.value -= 0.1; };
 const resetZoom = () => { scale.value = 1; };
 
+const CANVAS_BASE_WIDTH = 800;
+const CANVAS_BASE_HEIGHT = 1000;
+
 const canvasStyle = computed(() => ({
   transform: `scale(${scale.value})`,
   transformOrigin: 'top center',
-  transition: 'transform 0.2s ease-out'
 }));
 
-const selectComponent = (id: string) => {
-  selectedId.value = id;
-};
+// Dimensions "physiques" occupées par le zoom pour forcer le scroll
+const scaledAreaStyle = computed(() => ({
+  width: `${CANVAS_BASE_WIDTH * scale.value}px`,
+  height: `${CANVAS_BASE_HEIGHT * scale.value}px`,
+}));
 
 // Désélectionner quand on clique dans le vide du canevas
 const deselect = () => {
-  selectedId.value = null;
+  selectComponent(null);
 };
+
+watch(() => pageTree.value, (newVal) => {
+  console.log('PageTree updated:', JSON.parse(JSON.stringify(newVal)));
+}, { deep: true });
 </script>
 
 <template>
   <div class="h-full w-full bg-builder-background relative flex flex-col overflow-hidden" @click="deselect">
     
+    <!-- Contrôles de Zoom -->
     <div @click.stop class="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-builder-bar-background border border-border px-3 py-2 rounded-full shadow-2xl">
       <button @click="zoomOut" class="p-1.5 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white">
         <ZoomOut class="w-4 h-4" />
@@ -49,56 +72,60 @@ const deselect = () => {
       </button>
     </div>
 
-    <div class="flex-1 overflow-auto custom-scrollbar bg-[radial-gradient(#2e2e33_1px,transparent_1px)] [background-size:24px_24px]">
+    <!-- Zone de travail avec Overflow -->
+    <div class="flex-1 overflow-auto custom-scrollbar p-10 md:p-20">
       
-      <div 
-        class="min-h-full py-20 flex justify-center items-start"
-        :style="canvasStyle"
-      >
-        <div class="device-wrapper shadow-2xl overflow-hidden rounded-sm bg-white">
-            <div class="w-[800px] bg-gray-100 border-b border-gray-200 py-2 px-4 flex gap-1.5">
-                <div class="w-2 h-2 rounded-full bg-gray-300"></div>
-                <div class="w-2 h-2 rounded-full bg-gray-300"></div>
-                <div class="w-2 h-2 rounded-full bg-gray-300"></div>
-            </div>
-
-            <VueDraggable
-              v-model="pageTree"
-              group="blocks"
-              :animation="150"
-              ghost-class="ghost-preview"
-              class="w-[800px] min-h-[1000px] relative flex flex-col p-0"
-            >
+      <!-- Conteneur global de défilement -->
+      <div class="w-fit min-w-full min-h-full flex items-start">
+        
+        <!-- Cette div a la taille REELLE occupée par le zoom (width * scale) -->
+        <!-- On utilise margin-inline auto pour centrer tout en permettant le scroll -->
+        <div :style="scaledAreaStyle" class="relative mx-auto flex justify-center">
+          
+          <div 
+            class="device-wrapper absolute top-0 bg-white border border-dashed border-border origin-top transition-transform duration-200 ease-out box-border"
+            :style="canvasStyle"
+            @click.stop
+          >
               <div 
                 v-if="pageTree.length === 0" 
-                class="absolute inset-0 flex flex-col items-center justify-center text-gray-300 pointer-events-none"
+                class="absolute inset-0 flex flex-col items-center justify-center text-gray-300 pointer-events-none z-10"
               >
                 <MousePointer2 class="w-12 h-12 mb-2 opacity-10" />
                 <p class="text-xs uppercase tracking-widest font-bold">Canevas Vide</p>
               </div>
 
-              <div 
-                v-for="(element, index) in pageTree" 
-                :key="element.id"
-                @click.stop="selectComponent(element.id)"
-                class="relative group/item border border-transparent transition-all outline-none"
-                :class="{ 'ring-2 ring-primary ring-inset z-10': selectedId === element.id }"
+              <VueDraggable
+                v-model="pageTree"
+                :group="{ name: 'blocks', put: true }"
+                :animation="150"
+                ghost-class="ghost-preview"
+                class="w-full min-h-[1000px] relative flex flex-col p-0 z-0 bg-white"
               >
                 <div 
-                  v-if="selectedId === element.id"
-                  class="absolute -top-5 left-0 bg-primary text-white text-[9px] px-2 py-0.5 rounded-t-sm font-bold uppercase z-20"
+                  v-for="(element, index) in pageTree" 
+                  :key="element.id"
+                  class="relative transition-all outline-none"
                 >
-                  {{ element.name }}
+                  <BlocRender
+                    :element="element" 
+                    @update:element="(newVal: AnyComponentInstance) => {
+                      const newTree = [...pageTree];
+                      newTree[index] = newVal;
+                      pageTree = newTree;
+                    }"
+                  />
                 </div>
-
-                <BlocRender
-                  :element="element" 
-                  @update:element="(newVal: AnyComponentInstance) => pageTree[index] = newVal"
-                />
-              </div>
-            </VueDraggable>
+              </VueDraggable>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.device-wrapper {
+  width: 800px;
+}
+</style>

@@ -33,19 +33,25 @@ type ResponsiveProp<T = string> = T | {
 
 // types/styles.ts
 
-interface CommonStyles {
+// Interface de base contenant toutes les propriétés communes
+interface BaseStyles {
+  // Propriétés de mise en page
   marginTop?: ResponsiveProp<number | string>;
   marginBottom?: ResponsiveProp<number | string>;
   padding?: ResponsiveProp<number | string>;
+  
+  // Propriétés d'apparence
   bg?: ResponsiveProp<string>;
-  rounded?: ResponsiveProp<string>;
-  shadow?: ResponsiveProp<string>;
+  rounded?: ResponsiveProp<string | number>;
+  shadow?: ResponsiveProp<string | number>;
   opacity?: ResponsiveProp<number>;
   display?: ResponsiveProp<'hidden' | 'block' | 'flex' | 'grid'>;
+  width?: ResponsiveProp<string | number>;
+  height?: ResponsiveProp<string | number>;
 }
 
 // Famille : Container
-interface ContainerStyles extends CommonStyles {
+interface ContainerStyles extends BaseStyles {
   columns?: ResponsiveProp<number>;
   gap?: ResponsiveProp<number>;
   direction?: ResponsiveProp<'horizontal' | 'vertical'>;
@@ -55,7 +61,7 @@ interface ContainerStyles extends CommonStyles {
 }
 
 // Famille : Static (Texte, etc.)
-interface StaticStyles extends CommonStyles {
+interface StaticStyles extends BaseStyles {
   fontSize?: ResponsiveProp<string>;
   fontWeight?: ResponsiveProp<string>;
   textAlign?: ResponsiveProp<'left' | 'center' | 'right'>;
@@ -63,13 +69,24 @@ interface StaticStyles extends CommonStyles {
 }
 
 // Famille : Interactive (Boutons, liens)
-interface InteractiveStyles extends CommonStyles {
+interface InteractiveStyles extends BaseStyles {
   variant?: string;
   size?: string;
+  fontSize?: ResponsiveProp<string>;
+  fontWeight?: ResponsiveProp<string>;
+  textAlign?: ResponsiveProp<'left' | 'center' | 'right'>;
+  textColor?: ResponsiveProp<string>;
+}
+
+// Famille : Input
+interface InputStyles extends BaseStyles {
+  fontSize?: ResponsiveProp<string>;
+  fontWeight?: ResponsiveProp<string>;
+  textColor?: ResponsiveProp<string>;
 }
 
 // types/component.ts
-type AllStyles = ContainerStyles | StaticStyles | InteractiveStyles | CommonStyles;
+type AllStyles = ContainerStyles | StaticStyles | InteractiveStyles | InputStyles | BaseStyles;
 
 
 
@@ -82,12 +99,12 @@ type JsonValue =
   | JsonValue[];
 
 
-interface ComponentProps<T = CommonStyles> {
+interface ComponentProps<T = BaseStyles> {
   styles?: T;
   data?: Record<string, unknown>;
 }
 
-interface ComponentDefinition<T = CommonStyles> {
+interface ComponentDefinition<T = BaseStyles> {
   name: string;
   family: ComponentFamily;
   component: () => Promise<unknown>;
@@ -95,7 +112,7 @@ interface ComponentDefinition<T = CommonStyles> {
   defaultProps: ComponentProps<T>;
 }
 
-interface Component <T = CommonStyles> {
+interface Component <T = BaseStyles> {
   name: string;
   tag: string;
   icon: keyof typeof Icons;
@@ -108,7 +125,7 @@ type AnyComponent =
   | Component<ContainerStyles>
   | Component<StaticStyles>
   | Component<InteractiveStyles>
-  | Component<CommonStyles>;
+  | Component<BaseStyles>;
 
 
 
@@ -131,10 +148,11 @@ export type {
   Component,
   AnyComponent,
   AnyComponentInstance,
-  CommonStyles,
+  BaseStyles,
   ContainerStyles,
   StaticStyles,
   InteractiveStyles,
+  InputStyles,
   AllStyles
 }
 
