@@ -43,6 +43,10 @@ interface BaseStyles {
   // Propriétés d'apparence
   bg?: ResponsiveProp<string>;
   rounded?: ResponsiveProp<string | number>;
+  roundedTopLeft?: ResponsiveProp<string | number>;
+  roundedTopRight?: ResponsiveProp<string | number>;
+  roundedBottomLeft?: ResponsiveProp<string | number>;
+  roundedBottomRight?: ResponsiveProp<string | number>;
   shadow?: ResponsiveProp<string | number>;
   opacity?: ResponsiveProp<number>;
   display?: ResponsiveProp<'hidden' | 'block' | 'flex' | 'grid'>;
@@ -58,6 +62,9 @@ interface ContainerStyles extends BaseStyles {
   justify?: ResponsiveProp<'start' | 'center' | 'end' | 'between'>;
   align?: ResponsiveProp<'start' | 'center' | 'end' | 'between'>;
   border?: ResponsiveProp<string>;
+  borderWidth?: ResponsiveProp<number | string>;
+  borderColor?: ResponsiveProp<string>;
+  borderStyle?: ResponsiveProp<'solid' | 'dashed' | 'dotted' | 'double' | 'hidden'>;
 }
 
 // Famille : Static (Texte, etc.)
@@ -102,6 +109,7 @@ type JsonValue =
 interface ComponentProps<T = BaseStyles> {
   styles?: T;
   data?: Record<string, unknown>;
+  children?: AnyComponentInstance[];
 }
 
 interface ComponentDefinition<T = BaseStyles> {

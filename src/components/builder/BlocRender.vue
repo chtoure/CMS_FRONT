@@ -20,7 +20,7 @@ const emit = defineEmits(['update:element']);
 
 // Ce computed va servir de "pont" sécurisé pour le v-model
 const childrenModel = computed({
-  get: () => props.element.children,
+  get: () => props.element.children || [],
   set: (newValue) => {
     // Au lieu de muter la prop, on renvoie une copie de l'élément avec les nouveaux enfants
     emit('update:element', {
@@ -50,11 +50,40 @@ console.log('BlocRender mounting:', {
   tag: props.element.tag,
   componentFound: !!componentToRender
 });
+const isSelectedChild = (id: string) => selector?.selectedId.value === id;
+
+const formatSize = (value: unknown, defaultValue: string | undefined = undefined) => {
+  if (value === undefined || value === null || value === '') return defaultValue;
+  
+  let finalValue = value;
+  // Handle ResponsiveProp
+  if (typeof value === 'object' && value !== null && 'default' in value) {
+    finalValue = (value as { default: unknown }).default;
+  }
+
+  if (typeof finalValue === 'number') return `${finalValue}px`;
+  if (typeof finalValue === 'string' && !isNaN(Number(finalValue)) && finalValue.trim() !== '') return `${finalValue}px`;
+  return finalValue as string;
+};
+
+import ResizerWrapper from './ResizerWrapper.vue';
+
+const onDragStart = (e: any) => {
+  // e.stopPropagation(); // Let VueDraggable handle it
+};
+
+const onDragEnd = (e: any) => {
+  // e.stopPropagation();
+};
 </script>
 
 <template>
-  <div 
-    class="relative w-full h-full group/renderer transition-all duration-200"
+  <component 
+    v-if="componentToRender"
+    :is="componentToRender" 
+    :styles="element.styles" 
+    :data="element.data"
+    class="relative group/renderer transition-all duration-200"
     :class="{ 'ring-2 ring-gray-400 ring-inset z-10': isSelected, 'hover:ring-1 hover:ring-gray-300': !isSelected }"
     @click="handleSelect"
   >
@@ -70,37 +99,52 @@ console.log('BlocRender mounting:', {
       {{ element.name }}
     </div>
 
-    <component 
-      v-if="componentToRender"
-      :is="componentToRender" 
-      :styles="element.styles" 
-      :data="element.data"
-    >
-
-      <template v-if="FAMILY_CAPABILITIES[element.family].canHaveChildren">
-        <div class="relative w-full"> 
-          <VueDraggable
-            v-model="childrenModel"
-            :group="{ name: 'blocks', put: true, pull: true }"
-            :animation="150"
-            class="min-h-[100px] w-full pb-2"
-            :class="layoutClasses"
+    <template v-if="FAMILY_CAPABILITIES[element.family].canHaveChildren">
+      <div class="relative w-full h-full"> 
+        <VueDraggable
+          v-model="childrenModel"
+          :group="{ name: 'blocks', put: true, pull: true }"
+          :animation="150"
+          class="min-h-[50px] w-full h-full pb-10"
+          :class="layoutClasses"
+          @start="onDragStart"
+          @end="onDragEnd"
+        >
+          <div
+            v-for="(child, index) in childrenModel"
+            :key="child.id"
+            class="relative transition-all outline-none"
+            :style="{
+              width: formatSize(child.styles?.width, '100%'), 
+              height: formatSize(child.styles?.height) 
+            }"
+            @click.stop="selector?.selectComponent(child.id)"
           >
-            <BlocRender 
-              v-for="(child, index) in childrenModel" 
-              :key="child.id" 
+            <ResizerWrapper
               :element="child"
+              :active="isSelectedChild(child.id)"
               @update:element="(newChild: AnyComponentInstance) => {
                 const newChildren = [...childrenModel];
                 newChildren[index] = newChild;
                 childrenModel = newChildren;
               }"
-            />
-          </VueDraggable>
-          
-          <div v-if="childrenModel.length === 0" class="absolute inset-0 flex items-center justify-center pointer-events-none bg-gray-50/50 border border-dashed border-gray-300"/>
+            >
+              <BlocRender 
+                :element="child"
+                @update:element="(newChild: AnyComponentInstance) => {
+                  const newChildren = [...childrenModel];
+                  newChildren[index] = newChild;
+                  childrenModel = newChildren;
+                }"
+              />
+            </ResizerWrapper>
+          </div>
+        </VueDraggable>
+        
+        <div v-if="childrenModel.length === 0" class="absolute inset-0 flex items-center justify-center pointer-events-none bg-gray-50/50 border-2 border-dashed border-gray-300 z-0 rounded-md">
+          <span class="text-xs text-gray-400">Déposez ici</span>
         </div>
-      </template>
-    </component>
-  </div>
+      </div>
+    </template>
+  </component>
 </template>

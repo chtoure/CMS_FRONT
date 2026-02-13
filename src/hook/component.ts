@@ -10,21 +10,7 @@ type AnyComponent =
 
 
 const mockComponents: AnyComponent[] = [
-  {
-    name: "Grille",
-    tag: "GridBuilder",
-    icon: "Grid",
-    family: "container",
-    supportedActions: ACTIONS_BY_FAMILY['container'],
-    defaultProps: {
-      styles: {
-        padding: 10,
-        bg: "#CA2C2C",
-        direction: "vertical"
-      },
-      data: {}
-    }
-  },
+
   {
     name: "Bouton d'action",
     tag: "ButtonBuilder",
@@ -44,7 +30,8 @@ const mockComponents: AnyComponent[] = [
           action: "NAVIGATE_TO",
           action_params: { url: "/" }
         }
-      }
+      },
+      children: []
     }
   },
   {
@@ -64,7 +51,8 @@ const mockComponents: AnyComponent[] = [
         align: "center",
         justify: "between"
       },
-      data: {}
+      data: {},
+      children: []
     }
   },
   {
@@ -83,7 +71,8 @@ const mockComponents: AnyComponent[] = [
       data: {
         content: "Ceci est un texte par défaut",
         tag: "p"
-      }
+      },
+      children: []
     }
   },
   {
@@ -105,7 +94,8 @@ const mockComponents: AnyComponent[] = [
         width: "100%",
         height: 300,
         objectFit: "cover"
-      }
+      },
+      children: []
     }
   },
   {
@@ -123,7 +113,8 @@ const mockComponents: AnyComponent[] = [
         icon: "Star",
         size: 32,
         strokeWidth: 2
-      }
+      },
+      children: []
     }
   },
   {
@@ -145,7 +136,8 @@ const mockComponents: AnyComponent[] = [
         placeholder: "Entrez votre nom...",
         name: "username",
         required: true
-      }
+      },
+      children: []
     }
   }
 ];

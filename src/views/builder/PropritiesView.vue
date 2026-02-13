@@ -27,9 +27,9 @@ const selectedElement = computed(() => {
 const handleDelete = () => {
   if (!selectedElement.value) return;
   
-  if (confirm(`Êtes-vous sûr de vouloir supprimer "${selectedElement.value.name}" ?`)) {
+  // if (confirm(`Êtes-vous sûr de vouloir supprimer "${selectedElement.value.name}" ?`)) {
     builderState?.deleteComponent(selectedElement.value.id);
-  }
+  // }
 };
 </script>
 

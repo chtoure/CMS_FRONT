@@ -21,7 +21,8 @@ const builderState = inject<{
 }>('builderState');
 
 // État pour les pickers de couleur
-const activePicker = ref<'bg' | 'text' | null>(null);
+const activePicker = ref<'bg' | 'text' | 'border' | null>(null);
+const showIndividualCorners = ref(false);
 
 // Helper pour extraire la valeur brute d'une propriété responsive
 const getRawValue = (val: unknown): string | number | undefined => {
@@ -221,6 +222,47 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
           </Select>
         </div>
       </div>
+      <!-- Section: Bordure (Container) -->
+      <div class="space-y-3 pt-3 border-t border-white/10">
+         <h4 class="text-[10px] uppercase tracking-wider text-primary font-black pb-1">Bordure</h4>
+         <div class="grid grid-cols-2 gap-3">
+            <div class="space-y-1.5">
+               <Label class="text-[11px] text-gray-400">Épaisseur</Label>
+               <Input type="number" :model-value="getRawValue(containerStyles.borderWidth)" @update:model-value="(val) => updateStyle('borderWidth', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
+            </div>
+             <div class="space-y-1.5">
+               <Label class="text-[11px] text-gray-400">Style</Label>
+               <Select :model-value="(getRawValue(containerStyles.borderStyle) as string)" @update:model-value="(val) => val && updateStyle('borderStyle', val as string)">
+                  <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+                     <SelectValue placeholder="Style" />
+                  </SelectTrigger>
+                  <SelectContent>
+                     <SelectItem value="solid">Solid</SelectItem>
+                     <SelectItem value="dashed">Dashed</SelectItem>
+                     <SelectItem value="dotted">Dotted</SelectItem>
+                     <SelectItem value="double">Double</SelectItem>
+                     <SelectItem value="hidden">Hidden</SelectItem>
+                  </SelectContent>
+               </Select>
+            </div>
+         </div>
+         <div class="space-y-2">
+            <Label class="text-[11px] text-gray-400">Couleur</Label>
+            <CompositionColorPicker 
+               :is-open="activePicker === 'border'"
+               :initial-color="'#' + getHexValue(containerStyles.borderColor)"
+               @close="activePicker = null"
+               @color-change="(hex) => updateStyle('borderColor', hex)"
+            >
+               <template #trigger>
+               <button @click="activePicker = 'border'" class="w-full h-8 px-2 flex items-center gap-2 bg-black/20 border border-border/50 rounded text-xs hover:bg-white/5 transition-colors">
+                  <div class="w-4 h-4 rounded-sm border border-white/20" :style="{ backgroundColor: '#' + getHexValue(containerStyles.borderColor) }"></div>
+                  <span class="text-gray-300 font-mono">{{ getRawValue(containerStyles.borderColor) || 'Transparent' }}</span>
+               </button>
+               </template>
+            </CompositionColorPicker>
+         </div>
+      </div>
     </div>
 
     <!-- Section: Typographie -->
@@ -293,9 +335,17 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
           </template>
         </CompositionColorPicker>
       </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div class="space-y-1.5">
+      
+      <!-- Arrondis -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
           <Label class="text-[11px] text-gray-400">Arrondis</Label>
+          <button @click="showIndividualCorners = !showIndividualCorners" class="text-[10px] text-primary hover:text-white transition-colors">
+            {{ showIndividualCorners ? 'Global' : 'Individuel' }}
+          </button>
+        </div>
+
+        <div v-if="!showIndividualCorners">
           <Select :model-value="(getRawValue(styles.rounded) as string)" @update:model-value="(val) => updateStyle('rounded', val as string)">
             <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
               <SelectValue placeholder="Arrondis" />
@@ -305,20 +355,32 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
             </SelectContent>
           </Select>
         </div>
-        <div class="space-y-1.5">
-          <Label class="text-[11px] text-gray-400">Ombre</Label>
-          <!-- <Input type="number" :model-value="getRawValue(styles.shadow)" @update:model-value="(val) => updateStyle('shadow', val)" class="h-8 text-xs bg-black/20 border-border/50" /> -->
-
-          <Select :model-value="(getRawValue(styles.shadow) as string)" @update:model-value="(val) => updateStyle('shadow', val as string)">
-            <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
-              <SelectValue placeholder="Ombre" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem v-for="opt in shadowOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</SelectItem>
-            </SelectContent>
-          </Select>
+        <div v-else class="grid grid-cols-2 gap-2">
+          <div v-for="corner in [
+            { label: 'Haut G.', key: 'roundedTopLeft' },
+            { label: 'Haut D.', key: 'roundedTopRight' },
+            { label: 'Bas G.', key: 'roundedBottomLeft' },
+            { label: 'Bas D.', key: 'roundedBottomRight' }
+          ]" :key="corner.key" class="space-y-1">
+            <Label class="text-[9px] text-gray-500">{{ corner.label }}</Label>
+            <Input :model-value="getRawValue(styles[corner.key])" @update:model-value="(val) => updateStyle(corner.key, val)" class="h-7 text-[10px] bg-black/20 border-border/50 px-2" placeholder="0" />
+          </div>
         </div>
       </div>
+
+      <!-- Ombre -->
+      <div class="space-y-1.5">
+        <Label class="text-[11px] text-gray-400">Ombre</Label>
+        <Select :model-value="(getRawValue(styles.shadow) as string)" @update:model-value="(val) => updateStyle('shadow', val as string)">
+          <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+            <SelectValue placeholder="Ombre" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="opt in shadowOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div class="space-y-1.5">
         <Label class="text-[11px] text-gray-400">Opacité ({{ Math.round((Number(getRawValue(styles.opacity)) || 1) * 100) }}%)</Label>
         <input type="range" min="0" max="1" step="0.05" :value="getRawValue(styles.opacity) || 1" @input="(e) => updateStyle('opacity', parseFloat((e.target as HTMLInputElement).value))" class="w-full h-1.5 bg-border appearance-none cursor-pointer accent-primary rounded-lg" />

@@ -39,12 +39,16 @@ const formatColor = (prefix: string, v: unknown) => {
   return `${prefix}-[${hex}]`;
 };
 
-const BASE_MAPPER: StyleMapper<BaseStyles> = {
+const BASE_MAPPER: StyleMapper<BaseStyles & Record<string, any>> = {
   marginTop: (v) => formatDimension('mt', v),
   marginBottom: (v) => formatDimension('mb', v),
   padding: (v) => formatDimension('p', v),
   bg: (v) => formatColor('bg', v),
   rounded: (v) => formatDimension('rounded', v),
+  roundedTopLeft: (v) => formatDimension('rounded-tl', v),
+  roundedTopRight: (v) => formatDimension('rounded-tr', v),
+  roundedBottomLeft: (v) => formatDimension('rounded-bl', v),
+  roundedBottomRight: (v) => formatDimension('rounded-br', v),
   shadow: (v) => (v === 'none' || v === 'default') ? (v === 'none' ? 'shadow-none' : 'shadow') : `shadow-${v}`,
   opacity: (v) => isNumeric(v) ? `opacity-[${v}]` : `opacity-${v}`,
   display: (v) => v,
@@ -58,6 +62,9 @@ const CONTAINER_MAPPER: StyleMapper<ContainerStyles> = {
   direction: (v) => v === 'horizontal' ? 'flex-row' : 'flex-col',
   justify: (v) => `justify-${v}`,
   align: (v) => `items-${v}`,
+  borderWidth: (v) => formatDimension('border', v),
+  borderColor: (v) => formatColor('border', v),
+  borderStyle: (v) => `border-${v}`,
 };
 
 const STATIC_MAPPER: StyleMapper<StaticStyles> = {
@@ -210,6 +217,51 @@ export function buildInlineStyles(
       inlineStyles.borderRadius = `${roundedValue}px`;
     } else if (typeof roundedValue === 'string' && !isNaN(Number(roundedValue))) {
       inlineStyles.borderRadius = `${roundedValue}px`;
+    }
+  }
+
+  // Individual Corners
+  const corners = [
+    { key: 'roundedTopLeft', prop: 'borderTopLeftRadius' },
+    { key: 'roundedTopRight', prop: 'borderTopRightRadius' },
+    { key: 'roundedBottomLeft', prop: 'borderBottomLeftRadius' },
+    { key: 'roundedBottomRight', prop: 'borderBottomRightRadius' },
+  ];
+
+  corners.forEach(({ key, prop }) => {
+    const val = getValue(styles[key]);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inlineStyles[prop] = `${val}px`;
+    }
+  });
+
+  // Border Width
+  if (styles.borderWidth !== undefined) {
+    const bwValue = getValue(styles.borderWidth);
+    if (typeof bwValue === 'number') {
+      inlineStyles.borderWidth = `${bwValue}px`;
+    } else if (typeof bwValue === 'string' && !isNaN(Number(bwValue))) {
+       inlineStyles.borderWidth = `${bwValue}px`;
+    }
+  }
+
+  // Border Color
+  if (styles.borderColor) {
+    const bcValue = getValue(styles.borderColor);
+    if (typeof bcValue === 'string') {
+      if (bcValue.startsWith('#')) {
+        inlineStyles.borderColor = bcValue;
+      } else if (!bcValue.startsWith('border-')) {
+        inlineStyles.borderColor = `#${bcValue}`;
+      }
+    }
+  }
+
+  // Border Style
+  if (styles.borderStyle) {
+    const bsValue = getValue(styles.borderStyle);
+    if (typeof bsValue === 'string') {
+      inlineStyles.borderStyle = bsValue;
     }
   }
 

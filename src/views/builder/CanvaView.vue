@@ -4,6 +4,7 @@ import { VueDraggable } from 'vue-draggable-plus';
 import { type AnyComponentInstance } from '../../type/component';
 import { ZoomIn, ZoomOut, Maximize, MousePointer2 } from 'lucide-vue-next';
 import BlocRender from '../../components/builder/BlocRender.vue';
+import ResizerWrapper from '../../components/builder/ResizerWrapper.vue';
 
 // Injection de l'état global
 const builderState = inject<{
@@ -50,6 +51,20 @@ const deselect = () => {
 watch(() => pageTree.value, (newVal) => {
   console.log('PageTree updated:', JSON.parse(JSON.stringify(newVal)));
 }, { deep: true });
+
+const formatSize = (value: unknown, defaultValue: string | undefined = undefined) => {
+  if (value === undefined || value === null || value === '') return defaultValue;
+  
+  let finalValue = value;
+  // Handle ResponsiveProp
+  if (typeof value === 'object' && value !== null && 'default' in value) {
+    finalValue = (value as { default: unknown }).default;
+  }
+
+  if (typeof finalValue === 'number') return `${finalValue}px`;
+  if (typeof finalValue === 'string' && !isNaN(Number(finalValue)) && finalValue.trim() !== '') return `${finalValue}px`;
+  return finalValue as string;
+};
 </script>
 
 <template>
@@ -97,24 +112,39 @@ watch(() => pageTree.value, (newVal) => {
 
               <VueDraggable
                 v-model="pageTree"
-                :group="{ name: 'blocks', put: true }"
+                :group="{ name: 'blocks', put: true, pull: true }"
                 :animation="150"
                 ghost-class="ghost-preview"
-                class="w-full min-h-[1000px] relative flex flex-col p-0 z-0 bg-white"
+                class="w-full min-h-[1000px] relative flex flex-wrap content-start p-0 z-0 bg-white"
               >
                 <div 
                   v-for="(element, index) in pageTree" 
                   :key="element.id"
                   class="relative transition-all outline-none"
+                  :style="{
+                    width: formatSize(element.styles?.width, '100%'), 
+                    height: formatSize(element.styles?.height) 
+                  }"
+                  @click.stop="selectComponent(element.id)"
                 >
-                  <BlocRender
-                    :element="element" 
+                  <ResizerWrapper
+                    :element="element"
+                    :active="builderState?.selectedId.value === element.id"
                     @update:element="(newVal: AnyComponentInstance) => {
                       const newTree = [...pageTree];
                       newTree[index] = newVal;
                       pageTree = newTree;
                     }"
-                  />
+                  >
+                    <BlocRender
+                      :element="element" 
+                      @update:element="(newVal: AnyComponentInstance) => {
+                        const newTree = [...pageTree];
+                        newTree[index] = newVal;
+                        pageTree = newTree;
+                      }"
+                    />
+                  </ResizerWrapper>
                 </div>
               </VueDraggable>
           </div>
