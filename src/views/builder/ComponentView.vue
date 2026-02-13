@@ -35,6 +35,8 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
     data: { ...element.defaultProps.data },
     children: [] as AnyComponentInstance[]
   };
+  console.log('Cloning component:', element);
+  console.log('Created instance:', instance);
   return instance as ComponentInstance<T>;
 };
 </script>
@@ -49,13 +51,13 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
       </div>
 
       <div class="relative flex-1 overflow-y-auto p-2">
-        <Tabs default-value="component" class="w-full">
+        <Tabs default-value="atomic" class="w-full">
           <TabsList class="w-full justify-between grid grid-cols-2 mb-4">
-            <TabsTrigger value="component" class="text-xs h-8 data-[state=active]:bg-primary data-[state=active]:text-white">Composants</TabsTrigger>
-            <TabsTrigger value="reglage" class="text-xs h-8 data-[state=active]:bg-primary data-[state=active]:text-white">Réglages</TabsTrigger>
+            <TabsTrigger value="atomic" class="text-xs h-8 data-[state=active]:bg-primary data-[state=active]:text-white">Atomique</TabsTrigger>
+            <TabsTrigger value="complex" class="text-xs h-8 data-[state=active]:bg-primary data-[state=active]:text-white">Complexe</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="component" class="mt-0">
+          <TabsContent value="atomic" class="mt-0">
             <div v-if="isLoading" class="flex justify-center p-4">
               <Icons.Loader2 class="animate-spin text-primary" />
             </div>
@@ -88,8 +90,8 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
             </div>
           </TabsContent>
 
-          <TabsContent value="reglage">
-            <p class="text-xs text-text">Paramètres généraux de la page...</p>
+          <TabsContent value="complex">
+            <p class="text-xs text-text">liste des composants complexes</p>
           </TabsContent>
         </Tabs>
       </div>
