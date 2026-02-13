@@ -5,6 +5,7 @@ import { ACTIONS_BY_FAMILY } from "../../type/component.ts";
 
 
 
+
 export const componentsConfig = [
   {
     name: "Grille",
