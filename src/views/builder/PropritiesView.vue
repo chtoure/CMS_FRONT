@@ -9,7 +9,7 @@ import { findComponentById } from '../../lib/treeUtils';
 import type { AnyComponentInstance } from '../../type/component';
 import StyleEditor from '../../components/builder/StyleEditor.vue';
 import DataEditor from '../../components/builder/DataEditor.vue';
-import { MousePointer2, Trash2 } from 'lucide-vue-next';
+import { MousePointer2 } from 'lucide-vue-next';
 
 // Injection de l'état global
 const builderState = inject<{
@@ -24,17 +24,17 @@ const selectedElement = computed(() => {
   return findComponentById(builderState.pageTree.value, builderState.selectedId.value);
 });
 
-const handleDelete = () => {
-  if (!selectedElement.value) return;
+// const handleDelete = () => {
+//   if (!selectedElement.value) return;
   
-  // if (confirm(`Êtes-vous sûr de vouloir supprimer "${selectedElement.value.name}" ?`)) {
-    builderState?.deleteComponent(selectedElement.value.id);
-  // }
-};
+//   // if (confirm(`Êtes-vous sûr de vouloir supprimer "${selectedElement.value.name}" ?`)) {
+//     builderState?.deleteComponent(selectedElement.value.id);
+//   // }
+// };
 </script>
 
 <template>
-  <div :class="cn(['w-full', 'p-2', 'text-text', 'font-bold', 'h-full', 'flex', 'flex-col', 'bg-builder-bar-background'])">
+  <div :class="cn(['w-full', 'p-2', 'text-builder-bar-text', 'font-bold', 'h-full', 'flex', 'flex-col', 'bg-builder-bar-background'])">
     <div class="relative h-full w-full overflow-y-auto flex flex-col">
       
       <!-- État sélectionné -->
@@ -42,22 +42,22 @@ const handleDelete = () => {
         <div class="mb-6 flex items-start justify-between">
           <div>
             <!-- <p class="text-[10px] uppercase tracking-widest text-gray-400 mb-1">Composant</p> -->
-            <h3 class="text-lg font-bold text-white">{{ selectedElement.name }}</h3>
+            <h3 class="text-lg font-bold text-builder-bar-text">{{ selectedElement.name }}</h3>
             <p class="text-xs text-gray-500 font-mono">{{ selectedElement.tag }}</p>
           </div>
-          <button 
+          <!-- <button 
             @click="handleDelete"
             class="p-2 hover:bg-red-500/20 rounded transition-colors text-red-400 hover:text-red-300"
             title="Supprimer le composant"
           >
             <Trash2 class="w-4 h-4" />
-          </button>
+          </button> -->
         </div>
 
         <Tabs default-value="style" class="w-full">
           <TabsList class="w-full justify-between grid grid-cols-2 mb-4">
-            <TabsTrigger value="style" class=" h-8 data-[state=active]:bg-primary data-[state=active]:text-white">Style</TabsTrigger>
-            <TabsTrigger value="rules" class=" h-8 data-[state=active]:bg-primary data-[state=active]:text-white">Paramétrages</TabsTrigger>
+            <TabsTrigger value="style" class="text-xs h-8 data-[state=active]:bg-primary data-[state=active]:text-white">Style</TabsTrigger>
+            <TabsTrigger value="rules" class="text-xs h-8 data-[state=active]:bg-primary data-[state=active]:text-white">Paramétrages</TabsTrigger>
           </TabsList>
 
           <TabsContent value="style" class="mt-0 border-none p-0 outline-none">
@@ -73,11 +73,43 @@ const handleDelete = () => {
       <!-- État vide -->
       <div v-else class="flex-1 flex flex-col items-center justify-center p-8 text-center">
         <div class="w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center mb-4">
-          <MousePointer2 class="text-gray-500 w-6 h-6" />
+          <MousePointer2 class="text-builder-bar-text w-6 h-6" />
         </div>
-        <p class="text-sm text-gray-400">Sélectionnez un composant sur le canevas pour modifier ses propriétés.</p>
+        <p class="text-sm text-builder-bar-text font-mono">Sélectionnez un composant sur le canevas pour modifier ses propriétés.</p>
       </div>
 
     </div>
   </div>
 </template>
+
+<style>
+.input-custom {
+  @apply h-9 w-full rounded-md px-3 py-1 text-[13px] shadow-sm transition-all outline-none;
+  
+  /* Utilisation dynamique de tes variables builder */
+  background-color: var(--builder-input-bg);
+  border: 1px solid var(--builder-input-border);
+  color: var(--builder-input-text);
+  
+  @apply focus-visible:ring-1 focus-visible:ring-offset-1 focus-visible:border-transparent;
+  
+  /* Gestion du focus et placeholder */
+  --tw-ring-color: #3B82F6; /* Un bleu vif pour l'action */
+}
+
+.input-custom::placeholder {
+  color: var(--builder-input-placeholder);
+}
+
+.select-item-custom {
+  @apply cursor-pointer transition-colors px-2 py-1.5 rounded-sm;
+  color: var(--builder-bar-text); /* Aligné sur le texte de la barre */
+}
+
+.select-item-custom[data-highlighted] {
+  /* Au survol, on utilise ton bleu nuit en fond et du texte clair */
+  background-color: var(--primary) !important;
+  color: #F8FAFC !important;
+  outline: none !important;
+}
+</style>

@@ -105,16 +105,16 @@ const handleCustomInput = (val: string | number) => {
     <!-- Selecteur de Mode -->
     <div :class="[currentMode === 'custom' ? 'w-[45px] shrink-0' : 'w-full']">
       <Select :model-value="currentMode" @update:model-value="(val) => handleModeChange(val)">
-        <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50 px-2 justify-center">
+        <SelectTrigger class=" text-xs bg-builder-input-bg border-builder-input-border px-2 justify-center">
             <template v-if="currentMode === 'custom'">
                 <Settings2 class="w-3.5 h-3.5" />
             </template>
             <template v-else>
-                <SelectValue />
+                <SelectValue class="select-item-custom" />
             </template>
         </SelectTrigger>
-        <SelectContent>
-            <SelectItem v-for="preset in presets" :key="preset.value" :value="preset.value">{{ preset.label }}</SelectItem>
+        <SelectContent class="border-builder-bar-border">
+            <SelectItem v-for="preset in presets" :key="preset.value" :value="preset.value" class="select-item-custom">{{ preset.label }}</SelectItem>
         </SelectContent>
       </Select>
     </div>
@@ -125,7 +125,7 @@ const handleCustomInput = (val: string | number) => {
         type="text" 
         :model-value="customValue" 
         @update:model-value="handleCustomInput" 
-        class="h-8 text-xs bg-black/20 border-border/50" 
+        class="h-8 input-custom" 
         :placeholder="props.placeholder || 'px, %, rem...'"
         auto-focus
       />
