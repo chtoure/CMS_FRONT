@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/vue-query";
 import { ACTIONS_BY_FAMILY, type Component, type ContainerStyles, type InteractiveStyles, type StaticStyles } from "../type/component";
+import { ValueSource } from "../type/params";
 
 type AnyStyle = ContainerStyles | StaticStyles | InteractiveStyles;
 
-type AnyComponent = 
+type AnyComponent =
   | Component<ContainerStyles>
   | Component<StaticStyles>
   | Component<InteractiveStyles>;
@@ -38,6 +39,17 @@ const mockComponents: AnyComponent[] = [
         bg: "#BDACAC",
         padding: 10,
       },
+      params: [
+        {
+          name: "content",
+          label: "Contenu",
+          type: {
+            source: ValueSource.STATIC,
+            value: "Cliquez ici"
+          },
+          required: true,
+        }
+      ],
       data: {
         content: "Cliquez ici",
         cliquable: {

@@ -18,7 +18,7 @@ const getIcon = (name: string): VueComponent => {
       return (maybeIcon as unknown) as VueComponent;
     }
   }
-  
+
   return (Icons.HelpCircle as unknown) as VueComponent;
 };
 
@@ -33,7 +33,8 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
     supportedActions: element.supportedActions,
     styles: { ...element.defaultProps.styles } as T,
     data: { ...element.defaultProps.data },
-    children: [] as AnyComponentInstance[]
+    children: [] as AnyComponentInstance[],
+    params: element.defaultProps.params,
   };
   console.log('Cloning component:', element);
   console.log('Created instance:', instance);
@@ -68,17 +69,17 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
                 :animation="150"
                 :group="{ name: 'blocks', pull: 'clone', put: false }"
                 :sort="false"
-                :clone="onClone" 
+                :clone="onClone"
                 class="grid grid-cols-2 gap-2"
               >
-                <div 
-                  v-for="comp in components" 
+                <div
+                  v-for="comp in components"
                   :key="comp.tag"
                   class="flex flex-col items-center justify-center p-3 border border-sidebar-border rounded-md cursor-grab hover:-translate-y-1 transition-all group"
                 >
-                  <component 
-                    :is="getIcon(comp.icon)" 
-                    class="h-6 w-6 mb-2 text-gray-400" 
+                  <component
+                    :is="getIcon(comp.icon)"
+                    class="h-6 w-6 mb-2 text-gray-400"
                     stroke-width="1"
                   />
                   <span class="text-[10px] text-center font-medium leading-tight">
@@ -86,7 +87,7 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
                   </span>
                 </div>
               </VueDraggable>
-              
+
             </div>
           </TabsContent>
 

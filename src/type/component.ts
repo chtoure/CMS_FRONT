@@ -1,4 +1,5 @@
 import * as Icons from 'lucide-vue-next';
+import type { IComponentParams } from './params';
 
 // Actions (Discriminated Unions)
 type NavigateAction = { action: 'NAVIGATE_TO'; action_params: { url: string } };
@@ -12,7 +13,7 @@ type ComponentFamily = 'static' | 'interactive' | 'container' | 'input';
 const FAMILY_CAPABILITIES: Record<ComponentFamily, { canHaveChildren: boolean }> = {
   static: { canHaveChildren: false },
   interactive: { canHaveChildren: false },
-  container: { canHaveChildren: true }, 
+  container: { canHaveChildren: true },
   input: { canHaveChildren: false },
 };
 
@@ -25,10 +26,10 @@ const ACTIONS_BY_FAMILY: Record<ComponentFamily, CliquableAction['action'][]> = 
 
 // Support Responsif
 type ResponsiveProp<T = string> = T | {
-  default: T;    
-  sm?: T;        
-  md?: T;        
-  lg?: T;        
+  default: T;
+  sm?: T;
+  md?: T;
+  lg?: T;
 };
 
 // types/styles.ts
@@ -39,7 +40,7 @@ interface BaseStyles {
   marginTop?: ResponsiveProp<number | string>;
   marginBottom?: ResponsiveProp<number | string>;
   padding?: ResponsiveProp<number | string>;
-  
+
   // Propriétés d'apparence
   bg?: ResponsiveProp<string>;
   rounded?: ResponsiveProp<string | number>;
@@ -90,17 +91,18 @@ type AllStyles = ContainerStyles | StaticStyles | InteractiveStyles | InputStyle
 
 
 
-type JsonValue = 
-  | string 
-  | number 
-  | boolean 
-  | null 
-  | { [key: string]: JsonValue } 
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: JsonValue }
   | JsonValue[];
 
 
 interface ComponentProps<T = BaseStyles> {
   styles?: T;
+  params?: IComponentParams[];
   data?: Record<string, unknown>;
 }
 
@@ -116,12 +118,13 @@ interface Component <T = BaseStyles> {
   name: string;
   tag: string;
   icon: keyof typeof Icons;
+
   family: ComponentFamily;
   supportedActions: CliquableAction['action'][];
   defaultProps:  ComponentProps<T>;
 }
 
-type AnyComponent = 
+type AnyComponent =
   | Component<ContainerStyles>
   | Component<StaticStyles>
   | Component<InteractiveStyles>
@@ -132,6 +135,7 @@ type AnyComponent =
 interface AnyComponentInstance extends Omit<Component<AllStyles>, 'defaultProps'> {
   id: string;
   styles: AllStyles;
+  params: IComponentParams[];
   data: Record<string, unknown>;
   children: AnyComponentInstance[]; // <--- C'est ici que la magie opère !
 }
