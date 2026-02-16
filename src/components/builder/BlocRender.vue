@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject } from 'vue';
+import { computed, inject, ref, watch } from 'vue';
 import { FAMILY_CAPABILITIES, type AnyComponentInstance } from '../../type/component';
 
 defineOptions({
@@ -7,7 +7,7 @@ defineOptions({
 });
 import { VueDraggable } from 'vue-draggable-plus';
 import { COMPONENT_MAP } from '../../registry/component_registry';
-import { buildLayoutStyles } from '../../lib/styleProcessor';
+import { buildLayoutStyles, buildLayoutInlineStyles } from '../../lib/styleProcessor';
 
 interface Props {
   element: AnyComponentInstance;
@@ -19,10 +19,21 @@ const props = defineProps<Props>();
 const emit = defineEmits(['update:element']);
 
 // Ce computed va servir de "pont" sécurisé pour le v-model
+// Utilisation d'une ref locale pour garantir une référence stable à VueDraggable
+const localChildren = ref<AnyComponentInstance[]>([...(props.element.children || [])]);
+
+// Synchronisation descendante : si la prop change (ex: undo/redo), on met à jour le local
+watch(() => props.element.children, (newVal) => {
+  if (JSON.stringify(newVal) !== JSON.stringify(localChildren.value)) {
+    localChildren.value = [...(newVal || [])];
+  }
+}, { deep: true });
+
 const childrenModel = computed({
-  get: () => props.element.children || [],
+  get: () => localChildren.value,
   set: (newValue) => {
-    // Au lieu de muter la prop, on renvoie une copie de l'élément avec les nouveaux enfants
+    localChildren.value = newValue;
+    // On notifie le parent
     emit('update:element', {
       ...props.element,
       children: newValue
@@ -45,6 +56,10 @@ const layoutClasses = computed(() => {
   return buildLayoutStyles(props.element.styles as Record<string, unknown>);
 });
 
+const layoutInlineStyles = computed(() => {
+  return buildLayoutInlineStyles(props.element.styles as Record<string, unknown>);
+});
+
 console.log('BlocRender mounting:', {
   id: props.element.id,
   tag: props.element.tag,
@@ -57,10 +72,11 @@ const formatSize = (value: unknown, defaultValue: string | undefined = undefined
   
   let finalValue = value;
   // Handle ResponsiveProp
-  if (typeof value === 'object' && value !== null && 'default' in value) {
+  if (typeof value === 'object' && value !== null && 'default' in (value as Record<string, unknown>)) {
     finalValue = (value as { default: unknown }).default;
   }
 
+  if (finalValue === 'full') return '100%';
   if (typeof finalValue === 'number') return `${finalValue}px`;
   if (typeof finalValue === 'string' && !isNaN(Number(finalValue)) && finalValue.trim() !== '') return `${finalValue}px`;
   return finalValue as string;
@@ -68,11 +84,11 @@ const formatSize = (value: unknown, defaultValue: string | undefined = undefined
 
 import ResizerWrapper from './ResizerWrapper.vue';
 
-const onDragStart = (e: any) => {
+const onDragStart = () => {
   // e.stopPropagation(); // Let VueDraggable handle it
 };
 
-const onDragEnd = (e: any) => {
+const onDragEnd = () => {
   // e.stopPropagation();
 };
 </script>
@@ -107,6 +123,7 @@ const onDragEnd = (e: any) => {
           :animation="150"
           class="min-h-[50px] w-full h-full pb-10"
           :class="layoutClasses"
+          :style="layoutInlineStyles"
           @start="onDragStart"
           @end="onDragEnd"
         >

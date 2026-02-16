@@ -57,10 +57,11 @@ const formatSize = (value: unknown, defaultValue: string | undefined = undefined
   
   let finalValue = value;
   // Handle ResponsiveProp
-  if (typeof value === 'object' && value !== null && 'default' in value) {
+  if (typeof value === 'object' && value !== null && 'default' in (value as Record<string, unknown>)) {
     finalValue = (value as { default: unknown }).default;
   }
 
+  if (finalValue === 'full') return '100%';
   if (typeof finalValue === 'number') return `${finalValue}px`;
   if (typeof finalValue === 'string' && !isNaN(Number(finalValue)) && finalValue.trim() !== '') return `${finalValue}px`;
   return finalValue as string;

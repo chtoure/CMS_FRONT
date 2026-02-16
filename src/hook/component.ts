@@ -45,9 +45,9 @@ const mockComponents: AnyComponent[] = [
         padding: 6,
         rounded: "xl",
         shadow: "md",
-        bg: "#CA2C2C",
+        bg: "",
         border: "#CA2C2C",
-        display:"flex",
+        display:"block",
         align: "center",
         justify: "between"
       },
@@ -63,7 +63,7 @@ const mockComponents: AnyComponent[] = [
     supportedActions: ACTIONS_BY_FAMILY['static'],
     defaultProps: {
       styles: {
-        fontSize: { default: "base", md: "lg" },
+        fontSize: { default: "10", md: "20" },
         textColor: "#060505",
         textAlign: "left",
         marginBottom: 4

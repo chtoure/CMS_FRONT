@@ -9,6 +9,7 @@ import SelectValue from '../../components/ui/select/SelectValue.vue';
 import SelectContent from '../../components/ui/select/SelectContent.vue';
 import SelectItem from '../../components/ui/select/SelectItem.vue';
 import CompositionColorPicker from '../composition/CompositionColorPicker.vue';
+import DimensionInput from './DimensionInput.vue';
 
 const props = defineProps<{
   element: AnyComponentInstance;
@@ -144,17 +145,17 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
         </div>
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Padding</Label>
-          <Input type="number" :model-value="getRawValue(styles.padding)" @update:model-value="(val) => updateStyle('padding', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
+          <DimensionInput :model-value="getRawValue(styles.padding)" @update:model-value="(val: any) => updateStyle('padding', val)" />
         </div>
       </div>
       <div class="grid grid-cols-4 gap-2">
         <div class="space-y-1.5 col-span-2">
           <Label class="text-[11px] text-gray-400">Marge Haut</Label>
-          <Input type="number" :model-value="getRawValue(styles.marginTop)" @update:model-value="(val) => updateStyle('marginTop', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
+          <DimensionInput :model-value="getRawValue(styles.marginTop)" @update:model-value="(val: any) => updateStyle('marginTop', val)" />
         </div>
         <div class="space-y-1.5 col-span-2">
           <Label class="text-[11px] text-gray-400">Marge Bas</Label>
-          <Input type="number" :model-value="getRawValue(styles.marginBottom)" @update:model-value="(val) => updateStyle('marginBottom', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
+          <DimensionInput :model-value="getRawValue(styles.marginBottom)" @update:model-value="(val: any) => updateStyle('marginBottom', val)" />
         </div>
       </div>
     </div>
@@ -164,11 +165,11 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
       <div class="grid grid-cols-4 gap-2">
         <div class="space-y-1.5 col-span-2">
           <Label class="text-[11px] text-gray-400">Hauteur</Label>
-          <Input type="number" :model-value="getRawValue(styles.height)" @update:model-value="(val) => updateStyle('height', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
+          <DimensionInput :model-value="getRawValue(styles.height)" @update:model-value="(val: any) => updateStyle('height', val)" />
         </div>
         <div class="space-y-1.5 col-span-2">
           <Label class="text-[11px] text-gray-400">Largeur</Label>
-          <Input type="number" :model-value="getRawValue(styles.width)" @update:model-value="(val) => updateStyle('width', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
+          <DimensionInput :model-value="getRawValue(styles.width)" @update:model-value="(val: any) => updateStyle('width', val)" />
         </div>
       </div>
     </div>
@@ -183,7 +184,7 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
         </div>
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Gap</Label>
-          <Input type="number" :model-value="getRawValue(containerStyles.gap)" @update:model-value="(val) => updateStyle('gap', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
+          <DimensionInput :model-value="getRawValue(containerStyles.gap)" @update:model-value="(val: any) => updateStyle('gap', val)" />
         </div>
       </div>
       <div class="space-y-1.5">
@@ -287,7 +288,7 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Taille (px)</Label>
-          <Input :model-value="getRawValue(styles.fontSize)" @update:model-value="(val) => updateStyle('fontSize', val)" class="h-8 text-xs bg-black/20 border-border/50" />
+          <Input type="number" :model-value="getRawValue(styles.fontSize)" @update:model-value="(val) => updateStyle('fontSize', val)" class="h-8 text-xs bg-black/20 border-border/50" />
         </div>
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Poids</Label>
