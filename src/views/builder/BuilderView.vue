@@ -39,6 +39,33 @@ watch(selectedId, (newId) => {
   showPropertiesView.value = !!newId;
 });
 
+// Gestion de la suppression via touche clavier
+import { onMounted, onUnmounted } from 'vue';
+
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    // Vérifier si l'utilisateur n'est pas en train d'écrire
+    const activeElement = document.activeElement;
+    const isInput = activeElement && (
+      activeElement.tagName === 'INPUT' || 
+      activeElement.tagName === 'TEXTAREA' || 
+      activeElement.getAttribute('contenteditable') === 'true'
+    );
+    
+    if (!isInput && selectedId.value) {
+      deleteComponent(selectedId.value);
+    }
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeyDown);
+});
+
 // --- Gestion de l'historique (Undo/Redo) ---
 const history = ref<string[]>([JSON.stringify(pageTree.value)]);
 const historyIndex = ref(0);

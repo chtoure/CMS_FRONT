@@ -43,7 +43,7 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
 </script>
 
 <template>
-  <div class="w-full text-text h-full flex flex-col">
+  <div class="w-full text-builder-bar-text h-full flex flex-col">
     <div class="relative h-full overflow-y-auto flex flex-col">
       <div class="sticky top-0 z-10 pb-1 w-full border-b border-border bg-builder-bar-background">
         <div class="flex items-center justify-end gap-2 p-2">
@@ -75,11 +75,11 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
                 <div
                   v-for="comp in components"
                   :key="comp.tag"
-                  class="flex flex-col items-center justify-center p-3 border border-sidebar-border rounded-md cursor-grab hover:-translate-y-1 transition-all group"
+                  class="flex flex-col items-center justify-center p-3 border border-builder-bar-border rounded-md cursor-grab hover:-translate-y-1 transition-all group"
                 >
                   <component
                     :is="getIcon(comp.icon)"
-                    class="h-6 w-6 mb-2 text-gray-400"
+                    class="h-6 w-6 mb-2 text-builder-bar-text"
                     stroke-width="1"
                   />
                   <span class="text-[10px] text-center font-medium leading-tight">

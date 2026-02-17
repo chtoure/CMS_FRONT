@@ -49,6 +49,11 @@ export default {
         'builder-bar-background': "var(--builder-bar-background)",
         'builder-bar-text': "var(--builder-bar-text)",
         'builder-background': "var(--builder-background)",
+        'builder-bar-border': "var(--builder-bar-border)",
+        'builder-input-bg': "var(--builder-input-bg)",
+        'builder-input-border': "var(--builder-input-border)",
+        'builder-input-text': "var(--builder-input-text)",
+        'builder-input-placeholder': "var(--builder-input-placeholder)",
         primary: {
           DEFAULT: "var(--primary)",
           foreground: "var(--primary-foreground)",

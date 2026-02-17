@@ -41,6 +41,7 @@ const showAddForm = ref(false);
 watch(() => props.element.id, () => {
   showAddForm.value = false;
   expandedParam.value = null;
+  console.log(props.element);
 });
 
 // Options de base
@@ -175,6 +176,8 @@ const inputTypeOptions = [
   { label: 'Téléphone', value: 'tel' },
   { label: 'URL', value: 'url' },
 ];
+
+
 </script>
 
 <template>
