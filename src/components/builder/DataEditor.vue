@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref, inject, computed, watch } from 'vue';
 import type { AnyComponentInstance, CliquableAction } from '../../type/component';
-import { ValueSource, type IComponentParams, type IPropsSchemaField } from '../../type/params';
+import { ValueSource, type IComponentParams, type IContenusField, type IPropsSchemaField } from '../../type/params';
 import Label from '../../components/ui/label/Label.vue';
 import Input from '../../components/ui/input/Input.vue';
 import Select from '../../components/ui/select/Select.vue';
@@ -9,9 +9,12 @@ import SelectTrigger from '../../components/ui/select/SelectTrigger.vue';
 import SelectValue from '../../components/ui/select/SelectValue.vue';
 import SelectContent from '../../components/ui/select/SelectContent.vue';
 import SelectItem from '../../components/ui/select/SelectItem.vue';
-import { Checkbox } from '../../components/ui/checkbox';
-import { Button } from '../../components/ui/button';
 import { Plus, Trash2, ChevronDown, Type, Image as ImageIcon, Database } from 'lucide-vue-next';
+import { Button } from '../../components/ui/button';
+import { Checkbox } from '../../components/ui/checkbox';
+import { useGetContentTypes } from '../../hook/content-type';
+import { useGetContentEntriesBySlug } from '../../hook/content-entry';
+import type { ContentType } from '../../type/content-type';
 
 const props = defineProps<{
   element: AnyComponentInstance;
@@ -22,6 +25,16 @@ const builderState = inject<{
   selectedId: { value: string | null };
   selectComponent: (id: string | null) => void;
 }>('builderState');
+
+
+const {
+  data: contentTypeOptions
+} = useGetContentTypes();
+
+// const {
+//   data: contentTypeById
+// } = useGetContentTypeById(newParam.value.type.contentTypeId);
+
 
 // Mapping des sources autorisées par composant
 const COMPONENT_SOURCE_MAPPING: Record<string, ValueSource[]> = {
@@ -66,6 +79,31 @@ const newParam = ref<Partial<IComponentParams>>({
   required: false
 });
 
+// Initialisation dynamique des champs du type selon la source
+watch(() => (newParam.value.type as any)?.source, (newSource) => {
+  if (newSource === ValueSource.STATIC) {
+    newParam.value.type = { source: ValueSource.STATIC, value: '' };
+  } else if (newSource === ValueSource.IMAGE) {
+    newParam.value.type = { source: ValueSource.IMAGE };
+  } else if (newSource === ValueSource.CONTENUS) {
+    newParam.value.type = {
+      source: ValueSource.CONTENUS,
+      contentTypeId: 0,
+      config: { mode: 'single', entryId: 0 }
+    } as any;
+  }
+});
+
+const orderOptions = [
+  { label: 'Croissant', value: 'asc' },
+  { label: 'Décroissant', value: 'desc' },
+];
+
+const modeOptions = [
+  { label: 'Élément unique', value: 'single' },
+  { label: 'Requête (Liste)', value: 'query' },
+];
+
 // Génération de nom unique
 const generateUniqueName = (label: string): string => {
   const slug = label
@@ -80,8 +118,46 @@ const generateUniqueName = (label: string): string => {
   return `${slug || 'param'}_${suffix}`;
 };
 
+const editingParam = ref<IComponentParams | null>(null);
+
 const toggleParam = (name: string) => {
-  expandedParam.value = expandedParam.value === name ? null : name;
+  if (expandedParam.value === name) {
+    expandedParam.value = null;
+    editingParam.value = null;
+  } else {
+    expandedParam.value = name;
+    const param = props.element.params.find(p => p.name === name);
+    if (param) {
+      // Clone profond pour édition temporaire
+      editingParam.value = JSON.parse(JSON.stringify(param));
+    }
+  }
+};
+
+const saveParameterEdit = () => {
+  if (!editingParam.value || !builderState) return;
+
+  const updateNode = (nodes: AnyComponentInstance[]): AnyComponentInstance[] => {
+    return nodes.map((node) => {
+      if (node.id === props.element.id) {
+        return {
+          ...node,
+          params: node.params.map(p => p.name === editingParam.value?.name ? (editingParam.value as IComponentParams) : p)
+        };
+      }
+      if (node.children) return { ...node, children: updateNode(node.children) };
+      return node;
+    });
+  };
+
+  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  expandedParam.value = null;
+  editingParam.value = null;
+};
+
+const cancelParameterEdit = () => {
+  expandedParam.value = null;
+  editingParam.value = null;
 };
 
 const addParameter = () => {
@@ -178,6 +254,73 @@ const inputTypeOptions = [
 ];
 
 
+const tabChamp = ref<{ label: string; value: string }[]>([]);
+
+//computed pour savoir si un type de contenu est sélectionné (pour le formulaire d'ajout)
+const isContentTypeSelected = computed(() => !!(newParam.value.type as any).contentTypeId);
+
+// computed pour récupérer le slug du type de contenu sélectionné (pour l'ajout)
+const selectedNewContentTypeSlug = computed(() => {
+  const id = (newParam.value.type as any).contentTypeId;
+  return contentTypeOptions.value?.results.find((opt: ContentType) => opt.id === id)?.slug;
+});
+
+// Récupération des entrées pour le formulaire d'ajout
+const { data: newContentEntries } = useGetContentEntriesBySlug(selectedNewContentTypeSlug);
+
+// --- Logique pour l'ÉDITION ---
+const isEditingContentTypeSelected = computed(() => !!(editingParam.value?.type as any)?.contentTypeId);
+
+const selectedEditingContentTypeSlug = computed(() => {
+  const id = (editingParam.value?.type as any)?.contentTypeId;
+  return contentTypeOptions.value?.results.find((opt: ContentType) => opt.id === id)?.slug;
+});
+
+const { data: editingContentEntries } = useGetContentEntriesBySlug(selectedEditingContentTypeSlug);
+
+const updateContentTypeId = (contentTypeId: number) => {
+  (newParam.value.type as IContenusField).contentTypeId = contentTypeId;
+  // Reset entryId and mappingField when type changes
+  if ((newParam.value.type as any).config) {
+    (newParam.value.type as any).config.entryId = undefined;
+    (newParam.value.type as any).config.mappingField = '';
+  }
+
+  tabChamp.value = contentTypeOptions.value?.results.find((opt: ContentType) => opt.id === contentTypeId)?.fields_schema.map((field: any) => {
+    return {
+      label: field.label,
+      value: field.name
+    };
+  }) || [];
+};
+
+const handleSelectChange = (val:unknown) => {
+  if (val !== null && val !== undefined) {
+    updateContentTypeId(Number(val));
+  }
+};
+
+// Logique de mise à jour pour l'édition (similaire à updateContentTypeId)
+const tabChampEditing = computed(() => {
+  const id = (editingParam.value?.type as any)?.contentTypeId;
+  if (!id) return [];
+  return contentTypeOptions.value?.results.find((opt: ContentType) => opt.id === id)?.fields_schema.map(field => ({
+    label: field.label,
+    value: field.name
+  })) || [];
+});
+
+const handleEditingTypeChange = (val: unknown) => {
+  if (!editingParam.value || val === null || val === undefined) return;
+  const id = Number(val);
+  (editingParam.value.type as any).contentTypeId = id;
+  // Reset entryId and mappingField
+  if ((editingParam.value.type as any).config) {
+    (editingParam.value.type as any).config.entryId = undefined;
+    (editingParam.value.type as any).config.mappingField = '';
+  }
+};
+
 </script>
 
 <template>
@@ -239,6 +382,121 @@ const inputTypeOptions = [
                 </div>
             </div>
           </div>
+          <!-- Configuration dynamique selon la Source -->
+          <div v-if="(newParam.type as any).source === 'static'" class="space-y-1.5">
+            <Label class="text-[11px] text-gray-400">Valeur par défaut</Label>
+            <Input
+              v-model="(newParam.type as any).value"
+              placeholder="Valeur initiale..."
+              class="h-8 text-xs bg-black/40 border-border/30"
+            />
+          </div>
+
+          <div v-if="(newParam.type as any).source === 'image'" class="space-y-1.5">
+            <Label class="text-[11px] text-gray-400">ID Image par défaut (Optionnel)</Label>
+            <Input
+              type="number"
+              v-model.number="(newParam.type as any).imageId"
+              placeholder="ID de l'image..."
+              class="h-8 text-xs bg-black/40 border-border/30"
+            />
+          </div>
+
+          <div v-if="(newParam.type as any).source === 'contenus'" class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="space-y-1.5">
+                <Label class="text-[11px] text-gray-400">Type de contenu</Label>
+                <Select :model-value="(newParam.type as any).contentTypeId" @update:model-value="(val) => handleSelectChange(val)">
+                  <SelectTrigger class="h-8 text-xs bg-black/40 border-border/30">
+                    <SelectValue placeholder="Choisir..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem v-for="opt in contentTypeOptions?.results" :key="opt.id" :value="opt.id">
+                      {{ opt.name }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div class="space-y-1.5">
+                <Label class="text-[11px] text-gray-400">Mode d'affichage</Label>
+                <Select :model-value="(newParam.type as any).config.mode" @update:model-value="(val) => (newParam.type as any).config.mode = val">
+                  <SelectTrigger class="h-8 text-xs bg-black/40 border-border/30">
+                    <SelectValue placeholder="Mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem v-for="mode in modeOptions" :key="mode.value" :value="mode.value">
+                      {{ mode.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <!-- Mode: Single -->
+            <div v-if="(newParam.type as any).config.mode === 'single'" class="grid grid-cols-2 gap-3">
+              <div class="space-y-1.5">
+                <Label class="text-[11px] text-gray-400">Choisir une entrée</Label>
+                <Select
+                  :model-value="(newParam.type as any).config.entryId"
+                  @update:model-value="(val) => (newParam.type as any).config.entryId = val"
+                  :disabled="!isContentTypeSelected"
+                >
+                  <SelectTrigger class="h-8 text-xs bg-black/40 border-border/30">
+                    <SelectValue placeholder="Choisir..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem v-for="entry in newContentEntries?.results" :key="entry.id" :value="entry.id">
+                      {{ entry.id }} - {{ (entry.data_json as any).title || 'Sans titre' }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div class="space-y-1.5">
+                <Label class="text-[11px] text-gray-400">Champ de mapping</Label>
+                <Select
+                  :model-value="(newParam.type as any).config.mappingField"
+                  @update:model-value="(val) => (newParam.type as any).config.mappingField = val"
+                  :disabled="!isContentTypeSelected"
+                >
+                  <SelectTrigger class="h-8 text-xs bg-black/40 border-border/30">
+                    <SelectValue placeholder="Choisir..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem v-for="opt in tabChamp" :key="opt.value" :value="opt.value">
+                      {{ opt.label || opt.value }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <!-- Mode: Query -->
+            <div v-if="(newParam.type as any).config.mode === 'query'" class="space-y-3">
+              <div class="grid grid-cols-3 gap-2">
+                <div class="space-y-1.5">
+                  <Label class="text-[11px] text-gray-400">Limite</Label>
+                  <Input type="number" v-model.number="(newParam.type as any).config.limit" class="h-8 text-xs bg-black/40 border-border/30" />
+                </div>
+                <div class="space-y-1.5">
+                  <Label class="text-[11px] text-gray-400">Trier par</Label>
+                  <Input v-model="(newParam.type as any).config.sortBy" placeholder="id" class="h-8 text-xs bg-black/40 border-border/30" />
+                </div>
+                <div class="space-y-1.5">
+                  <Label class="text-[11px] text-gray-400">Ordre</Label>
+                  <Select :model-value="(newParam.type as any).config.order" @update:model-value="(val) => (newParam.type as any).config.order = val">
+                    <SelectTrigger class="h-8 text-xs bg-black/40 border-border/30">
+                      <SelectValue placeholder="Ordre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem v-for="ord in orderOptions" :key="ord.value" :value="ord.value">
+                        {{ ord.label }}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </div>
           <div class="flex gap-2 pt-1">
             <Button size="sm" class="flex-1 h-7 text-[10px]" @click="addParameter">Ajouter</Button>
             <Button size="sm" variant="ghost" class="flex-1 h-7 text-[10px]" @click="showAddForm = false">Annuler</Button>
@@ -261,8 +519,16 @@ const inputTypeOptions = [
               <Database v-else class="h-3.5 w-3.5 text-gray-500" />
               <span class="text-[11px] font-medium text-gray-300">{{ field.label }}</span>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1">
               <span v-if="field.required" class="text-[9px] px-1 bg-primary/20 text-primary rounded">Requis</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                class="h-6 w-6 text-red-500 hover:bg-red-500/10 hover:text-red-400"
+                @click.stop="removeParameter(field.name)"
+              >
+                <Trash2 class="h-3 w-3" />
+              </Button>
               <ChevronDown
                 class="h-3.5 w-3.5 text-gray-500 transition-transform duration-200"
                 :class="{ 'rotate-180': expandedParam === field.name }"
@@ -279,60 +545,153 @@ const inputTypeOptions = [
             leave-from-class="max-h-[500px] opacity-100"
             leave-to-class="max-h-0 opacity-0"
           >
-            <div v-if="expandedParam === field.name" class="p-3 space-y-4 bg-black/40">
+            <div v-if="editingParam && expandedParam === field.name" class="p-3 space-y-4 bg-black/40">
               <!-- Édition du Label -->
               <div class="space-y-1.5">
                 <div class="space-y-2">
                   <div class="space-y-1">
                     <Label class="text-[11px] text-gray-400">Label d'affichage</Label>
                     <Input
-                      v-model="field.label"
+                      v-model="editingParam.label"
                       class="h-8 text-xs bg-black/20 border-border/50"
                     />
                   </div>
-                  <!-- <div class="space-y-1">
-                    <Label class="text-[11px] text-gray-400">Nom technique (lecture seule)</Label>
-                    <Input
-                      :model-value="field.name"
-                      disabled
-                      class="h-8 text-xs bg-black/20 border-border/50 opacity-50 italic"
-                    />
-                  </div> -->
                 </div>
               </div>
 
-              <!-- Édition de la Valeur (Data) -->
-              <div class="space-y-1 border-t border-white/5">
-                <Label class="text-[10px] text-gray-400">{{ field.label }} (Valeur)</Label>
-                <div v-if="field.type.source === 'static'" class="space-y-1.5">
+              <!-- Édition de la Configuration (Schema Type) -->
+              <div class="space-y-1 border-t border-white/5 pt-2">
+                <!-- Static Configuration -->
+                <div v-if="editingParam.type.source === 'static'" class="space-y-1.5">
+                  <Label class="text-[11px] text-gray-400">Valeur par défaut</Label>
                   <Input
-                    :model-value="(element.data[field.name] as string)"
-                    @update:model-value="(val) => updateData(field.name, val)"
-                    class="h-8 text-xs px-2 bg-black/20 border-border/50"
-                    placeholder="Saisir la valeur..."
+                    v-model="(editingParam.type as any).value"
+                    class="h-8 text-xs bg-black/20 border-border/50"
                   />
                 </div>
-                <div v-else-if="field.type.source === 'image'" class="space-y-1.5">
-                   <Input
-                    :model-value="(element.data[field.name] as string)"
-                    @update:model-value="(val) => updateData(field.name, val)"
-                    class="h-8 text-xs px-2 bg-black/20 border-border/50"
-                    placeholder="URL de l'image..."
+
+                <!-- Image Configuration -->
+                <div v-if="editingParam.type.source === 'image'" class="space-y-1.5">
+                  <Label class="text-[11px] text-gray-400">ID Image par défaut</Label>
+                  <Input
+                    type="number"
+                    v-model.number="(editingParam.type as any).imageId"
+                    class="h-8 text-xs bg-black/20 border-border/50"
                   />
                 </div>
-                <!-- On pourra ajouter d'autres types ici -->
+
+                <!-- Contenus Configuration -->
+                <div v-if="editingParam.type.source === 'contenus'" class="space-y-3">
+                  <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1.5">
+                      <Label class="text-[11px] text-gray-400">Type de contenu</Label>
+                      <Select :model-value="(editingParam.type as any).contentTypeId" @update:model-value="handleEditingTypeChange">
+                        <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+                          <SelectValue placeholder="Choisir..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem v-for="opt in contentTypeOptions?.results" :key="opt.id" :value="opt.id">
+                            {{ opt.name }}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div class="space-y-1.5">
+                      <Label class="text-[11px] text-gray-400">Mode d'affichage</Label>
+                      <Select :model-value="(editingParam.type as any).config.mode" @update:model-value="(val) => (editingParam.type as any).config.mode = val">
+                        <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+                          <SelectValue placeholder="Mode" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem v-for="mode in modeOptions" :key="mode.value" :value="mode.value">
+                            {{ mode.label }}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <!-- Mode: Single -->
+                  <div v-if="(editingParam.type as any).config.mode === 'single'" class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1.5">
+                      <Label class="text-[11px] text-gray-400">Choisir une entrée</Label>
+                      <Select
+                        :model-value="(editingParam.type as any).config.entryId"
+                        @update:model-value="(val) => (editingParam.type as any).config.entryId = val"
+                        :disabled="!isEditingContentTypeSelected"
+                      >
+                        <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+                          <SelectValue placeholder="Choisir..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem v-for="entry in editingContentEntries?.results" :key="entry.id" :value="entry.id">
+                            {{ entry.id }} - {{ (entry.data_json as any).title || 'Sans titre' }}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div class="space-y-1.5">
+                      <Label class="text-[11px] text-gray-400">Champ Mapping</Label>
+                      <Select
+                        :model-value="(editingParam.type as any).config.mappingField"
+                        @update:model-value="(val) => (editingParam.type as any).config.mappingField = val"
+                        :disabled="!isEditingContentTypeSelected"
+                      >
+                        <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+                          <SelectValue placeholder="Choisir..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem v-for="opt in tabChampEditing" :key="opt.value" :value="opt.value">
+                            {{ opt.label || opt.value }}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <!-- Mode: Query -->
+                  <div v-if="(editingParam.type as any).config.mode === 'query'" class="grid grid-cols-3 gap-2">
+                    <div class="space-y-1.5">
+                      <Label class="text-[11px] text-gray-400">Limite</Label>
+                      <Input type="number" v-model.number="(editingParam.type as any).config.limit" class="h-8 text-xs bg-black/20 border-border/50" />
+                    </div>
+                    <div class="space-y-1.5">
+                      <Label class="text-[11px] text-gray-400">Trier par</Label>
+                      <Input v-model="(editingParam.type as any).config.sortBy" class="h-8 text-xs bg-black/20 border-border/50" />
+                    </div>
+                    <div class="space-y-1.5">
+                      <Label class="text-[11px] text-gray-400">Ordre</Label>
+                      <Select :model-value="(editingParam.type as any).config.order" @update:model-value="(val) => (editingParam.type as any).config.order = val">
+                        <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+                          <SelectValue placeholder="Ordre" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem v-for="ord in orderOptions" :key="ord.value" :value="ord.value">
+                            {{ ord.label }}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <!-- Footer de l'accordéon -->
-              <div class="flex justify-end pt-2">
+              <div class="flex gap-2 pt-2 border-t border-white/5">
                 <Button
-                  variant="ghost"
                   size="sm"
-                  class="h-7 text-[10px] text-red-400 hover:text-red-300 hover:bg-red-400/10"
-                  @click="removeParameter(field.name)"
+                  variant="ghost"
+                  class="flex-1 h-7 text-[10px] order-2"
+                  @click="cancelParameterEdit"
                 >
-                  <Trash2 class="h-3.5 w-3.5 mr-1" />
-                  Supprimer le paramètre
+                  Annuler
+                </Button>
+                <Button
+                  size="sm"
+                  class="flex-1 h-7 text-[10px]"
+                  @click="saveParameterEdit"
+                >
+                  Modifier
                 </Button>
               </div>
             </div>

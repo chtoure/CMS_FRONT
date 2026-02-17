@@ -22,7 +22,7 @@ interface IStaticField {
 
 
 
-// Partie Source : Variable
+// Partie Source : Image
 interface IImageField {
   source: ValueSource.IMAGE;
   imageId?: number;
@@ -71,7 +71,7 @@ interface IComponentParams {
   label: string;
   type: IPropsSchemaField;
   required: boolean;
-  config?: Record<string, unknown>;
+  // config?: Record<string, unknown>;
 
 }
 
