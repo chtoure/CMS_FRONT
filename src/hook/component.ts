@@ -76,6 +76,7 @@ const mockComponents: AnyComponent[] = [
         align: "center",
         justify: "between"
       },
+      params: [],
       data: {}
     }
   },
@@ -92,6 +93,17 @@ const mockComponents: AnyComponent[] = [
         textAlign: "left",
         marginBottom: 4
       },
+      params: [
+        {
+          name: "content",
+          label: "Contenu",
+          type: {
+            source: ValueSource.STATIC,
+            value: "Ceci est un texte par défaut"
+          },
+          required: true,
+        }
+      ],
       data: {
         content: "Ceci est un texte par défaut",
         tag: "p"
@@ -111,6 +123,17 @@ const mockComponents: AnyComponent[] = [
         display: "block",
         marginBottom: 4
       },
+      params: [
+        {
+          name: "src",
+          label: "Source",
+          type: {
+            source: ValueSource.IMAGE,
+            imageId:1
+          },
+          required: true,
+        }
+      ],
       data: {
         src: "https://images.unsplash.com/photo-1707343843437-caacff5cfa74?q=80&w=2912&auto=format&fit=crop",
         alt: "Image de démonstration",
@@ -131,6 +154,17 @@ const mockComponents: AnyComponent[] = [
         textColor: "#CA2C2C",
         marginBottom: 2
       },
+      params: [
+        {
+          name: "icon",
+          label: "Icône",
+          type: {
+            source: ValueSource.STATIC,
+            value: "Star"
+          },
+          required: true,
+        }
+      ],
       data: {
         icon: "Star",
         size: 32,
@@ -151,6 +185,35 @@ const mockComponents: AnyComponent[] = [
         rounded: "md",
         padding: 2
       },
+      params: [
+        {
+          name: "label",
+          label: "Label",
+          type: {
+            source: ValueSource.STATIC,
+            value: "Votre nom"
+          },
+          required: true,
+        },
+        {
+          name: "placeholder",
+          label: "Placeholder",
+          type: {
+            source: ValueSource.STATIC,
+            value: "Entrez votre nom..."
+          },
+          required: true,
+        },
+        {
+          name: "name",
+          label: "Name",
+          type: {
+            source: ValueSource.STATIC,
+            value: "username"
+          },
+          required: true,
+        }
+      ],
       data: {
         type: "text",
         label: "Votre nom",
