@@ -53,9 +53,14 @@
   --sidebar-border: #dfdfdf;
   --sidebar-ring: #0c8ce9;
 
-  --builder-bar-background: #e9ecef;
-  --builder-bar-text:  #545454;
-  --builder-background: #FFFFFF;
+  --builder-bar-background: #F8FAFC; 
+  --builder-bar-text: #020617; 
+  --builder-bar-border: #E2E8F0;
+  --builder-input-bg : #FFFFFF;
+  --builder-input-border : #E2E8F0;
+  --builder-input-text : #020617;
+  --builder-input-placeholder : #94A3B8;
+ 
 
   --pagination-item-text: #000000;
 
@@ -109,10 +114,13 @@
   --sidebar-border: #373737;
   --sidebar-ring: #0c8ce9;
 
-  --builder-bar-background: #020617;
-  --builder-bar-text: #f1f5f9;
-
-
+  --builder-bar-background: #020617; 
+  --builder-bar-text: #F1F5F9;       
+  --builder-bar-border: #1E293B;
+  --builder-input-bg : #0F172A;
+  --builder-input-border : #1E293B;
+  --builder-input-text : #F1F5F9;
+  --builder-input-placeholder : #64748B;
 
   --pagination-item-text: #ffffff;
 
