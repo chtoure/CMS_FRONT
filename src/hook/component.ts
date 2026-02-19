@@ -118,7 +118,16 @@ const mockComponents: AnyComponent[] = [
           label: "Source",
           type: {
             source: ValueSource.IMAGE,
-            imageId:1
+            src:"https://images.unsplash.com/photo-1707343843437-caacff5cfa74?q=80&w=2912&auto=format&fit=crop"
+          },
+          required: true,
+        },
+        {
+          name: "alt",
+          label: "Alt",
+          type: {
+            source: ValueSource.STATIC,
+            value: "Image de démonstration"
           },
           required: true,
         }

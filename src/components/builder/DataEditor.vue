@@ -1,7 +1,8 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script lang="ts" setup>
 import { ref, inject, computed, watch } from 'vue';
 import type { AnyComponentInstance, CliquableAction } from '../../type/component';
-import { ValueSource, type IComponentParams, type IContenusField, type IPropsSchemaField } from '../../type/params';
+import { ValueSource, type IComponentParams, type IContenusField, type IImageField, type IPropsSchemaField, type IParentField, type IStaticField } from '../../type/params';
 import Label from '../../components/ui/label/Label.vue';
 import Input from '../../components/ui/input/Input.vue';
 import Select from '../../components/ui/select/Select.vue';
@@ -9,12 +10,16 @@ import SelectTrigger from '../../components/ui/select/SelectTrigger.vue';
 import SelectValue from '../../components/ui/select/SelectValue.vue';
 import SelectContent from '../../components/ui/select/SelectContent.vue';
 import SelectItem from '../../components/ui/select/SelectItem.vue';
-import { Plus, Trash2, ChevronDown, Type, Image as ImageIcon, Database } from 'lucide-vue-next';
+import * as Icons from 'lucide-vue-next';
+import { Plus, Trash2, ChevronDown, Type, Image as ImageIcon, Database, Link as LinkIcon } from 'lucide-vue-next';
 import { Button } from '../../components/ui/button';
 import { Checkbox } from '../../components/ui/checkbox';
 import { useGetContentTypes } from '../../hook/content-type';
 import { useGetContentEntriesBySlug } from '../../hook/content-entry';
 import type { ContentType } from '../../type/content-type';
+import CompositionMediaPicker from '../composition/CompositionMediaPicker.vue';
+import { useGetMediaList } from '../../hook/media';
+import { FieldType, TypesMedia } from '../../type/field';
 
 const props = defineProps<{
   element: AnyComponentInstance;
@@ -67,6 +72,7 @@ const sourceOptions = [
 // Propriétés calculées pour la dynamisation
 const allowedSources = computed(() => COMPONENT_SOURCE_MAPPING[props.element.tag] || []);
 const canAddParams = computed(() => allowedSources.value.length > 0);
+const paramDynamic = computed(() => props.element.tag === 'CardBuilder');
 
 const filteredSourceOptions = computed(() => {
   return sourceOptions.filter(opt => allowedSources.value.includes(opt.value as ValueSource));
@@ -84,7 +90,7 @@ watch(() => (newParam.value.type as any)?.source, (newSource) => {
   if (newSource === ValueSource.STATIC) {
     newParam.value.type = { source: ValueSource.STATIC, value: '' };
   } else if (newSource === ValueSource.IMAGE) {
-    newParam.value.type = { source: ValueSource.IMAGE };
+    newParam.value.type = { source: ValueSource.IMAGE, src: '' };
   } else if (newSource === ValueSource.CONTENUS) {
     newParam.value.type = {
       source: ValueSource.CONTENUS,
@@ -140,10 +146,31 @@ const saveParameterEdit = () => {
   const updateNode = (nodes: AnyComponentInstance[]): AnyComponentInstance[] => {
     return nodes.map((node) => {
       if (node.id === props.element.id) {
-        return {
+        let newValue: any = null;
+        if (editingParam.value?.type.source === ValueSource.STATIC) {
+          newValue = editingParam.value.type.value;
+        } else if (editingParam.value?.type.source === ValueSource.IMAGE) {
+          newValue = editingParam.value.type.src;
+        } else if (editingParam.value?.type.source === ValueSource.CONTENUS) {
+          const type = editingParam.value.type as IContenusField;
+          newValue = type.config.mode === 'single' ? type.config.entryId : type.contentTypeId;
+        }
+
+        const newNode = {
           ...node,
-          params: node.params.map(p => p.name === editingParam.value?.name ? (editingParam.value as IComponentParams) : p)
+          params: node.params.map(p => p.name === editingParam.value?.name ? (editingParam.value as IComponentParams) : p),
+          data: {
+            ...node.data,
+            [editingParam.value?.name as string]: newValue
+          }
         };
+
+        // Propager la nouvelle valeur aux enfants liés si nécessaire
+        if (editingParam.value?.name && newNode.children) {
+          newNode.children = propagateValueToChildren(newNode.children, editingParam.value.name, newValue);
+        }
+
+        return newNode;
       }
       if (node.children) return { ...node, children: updateNode(node.children) };
       return node;
@@ -177,7 +204,12 @@ const addParameter = () => {
         return {
           ...node,
           params: [...node.params, param],
-          data: { ...node.data, [name]: node.data[name] ?? (param.type.source === ValueSource.STATIC ? '' : null) }
+          data: { ...node.data, [name]: node.data[name] ?? (
+               param.type.source === ValueSource.STATIC ? (param.type as IStaticField).value
+             : param.type.source === ValueSource.IMAGE ? (param.type as IImageField).src
+             : param.type.source === ValueSource.CONTENUS ? ((param.type as any).config?.mode === 'single' ? (param.type as any).config.entryId : (param.type as any).contentTypeId)
+             : null
+          ) }
         };
       }
       if (node.children) return { ...node, children: updateNode(node.children) };
@@ -186,6 +218,9 @@ const addParameter = () => {
   };
 
   builderState.pageTree.value = updateNode(builderState.pageTree.value);
+
+  console.log("Ajout",builderState);
+
 
   // Reset form
   newParam.value = { label: '', name: '', type: { source: ValueSource.STATIC, value: '' } as IPropsSchemaField, required: false };
@@ -224,7 +259,12 @@ const updateData = (key: string, value: string | number | boolean | object) => {
   const updateNode = (nodes: AnyComponentInstance[]): AnyComponentInstance[] => {
     return nodes.map((node: AnyComponentInstance): AnyComponentInstance => {
       if (node.id === props.element.id) {
-        return { ...node, data: newData };
+        // En plus de mettre à jour le parent, on propage aux enfants liés
+        const nodeWithNewData = { ...node, data: newData };
+        if (nodeWithNewData.children) {
+          nodeWithNewData.children = propagateValueToChildren(nodeWithNewData.children, key, value);
+        }
+        return nodeWithNewData;
       }
       if (node.children) {
         return { ...node, children: updateNode(node.children) };
@@ -234,6 +274,186 @@ const updateData = (key: string, value: string | number | boolean | object) => {
   };
 
   builderState.pageTree.value = updateNode(builderState.pageTree.value);
+};
+
+// Fonction récursive pour propager une valeur aux enfants liés
+const propagateValueToChildren = (children: AnyComponentInstance[], parentParamName: string, newValue: any): AnyComponentInstance[] => {
+  // On récupère le type du paramètre parent pour savoir s'il s'agit d'un contenu CMS
+  const parentParam = props.element.params.find(p => p.name === parentParamName);
+  const isCMS = parentParam?.type.source === ValueSource.CONTENUS;
+
+  // Si c'est du CMS, on essaie de trouver l'entrée correspondante pour avoir le data_json
+  let entryData: any = null;
+  if (isCMS && newValue) {
+    // On cherche dans les entrées chargées (celles de l'édition en cours)
+    const entry = editingContentEntries.value?.results?.find((e: any) => e.id === newValue);
+    if (entry) {
+      entryData = entry.data_json;
+    }
+  }
+
+  return children.map(child => {
+    const newChildData = { ...child.data };
+    let hasChanged = false;
+
+    // On parcourt les paramètres de l'enfant pour voir s'il y a une liaison
+    child.params.forEach(p => {
+      if (p.type.source === ValueSource.PARENT && p.type.parentParamName === parentParamName) {
+        const pt = p.type as IParentField;
+
+        if (isCMS) {
+          // Liaison CMS : on utilise la parentKey pour extraire la valeur brute
+          if (pt.parentKey && entryData) {
+            const rawValue = entryData[pt.parentKey];
+
+            // Si l'enfant est une image, on s'attend à un objet ou une URL
+            if (p.type.source === ValueSource.PARENT && child.params.find(param => param.name === p.name)?.type.source === ValueSource.IMAGE) {
+               // On pourrait avoir besoin d'extraire le src si c'est un objet Media
+               newChildData[p.name] = typeof rawValue === 'object' ? (rawValue as any)?.url : rawValue;
+            } else {
+               newChildData[p.name] = rawValue;
+            }
+            hasChanged = true;
+          }
+        } else {
+          // Liaison directe (Static/Image)
+          newChildData[p.name] = newValue;
+          hasChanged = true;
+        }
+      }
+    });
+
+    const updatedChild = hasChanged ? { ...child, data: newChildData } : child;
+
+    // Propagation récursive si l'enfant a lui-même des enfants
+    if (updatedChild.children && updatedChild.children.length > 0) {
+      updatedChild.children = propagateValueToChildren(updatedChild.children, parentParamName, newValue);
+    }
+
+    return updatedChild;
+  });
+};
+
+// Fonction pour mettre à jour la liaison d'un paramètre enfant
+const updateChildParamSource = (childId: string, paramName: string, source: ValueSource, parentParamName?: string, parentKey?: string) => {
+  if (!builderState) return;
+
+  const updateNode = (nodes: AnyComponentInstance[]): AnyComponentInstance[] => {
+    return nodes.map((node) => {
+      if (node.id === childId) {
+        const newParams = node.params.map(p => {
+          if (p.name === paramName) {
+            if (source === ValueSource.PARENT) {
+              const currentParentName = parentParamName || (p.type.source === ValueSource.PARENT ? (p.type as IParentField).parentParamName : '');
+              const parentParam = props.element.params.find(pp => pp.name === currentParentName);
+              const isCMS = parentParam?.type.source === ValueSource.CONTENUS;
+
+              // Détermination du type cible (Static ou Image)
+              // Si on vient d'un type original, on le stocke
+              const originalType = p.type.source === ValueSource.PARENT ? (p.type as IParentField).targetType
+                                  : (p.type.source as any);
+
+              const newType: IParentField = {
+                source: ValueSource.PARENT,
+                parentParamName: currentParentName,
+                parentKey: parentKey || (p.type.source === ValueSource.PARENT ? (p.type as IParentField).parentKey : undefined),
+                targetType: originalType
+              };
+
+              // Synchronisation immédiate si mapping complet et nom sélectionné
+              if (currentParentName) {
+                if (!isCMS) {
+                  node.data[paramName] = props.element.data[currentParentName];
+                } else if (newType.parentKey) {
+                  const entryId = props.element.data[currentParentName];
+                  const entry = editingContentEntries.value?.results?.find((e: any) => e.id === entryId);
+                  if (entry?.data_json) {
+                    const rawValue = entry.data_json[newType.parentKey];
+                    if (originalType === ValueSource.IMAGE) {
+                      node.data[paramName] = typeof rawValue === 'object' ? (rawValue as any)?.url : rawValue;
+                    } else {
+                      node.data[paramName] = rawValue;
+                    }
+                  }
+                }
+              }
+
+              return { ...p, type: newType };
+            } else {
+              return { ...p, type: { source: ValueSource.STATIC, value: node.data[paramName] || '' } as IStaticField };
+            }
+          }
+          return p;
+        });
+
+        return { ...node, params: newParams };
+      }
+      if (node.children) return { ...node, children: updateNode(node.children) };
+      return node;
+    });
+  };
+
+  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+};
+
+// Récupère les paramètres parents compatibles avec un type de paramètre enfant
+const getCompatibleParentParams = (childParam: IComponentParams) => {
+  // Utilise targetType si déjà lié, sinon le type direct
+  const childType = childParam.type.source === ValueSource.PARENT
+                    ? (childParam.type as IParentField).targetType
+                    : childParam.type.source;
+
+  return props.element.params.filter(p => {
+    // Si l'enfant est statique, il peut se lier à un parent statique OR à un parent CMS (qui fournira des champs texte)
+    if (childType === ValueSource.STATIC) {
+      return p.type.source === ValueSource.STATIC || p.type.source === ValueSource.CONTENUS;
+    }
+    // Si l'enfant est image, il peut se lier à un parent image OR à un parent CMS (qui fournira des champs Media)
+    if (childType === ValueSource.IMAGE) {
+      return p.type.source === ValueSource.IMAGE || p.type.source === ValueSource.CONTENUS;
+    }
+    return false;
+  });
+};
+
+// Récupère les champs du CMS compatibles avec un type de paramètre enfant
+const getCompatibleCMSFields = (parentParamName: string, childParam: IComponentParams) => {
+  const parentParam = props.element.params.find(p => p.name === parentParamName);
+  if (parentParam?.type.source !== ValueSource.CONTENUS) return [];
+
+  const contentTypeId = parentParam.type.contentTypeId;
+  const contentType = contentTypeOptions.value?.results?.find((ct: any) => ct.id === contentTypeId);
+  if (!contentType) return [];
+
+  const childType = childParam.type.source === ValueSource.PARENT
+                    ? (childParam.type as IParentField).targetType
+                    : childParam.type.source;
+
+  return contentType.fields_schema.filter((f: any) => {
+    if (childType === ValueSource.STATIC) {
+      // Types simples supportés pour le texte
+      return [FieldType.TEXT, 'text', 'string', FieldType.NUMBER, 'number', FieldType.RICH_TEXT, 'richtext', FieldType.BOOLEAN, 'boolean'].includes(f.type);
+    }
+    if (childType === ValueSource.IMAGE) {
+      // Type Media pour les images - on vérifie si allowedTypes contient image et UNIQUEMENT image si possible
+      const isMedia = f.type === FieldType.MEDIA || f.type === 'media';
+      const allowed = f.allowedTypes || [];
+      const hasImage = allowed.includes(TypesMedia.IMAGE) || allowed.includes('image');
+      // On accepte si c'est un media qui contient des images
+      return isMedia && hasImage;
+    }
+    return false;
+  }).map((f: any) => ({ label: f.label || f.name, value: f.name }));
+};
+
+const getIcon = (name: string) => {
+  if (name in Icons) {
+    const maybeIcon = (Icons as any)[name];
+    if (typeof maybeIcon === 'function' || typeof maybeIcon === 'object') {
+      return maybeIcon;
+    }
+  }
+  return Icons.HelpCircle;
 };
 
 const objectFitOptions = [
@@ -252,9 +472,6 @@ const inputTypeOptions = [
   { label: 'Téléphone', value: 'tel' },
   { label: 'URL', value: 'url' },
 ];
-
-
-const tabChamp = ref<{ label: string; value: string }[]>([]);
 
 //computed pour savoir si un type de contenu est sélectionné (pour le formulaire d'ajout)
 const isContentTypeSelected = computed(() => !!(newParam.value.type as any).contentTypeId);
@@ -278,37 +495,17 @@ const selectedEditingContentTypeSlug = computed(() => {
 
 const { data: editingContentEntries } = useGetContentEntriesBySlug(selectedEditingContentTypeSlug);
 
-const updateContentTypeId = (contentTypeId: number) => {
-  (newParam.value.type as IContenusField).contentTypeId = contentTypeId;
-  // Reset entryId and mappingField when type changes
-  if ((newParam.value.type as any).config) {
-    (newParam.value.type as any).config.entryId = undefined;
-    (newParam.value.type as any).config.mappingField = '';
-  }
-
-  tabChamp.value = contentTypeOptions.value?.results.find((opt: ContentType) => opt.id === contentTypeId)?.fields_schema.map((field: any) => {
-    return {
-      label: field.label,
-      value: field.name
-    };
-  }) || [];
-};
-
 const handleSelectChange = (val:unknown) => {
   if (val !== null && val !== undefined) {
-    updateContentTypeId(Number(val));
+    const contentTypeId = Number(val);
+    (newParam.value.type as IContenusField).contentTypeId = contentTypeId;
+    // Reset entryId and mappingField when type changes
+    if ((newParam.value.type as any).config) {
+      (newParam.value.type as any).config.entryId = undefined;
+      (newParam.value.type as any).config.mappingField = '';
+    }
   }
 };
-
-// Logique de mise à jour pour l'édition (similaire à updateContentTypeId)
-const tabChampEditing = computed(() => {
-  const id = (editingParam.value?.type as any)?.contentTypeId;
-  if (!id) return [];
-  return contentTypeOptions.value?.results.find((opt: ContentType) => opt.id === id)?.fields_schema.map(field => ({
-    label: field.label,
-    value: field.name
-  })) || [];
-});
 
 const handleEditingTypeChange = (val: unknown) => {
   if (!editingParam.value || val === null || val === undefined) return;
@@ -321,6 +518,36 @@ const handleEditingTypeChange = (val: unknown) => {
   }
 };
 
+const previewImage = ref('')
+
+
+const mediaQuery = useGetMediaList({});
+const changeMediaEditor = (id: number) => {
+  if (!editingParam.value || id === null || id === undefined) return;
+
+  previewImage.value = mediaQuery?.data.value?.results?.find((m) => m.id === id)?.file_path || '';
+  (editingParam.value.type as IImageField).src = previewImage.value;
+  (editingParam.value.type as IImageField).id = id;
+
+}
+
+
+const changeMediaAdd = (id: number) => {
+  if (!newParam.value || id === null || id === undefined) return;
+
+  previewImage.value = mediaQuery?.data.value?.results?.find((m) => m.id === id)?.file_path || '';
+  (newParam.value.type as IImageField).src = previewImage.value;
+  (newParam.value.type as IImageField).id = id
+}
+
+// Hack pour l'accessibilité Radix UI
+const forceAriaHidden = (isOpen: boolean) => {
+  if (isOpen) {
+    window.document.getElementById('app')?.setAttribute('aria-hidden', 'false');
+  }
+};
+
+
 </script>
 
 <template>
@@ -328,7 +555,7 @@ const handleEditingTypeChange = (val: unknown) => {
 
     <!-- Section: Gestion des Paramètres -->
     <div v-if="canAddParams" class="space-y-4">
-      <div class="flex items-center justify-between border-b border-white/10 pb-2">
+      <div v-if="paramDynamic" class="flex items-center justify-between border-b border-white/10 pb-2">
         <h4 class="text-xs text-primary font-black">Ajouter un paramètre</h4>
         <Button
           variant="ghost"
@@ -361,7 +588,7 @@ const handleEditingTypeChange = (val: unknown) => {
           <div class="grid grid-cols-2 gap-3">
             <div class="space-y-1.5">
               <Label class="text-[11px] text-gray-400">Type de source</Label>
-              <Select v-model="(newParam.type as any).source">
+              <Select v-model="(newParam.type as any).source" :modal="false">
                  <SelectTrigger class="h-8 text-xs bg-black/40 border-border/30">
                     <SelectValue placeholder="Source" />
                  </SelectTrigger>
@@ -377,7 +604,7 @@ const handleEditingTypeChange = (val: unknown) => {
             </div>
             <div class="flex items-end pb-1.5 px-1">
                 <div class="flex items-center space-x-2">
-                  <Checkbox id="new-required" :checked="newParam.required" @update:checked="(val) => newParam.required = !!val" />
+                  <Checkbox id="new-required" :checked="newParam.required" @update:checked="(val: any) => newParam.required = !!val" />
                   <label for="new-required" class="text-[10px] text-gray-400 cursor-pointer">Requis</label>
                 </div>
             </div>
@@ -393,20 +620,21 @@ const handleEditingTypeChange = (val: unknown) => {
           </div>
 
           <div v-if="(newParam.type as any).source === 'image'" class="space-y-1.5">
-            <Label class="text-[11px] text-gray-400">ID Image par défaut (Optionnel)</Label>
-            <Input
-              type="number"
-              v-model.number="(newParam.type as any).imageId"
-              placeholder="ID de l'image..."
-              class="h-8 text-xs bg-black/40 border-border/30"
-            />
+            <Label class="text-[11px] text-gray-400">Choisir une image</Label>
+            <div class="flex flex-row items-end gap-6">
+              <CompositionMediaPicker
+                :model-value="(newParam.type as any).id"
+                :allowed-types="['image']"
+                @update:model-value="changeMediaAdd($event)"
+              />
+            </div>
           </div>
 
           <div v-if="(newParam.type as any).source === 'contenus'" class="space-y-3">
             <div class="grid grid-cols-2 gap-3">
               <div class="space-y-1.5">
                 <Label class="text-[11px] text-gray-400">Type de contenu</Label>
-                <Select :model-value="(newParam.type as any).contentTypeId" @update:model-value="(val) => handleSelectChange(val)">
+                <Select :model-value="(newParam.type as any).contentTypeId" :modal="false" @update:model-value="(val) => handleSelectChange(val)">
                   <SelectTrigger class="h-8 text-xs bg-black/40 border-border/30">
                     <SelectValue placeholder="Choisir..." />
                   </SelectTrigger>
@@ -419,7 +647,7 @@ const handleEditingTypeChange = (val: unknown) => {
               </div>
               <div class="space-y-1.5">
                 <Label class="text-[11px] text-gray-400">Mode d'affichage</Label>
-                <Select :model-value="(newParam.type as any).config.mode" @update:model-value="(val) => (newParam.type as any).config.mode = val">
+                <Select :model-value="(newParam.type as any).config.mode" :modal="false" @update:model-value="(val) => (newParam.type as any).config.mode = val">
                   <SelectTrigger class="h-8 text-xs bg-black/40 border-border/30">
                     <SelectValue placeholder="Mode" />
                   </SelectTrigger>
@@ -433,41 +661,23 @@ const handleEditingTypeChange = (val: unknown) => {
             </div>
 
             <!-- Mode: Single -->
-            <div v-if="(newParam.type as any).config.mode === 'single'" class="grid grid-cols-2 gap-3">
-              <div class="space-y-1.5">
-                <Label class="text-[11px] text-gray-400">Choisir une entrée</Label>
-                <Select
-                  :model-value="(newParam.type as any).config.entryId"
-                  @update:model-value="(val) => (newParam.type as any).config.entryId = val"
-                  :disabled="!isContentTypeSelected"
-                >
-                  <SelectTrigger class="h-8 text-xs bg-black/40 border-border/30">
-                    <SelectValue placeholder="Choisir..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem v-for="entry in newContentEntries?.results" :key="entry.id" :value="entry.id">
-                      {{ entry.id }} - {{ (entry.data_json as any).title || 'Sans titre' }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div class="space-y-1.5">
-                <Label class="text-[11px] text-gray-400">Champ de mapping</Label>
-                <Select
-                  :model-value="(newParam.type as any).config.mappingField"
-                  @update:model-value="(val) => (newParam.type as any).config.mappingField = val"
-                  :disabled="!isContentTypeSelected"
-                >
-                  <SelectTrigger class="h-8 text-xs bg-black/40 border-border/30">
-                    <SelectValue placeholder="Choisir..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem v-for="opt in tabChamp" :key="opt.value" :value="opt.value">
-                      {{ opt.label || opt.value }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div v-if="(newParam.type as any).config.mode === 'single'" class="space-y-1.5">
+              <Label class="text-[11px] text-gray-400">Choisir une entrée</Label>
+              <Select
+                :model-value="(newParam.type as any).config.entryId"
+                :modal="false"
+                @update:model-value="(val) => (newParam.type as any).config.entryId = val"
+                :disabled="!isContentTypeSelected"
+              >
+                <SelectTrigger class="h-8 text-xs bg-black/40 border-border/30">
+                  <SelectValue placeholder="Choisir..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="entry in newContentEntries?.results" :key="entry.id" :value="entry.id">
+                    {{ entry.id }} - {{ (entry.data_json as any).title || 'Sans titre' }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <!-- Mode: Query -->
@@ -483,7 +693,7 @@ const handleEditingTypeChange = (val: unknown) => {
                 </div>
                 <div class="space-y-1.5">
                   <Label class="text-[11px] text-gray-400">Ordre</Label>
-                  <Select :model-value="(newParam.type as any).config.order" @update:model-value="(val) => (newParam.type as any).config.order = val">
+                  <Select :model-value="(newParam.type as any).config.order" :modal="false" @update:model-value="(val) => (newParam.type as any).config.order = val">
                     <SelectTrigger class="h-8 text-xs bg-black/40 border-border/30">
                       <SelectValue placeholder="Ordre" />
                     </SelectTrigger>
@@ -522,6 +732,7 @@ const handleEditingTypeChange = (val: unknown) => {
             <div class="flex items-center gap-1">
               <span v-if="field.required" class="text-[9px] px-1 bg-primary/20 text-primary rounded">Requis</span>
               <Button
+                v-if="paramDynamic"
                 variant="ghost"
                 size="icon"
                 class="h-6 w-6 text-red-500 hover:bg-red-500/10 hover:text-red-400"
@@ -572,12 +783,19 @@ const handleEditingTypeChange = (val: unknown) => {
 
                 <!-- Image Configuration -->
                 <div v-if="editingParam.type.source === 'image'" class="space-y-1.5">
-                  <Label class="text-[11px] text-gray-400">ID Image par défaut</Label>
-                  <Input
+                  <Label class="text-[11px] text-gray-400">Choisir une image</Label>
+                  <div class="flex flex-row items-end gap-6">
+                    <CompositionMediaPicker
+                      :model-value="(editingParam.type as any).id"
+                      :allowed-types="['image']"
+                      @update:model-value="changeMediaEditor($event)"
+                    />
+                  </div>
+                  <!-- <Input
                     type="number"
                     v-model.number="(editingParam.type as any).imageId"
                     class="h-8 text-xs bg-black/20 border-border/50"
-                  />
+                  /> -->
                 </div>
 
                 <!-- Contenus Configuration -->
@@ -585,7 +803,7 @@ const handleEditingTypeChange = (val: unknown) => {
                   <div class="grid grid-cols-2 gap-3">
                     <div class="space-y-1.5">
                       <Label class="text-[11px] text-gray-400">Type de contenu</Label>
-                      <Select :model-value="(editingParam.type as any).contentTypeId" @update:model-value="handleEditingTypeChange">
+                      <Select :model-value="(editingParam.type as any).contentTypeId" :modal="false" @update:model-value="handleEditingTypeChange">
                         <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
                           <SelectValue placeholder="Choisir..." />
                         </SelectTrigger>
@@ -598,7 +816,7 @@ const handleEditingTypeChange = (val: unknown) => {
                     </div>
                     <div class="space-y-1.5">
                       <Label class="text-[11px] text-gray-400">Mode d'affichage</Label>
-                      <Select :model-value="(editingParam.type as any).config.mode" @update:model-value="(val) => (editingParam.type as any).config.mode = val">
+                      <Select :model-value="(editingParam.type as any).config.mode" :modal="false" @update:model-value="(val) => (editingParam?.type as any).config.mode = val">
                         <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
                           <SelectValue placeholder="Mode" />
                         </SelectTrigger>
@@ -612,41 +830,26 @@ const handleEditingTypeChange = (val: unknown) => {
                   </div>
 
                   <!-- Mode: Single -->
-                  <div v-if="(editingParam.type as any).config.mode === 'single'" class="grid grid-cols-2 gap-3">
-                    <div class="space-y-1.5">
-                      <Label class="text-[11px] text-gray-400">Choisir une entrée</Label>
-                      <Select
-                        :model-value="(editingParam.type as any).config.entryId"
-                        @update:model-value="(val) => (editingParam.type as any).config.entryId = val"
-                        :disabled="!isEditingContentTypeSelected"
-                      >
-                        <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
-                          <SelectValue placeholder="Choisir..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem v-for="entry in editingContentEntries?.results" :key="entry.id" :value="entry.id">
-                            {{ entry.id }} - {{ (entry.data_json as any).title || 'Sans titre' }}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div class="space-y-1.5">
-                      <Label class="text-[11px] text-gray-400">Champ Mapping</Label>
-                      <Select
-                        :model-value="(editingParam.type as any).config.mappingField"
-                        @update:model-value="(val) => (editingParam.type as any).config.mappingField = val"
-                        :disabled="!isEditingContentTypeSelected"
-                      >
-                        <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
-                          <SelectValue placeholder="Choisir..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem v-for="opt in tabChampEditing" :key="opt.value" :value="opt.value">
-                            {{ opt.label || opt.value }}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div v-if="(editingParam.type as any).config.mode === 'single'" class="space-y-1.5">
+                    <Label class="text-[11px] text-gray-400">Choisir une entrée</Label>
+                    <Select
+                      :model-value="(editingParam.type as any).config.entryId"
+                      :modal="false"
+                      @update:model-value="(val) => {
+                        (editingParam!.type as any).config.entryId = val;
+                        updateData(editingParam!.name, val as any);
+                      }"
+                      :disabled="!isEditingContentTypeSelected"
+                    >
+                      <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+                        <SelectValue placeholder="Choisir..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem v-for="entry in editingContentEntries?.results" :key="entry.id" :value="entry.id">
+                          {{ entry.id }} - {{ (entry.data_json as any).title || 'Sans titre' }}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <!-- Mode: Query -->
@@ -661,7 +864,7 @@ const handleEditingTypeChange = (val: unknown) => {
                     </div>
                     <div class="space-y-1.5">
                       <Label class="text-[11px] text-gray-400">Ordre</Label>
-                      <Select :model-value="(editingParam.type as any).config.order" @update:model-value="(val) => (editingParam.type as any).config.order = val">
+                      <Select :model-value="(editingParam.type as any).config.order" :modal="false" @update:model-value="(val) => (editingParam?.type as any).config.order = val">
                         <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
                           <SelectValue placeholder="Ordre" />
                         </SelectTrigger>
@@ -700,6 +903,87 @@ const handleEditingTypeChange = (val: unknown) => {
       </div>
     </div>
 
+    <!-- Section: Liaison Parent-Enfant (Uniquement pour CardBuilder ou conteneurs) -->
+    <div v-if="element.tag === 'CardBuilder' && element.children && element.children.length > 0" class="space-y-4 pt-4 border-t border-white/10">
+      <div class="flex items-center gap-2 border-b border-white/10 pb-2">
+        <LinkIcon class="h-4 w-4 text-primary" />
+        <h4 class="text-xs text-primary font-black uppercase tracking-wider">Liaison Enfants</h4>
+      </div>
+
+      <div v-for="child in element.children" :key="child.id" class="space-y-3 p-2 bg-white/5 rounded-md border border-white/5">
+        <div class="flex items-center gap-2 border-b border-white/5 pb-1 mb-2">
+          <component :is="getIcon(child.icon)" class="h-3 w-3 text-gray-400" />
+          <span class="text-[10px] font-bold text-gray-300">{{ child.name }}</span>
+        </div>
+
+        <div v-for="p in child.params" :key="p.name" class="space-y-2">
+          <div class="flex items-center justify-between">
+            <Label class="text-[10px] text-gray-400">{{ p.label }}</Label>
+            <div class="flex gap-1">
+               <Button
+                size="sm"
+                variant="ghost"
+                class="h-6 text-[9px] px-2 focus:ring-0"
+                :class="{ 'bg-primary/20 text-primary': p.type.source === 'parent' }"
+                @click="(e: MouseEvent) => {
+                  updateChildParamSource(child.id, p.name, p.type.source === 'parent' ? ValueSource.STATIC : ValueSource.PARENT);
+                  (e.currentTarget as HTMLElement)?.blur();
+                }"
+              >
+                {{ p.type.source === 'parent' ? 'Lié' : 'Lier' }}
+              </Button>
+            </div>
+          </div>
+
+            <div v-if="p.type.source === 'parent'" :key="`link-${child.id}-${p.name}`" class="pl-2 border-l-2 border-primary/30 space-y-2">
+             <div class="space-y-1">
+               <Label class="text-[9px] text-gray-500">Paramètre Parent</Label>
+               <Select
+                   :model-value="(p.type as IParentField).parentParamName"
+                   :modal="false"
+                   @update:model-value="(val) => updateChildParamSource(child.id, p.name, ValueSource.PARENT, val as string)"
+                   @update:open="forceAriaHidden"
+                >
+                  <SelectTrigger class="h-7 text-[10px] bg-black/40 border-border/30" @click.stop>
+                    <SelectValue placeholder="Choisir..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem v-for="pp in getCompatibleParentParams(p)" :key="pp.name" :value="pp.name">
+                      {{ pp.label }}
+                    </SelectItem>
+                  </SelectContent>
+               </Select>
+             </div>
+
+             <!-- Si le paramètre parent est choisi ET de type CONTENUS, on demande le champ source (parentKey) -->
+             <div v-if="(p.type as IParentField).parentParamName && element.params.find(pp => pp.name === (p.type as IParentField).parentParamName)?.type.source === ValueSource.CONTENUS" class="space-y-1">
+                <Label class="text-[9px] text-gray-500">Champ Source (CMS)</Label>
+                 <Select
+                  :model-value="(p.type as IParentField).parentKey"
+                  :modal="false"
+                  @update:model-value="(val) => updateChildParamSource(child.id, p.name, ValueSource.PARENT, (p.type as IParentField).parentParamName, val as string)"
+                  @update:open="forceAriaHidden"
+                >
+                  <SelectTrigger
+                    class="h-7 text-[10px] bg-black/40 border-border/30 focus:ring-0"
+                    :class="{ 'border-red-500/50': !(p.type as IParentField).parentKey }"
+                    @click.stop
+                  >
+                    <SelectValue placeholder="Choisir le champ..." />
+                  </SelectTrigger>
+                  <SelectContent :modal="false">
+                    <SelectItem v-for="cf in getCompatibleCMSFields((p.type as IParentField).parentParamName, p)" :key="cf.value" :value="cf.value">
+                      {{ cf.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <p v-if="!(p.type as IParentField).parentKey" class="text-[8px] text-red-400 italic">Sélectionnez un champ pour activer la liaison</p>
+             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Section: Paramètres Spécifiques (ImageBuilder etc.) -->
     <div v-if="element.tag === 'ImageBuilder'" class="space-y-3 pt-4 border-t border-white/10">
       <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Paramètres Système Image</h4>
@@ -715,7 +999,7 @@ const handleEditingTypeChange = (val: unknown) => {
       </div>
       <div class="space-y-1.5">
         <Label class="text-[11px] text-gray-400">Ajustement (Object Fit)</Label>
-        <Select :model-value="(element.data.objectFit as string)" @update:model-value="(val) => val && updateData('objectFit', val as string)">
+        <Select :model-value="(element.data.objectFit as string)" :modal="false" @update:model-value="(val) => val && updateData('objectFit', val as string)">
           <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
             <SelectValue placeholder="Fit" />
           </SelectTrigger>
@@ -747,7 +1031,7 @@ const handleEditingTypeChange = (val: unknown) => {
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Type de saisie</Label>
-          <Select :model-value="(element.data.type as string)" @update:model-value="(val) => val && updateData('type', val as string)">
+          <Select :model-value="(element.data.type as string)" :modal="false" @update:model-value="(val) => val && updateData('type', val as string)">
             <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
               <SelectValue placeholder="Type" />
             </SelectTrigger>
@@ -769,7 +1053,7 @@ const handleEditingTypeChange = (val: unknown) => {
        <div v-if="element.data.cliquable && typeof element.data.cliquable === 'object'" class="space-y-4">
          <div class="space-y-1.5">
             <Label class="text-[11px] text-gray-400">Action au clic</Label>
-            <Select :model-value="((element.data.cliquable as CliquableAction).action)" @update:model-value="(val) => val && updateData('cliquable', { ...(element.data.cliquable as object), action: val as CliquableAction['action'] })">
+            <Select :model-value="((element.data.cliquable as CliquableAction).action)" :modal="false" @update:model-value="(val) => val && updateData('cliquable', { ...(element.data.cliquable as object), action: val as CliquableAction['action'] })">
               <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
                 <SelectValue placeholder="Action" />
               </SelectTrigger>

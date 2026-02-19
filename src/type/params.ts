@@ -3,7 +3,8 @@
 enum ValueSource {
   STATIC = 'static',
   IMAGE = 'image',
-  CONTENUS = 'contenus'
+  CONTENUS = 'contenus',
+  PARENT = 'parent'
 }
 
 // Partie Taxonomy
@@ -25,7 +26,8 @@ interface IStaticField {
 // Partie Source : Image
 interface IImageField {
   source: ValueSource.IMAGE;
-  imageId?: number;
+  src: string;
+  id?: number;
 }
 
 // Partie Source : Contenus
@@ -52,17 +54,20 @@ interface IContenusField {
 
 }
 
-
-
-
-
-
+// Partie Source : Parent
+interface IParentField {
+  source: ValueSource.PARENT;
+  parentParamName: string;
+  parentKey?: string;
+  targetType?: ValueSource.STATIC | ValueSource.IMAGE;
+}
 
 // Definition Interface BlockField
 type IPropsSchemaField =
     | IStaticField
     | IImageField
-    | IContenusField;
+    | IContenusField
+    | IParentField;
 
 
 // Definition des PropsSchemaField
@@ -82,6 +87,7 @@ export {
     type IStaticField,
     type IImageField,
     type IContenusField,
+    type IParentField,
     type IPropsSchemaField,
     type IComponentParams
 }
