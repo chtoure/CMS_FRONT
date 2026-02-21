@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue';
 import { FAMILY_CAPABILITIES, type AnyComponentInstance } from '../../type/component';
+import { VueDraggable } from 'vue-draggable-plus';
+import { COMPONENT_MAP } from '../../registry/component_registry';
+import { buildLayoutStyles, buildLayoutInlineStyles } from '../../lib/styleProcessor';
 
 defineOptions({
   name: 'BlocRender'
 });
-import { VueDraggable } from 'vue-draggable-plus';
-import { COMPONENT_MAP } from '../../registry/component_registry';
-import { buildLayoutStyles, buildLayoutInlineStyles } from '../../lib/styleProcessor';
 
 interface Props {
   element: AnyComponentInstance;
@@ -43,13 +43,16 @@ const childrenModel = computed({
 
 const componentToRender = COMPONENT_MAP[props.element.tag];
 
-const selector = inject<{ selectedId: { value: string | null }, selectComponent: (id: string) => void }>('builderSelector');
+const builderState = inject<{ 
+  selectedId: { value: string | null }, 
+  selectComponent: (id: string | null) => void 
+}>('builderState');
 
-const isSelected = computed(() => selector?.selectedId.value === props.element.id);
+const isSelected = computed(() => builderState?.selectedId.value === props.element.id);
 
 const handleSelect = (e: MouseEvent) => {
   e.stopPropagation();
-  selector?.selectComponent(props.element.id);
+  builderState?.selectComponent(props.element.id);
 };
 
 const layoutClasses = computed(() => {
@@ -65,7 +68,7 @@ console.log('BlocRender mounting:', {
   tag: props.element.tag,
   componentFound: !!componentToRender
 });
-const isSelectedChild = (id: string) => selector?.selectedId.value === id;
+const isSelectedChild = (id: string) => builderState?.selectedId.value === id;
 
 const formatSize = (value: unknown, defaultValue: string | undefined = undefined) => {
   if (value === undefined || value === null || value === '') return defaultValue;
@@ -130,12 +133,12 @@ const onDragEnd = () => {
           <div
             v-for="(child, index) in childrenModel"
             :key="child.id"
+            @click.stop="builderState?.selectComponent(child.id)"
             class="relative transition-all outline-none"
             :style="{
               width: formatSize(child.styles?.width, '100%'), 
               height: formatSize(child.styles?.height) 
             }"
-            @click.stop="selector?.selectComponent(child.id)"
           >
             <ResizerWrapper
               :element="child"
@@ -158,7 +161,7 @@ const onDragEnd = () => {
           </div>
         </VueDraggable>
         
-        <div v-if="childrenModel.length === 0" class="absolute inset-0 flex items-center justify-center pointer-events-none bg-gray-50/50 border-2 border-dashed border-gray-300 z-0 rounded-md">
+        <div v-if="childrenModel.length === 0" class="absolute inset-0 flex items-center justify-center pointer-events-none bg-gray-50/50 border border-gray-300 z-0">
           <span class="text-xs text-gray-400">Déposez ici</span>
         </div>
       </div>

@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { inject, computed, ref } from 'vue';
-import type { AnyComponentInstance, AllStyles, ContainerStyles, InteractiveStyles } from '../../type/component';
+import type { AnyComponentInstance } from '../../type/component';
+import type { AnySectionInstance } from '../../type/section';
 import Label from '../../components/ui/label/Label.vue';
 import Input from '../../components/ui/input/Input.vue';
 import Select from '../../components/ui/select/Select.vue';
@@ -12,11 +13,11 @@ import CompositionColorPicker from '../composition/CompositionColorPicker.vue';
 import DimensionInput from './DimensionInput.vue';
 
 const props = defineProps<{
-  element: AnyComponentInstance;
+  element: AnyComponentInstance | AnySectionInstance;
 }>();
 
 const builderState = inject<{
-  pageTree: { value: AnyComponentInstance[] };
+  pageTree: { value: (AnyComponentInstance | AnySectionInstance)[] };
   selectedId: { value: string | null };
   selectComponent: (id: string | null) => void;
 }>('builderState');
@@ -38,9 +39,13 @@ const getHexValue = (val: unknown): string => {
   const raw = getRawValue(val);
   if (!raw || typeof raw !== 'string') return 'FFFFFF';
   
-  const jitMatch = raw.match(/\[#([0-9A-Fa-f]{6})\]/);
+  // Supprimer le '#' s'il est présent au début
+  const cleanRaw = raw.startsWith('#') ? raw.slice(1) : raw;
+  
+  const jitMatch = cleanRaw.match(/\[#([0-9A-Fa-f]{6})\]/);
   if (jitMatch && jitMatch[1]) return jitMatch[1];
-  if (/^[0-9A-Fa-f]{6}$/.test(raw)) return raw;
+  
+  if (/^[0-9A-Fa-f]{6}$/.test(cleanRaw)) return cleanRaw;
   
   const tailwindMap: Record<string, string> = {
     'bg-white': 'FFFFFF', 'text-white': 'FFFFFF',
@@ -49,24 +54,26 @@ const getHexValue = (val: unknown): string => {
     'bg-slate-800': '1e293b'
   };
   
-  return tailwindMap[raw] || 'FFFFFF';
+  return tailwindMap[cleanRaw] || 'FFFFFF';
 };
 
 const updateStyle = (key: string, value: string | number | boolean | undefined) => {
   if (!builderState) return;
   const newStyles = { ...props.element.styles, [key]: value };
-  const updateNode = (nodes: AnyComponentInstance[]): AnyComponentInstance[] => {
-    return nodes.map((node: AnyComponentInstance): AnyComponentInstance => {
-      if (node.id === props.element.id) {
-        return { ...node, styles: newStyles as AllStyles };
+  
+  const updateTree = (items: (AnyComponentInstance | AnySectionInstance)[]): (AnyComponentInstance | AnySectionInstance)[] => {
+    return items.map((item: any): any => {
+      if (item.id === props.element.id) {
+        return { ...item, styles: newStyles };
       }
-      if (node.children) {
-        return { ...node, children: updateNode(node.children) };
+      if (item.children) {
+        return { ...item, children: updateTree(item.children) };
       }
-      return node;
+      return item;
     });
   };
-  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  
+  builderState.pageTree.value = updateTree(builderState.pageTree.value);
 };
 
 // Options
@@ -119,21 +126,65 @@ const fontWeightOptions = [
 
 // Computed pour accès typé
 const styles = computed(() => props.element.styles as any);
-const containerStyles = computed(() => props.element.styles as ContainerStyles);
-const interactiveStyles = computed(() => props.element.styles as InteractiveStyles);
 
-const hasTypography = computed(() => ['static', 'interactive', 'input'].includes(props.element.family));
+const isSection = computed(() => props.element.family === 'section');
+const hasTypography = computed(() => !isSection.value && ['static', 'interactive', 'input'].includes(props.element.family as string));
+
+// Whitelist par famille pour un filtrage strict
+const STYLE_WHITELIST: Record<string, string[]> = {
+  section: [
+    'padding', 'bg', 'opacity', 'display', 'columns', 'gap', 'direction', 'justify', 'align', 
+    'borderWidth', 'borderColor', 'borderStyle'
+  ],
+  container: [
+    'marginTop', 'marginBottom', 'padding', 'bg', 'rounded', 'roundedTopLeft', 'roundedTopRight', 
+    'roundedBottomLeft', 'roundedBottomRight', 'shadow', 'opacity', 'display', 'width', 'height',
+    'columns', 'gap', 'direction', 'justify', 'align', 'borderWidth', 'borderColor', 'borderStyle'
+  ],
+  static: [
+    'marginTop', 'marginBottom', 'padding', 'bg', 'rounded', 'roundedTopLeft', 'roundedTopRight', 
+    'roundedBottomLeft', 'roundedBottomRight', 'shadow', 'opacity', 'width', 'height',
+    'fontSize', 'fontWeight', 'textAlign', 'textColor'
+  ],
+  interactive: [
+    'marginTop', 'marginBottom', 'padding', 'bg', 'rounded', 'roundedTopLeft', 'roundedTopRight', 
+    'roundedBottomLeft', 'roundedBottomRight', 'shadow', 'opacity', 'width', 'height',
+    'fontSize', 'fontWeight', 'textAlign', 'textColor', 'variant', 'size'
+  ],
+  input: [
+    'marginTop', 'marginBottom', 'padding', 'bg', 'rounded', 'roundedTopLeft', 'roundedTopRight', 
+    'roundedBottomLeft', 'roundedBottomRight', 'shadow', 'opacity', 'width', 'height',
+    'fontSize', 'fontWeight', 'textColor', 'variant'
+  ]
+};
+
+// Helper de visibilité conditionnelle
+const showField = (fieldName: string) => {
+  const family = props.element.family;
+  const whitelist = STYLE_WHITELIST[family] || [];
+  
+  // 1. Check whitelist
+  if (!whitelist.includes(fieldName)) return false;
+  
+  // 2. Check conditional display (Flex/Grid)
+  if (['gap', 'columns', 'direction', 'justify', 'align'].includes(fieldName)) {
+    const display = getRawValue(styles.value.display);
+    return display === 'flex' || display === 'grid';
+  }
+  
+  return true;
+};
 </script>
 
 <template>
   <div class="space-y-6 pb-20 p-1">
     
     <!-- Section: Mise en page -->
-    <div class="space-y-3">
+    <div v-if="showField('display') || showField('padding')" class="space-y-3">
       <h4 class="text-[10px] tracking-wider text-primary font-black border-b border-white/10 pb-1">Mise en page</h4>
       <div class="grid grid-cols-2 gap-3">
-        <div class="space-y-1.5">
-          <Label class="text-[11px] text-builder-bar-text">Display</Label>
+        <div v-if="showField('display')" class="space-y-1.5">
+          <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Display</Label>
           <Select :model-value="(getRawValue(styles.display) as string)" @update:model-value="(val) => val && updateStyle('display', val as string)" class="input-custom">
             <SelectTrigger class="h-8 input-custom">
               <SelectValue placeholder="Display" class="select-item-custom" />
@@ -143,53 +194,55 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
             </SelectContent>
           </Select>
         </div>
-        <div class="space-y-1.5">
-          <Label class="text-[11px] text-builder-bar-text">Padding</Label>
+        <div v-if="showField('padding')" class="space-y-1.5">
+          <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Padding</Label>
           <DimensionInput :model-value="getRawValue(styles.padding)" @update:model-value="(val: any) => updateStyle('padding', val)" />
         </div>
       </div>
-      <div class="grid grid-cols-4 gap-2">
-        <div class="space-y-1.5 col-span-2">
-          <Label class="text-[11px] text-builder-bar-text">Marge Haut</Label>
+      <div v-if="showField('marginTop') || showField('marginBottom')" class="grid grid-cols-4 gap-2">
+        <div v-if="showField('marginTop')" class="space-y-1.5 col-span-2">
+          <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Marge Haut</Label>
           <DimensionInput :model-value="getRawValue(styles.marginTop)" @update:model-value="(val: any) => updateStyle('marginTop', val)" />
         </div>
-        <div class="space-y-1.5 col-span-2">
-          <Label class="text-[11px] text-builder-bar-text">Marge Bas</Label>
+        <div v-if="showField('marginBottom')" class="space-y-1.5 col-span-2">
+          <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Marge Bas</Label>
           <DimensionInput :model-value="getRawValue(styles.marginBottom)" @update:model-value="(val: any) => updateStyle('marginBottom', val)" />
         </div>
       </div>
     </div>
 
-    <div class="space-y-3">
+    <div v-if="showField('width') || showField('height')" class="space-y-3">
       <h4 class="text-[10px] tracking-wider text-primary font-black border-b border-white/10 pb-1">Dimension</h4>
       <div class="grid grid-cols-4 gap-2">
-        <div class="space-y-1.5 col-span-2">
-          <Label class="text-[11px] text-builder-bar-text">Hauteur</Label>
+        <div v-if="showField('height')" class="space-y-1.5 col-span-2">
+          <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Hauteur</Label>
           <DimensionInput :model-value="getRawValue(styles.height)" @update:model-value="(val: any) => updateStyle('height', val)" />
         </div>
-        <div class="space-y-1.5 col-span-2">
-          <Label class="text-[11px] text-builder-bar-text">Largeur</Label>
+        <div v-if="showField('width')" class="space-y-1.5 col-span-2">
+          <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Largeur</Label>
           <DimensionInput :model-value="getRawValue(styles.width)" @update:model-value="(val: any) => updateStyle('width', val)" />
         </div>
       </div>
     </div>
 
-    <!-- Section: Conteneur -->
-    <div v-if="element.family === 'container'" class="space-y-3">
-      <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Réglages Conteneur</h4>
+    <!-- Section: Conteneur / Section Settings -->
+    <div v-if="showField('columns') || showField('gap') || showField('direction') || showField('justify') || showField('align') || showField('borderWidth')" class="space-y-3">
+      <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">
+        {{ isSection ? 'Propriétés Section' : 'Configuration Flex/Grid' }}
+      </h4>
       <div class="grid grid-cols-2 gap-3">
-        <div class="space-y-1.5">
-          <Label class="text-[11px] text-builder-bar-text">Colonnes</Label>
-          <Input type="number" :model-value="getRawValue(containerStyles.columns)" @update:model-value="(val) => updateStyle('columns', parseInt(val.toString()))" class="h-8 input-custom" />
+        <div v-if="showField('columns')" class="space-y-1.5">
+          <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Colonnes</Label>
+          <Input type="number" :model-value="getRawValue(styles.columns)" @update:model-value="(val) => updateStyle('columns', parseInt(val.toString()))" class="h-8 input-custom" />
         </div>
-        <div class="space-y-1.5">
-          <Label class="text-[11px] text-builder-bar-text">Gap</Label>
-          <DimensionInput :model-value="getRawValue(containerStyles.gap)" @update:model-value="(val: any) => updateStyle('gap', val)" />
+        <div v-if="showField('gap')" class="space-y-1.5">
+          <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Gap</Label>
+          <DimensionInput :model-value="getRawValue(styles.gap)" @update:model-value="(val: any) => updateStyle('gap', val)" />
         </div>
       </div>
-      <div class="space-y-1.5">
-        <Label class="text-[11px] text-builder-bar-text">Direction</Label>
-        <Select :model-value="(getRawValue(containerStyles.direction) as string)" @update:model-value="(val) => val && updateStyle('direction', val as string)">
+      <div v-if="showField('direction')" class="space-y-1.5">
+        <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Direction</Label>
+        <Select :model-value="(getRawValue(styles.direction) as string)" @update:model-value="(val) => val && updateStyle('direction', val as string)">
           <SelectTrigger class="h-8 input-custom">
             <SelectValue placeholder="Direction" />
           </SelectTrigger>
@@ -199,10 +252,10 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
           </SelectContent>
         </Select>
       </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div class="space-y-1.5">
-          <Label class="text-[11px] text-builder-bar-text">Justify</Label>
-          <Select :model-value="(getRawValue(containerStyles.justify) as string)" @update:model-value="(val) => updateStyle('justify', val as string)">
+      <div v-if="showField('justify') || showField('align')" class="grid grid-cols-2 gap-3">
+        <div v-if="showField('justify')" class="space-y-1.5">
+          <Label class="text-[11px] text-builder-bar-text !font-bold !mono">Justify</Label>
+          <Select :model-value="(getRawValue(styles.justify) as string)" @update:model-value="(val) => updateStyle('justify', val as string)">
             <SelectTrigger class="h-8 input-custom">
               <SelectValue placeholder="Justify" />
             </SelectTrigger>
@@ -211,9 +264,9 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
             </SelectContent>
           </Select>
         </div>
-        <div class="space-y-1.5">
-          <Label class="text-[11px] text-builder-bar-text">Align</Label>
-          <Select :model-value="(getRawValue(containerStyles.align) as string)" @update:model-value="(val) => updateStyle('align', val as string)">
+        <div v-if="showField('align')" class="space-y-1.5">
+          <Label class="text-[11px] text-builder-bar-text !font-bold !mono">Align</Label>
+          <Select :model-value="(getRawValue(styles.align) as string)" @update:model-value="(val) => updateStyle('align', val as string)">
             <SelectTrigger class="h-8 input-custom">
               <SelectValue placeholder="Align" />
             </SelectTrigger>
@@ -223,17 +276,17 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
           </Select>
         </div>
       </div>
-      <!-- Section: Bordure (Container) -->
-      <div class="space-y-3 pt-3 border-t border-white/10">
+      <!-- Section: Bordure -->
+      <div v-if="showField('borderWidth')" class="space-y-3 pt-3 border-t border-white/10">
          <h4 class="text-[10px] uppercase tracking-wider text-primary font-black pb-1">Bordure</h4>
          <div class="grid grid-cols-2 gap-3">
             <div class="space-y-1.5">
-               <Label class="text-[11px] text-builder-bar-text">Épaisseur</Label>
-               <Input type="number" :model-value="getRawValue(containerStyles.borderWidth)" @update:model-value="(val) => updateStyle('borderWidth', parseInt(val.toString()))" class="h-8 input-custom" />
+               <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Épaisseur</Label>
+               <Input type="number" :model-value="getRawValue(styles.borderWidth)" @update:model-value="(val) => updateStyle('borderWidth', parseInt(val.toString()))" class="h-8 input-custom" />
             </div>
-             <div class="space-y-1.5">
-               <Label class="text-[11px] text-builder-bar-text">Style</Label>
-               <Select :model-value="(getRawValue(containerStyles.borderStyle) as string)" @update:model-value="(val) => val && updateStyle('borderStyle', val as string)">
+             <div v-if="showField('borderStyle')" class="space-y-1.5">
+               <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Style</Label>
+               <Select :model-value="(getRawValue(styles.borderStyle) as string)" @update:model-value="(val) => val && updateStyle('borderStyle', val as string)">
                   <SelectTrigger class="h-8 input-custom">
                      <SelectValue placeholder="Style" />
                   </SelectTrigger>
@@ -247,18 +300,18 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
                </Select>
             </div>
          </div>
-         <div class="space-y-2">
-            <Label class="text-[11px] text-builder-bar-text">Couleur</Label>
+         <div v-if="showField('borderColor')" class="space-y-2">
+            <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Couleur de bordure</Label>
             <CompositionColorPicker 
                :is-open="activePicker === 'border'"
-               :initial-color="'#' + getHexValue(containerStyles.borderColor)"
+               :initial-color="'#' + getHexValue(styles.borderColor)"
                @close="activePicker = null"
                @color-change="(hex) => updateStyle('borderColor', hex)"
             >
                <template #trigger>
                <button @click="activePicker = 'border'" class="w-full h-8 px-2 flex items-center gap-2 bg-black/20 border border-border/50 rounded text-xs hover:bg-white/5 transition-colors">
-                  <div class="w-4 h-4 rounded-sm border border-white/20" :style="{ backgroundColor: '#' + getHexValue(containerStyles.borderColor) }"></div>
-                  <span class="text-gray-300 font-mono">{{ getRawValue(containerStyles.borderColor) || 'Transparent' }}</span>
+                  <div class="w-4 h-4 rounded-sm border border-white/20" :style="{ backgroundColor: '#' + getHexValue(styles.borderColor) }"></div>
+                  <span class="text-gray-300 font-mono">{{ getRawValue(styles.borderColor) || 'Transparent' }}</span>
                </button>
                </template>
             </CompositionColorPicker>
@@ -269,8 +322,8 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
     <!-- Section: Typographie -->
     <div v-if="hasTypography" class="space-y-3">
       <h4 class="text-[10px] tracking-wider text-primary font-black border-b border-builder-bar-border pb-1">Typographie</h4>
-      <div class="space-y-2">
-        <Label class="text-[11px] text-builder-bar-text">Couleur du texte</Label>
+      <div v-if="showField('textColor')" class="space-y-2">
+        <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Couleur du texte</Label>
         <CompositionColorPicker 
           :is-open="activePicker === 'text'"
           :initial-color="'#' + getHexValue(styles.textColor)"
@@ -286,12 +339,12 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
         </CompositionColorPicker>
       </div>
       <div class="grid grid-cols-2 gap-3">
-        <div class="space-y-1.5">
-          <Label class="text-[11px] text-builder-bar-text">Taille (px)</Label>
+        <div v-if="showField('fontSize')" class="space-y-1.5">
+          <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Taille (px)</Label>
           <Input type="number" :model-value="getRawValue(styles.fontSize)" @update:model-value="(val) => updateStyle('fontSize', val)" class="h-8 input-custom" />
         </div>
-        <div class="space-y-1.5">
-          <Label class="text-[11px] text-builder-bar-text">Poids</Label>
+        <div v-if="showField('fontWeight')" class="space-y-1.5">
+          <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Poids</Label>
           <Select :model-value="(getRawValue(styles.fontWeight) as string)" @update:model-value="(val) => updateStyle('fontWeight', val as string)">
             <SelectTrigger class="h-8 input-custom">
               <SelectValue placeholder="Poids" />
@@ -302,8 +355,8 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
           </Select>
         </div>
       </div>
-      <div v-if="element.family !== 'input'" class="space-y-1.5">
-        <Label class="text-[11px] text-builder-bar-text">Alignement</Label>
+      <div v-if="showField('textAlign')" class="space-y-1.5">
+        <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Alignement</Label>
         <Select :model-value="(getRawValue(styles.textAlign) as string)" @update:model-value="(val) => updateStyle('textAlign', val as string)">
           <SelectTrigger class="h-8 input-custom">
             <SelectValue placeholder="Align" />
@@ -318,10 +371,10 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
     </div>
 
     <!-- Section: Apparence -->
-    <div class="space-y-3">
+    <div v-if="showField('bg') || showField('rounded') || showField('shadow') || showField('opacity')" class="space-y-3">
       <h4 class="text-[10px] tracking-wider text-primary font-black border-b border-builder-bar-border pb-1">Apparence</h4>
-      <div class="space-y-2">
-        <Label class="text-[11px] text-builder-bar-text">Fond</Label>
+      <div v-if="showField('bg')" class="space-y-2">
+        <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Couleur de fond</Label>
         <CompositionColorPicker 
           :is-open="activePicker === 'bg'"
           :initial-color="'#' + getHexValue(styles.bg)"
@@ -338,9 +391,9 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
       </div>
       
       <!-- Arrondis -->
-      <div class="space-y-1.5">
+      <div v-if="showField('rounded')" class="space-y-1.5">
         <div class="flex items-center justify-between">
-          <Label class="text-[11px] text-builder-bar-text">Arrondis</Label>
+          <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Arrondis</Label>
           <button @click="showIndividualCorners = !showIndividualCorners" class="text-[10px] text-primary hover:text-white transition-colors">
             {{ showIndividualCorners ? 'Global' : 'Individuel' }}
           </button>
@@ -363,15 +416,15 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
             { label: 'Bas G.', key: 'roundedBottomLeft' },
             { label: 'Bas D.', key: 'roundedBottomRight' }
           ]" :key="corner.key" class="space-y-1">
-            <Label class="text-[9px] text-builder-bar-text">{{ corner.label }}</Label>
+            <Label class="text-[9px] text-builder-bar-text !font-bold !font-mono">{{ corner.label }}</Label>
             <Input :model-value="getRawValue(styles[corner.key])" @update:model-value="(val) => updateStyle(corner.key, val)" class="h-7 input-custom" placeholder="0" />
           </div>
         </div>
       </div>
 
       <!-- Ombre -->
-      <div class="space-y-1.5">
-        <Label class="text-[11px] text-builder-bar-text">Ombre</Label>
+      <div v-if="showField('shadow')" class="space-y-1.5">
+        <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono ">Ombre</Label>
         <Select :model-value="(getRawValue(styles.shadow) as string)" @update:model-value="(val) => updateStyle('shadow', val as string)">
           <SelectTrigger class="h-8 input-custom">
             <SelectValue placeholder="Ombre" />
@@ -382,23 +435,23 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
         </Select>
       </div>
 
-      <div class="space-y-1.5">
-        <Label class="text-[11px] text-builder-bar-text">Opacité ({{ Math.round((Number(getRawValue(styles.opacity)) || 1) * 100) }}%)</Label>
+      <div v-if="showField('opacity')" class="space-y-1.5">
+        <Label class="text-[11px] text-builder-bar-text font-mono">Opacité ({{ Math.round((Number(getRawValue(styles.opacity)) || 1) * 100) }}%)</Label>
         <input type="range" min="0" max="1" step="0.05" :value="getRawValue(styles.opacity) || 1" @input="(e) => updateStyle('opacity', parseFloat((e.target as HTMLInputElement).value))" class="w-full h-1.5 bg-border appearance-none cursor-pointer accent-primary rounded-lg" />
       </div>
     </div>
 
     <!-- Section: Interactif -->
-    <div v-if="element.family === 'interactive'" class="space-y-3">
+    <div v-if="showField('variant') || showField('size')" class="space-y-3">
       <h4 class="text-[10px] tracking-wider text-primary font-black border-b border-builder-bar-border pb-1">Interactif</h4>
       <div class="grid grid-cols-2 gap-3">
-        <div class="space-y-1.5">
-          <Label class="text-[11px] text-builder-bar-text">Variante</Label>
-          <Input :model-value="getRawValue(interactiveStyles.variant)" @update:model-value="(val) => updateStyle('variant', val)" class="h-8 input-custom" />
+        <div v-if="showField('variant')" class="space-y-1.5">
+          <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Variante</Label>
+          <Input :model-value="getRawValue(styles.variant)" @update:model-value="(val) => updateStyle('variant', val)" class="h-8 input-custom" />
         </div>
-        <div class="space-y-1.5">
-          <Label class="text-[11px] text-builder-bar-text">Taille</Label>
-          <Input :model-value="getRawValue(interactiveStyles.size)" @update:model-value="(val) => updateStyle('size', val)" class="h-8 input-custom" />
+        <div v-if="showField('size')" class="space-y-1.5">
+          <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Taille</Label>
+          <Input :model-value="getRawValue(styles.size)" @update:model-value="(val) => updateStyle('size', val)" class="h-8 input-custom" />
         </div>
       </div>
     </div>
@@ -406,12 +459,41 @@ const hasTypography = computed(() => ['static', 'interactive', 'input'].includes
 </template>
 
 <style scoped>
-input[type="range"]::-webkit-slider-thumb {
+/* input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   height: 12px;
   width: 12px;
   border-radius: 50%;
   background: var(--primary);
   cursor: pointer;
+} */
+
+
+.input-custom {
+  @apply h-8 w-full !rounded px-3 py-1 text-[11px] shadow-sm transition-all outline-none !font-mono;
+  
+  background-color: var(--builder-input-bg);
+  border: 1px solid var(--builder-input-border);
+  color: var(--builder-input-text);
+  
+  @apply focus-visible:ring-1 focus-visible:ring-offset-1 focus-visible:border-transparent;
+
+  --tw-ring-color: #3B82F6;
+}
+
+.input-custom::placeholder {
+  color: var(--builder-input-placeholder);
+}
+
+.select-item-custom {
+  @apply cursor-pointer transition-colors px-2 py-1.5 !rounded font-mono;
+  color: var(--builder-bar-text);
+}
+
+.select-item-custom[data-highlighted] {
+  background-color: var(--primary) !important;
+  color: #F8FAFC !important;
+  outline: none !important;
 }
 </style>
+

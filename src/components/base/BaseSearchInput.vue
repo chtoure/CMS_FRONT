@@ -17,7 +17,7 @@
     const inputBaseClasses = cn(
         'w-full',
         'px-2.5 py-1.5',
-        'input-custom transition-all duration-300 focus:ring-1 focus:ring-primary/20',
+        'input-custom rounded-none transition-all duration-300 focus:ring-1 focus:ring-primary/20',
     );
 
     const iconLeftClasses = cn(
