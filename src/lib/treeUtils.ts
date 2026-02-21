@@ -1,13 +1,13 @@
-import type { AnyComponentInstance } from '../type/component';
+import type { AnyComponentInstance, AnySectionInstance } from '../type/component';
 
 /**
- * Trouve récursivement un composant par son ID dans l'arbre.
+ * Trouve récursivement un composant ou une section par son ID dans l'arbre.
  */
-export function findComponentById(tree: AnyComponentInstance[], id: string): AnyComponentInstance | null {
+export function findComponentById(tree: (AnyComponentInstance | AnySectionInstance)[], id: string): AnyComponentInstance | AnySectionInstance | null {
   for (const node of tree) {
     if (node.id === id) return node;
     if (node.children?.length) {
-      const found = findComponentById(node.children, id);
+      const found = findComponentById(node.children as (AnyComponentInstance | AnySectionInstance)[], id);
       if (found) return found;
     }
   }
@@ -15,22 +15,22 @@ export function findComponentById(tree: AnyComponentInstance[], id: string): Any
 }
 
 /**
- * Met à jour un composant spécifique dans l'arbre de manière immuable pour déclencher la réactivité de Vue.
+ * Met à jour un composant ou une section spécifique dans l'arbre de manière immuable.
  */
 export function updateComponentInTree(
-  tree: AnyComponentInstance[],
+  tree: (AnyComponentInstance | AnySectionInstance)[],
   id: string,
-  updates: Partial<AnyComponentInstance>
-): AnyComponentInstance[] {
+  updates: Partial<AnyComponentInstance | AnySectionInstance>
+): (AnyComponentInstance | AnySectionInstance)[] {
   return tree.map((node) => {
     if (node.id === id) {
-      return { ...node, ...updates };
+      return { ...node, ...updates } as any;
     }
     if (node.children?.length) {
       return {
         ...node,
-        children: updateComponentInTree(node.children, id, updates),
-      };
+        children: updateComponentInTree(node.children as (AnyComponentInstance | AnySectionInstance)[], id, updates),
+      } as any;
     }
     return node;
   });

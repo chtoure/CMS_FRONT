@@ -1,14 +1,14 @@
 <script lang="ts" setup>
 import { ref, computed, inject, watch } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
-import { type AnyComponentInstance } from '../../type/component';
 import { ZoomIn, ZoomOut, Maximize, MousePointer2 } from 'lucide-vue-next';
-import BlocRender from '../../components/builder/BlocRender.vue';
-import ResizerWrapper from '../../components/builder/ResizerWrapper.vue';
+import SectionBuilder from '../../components/builder/SectionBuilder.vue';
+import type { AnyComponentInstance } from '../../type/component';
+import type { AnySectionInstance } from '../../type/section';
 
 // Injection de l'état global
 const builderState = inject<{
-  pageTree: { value: AnyComponentInstance[] };
+  pageTree: { value: AnySectionInstance[] };
   selectedId: { value: string | null };
   selectComponent: (id: string | null) => void;
 }>('builderState');
@@ -49,27 +49,43 @@ const deselect = () => {
 };
 
 watch(() => pageTree.value, (newVal) => {
+  // Détection de composants déposés au premier niveau (qui devraient être dans une section)
+  // Un composant a une propriété 'tag', une section non.
+  const orphanComponents = newVal.filter((item: any) => 'tag' in item);
+  
+  if (orphanComponents.length > 0) {
+    const newTree = [...newVal] as any[];
+    orphanComponents.forEach(comp => {
+      const idx = newTree.indexOf(comp);
+      if (idx !== -1) {
+        // Est-ce qu'on a une section vide ?
+        const emptySection = newTree.find(s => !('tag' in s) && s.children.length === 0);
+        
+        if (emptySection) {
+          emptySection.children.push(comp);
+          newTree.splice(idx, 1);
+        } else {
+          // Créer une nouvelle section
+          const newSection: AnySectionInstance = {
+            id: crypto.randomUUID(),
+            order: newTree.length,
+            family: 'section',
+            styles: {},
+            children: [comp as unknown as AnyComponentInstance]
+          };
+          newTree.splice(idx, 1, newSection);
+        }
+      }
+    });
+    pageTree.value = newTree as AnySectionInstance[];
+  }
+  
   console.log('PageTree updated:', JSON.parse(JSON.stringify(newVal)));
 }, { deep: true });
-
-const formatSize = (value: unknown, defaultValue: string | undefined = undefined) => {
-  if (value === undefined || value === null || value === '') return defaultValue;
-  
-  let finalValue = value;
-  // Handle ResponsiveProp
-  if (typeof value === 'object' && value !== null && 'default' in (value as Record<string, unknown>)) {
-    finalValue = (value as { default: unknown }).default;
-  }
-
-  if (finalValue === 'full') return '100%';
-  if (typeof finalValue === 'number') return `${finalValue}px`;
-  if (typeof finalValue === 'string' && !isNaN(Number(finalValue)) && finalValue.trim() !== '') return `${finalValue}px`;
-  return finalValue as string;
-};
 </script>
 
 <template>
-  <div class="h-full w-full bg-builder-background relative flex flex-col overflow-hidden" @click="deselect">
+  <div class="h-full w-full bg-white relative flex flex-col overflow-hidden" @click="deselect">
     
     <!-- Contrôles de Zoom -->
     <div @click.stop class="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-builder-bar-background border border-border px-3 py-2 rounded-full shadow-2xl">
@@ -116,36 +132,23 @@ const formatSize = (value: unknown, defaultValue: string | undefined = undefined
                 :group="{ name: 'blocks', put: true, pull: true }"
                 :animation="150"
                 ghost-class="ghost-preview"
-                class="w-full min-h-[1000px] relative flex flex-wrap content-start p-0 z-0 bg-white"
+                class="w-full min-h-[1000px] relative flex flex-col p-0 z-0 bg-white"
               >
                 <div 
-                  v-for="(element, index) in pageTree" 
-                  :key="element.id"
-                  class="relative transition-all outline-none"
-                  :style="{
-                    width: formatSize(element.styles?.width, '100%'), 
-                    height: formatSize(element.styles?.height) 
-                  }"
-                  @click.stop="selectComponent(element.id)"
+                  v-for="(section, index) in pageTree" 
+                  :key="section.id"
+                  class="w-full"
                 >
-                  <ResizerWrapper
-                    :element="element"
-                    :active="builderState?.selectedId.value === element.id"
-                    @update:element="(newVal: AnyComponentInstance) => {
+                  <SectionBuilder
+                    :section="section"
+                    :active="builderState?.selectedId.value === section.id"
+                    @select="selectComponent"
+                    @update:section="(newVal: AnySectionInstance) => {
                       const newTree = [...pageTree];
                       newTree[index] = newVal;
                       pageTree = newTree;
                     }"
-                  >
-                    <BlocRender
-                      :element="element" 
-                      @update:element="(newVal: AnyComponentInstance) => {
-                        const newTree = [...pageTree];
-                        newTree[index] = newVal;
-                        pageTree = newTree;
-                      }"
-                    />
-                  </ResizerWrapper>
+                  />
                 </div>
               </VueDraggable>
           </div>

@@ -7,13 +7,14 @@ import TabsTrigger from '../../components/ui/tabs/TabsTrigger.vue';
 import { cn } from '../../lib/utils';
 import { findComponentById } from '../../lib/treeUtils';
 import type { AnyComponentInstance } from '../../type/component';
+import type { AnySectionInstance } from '../../type/section';
 import StyleEditor from '../../components/builder/StyleEditor.vue';
 import DataEditor from '../../components/builder/DataEditor.vue';
 import { MousePointer2 } from 'lucide-vue-next';
 
 // Injection de l'état global
 const builderState = inject<{
-  pageTree: { value: AnyComponentInstance[] };
+  pageTree: { value: (AnyComponentInstance | AnySectionInstance)[] };
   selectedId: { value: string | null };
   deleteComponent: (id: string) => void;
 }>('builderState');
@@ -21,7 +22,7 @@ const builderState = inject<{
 // Calcul de l'élément sélectionné
 const selectedElement = computed(() => {
   if (!builderState?.selectedId.value || !builderState?.pageTree.value) return null;
-  return findComponentById(builderState.pageTree.value, builderState.selectedId.value);
+  return findComponentById(builderState.pageTree.value as any, builderState.selectedId.value);
 });
 
 // const handleDelete = () => {
@@ -37,21 +38,15 @@ const selectedElement = computed(() => {
   <div :class="cn(['w-full', 'p-2', 'text-builder-bar-text', 'font-bold', 'h-full', 'flex', 'flex-col', 'bg-builder-bar-background'])">
     <div class="relative h-full w-full overflow-y-auto flex flex-col">
       
-      <!-- État sélectionné -->
       <div v-if="selectedElement" class="relative p-4 flex-1 overflow-y-auto">
         <div class="mb-6 flex items-start justify-between">
           <div>
-            <!-- <p class="text-[10px] uppercase tracking-widest text-gray-400 mb-1">Composant</p> -->
-            <h3 class="text-lg font-bold text-builder-bar-text">{{ selectedElement.name }}</h3>
-            <p class="text-xs text-gray-500 font-mono">{{ selectedElement.tag }}</p>
+            <h3 class="text-lg font-bold text-builder-bar-text">
+              {{ 'name' in selectedElement ? selectedElement.name : 'Section' }}
+            </h3>
+            <p v-if="'tag' in selectedElement" class="text-xs text-gray-500 font-mono">{{ selectedElement.tag }}</p>
+            <p v-else class="text-xs text-gray-500 font-mono">Layout Section</p>
           </div>
-          <!-- <button 
-            @click="handleDelete"
-            class="p-2 hover:bg-red-500/20 rounded transition-colors text-red-400 hover:text-red-300"
-            title="Supprimer le composant"
-          >
-            <Trash2 class="w-4 h-4" />
-          </button> -->
         </div>
 
         <Tabs default-value="style" class="w-full">
@@ -61,16 +56,18 @@ const selectedElement = computed(() => {
           </TabsList>
 
           <TabsContent value="style" class="mt-0 border-none p-0 outline-none">
-            <StyleEditor :element="selectedElement" />
+            <StyleEditor :element="selectedElement as any" />
           </TabsContent>
 
           <TabsContent value="rules" class="mt-0 border-none p-0 outline-none">
-            <DataEditor :element="selectedElement" />
+            <DataEditor v-if="'family' in selectedElement && selectedElement.family !== 'section'" :element="selectedElement as any" />
+            <div v-else class="p-4 text-center text-xs text-gray-500 italic">
+              Pas de paramétrages de données pour les sections.
+            </div>
           </TabsContent>
         </Tabs>
       </div>
 
-      <!-- État vide -->
       <div v-else class="flex-1 flex flex-col items-center justify-center p-8 text-center">
         <div class="w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center mb-4">
           <MousePointer2 class="text-builder-bar-text w-6 h-6" />
@@ -82,19 +79,17 @@ const selectedElement = computed(() => {
   </div>
 </template>
 
-<style>
+<style scoped>
 .input-custom {
-  @apply h-9 w-full rounded-md px-3 py-1 text-[13px] shadow-sm transition-all outline-none;
+  @apply h-9 w-full !rounded px-3 py-1 text-[11px] shadow-sm transition-all outline-none font-mono;
   
-  /* Utilisation dynamique de tes variables builder */
   background-color: var(--builder-input-bg);
   border: 1px solid var(--builder-input-border);
   color: var(--builder-input-text);
   
   @apply focus-visible:ring-1 focus-visible:ring-offset-1 focus-visible:border-transparent;
-  
-  /* Gestion du focus et placeholder */
-  --tw-ring-color: #3B82F6; /* Un bleu vif pour l'action */
+
+  --tw-ring-color: #3B82F6;
 }
 
 .input-custom::placeholder {
@@ -102,12 +97,11 @@ const selectedElement = computed(() => {
 }
 
 .select-item-custom {
-  @apply cursor-pointer transition-colors px-2 py-1.5 rounded-sm;
-  color: var(--builder-bar-text); /* Aligné sur le texte de la barre */
+  @apply cursor-pointer transition-colors px-2 py-1.5 rounded-sm font-mono;
+  color: var(--builder-bar-text);
 }
 
 .select-item-custom[data-highlighted] {
-  /* Au survol, on utilise ton bleu nuit en fond et du texte clair */
   background-color: var(--primary) !important;
   color: #F8FAFC !important;
   outline: none !important;

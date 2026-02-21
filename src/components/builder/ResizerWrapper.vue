@@ -64,7 +64,7 @@ const startResize = (e: MouseEvent, direction: string) => {
   <div 
     ref="resizableRef"
     class="relative w-full h-full" 
-    :class="{ 'ring-2 ring-blue-500 ring-offset-1': active }"
+    :class="{ 'ring-2 ring-gray-400 ring-offset-1': active }"
   >
     <slot />
     
@@ -87,9 +87,9 @@ const startResize = (e: MouseEvent, direction: string) => {
 
 <style scoped>
 .handle {
-  @apply absolute w-2.5 h-2.5 bg-white border border-blue-500 rounded-full z-50 transition-transform hover:scale-125;
+  @apply absolute w-2.5 h-2.5 bg-white border border-gray-400 rounded-full z-50 transition-transform hover:scale-125;
 }
 .handle-side {
-  @apply absolute bg-blue-500/50 rounded-full z-50 h-1.5 w-1.5 hover:bg-blue-600;
+  @apply absolute bg-primary rounded-full z-50 h-1.5 w-1.5 hover:opacity-50;
 }
 </style>

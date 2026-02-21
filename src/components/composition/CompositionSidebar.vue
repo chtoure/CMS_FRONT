@@ -11,7 +11,8 @@ import {
   ShieldUser,
   ClipboardList,
   Trash2,
-  Tags
+  Tags,
+  PanelsTopLeft
 } from 'lucide-vue-next'
 import { useRoute, RouterLink, useRouter } from 'vue-router'
 import { cn } from '../../lib/utils'
@@ -138,6 +139,11 @@ const navItems = computed<NavItem[]>(() =>{
           href: 'admin.taxonomies.corbeille'
         }
       ]
+    },{
+      id: 'pages',
+      label : 'Pages',
+      icon: PanelsTopLeft,
+      href: 'admin.pages'
     }
   ];
 

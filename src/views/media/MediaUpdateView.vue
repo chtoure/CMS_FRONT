@@ -255,11 +255,11 @@ const onSave = () => {
     </CompositionPageHeader>
 
     <div class="flex flex-col max-h-screen overflow-hidden card rounded-none w-fit min-w-full">
-      <header class="border-b px-6 py-3 flex justify-between items-center bg-white z-20 shrink-0">
+      <header class="border-b px-6 py-3 flex justify-between items-center bg-sidebar z-20 shrink-0">
         <h1 class="text-lg font-bold tracking-tight text-gray-900">Éditeur</h1>
         <div class="flex gap-2">
           <button @click="router.back()" class="px-4 py-2 text-sm font-medium hover:bg-gray-100 rounded-md text-gray-600">Annuler</button>
-          <button @click="onSave" :disabled="isSaving" class="px-4 py-2 bg-primary text-white text-sm font-medium rounded-md flex items-center gap-2 shadow-sm hover:bg-primary/90 disabled:opacity-50 transition-all">
+          <button @click="onSave" :disabled="isSaving" class="px-4 py-2 bg-primary text-text text-sm font-medium rounded-md flex items-center gap-2 shadow-sm hover:bg-primary/90 disabled:opacity-50 transition-all">
             <Loader2 v-if="isSaving" class="w-4 h-4 animate-spin" />
             <Check v-else class="w-4 h-4" />
             Enregistrer
@@ -268,15 +268,15 @@ const onSave = () => {
       </header>
 
       <div class="flex flex-1 overflow-hidden">
-        <aside class="w-72 border-r p-6 overflow-y-auto bg-white space-y-10 shrink-0">
+        <aside class="w-72 border-r p-6 overflow-y-auto bg-sidebar space-y-10 shrink-0">
           <div class="space-y-4">
             <div class="flex items-center gap-2 text-primary">
               <Scissors :size="16" />
               <h2 class="text-xs font-bold capitalize tracking-widest">Recadrage</h2>
             </div>
-            <Select v-model="aspectRatio" @update:modelValue="centerCropBox">
-              <SelectTrigger class="w-full h-9 shadow-none border-gray-200"><SelectValue /></SelectTrigger>
-              <SelectContent>
+            <Select v-model="aspectRatio" @update:modelValue="centerCropBox" class="input-custom">
+              <SelectTrigger class="w-full h-9 select-item-custom"><SelectValue /></SelectTrigger>
+              <SelectContent class="border-border">
                 <SelectItem
                   v-for="(v, k) in ASPECT_RATIOS"
                   :key="k"
