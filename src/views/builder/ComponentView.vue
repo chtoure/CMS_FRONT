@@ -3,11 +3,15 @@ import * as Icons from 'lucide-vue-next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import CompositionDarkMode from '../../components/composition/CompositionDarkMode.vue';
 import { useGetComponents } from '../../hook/component';
-import { type ComponentInstance, type Component as VueComponent } from 'vue';
+import { watch, type ComponentInstance, type Component as VueComponent } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import type { AllStyles, AnyComponentInstance, Component } from '../../type/component';
 
 const { data: components, isLoading } = useGetComponents();
+
+watch(components, () => {
+  console.log(components.value);
+})
 
 type IconName = keyof typeof Icons;
 
@@ -31,6 +35,7 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
     icon: element.icon,
     family: element.family,
     supportedActions: element.supportedActions,
+    componentDefinitionId: element.id, // Stocker l'ID du type de composant pour le backend
     styles: { ...element.defaultProps.styles } as T,
     data: { ...element.defaultProps.data },
     children: [] as AnyComponentInstance[],
@@ -59,13 +64,13 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
           </TabsList>
 
           <TabsContent value="atomic" class="mt-0">
-            <div v-if="isLoading" class="flex justify-center p-4">
+            <div v-if="isLoading || !components" class="flex justify-center p-4">
               <Icons.Loader2 class="animate-spin text-primary" />
             </div>
 
             <div v-else >
               <VueDraggable
-                v-model="components!"
+                v-model="components.results!"
                 :animation="150"
                 :group="{ name: 'blocks', pull: 'clone', put: false }"
                 :sort="false"
@@ -73,7 +78,7 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
                 class="grid grid-cols-2 gap-2"
               >
                 <div
-                  v-for="comp in components"
+                  v-for="comp in components?.results"
                   :key="comp.tag"
                   class="flex flex-col items-center justify-center p-3 border border-builder-bar-border rounded-md cursor-grab hover:-translate-y-1 transition-all group"
                 >

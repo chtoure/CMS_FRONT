@@ -29,6 +29,8 @@ import ContentTypeCorbeilleView from '../views/contentType/ContentTypeCorbeilleV
 import TaxonomyCorbeilleView from '../views/Taxonomy/TaxonomyCorbeilleView.vue'
 import BuilderView from '../views/builder/BuilderView.vue'
 import BuilderLayout from '../layout/BuilderLayout.vue'
+import PageListView from '../views/page/PageListView.vue'
+import PageRevisionListView from '../views/pageRevision/PageRevisionListView.vue'
 
 
 const router = createRouter({
@@ -189,22 +191,36 @@ const router = createRouter({
                           component: TaxonomyCorbeilleView
                         }
                       ]
-                    }
+                    },
+                    {
+                      path: 'pages',
+                      children:[
+                        {
+                          path: '',
+                          name: 'admin.pages',
+                          component: PageListView
+                        },
+                        {
+                          path: 'page-revisions/:id',
+                          name: 'admin.pages.revisions',
+                          component: PageRevisionListView,
+                        }
+                      ]
+                    },
+
                 ]
             },
             {
               path: 'builder',
               component: BuilderLayout,
               children:[
-                  {
-                    path: '',
-                    name: 'admin.builder',
-                    component: BuilderView
-                  }
-                ]
-              }
-
-
+                {
+                  path: 'page-revision/update/:id',
+                  name: 'admin.page-revision.update',
+                  component: BuilderView,
+                }
+              ]
+            }
         ]
     },
 

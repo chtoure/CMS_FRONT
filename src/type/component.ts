@@ -1,5 +1,6 @@
 import * as Icons from 'lucide-vue-next';
 import type { IComponentParams } from './params';
+import type { sectionStyle } from './section';
 
 // Actions (Discriminated Unions)
 type NavigateAction = { action: 'NAVIGATE_TO'; action_params: { url: string } };
@@ -115,6 +116,7 @@ interface ComponentProps<T = BaseStyles> {
 }
 
 interface ComponentDefinition<T = BaseStyles> {
+  id?: number;
   name: string;
   family: ComponentFamily;
   component: () => Promise<unknown>;
@@ -123,6 +125,7 @@ interface ComponentDefinition<T = BaseStyles> {
 }
 
 interface Component <T = BaseStyles> {
+  id?: number; // ID du type de composant venant du backend (pour la création de BlockTemplate)
   name: string;
   tag: string;
   icon: keyof typeof Icons;
@@ -140,13 +143,17 @@ type AnyComponent =
 
 
 
-interface AnyComponentInstance extends Omit<Component<AllStyles>, 'defaultProps'> {
-  id: string;
+interface AnyComponentInstance extends Omit<Component<AllStyles>, 'defaultProps' | 'id'> {
+  id: string; // UUID local
+  blocTemplateId?: number; // ID backend (BlockTemplate)
+  componentDefinitionId?: number; // ID du type de composant (table components)
   styles: AllStyles;
   params: IComponentParams[];
   data: Record<string, unknown>;
-  children: AnyComponentInstance[]; // <--- C'est ici que la magie opère !
+  children: AnyComponentInstance[];
 }
+
+
 
 export type {
   NavigateAction,
@@ -165,7 +172,9 @@ export type {
   StaticStyles,
   InteractiveStyles,
   InputStyles,
-  AllStyles
+  AllStyles,
+  ComponentProps,
+  sectionStyle
 }
 
 export {

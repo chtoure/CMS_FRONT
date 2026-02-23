@@ -105,7 +105,7 @@ const handleCustomInput = (val: string | number) => {
     <!-- Selecteur de Mode -->
     <div :class="[currentMode === 'custom' ? 'w-[45px] shrink-0' : 'w-full']">
       <Select :model-value="currentMode" @update:model-value="(val) => handleModeChange(val)">
-        <SelectTrigger class=" text-xs bg-builder-input-bg border-builder-input-border px-2 justify-center">
+        <SelectTrigger class=" text-xs bg-builder-input-bg border-builder-input-border px-2 justify-center !rounded h-8">
             <template v-if="currentMode === 'custom'">
                 <Settings2 class="w-3.5 h-3.5" />
             </template>
@@ -132,3 +132,32 @@ const handleCustomInput = (val: string | number) => {
     </div>
   </div>
 </template>
+
+
+<style scoped>
+.input-custom {
+  @apply h-8 w-full !rounded px-3 py-1 text-[11px] shadow-sm transition-all outline-none !font-mono;
+  
+  background-color: var(--builder-input-bg);
+  border: 1px solid var(--builder-input-border);
+  color: var(--builder-input-text);
+  
+  @apply focus-visible:ring-1 focus-visible:ring-offset-1 focus-visible:border-transparent;
+
+  --tw-ring-color: #3B82F6;
+}
+
+.input-custom::placeholder {
+  color: var(--builder-input-placeholder);
+}
+
+.select-item-custom {
+  @apply cursor-pointer transition-colors px-2 py-1.5 !rounded !font-mono;
+  color: var(--builder-bar-text);
+}
+
+.select-item-custom[data-highlighted] {
+  background-color: var(--primary) !important;
+  color: #F8FAFC !important;
+  outline: none !important;
+}</style>

@@ -33,8 +33,11 @@ const builderState = inject<{
 
 
 const {
-  data: contentTypeOptions
+  data: contentTypeOptions,
+  refetch: refetchContentTypes
 } = useGetContentTypes();
+
+
 
 // const {
 //   data: contentTypeById
@@ -72,7 +75,7 @@ const sourceOptions = [
 // Propriétés calculées pour la dynamisation
 const allowedSources = computed(() => COMPONENT_SOURCE_MAPPING[props.element.tag] || []);
 const canAddParams = computed(() => allowedSources.value.length > 0);
-const paramDynamic = computed(() => props.element.tag === 'CardBuilder');
+const paramDynamic = computed(() => props.element.family === 'container');
 
 const filteredSourceOptions = computed(() => {
   return sourceOptions.filter(opt => allowedSources.value.includes(opt.value as ValueSource));
@@ -126,6 +129,53 @@ const generateUniqueName = (label: string): string => {
 
 const editingParam = ref<IComponentParams | null>(null);
 
+// Cache global pour les entrées CMS du bloc (ID -> data_json)
+const blockCMSData = ref<Record<number, any>>({});
+
+// Fonction pour charger les données CMS manquantes pour tout le bloc
+import api from '../../api/fetchConfig';
+import { handleResponse } from '../../api/fetchConfig';
+
+const fetchBlockCMSData = async () => {
+  const params = props.element.params || [];
+  const entryIdsToFetch = params
+    .filter(p => p.type.source === ValueSource.CONTENUS && (p.type as IContenusField).config.mode === 'single')
+    .map(p => {
+       const id = props.element.data[p.name];
+       return typeof id === 'number' ? id : null;
+    })
+    .filter((id): id is number => id !== null && !blockCMSData.value[id]);
+
+  if (entryIdsToFetch.length === 0) return;
+
+  // Récupération asynchrone pour chaque ID manquant
+  const fetchPromises = entryIdsToFetch.map(async (id) => {
+    try {
+      const resp = await api(`/content-entries/${id}`);
+      const entry = await handleResponse<any>(resp);
+      if (entry?.data_json) {
+        blockCMSData.value[id] = entry.data_json;
+        // Déclencher une propagation pour tous les paramètres liés à cet ID
+        const params = props.element.params || [];
+        params.forEach(p => {
+          if (p.type.source === ValueSource.CONTENUS && props.element.data[p.name] === id) {
+            updateData(p.name, id);
+          }
+        });
+      }
+    } catch (err) {
+      console.error(`Failed to fetch CMS entry ${id}`, err);
+    }
+  });
+
+  await Promise.all(fetchPromises);
+};
+
+// On recharge le cache quand le composant change ou quand les données changent
+watch(() => [props.element.id, JSON.stringify(props.element.data)], () => {
+  fetchBlockCMSData();
+}, { immediate: true });
+
 const toggleParam = (name: string) => {
   if (expandedParam.value === name) {
     expandedParam.value = null;
@@ -156,9 +206,10 @@ const saveParameterEdit = () => {
           newValue = type.config.mode === 'single' ? type.config.entryId : type.contentTypeId;
         }
 
+        const params = node.params || [];
         const newNode = {
           ...node,
-          params: node.params.map(p => p.name === editingParam.value?.name ? (editingParam.value as IComponentParams) : p),
+          params: params.map(p => p.name === editingParam.value?.name ? (editingParam.value as IComponentParams) : p),
           data: {
             ...node.data,
             [editingParam.value?.name as string]: newValue
@@ -201,9 +252,10 @@ const addParameter = () => {
   const updateNode = (nodes: AnyComponentInstance[]): AnyComponentInstance[] => {
     return nodes.map((node) => {
       if (node.id === props.element.id) {
+        const params = node.params || [];
         return {
           ...node,
-          params: [...node.params, param],
+          params: [...params, param],
           data: { ...node.data, [name]: node.data[name] ?? (
                param.type.source === ValueSource.STATIC ? (param.type as IStaticField).value
              : param.type.source === ValueSource.IMAGE ? (param.type as IImageField).src
@@ -236,9 +288,10 @@ const removeParameter = (name: string) => {
       if (node.id === props.element.id) {
         const newData = { ...node.data };
         delete newData[name];
+        const params = node.params || [];
         return {
           ...node,
-          params: node.params.filter(p => p.name !== name),
+          params: params.filter(p => p.name !== name),
           data: newData
         };
       }
@@ -279,17 +332,14 @@ const updateData = (key: string, value: string | number | boolean | object) => {
 // Fonction récursive pour propager une valeur aux enfants liés
 const propagateValueToChildren = (children: AnyComponentInstance[], parentParamName: string, newValue: any): AnyComponentInstance[] => {
   // On récupère le type du paramètre parent pour savoir s'il s'agit d'un contenu CMS
-  const parentParam = props.element.params.find(p => p.name === parentParamName);
+  const params = props.element.params || [];
+  const parentParam = params.find(p => p.name === parentParamName);
   const isCMS = parentParam?.type.source === ValueSource.CONTENUS;
 
-  // Si c'est du CMS, on essaie de trouver l'entrée correspondante pour avoir le data_json
+  // Si c'est du CMS, on essaie de trouver l'entrée correspondante dans le cache global
   let entryData: any = null;
   if (isCMS && newValue) {
-    // On cherche dans les entrées chargées (celles de l'édition en cours)
-    const entry = editingContentEntries.value?.results?.find((e: any) => e.id === newValue);
-    if (entry) {
-      entryData = entry.data_json;
-    }
+    entryData = blockCMSData.value[newValue];
   }
 
   return children.map(child => {
@@ -297,7 +347,8 @@ const propagateValueToChildren = (children: AnyComponentInstance[], parentParamN
     let hasChanged = false;
 
     // On parcourt les paramètres de l'enfant pour voir s'il y a une liaison
-    child.params.forEach(p => {
+    const childParams = child.params || [];
+    childParams.forEach(p => {
       if (p.type.source === ValueSource.PARENT && p.type.parentParamName === parentParamName) {
         const pt = p.type as IParentField;
 
@@ -338,14 +389,21 @@ const propagateValueToChildren = (children: AnyComponentInstance[], parentParamN
 const updateChildParamSource = (childId: string, paramName: string, source: ValueSource, parentParamName?: string, parentKey?: string) => {
   if (!builderState) return;
 
+  // Si on ouvre une liaison, on rafraîchit les types de contenu pour avoir les derniers schémas
+  if (source === ValueSource.PARENT) {
+    refetchContentTypes();
+  }
+
   const updateNode = (nodes: AnyComponentInstance[]): AnyComponentInstance[] => {
     return nodes.map((node) => {
       if (node.id === childId) {
-        const newParams = node.params.map(p => {
+        const params = node.params || [];
+        const newParams = params.map(p => {
           if (p.name === paramName) {
             if (source === ValueSource.PARENT) {
               const currentParentName = parentParamName || (p.type.source === ValueSource.PARENT ? (p.type as IParentField).parentParamName : '');
-              const parentParam = props.element.params.find(pp => pp.name === currentParentName);
+              const elementParams = props.element.params || [];
+              const parentParam = elementParams.find(pp => pp.name === currentParentName);
               const isCMS = parentParam?.type.source === ValueSource.CONTENUS;
 
               // Détermination du type cible (Static ou Image)
@@ -365,10 +423,10 @@ const updateChildParamSource = (childId: string, paramName: string, source: Valu
                 if (!isCMS) {
                   node.data[paramName] = props.element.data[currentParentName];
                 } else if (newType.parentKey) {
-                  const entryId = props.element.data[currentParentName];
-                  const entry = editingContentEntries.value?.results?.find((e: any) => e.id === entryId);
-                  if (entry?.data_json) {
-                    const rawValue = entry.data_json[newType.parentKey];
+                  const entryId = props.element.data[currentParentName] as any;
+                  const entryData = blockCMSData.value[entryId];
+                  if (entryData) {
+                    const rawValue = entryData[newType.parentKey];
                     if (originalType === ValueSource.IMAGE) {
                       node.data[paramName] = typeof rawValue === 'object' ? (rawValue as any)?.url : rawValue;
                     } else {
@@ -380,7 +438,15 @@ const updateChildParamSource = (childId: string, paramName: string, source: Valu
 
               return { ...p, type: newType };
             } else {
-              return { ...p, type: { source: ValueSource.STATIC, value: node.data[paramName] || '' } as IStaticField };
+              // Récupération du type original (IMAGE ou STATIC)
+              const originalType = p.type.source === ValueSource.PARENT ? (p.type as IParentField).targetType
+                                  : p.type.source;
+
+              if (originalType === ValueSource.IMAGE) {
+                return { ...p, type: { source: ValueSource.IMAGE, src: node.data[paramName] || '' } as IImageField };
+              } else {
+                return { ...p, type: { source: ValueSource.STATIC, value: node.data[paramName] || '' } as IStaticField };
+              }
             }
           }
           return p;
@@ -403,7 +469,8 @@ const getCompatibleParentParams = (childParam: IComponentParams) => {
                     ? (childParam.type as IParentField).targetType
                     : childParam.type.source;
 
-  return props.element.params.filter(p => {
+  const params = props.element.params || [];
+  return params.filter(p => {
     // Si l'enfant est statique, il peut se lier à un parent statique OR à un parent CMS (qui fournira des champs texte)
     if (childType === ValueSource.STATIC) {
       return p.type.source === ValueSource.STATIC || p.type.source === ValueSource.CONTENUS;
@@ -418,7 +485,8 @@ const getCompatibleParentParams = (childParam: IComponentParams) => {
 
 // Récupère les champs du CMS compatibles avec un type de paramètre enfant
 const getCompatibleCMSFields = (parentParamName: string, childParam: IComponentParams) => {
-  const parentParam = props.element.params.find(p => p.name === parentParamName);
+  const params = props.element.params || [];
+  const parentParam = params.find(p => p.name === parentParamName);
   if (parentParam?.type.source !== ValueSource.CONTENUS) return [];
 
   const contentTypeId = parentParam.type.contentTypeId;
@@ -431,16 +499,16 @@ const getCompatibleCMSFields = (parentParamName: string, childParam: IComponentP
 
   return contentType.fields_schema.filter((f: any) => {
     if (childType === ValueSource.STATIC) {
-      // Types simples supportés pour le texte
+      // Types simples supportés pour le texte (Strict : pas de Media ici pour éviter les erreurs de type)
       return [FieldType.TEXT, 'text', 'string', FieldType.NUMBER, 'number', FieldType.RICH_TEXT, 'richtext', FieldType.BOOLEAN, 'boolean'].includes(f.type);
     }
     if (childType === ValueSource.IMAGE) {
-      // Type Media pour les images - on vérifie si allowedTypes contient image et UNIQUEMENT image si possible
+      // Strict : Que du média de type image
       const isMedia = f.type === FieldType.MEDIA || f.type === 'media';
+      if (!isMedia) return false;
+
       const allowed = f.allowedTypes || [];
-      const hasImage = allowed.includes(TypesMedia.IMAGE) || allowed.includes('image');
-      // On accepte si c'est un media qui contient des images
-      return isMedia && hasImage;
+      return allowed.includes(TypesMedia.IMAGE) || allowed.includes('image');
     }
     return false;
   }).map((f: any) => ({ label: f.label || f.name, value: f.name }));
@@ -715,7 +783,7 @@ const forceAriaHidden = (isOpen: boolean) => {
       </transition>
 
       <!-- Liste des paramètres (Accordéon) -->
-      <div v-if="element.params.length > 0" class="space-y-2">
+      <div v-if="element.params && element.params.length > 0" class="space-y-2">
         <div v-for="field in element.params" :key="field.name" class="border border-border/30 rounded-md overflow-hidden bg-black/5">
           <!-- Header Accordéon -->
           <div
@@ -901,10 +969,13 @@ const forceAriaHidden = (isOpen: boolean) => {
           </transition>
         </div>
       </div>
+      <div v-else>
+        <p>Paramètre non trouvé</p>
+      </div>
     </div>
 
-    <!-- Section: Liaison Parent-Enfant (Uniquement pour CardBuilder ou conteneurs) -->
-    <div v-if="element.tag === 'CardBuilder' && element.children && element.children.length > 0" class="space-y-4 pt-4 border-t border-white/10">
+    <!-- Section: Liaison Parent-Enfant (Uniquement pour les conteneurs avec enfants) -->
+    <div v-if="element.family === 'container' && element.children && element.children.length > 0" class="space-y-4 pt-4 border-t border-white/10">
       <div class="flex items-center gap-2 border-b border-white/10 pb-2">
         <LinkIcon class="h-4 w-4 text-primary" />
         <h4 class="text-xs text-primary font-black uppercase tracking-wider">Liaison Enfants</h4>

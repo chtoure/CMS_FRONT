@@ -86,7 +86,7 @@ const onFilterChange = (val: string | number | boolean | null | undefined) => {
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div class="space-y-4 ">
     <div v-if="searchable || filterable" class="flex flex-col sm:flex-row justify-between items-center gap-4 py-3">
       <div v-if="filterable" class="w-full sm:w-auto">
         <Select :model-value="filterValue" @update:model-value="(val) => onFilterChange(val as string)">
