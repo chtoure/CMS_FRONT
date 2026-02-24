@@ -1,3 +1,4 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script lang="ts" setup>
 import { ref, watch, provide, computed } from 'vue';
 import CanvaView from './CanvaView.vue';
@@ -17,8 +18,10 @@ const showComponentView = ref(true);
 const showPropertiesView = ref(false);
 
 const pageTree = ref<AnySectionInstance[]>([]);
+const libraryTree = ref<AnyComponentInstance[]>([]); // Arbre pour les composants customs (sans sections)
 const selectedId = ref<string | null>(null);
 const selectedSectionId = ref<string | null>(null);
+const builderMode = ref<'page' | 'library'>('page');
 
 const selectComponent = (id: string | null) => {
   selectedId.value = id;
@@ -29,22 +32,39 @@ const deleteComponent = async (id: string) => {
   let sectionIdToDelete: number | null = null;
   let isSection = false;
   
-  // Supprimer une section
-  const sectionIndex = pageTree.value.findIndex(s => s.id === id);
-  if (sectionIndex !== -1) {
-    const section = pageTree.value[sectionIndex]!;
-    if (section.sectionId) sectionIdToDelete = section.sectionId;
-    pageTree.value.splice(sectionIndex, 1);
-    isSection = true;
-  } else {
-    // Supprimer un bloc à l'intérieur des sections
-    const removeFromSections = (sections: AnySectionInstance[]): AnySectionInstance[] => {
-      return sections.map(section => ({
-        ...section,
-        children: removeFromTree(section.children)
-      }));
-    };
+  if (builderMode.value === 'page') {
+    // Supprimer une section ou un bloc dans une section (Mode Page)
+    const sectionIndex = pageTree.value.findIndex(s => s.id === id);
+    if (sectionIndex !== -1) {
+      const section = pageTree.value[sectionIndex]!;
+      if (section.sectionId) sectionIdToDelete = section.sectionId;
+      pageTree.value.splice(sectionIndex, 1);
+      isSection = true;
+    } else {
+      const removeFromSections = (sections: AnySectionInstance[]): AnySectionInstance[] => {
+        return sections.map(section => ({
+          ...section,
+          children: removeFromTree(section.children)
+        }));
+      };
 
+      const removeFromTree = (nodes: AnyComponentInstance[]): AnyComponentInstance[] => {
+        return nodes.filter(node => {
+          if (node.id === id) {
+            if (node.blocTemplateId) blocTemplateIdToDelete = node.blocTemplateId;
+            return false;
+          }
+          if (node.children && node.children.length > 0) {
+            node.children = removeFromTree(node.children);
+          }
+          return true;
+        });
+      };
+      
+      pageTree.value = removeFromSections(pageTree.value);
+    }
+  } else {
+    // Supprimer un bloc dans la bibliothèque (Mode Bibliothèque)
     const removeFromTree = (nodes: AnyComponentInstance[]): AnyComponentInstance[] => {
       return nodes.filter(node => {
         if (node.id === id) {
@@ -57,8 +77,7 @@ const deleteComponent = async (id: string) => {
         return true;
       });
     };
-    
-    pageTree.value = removeFromSections(pageTree.value);
+    libraryTree.value = removeFromTree(libraryTree.value);
   }
 
   // Désélectionner après suppression
@@ -66,20 +85,14 @@ const deleteComponent = async (id: string) => {
   selectedSectionId.value = null;
 
   // Appels Backend
-  if (isSection && sectionIdToDelete) {
-    try {
+  try {
+    if (isSection && sectionIdToDelete) {
       await useDeleteSection(sectionIdToDelete);
-      console.log('Section deleted from backend');
-    } catch (error) {
-      console.error('Failed to delete section from backend', error);
-    }
-  } else if (blocTemplateIdToDelete) {
-    try {
+    } else if (blocTemplateIdToDelete) {
       await deleteBlockTemplate(blocTemplateIdToDelete);
-      console.log('Block deleted from backend');
-    } catch (error) {
-      console.error('Failed to delete block from backend', error);
     }
+  } catch (error) {
+    console.error('Failed to delete from backend', error);
   }
 };
 
@@ -119,7 +132,7 @@ onUnmounted(() => {
 import { useBlockTemplate } from '../../hook/bloc-template';
 import type { AnySectionInstance } from '../../type/section';
 import { useRouter } from 'vue-router';
-const { autoSave, isSaving, fetchAll, deleteBlockTemplate, useDeleteSection } = useBlockTemplate();
+const { autoSave, autoSaveLibrary, isSaving, fetchAll, deleteBlockTemplate, useDeleteSection, fetchCustomTree } = useBlockTemplate();
 
 // --- Gestion de l'historique et de la Sauvegarde ---
 const history = ref<string[]>([JSON.stringify(pageTree.value)]);
@@ -129,8 +142,15 @@ const isInternalChange = ref(false);
 const loadInitialData = async () => {
   if (!pageRevisionId.value) return;
   isInternalChange.value = true;
+  
+  // Charger la page par défaut
   const initialTree = await fetchAll(pageRevisionId.value);
   pageTree.value = initialTree;
+  
+  // Charger les composants de la bibliothèque
+  const customs = await fetchCustomTree();
+  libraryTree.value = customs as any;
+  
   history.value = [JSON.stringify(initialTree)];
   historyIndex.value = 0;
 };
@@ -140,9 +160,9 @@ onMounted(() => {
   loadInitialData();
 });
 
-// Un seul watcher pour tout
+// Watcher pour le Mode Page
 watch(pageTree, async (newVal) => {
-  if (isInternalChange.value) {
+  if (builderMode.value !== 'page' || isInternalChange.value) {
     isInternalChange.value = false;
     return;
   }
@@ -150,31 +170,58 @@ watch(pageTree, async (newVal) => {
   const newState = JSON.stringify(newVal);
   if (history.value[historyIndex.value] === newState) return;
 
-  // 1. Gérer l'historique
-  if (historyIndex.value < history.value.length - 1) {
-    history.value = history.value.slice(0, historyIndex.value + 1);
-  }
-  history.value.push(newState);
+  history.value = [...history.value.slice(0, historyIndex.value + 1), newState];
   historyIndex.value++;
 
-  // 2. Déclencher l'auto-save
   const syncedTree = await autoSave(newVal, pageRevisionId.value);
-  if (syncedTree) {
-    // Vérifier si l'état actuel est toujours le même que celui envoyé (newState) 
-    // pour éviter d'écraser des changements (comme une suppression) survenus pendant la sauvegarde
-    if (JSON.stringify(pageTree.value) === newState) {
-      isInternalChange.value = true;
-      pageTree.value = syncedTree;
-    }
+  if (syncedTree && JSON.stringify(pageTree.value) === newState) {
+    isInternalChange.value = true;
+    pageTree.value = syncedTree;
   }
 }, { deep: true });
 
+// Watcher pour le Mode Bibliothèque
+watch(libraryTree, async (newVal) => {
+  if (builderMode.value !== 'library' || isInternalChange.value) {
+    isInternalChange.value = false;
+    return;
+  }
+
+  const newState = JSON.stringify(newVal);
+  if (history.value[historyIndex.value] === newState) return;
+
+  history.value = [...history.value.slice(0, historyIndex.value + 1), newState];
+  historyIndex.value++;
+
+  const syncedTree = await autoSaveLibrary(newVal);
+  if (syncedTree && JSON.stringify(libraryTree.value) === newState) {
+    isInternalChange.value = true;
+    libraryTree.value = syncedTree as any;
+  }
+}, { deep: true });
+
+// Réinitialiser l'historique lors du changement de mode
+watch(builderMode, async (newMode) => {
+  isInternalChange.value = true;
+  
+  if (newMode === 'library' && libraryTree.value.length === 0) {
+    const customs = await fetchCustomTree();
+    libraryTree.value = customs as any;
+  }
+
+  const targetTree = newMode === 'page' ? pageTree.value : libraryTree.value;
+  history.value = [JSON.stringify(targetTree)];
+  historyIndex.value = 0;
+  selectComponent(null);
+});
 
 const undo = () => {
   if (historyIndex.value > 0) {
     historyIndex.value--;
     isInternalChange.value = true;
-    pageTree.value = JSON.parse(history.value[historyIndex.value]!);
+    const state = JSON.parse(history.value[historyIndex.value]!);
+    if (builderMode.value === 'page') pageTree.value = state;
+    else libraryTree.value = state;
   }
 };
 
@@ -182,7 +229,9 @@ const redo = () => {
   if (historyIndex.value < history.value.length - 1) {
     historyIndex.value++;
     isInternalChange.value = true;
-    pageTree.value = JSON.parse(history.value[historyIndex.value]!);
+    const state = JSON.parse(history.value[historyIndex.value]!);
+    if (builderMode.value === 'page') pageTree.value = state;
+    else libraryTree.value = state;
   }
 };
 
@@ -191,7 +240,9 @@ const canRedo = computed(() => historyIndex.value < history.value.length - 1);
 
 provide('builderState', {
   pageTree,
+  libraryTree,
   selectedId,
+  builderMode,
   selectComponent,
   deleteComponent,
   undo,
@@ -211,6 +262,24 @@ provide('builderState', {
         right: showPropertiesView ? '16rem' : '0' 
       }"
     >
+      <!-- Sélecteur de Mode (Repositionné plus haut) -->
+      <div class="absolute top-0.5 left-1/2 -translate-x-1/2 z-50 flex items-center bg-builder-bar-background border border-border rounded p-1 shadow-lg scale-90">
+        <button 
+          @click="builderMode = 'page'"
+          class="px-4 py-1 rounded text-xs font-medium transition-all"
+          :class="builderMode === 'page' ? 'bg-primary text-white shadow-sm' : 'text-gray-400'"
+        >
+          Page
+        </button>
+        <button 
+          @click="builderMode = 'library'"
+          class="px-4 py-1 rounded text-xs font-medium transition-all"
+          :class="builderMode === 'library' ? 'bg-primary text-white shadow-sm' : 'text-gray-400'"
+        >
+          Bibliothèque
+        </button>
+      </div>
+
       <CanvaView />
     </main>
 
@@ -221,7 +290,7 @@ provide('builderState', {
     >
       <div class="flex items-center justify-between p-4 border-b border-border">
         <h2 class="font-bold text-builder-bar-text tracking-wide">Composants</h2>
-        <Button @click="showComponentView = false" class="text-white">
+        <Button @click="showComponentView = false" class="text-white !rounded">
           <X class="h-4 w-4" />
         </Button>
       </div>
@@ -237,7 +306,7 @@ provide('builderState', {
     >
       <div class="flex items-center justify-between p-4 border-b border-border">
         <h2 class="font-bold text-builder-bar-text tracking-wide">Propriétés</h2>
-        <Button @click="selectComponent(null)" class="text-white">
+        <Button @click="selectComponent(null)" class="text-white !rounded">
           <X class="h-4 w-4" />
         </Button>
       </div>
@@ -251,14 +320,14 @@ provide('builderState', {
        <Button
         v-if="!showComponentView"
         @click="showComponentView = true"
-        class="flex items-center justify-center p-2 text-white shadow-lg transition-all"
+        class="flex items-center justify-center p-2 text-white shadow-lg transition-all !rounded"
         title="Ouvrir les composants"
       >
         <Menu class="h-5 w-5" />
       </Button>
 
       <!-- Groupe Undo/Redo -->
-      <div class="flex items-center gap-1 bg-builder-bar-background rounded-md shadow-lg p-1 border border-border">
+      <div class="flex items-center gap-1 bg-builder-bar-background rounded shadow-lg p-1 border border-border">
         
         <!-- Indicateur de sauvegarde -->
         <div class="flex items-center px-2 text-xs text-gray-400 border-r border-gray-700 mr-1" title="Statut de sauvegarde">

@@ -1,15 +1,21 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script lang="ts" setup>
 import { ref, computed, inject, watch } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import { ZoomIn, ZoomOut, Maximize, MousePointer2 } from 'lucide-vue-next';
 import SectionBuilder from '../../components/builder/SectionBuilder.vue';
+import BlocRender from '../../components/builder/BlocRender.vue';
+import ResizerWrapper from '../../components/builder/ResizerWrapper.vue';
 import type { AnyComponentInstance } from '../../type/component';
 import type { AnySectionInstance } from '../../type/section';
+import { findComponentById } from '../../lib/treeUtils';
 
 // Injection de l'état global
 const builderState = inject<{
   pageTree: { value: AnySectionInstance[] };
+  libraryTree: { value: AnyComponentInstance[] };
   selectedId: { value: string | null };
+  builderMode: { value: 'page' | 'library' };
   selectComponent: (id: string | null) => void;
 }>('builderState');
 
@@ -22,6 +28,18 @@ const pageTree = computed({
 const selectComponent = (id: string | null) => {
   builderState?.selectComponent(id);
 };
+
+const selectedElement = computed(() => {
+  if (!builderState?.selectedId.value) return null;
+  
+  const tree = builderState.builderMode.value === 'page' 
+    ? builderState.pageTree.value 
+    : builderState.libraryTree?.value;
+
+  if (!tree) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return findComponentById(tree as any, builderState.selectedId.value);
+});
 
 // --- Logique de Zoom ---
 const scale = ref(1);
@@ -49,8 +67,9 @@ const deselect = () => {
 };
 
 watch(() => pageTree.value, (newVal) => {
-  // Détection de composants déposés au premier niveau (qui devraient être dans une section)
-  // Un composant a une propriété 'tag', une section non.
+  // Uniquement en mode PAGE : forcer les composants dans des sections
+  if (builderState?.builderMode.value !== 'page') return;
+
   const orphanComponents = newVal.filter((item: any) => 'tag' in item);
   
   if (orphanComponents.length > 0) {
@@ -88,7 +107,7 @@ watch(() => pageTree.value, (newVal) => {
   <div class="h-full w-full bg-white relative flex flex-col overflow-hidden" @click="deselect">
     
     <!-- Contrôles de Zoom -->
-    <div @click.stop class="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-builder-bar-background border border-border px-3 py-2 rounded-full shadow-2xl">
+    <div @click.stop class="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-builder-bar-background border border-border px-3 py-1 rounded shadow-2xl">
       <button @click="zoomOut" class="p-1.5 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white">
         <ZoomOut class="w-4 h-4" />
       </button>
@@ -107,8 +126,27 @@ watch(() => pageTree.value, (newVal) => {
     <!-- Zone de travail avec Overflow -->
     <div class="flex-1 overflow-auto custom-scrollbar p-10 md:p-20">
       
+      <!-- Fil d'Ariane / Breadcrumbs (Descendu pour éviter le conflit) -->
+      <div 
+        class="absolute top-10 left-1/2 -translate-x-1/2 z-40 bg-builder-bar-background backdrop-blur-sm border border-border px-3 py-1 rounded shadow-lg flex items-center gap-2 text-[9px] tracking-wider font-bold"
+      >
+        <span class="text-gray-500">Projet</span>
+        <span class="text-gray-700">/</span>
+        <span class="text-gray-300">
+          {{ builderState?.builderMode.value === 'page' ? 'Page Actuelle' : 'Bibliothèque' }}
+        </span>
+        <template v-if="selectedElement">
+          <span class="text-gray-700">/</span>
+          <span class="text-primary">{{ 'name' in selectedElement ? selectedElement.name : 'Section' }}</span>
+        </template>
+
+      </div>
+
       <!-- Conteneur global de défilement -->
-      <div class="w-fit min-w-full min-h-full flex items-start">
+      <div 
+        class="w-fit min-w-full min-h-full flex items-start transition-colors duration-500"
+        :class="builderState?.builderMode.value === 'library' ? '' : ''"
+      >
         
         <!-- Cette div a la taille REELLE occupée par le zoom (width * scale) -->
         <!-- On utilise margin-inline auto pour centrer tout en permettant le scroll -->
@@ -128,6 +166,7 @@ watch(() => pageTree.value, (newVal) => {
               </div>
 
               <VueDraggable
+                v-if="builderState?.builderMode.value === 'page'"
                 v-model="pageTree"
                 :group="{ name: 'blocks', put: true, pull: true }"
                 :animation="150"
@@ -151,6 +190,55 @@ watch(() => pageTree.value, (newVal) => {
                   />
                 </div>
               </VueDraggable>
+
+              <!-- Mode Bibliothèque (SANS Sections) -->
+              <VueDraggable
+                v-else
+                v-model="builderState!.libraryTree.value"
+                :group="{ name: 'blocks', put: true, pull: true }"
+                :animation="150"
+                ghost-class="ghost-preview"
+                class="w-full min-h-[1000px] relative flex flex-col p-8 z-0 bg-transparent items-center"
+              >
+                 <div 
+                   v-for="(element, index) in builderState!.libraryTree.value" 
+                   :key="element.id"
+                   class="relative transition-all outline-none mb-12 w-full max-w-4xl bg-white/5 p-8 rounded-xl border border-white/10 group/lib-item"
+                 >
+                    <!-- Label du composant custom -->
+                    <div class="absolute -top-4 left-4 bg-primary text-white text-[10px] px-2 py-0.5 rounded shadow-lg opacity-80 group-hover/lib-item:opacity-100 transition-opacity">
+                      MODÈLE : {{ element.name }}
+                    </div>
+
+                    <ResizerWrapper
+                      :element="element"
+                      :active="builderState?.selectedId.value === element.id" 
+                      @click.stop="builderState?.selectComponent(element.id)"
+                      @update:element="(newVal: AnyComponentInstance) => {
+                        const newTree = [...builderState!.libraryTree.value];
+                        newTree[index] = newVal;
+                        builderState!.libraryTree.value = newTree;
+                      }"
+                    >
+                      <BlocRender
+                        :element="element" 
+                        @update:element="(newVal: AnyComponentInstance) => {
+                          const newTree = [...builderState!.libraryTree.value];
+                          newTree[index] = newVal;
+                          builderState!.libraryTree.value = newTree;
+                        }"
+                      />
+                    </ResizerWrapper>
+                 </div>
+              </VueDraggable>
+          </div>
+          
+          <!-- Indicateur visuel du Mode Isolation (Library) -->
+          <div 
+            v-if="builderState?.builderMode.value === 'library'"
+            class="absolute -inset-10 pointer-events-none"
+          >
+             <div class="absolute top-2 right-4 text-[10px] text-primary opacity-50 font-mono">LABS / ISOLATION MODE</div>
           </div>
         </div>
       </div>

@@ -2,12 +2,13 @@ import { useQuery } from "@tanstack/vue-query";
 import { ACTIONS_BY_FAMILY, type AnyComponent, type Component, type ContainerStyles, type InteractiveStyles, type StaticStyles } from "../type/component";
 import api, { handleResponse } from "../api/fetchConfig";
 import type { Pagination } from "../type/pagination";
+import type { BlocTemplate } from "../type/bloc-template";
 
 type AnyStyle = ContainerStyles | StaticStyles | InteractiveStyles;
 
 
 
-export const useGetComponents = () => {
+const useGetComponents = () => {
   return useQuery({
     queryKey: ['builder-components'],
     queryFn: async () => {
@@ -19,6 +20,24 @@ export const useGetComponents = () => {
     }
   });
 };
+
+const useGetBlocTemplatesComponentCustom = () => {
+  return useQuery({
+    queryKey: ['builder-bloc-templates-custom'],
+    queryFn: async () => {
+      return handleResponse<BlocTemplate[]>(
+        await api(`/bloc-templates-components-custom`, {
+          method: 'GET'
+        })
+      );
+    }
+  });
+};
+
+export {
+  useGetComponents,
+  useGetBlocTemplatesComponentCustom
+}
 
 
 

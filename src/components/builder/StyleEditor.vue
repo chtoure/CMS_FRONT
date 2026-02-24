@@ -1,3 +1,4 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script lang="ts" setup>
 import { inject, computed, ref } from 'vue';
 import type { AnyComponentInstance } from '../../type/component';
@@ -18,7 +19,9 @@ const props = defineProps<{
 
 const builderState = inject<{
   pageTree: { value: (AnyComponentInstance | AnySectionInstance)[] };
+  libraryTree: { value: AnyComponentInstance[] };
   selectedId: { value: string | null };
+  builderMode: { value: 'page' | 'library' };
   selectComponent: (id: string | null) => void;
 }>('builderState');
 
@@ -73,7 +76,11 @@ const updateStyle = (key: string, value: string | number | boolean | undefined) 
     });
   };
   
-  builderState.pageTree.value = updateTree(builderState.pageTree.value);
+  if (builderState.builderMode.value === 'page') {
+    builderState.pageTree.value = updateTree(builderState.pageTree.value);
+  } else {
+    builderState.libraryTree.value = updateTree(builderState.libraryTree.value) as AnyComponentInstance[];
+  }
 };
 
 // Options
@@ -227,7 +234,7 @@ const showField = (fieldName: string) => {
 
     <!-- Section: Conteneur / Section Settings -->
     <div v-if="showField('columns') || showField('gap') || showField('direction') || showField('justify') || showField('align') || showField('borderWidth')" class="space-y-3">
-      <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">
+      <h4 class="text-[10px] tracking-wider text-primary font-black border-b border-white/10 pb-1">
         {{ isSection ? 'Propriétés Section' : 'Configuration Flex/Grid' }}
       </h4>
       <div class="grid grid-cols-2 gap-3">
@@ -278,7 +285,7 @@ const showField = (fieldName: string) => {
       </div>
       <!-- Section: Bordure -->
       <div v-if="showField('borderWidth')" class="space-y-3 pt-3 border-t border-white/10">
-         <h4 class="text-[10px] uppercase tracking-wider text-primary font-black pb-1">Bordure</h4>
+         <h4 class="text-[10px] tracking-wider text-primary font-black pb-1">Bordure</h4>
          <div class="grid grid-cols-2 gap-3">
             <div class="space-y-1.5">
                <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Épaisseur</Label>

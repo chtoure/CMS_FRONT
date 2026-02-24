@@ -25,7 +25,7 @@ function showToast(type: ToastType, message: string) {
   };
 
   const options: ToastOptions = {
-    toastClassName: `relative flex min-h-12 rounded-lg justify-between overflow-hidden cursor-pointer shadow-lg border border-border/40 mb-2 ${typeStyles[type]}`,
+    toastClassName: `relative flex min-h-12 rounded-lg justify-between overflow-hidden cursor-pointer shadow-lg border border-border mb-2 ${typeStyles[type]}`,
 
     bodyClassName: "flex text-sm font-mono p-3 !text-text",
 

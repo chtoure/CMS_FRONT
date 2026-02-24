@@ -7,14 +7,13 @@ interface BlocTemplate <T = BaseStyles> {
   order: number;
   parentId?: number | undefined;
   sectionId?: number;
-
+  is_custom: boolean;
   props: ComponentProps<T>;
   createdAt: Date;
   updatedAt: Date;
   component?: AnyComponent;
   archive: boolean;
   archivedAt: Date | null;
- 
 }
 
 
@@ -24,16 +23,17 @@ interface RegisterBlocTemplate <T = BaseStyles> {
   order: number;
   parentId?: number | undefined;
   sectionId?: number;
+  is_custom: boolean;
   props?: ComponentProps<T>;
 }
 
 
 interface UpdateBlocTemplate <T = BaseStyles>{
   name?: string;        
-  // componentId?: number;
   order?: number;
   parentId?: number;
   sectionId?: number;
+  is_custom: boolean;
   props?: ComponentProps<T>;
 }
 
