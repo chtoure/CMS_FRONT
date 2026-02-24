@@ -14,6 +14,9 @@ interface BlocTemplate <T = BaseStyles> {
   component?: AnyComponent;
   archive: boolean;
   archivedAt: Date | null;
+  modelId?: number | null;
+  model?: BlocTemplate;
+  customBlocTemplates?: BlocTemplate[]
 }
 
 
@@ -21,17 +24,18 @@ interface BlocTemplate <T = BaseStyles> {
 interface RegisterBlocTemplate <T = BaseStyles> {
   componentId: number;
   order: number;
-  parentId?: number | undefined;
+  parentId?: number | null;
   sectionId?: number;
   is_custom: boolean;
   props?: ComponentProps<T>;
+  modelId?: number | null;
 }
 
 
 interface UpdateBlocTemplate <T = BaseStyles>{
   name?: string;        
   order?: number;
-  parentId?: number;
+  parentId?: number | null;
   sectionId?: number;
   is_custom: boolean;
   props?: ComponentProps<T>;

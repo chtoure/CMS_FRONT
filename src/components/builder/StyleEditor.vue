@@ -23,17 +23,29 @@ const builderState = inject<{
   selectedId: { value: string | null };
   builderMode: { value: 'page' | 'library' };
   selectComponent: (id: string | null) => void;
+  currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' };
 }>('builderState');
 
 // État pour les pickers de couleur
 const activePicker = ref<'bg' | 'text' | 'border' | null>(null);
 const showIndividualCorners = ref(false);
 
-// Helper pour extraire la valeur brute d'une propriété responsive
+// Helper pour extraire la valeur brute d'une propriété responsive par rapport au breakpoint actuel
 const getRawValue = (val: unknown): string | number | undefined => {
-  if (val && typeof val === 'object' && 'default' in val) {
-    return (val as { default: string | number }).default;
+  if (!val) return undefined;
+  const bp = builderState?.currentBreakpoint.value || 'default';
+  
+  if (typeof val === 'object' && val !== null && 'default' in val) {
+    const res = val as any;
+    // Cascade manuelle pour l'affichage dans l'input
+    if (res[bp] !== undefined) return res[bp];
+    
+    // Fallback selon la cascade
+    if (bp === 'lg' && res.md !== undefined) return res.md;
+    if ((bp === 'lg' || bp === 'md') && res.sm !== undefined) return res.sm;
+    return res.default;
   }
+  
   return (typeof val === 'string' || typeof val === 'number') ? val : undefined;
 };
 
@@ -62,7 +74,23 @@ const getHexValue = (val: unknown): string => {
 
 const updateStyle = (key: string, value: string | number | boolean | undefined) => {
   if (!builderState) return;
-  const newStyles = { ...props.element.styles, [key]: value };
+  const bp = builderState.currentBreakpoint.value;
+  
+  const currentVal = props.element.styles[key as keyof typeof props.element.styles];
+  let newValue: any;
+
+  if (typeof currentVal === 'object' && currentVal !== null && 'default' in currentVal) {
+    // C'est déjà un objet responsive
+    newValue = { ...currentVal, [bp]: value };
+  } else if (bp === 'default') {
+    // On est sur le défaut, on peut garder la valeur simple ou créer l'objet
+    newValue = value;
+  } else {
+    // On crée un objet responsive car on modifie un breakpoint spécifique
+    newValue = { default: currentVal, [bp]: value };
+  }
+
+  const newStyles = { ...props.element.styles, [key]: newValue };
   
   const updateTree = (items: (AnyComponentInstance | AnySectionInstance)[]): (AnyComponentInstance | AnySectionInstance)[] => {
     return items.map((item: any): any => {
@@ -503,4 +531,3 @@ const showField = (fieldName: string) => {
   outline: none !important;
 }
 </style>
-

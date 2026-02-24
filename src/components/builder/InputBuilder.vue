@@ -19,12 +19,19 @@ interface Props {
 
 const props = defineProps<Props>();
 
+import { inject } from 'vue';
+
+const builderState = inject<{
+  currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
+}>('builderState', { currentBreakpoint: { value: 'default' } } as any);
+
 const computedClasses = computed(() => {
   return buildStyles('input', props.styles as Record<string, unknown>);
 });
 
 const computedInlineStyles = computed(() => {
-  return buildInlineStyles('input', props.styles as Record<string, unknown>);
+  const bp = builderState.currentBreakpoint.value;
+  return buildInlineStyles('input', props.styles as Record<string, unknown>, bp);
 });
 </script>
 

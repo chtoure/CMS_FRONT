@@ -1,0 +1,19 @@
+<div class="absolute top-2 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 p-1.5 shadow-2xl scale-90 transition-all duration-300">
+    <!-- Sélecteur de Mode (Repositionné plus haut) --> 
+    <div class="absolute top-0.5 left-1/2 -translate-x-1/2 z-50 flex items-center bg-builder-bar-background border border-border rounded p-1 shadow-lg scale-90"> 
+        <button @click="builderMode = 'page'" class="px-4 py-1 rounded text-xs font-medium transition-all" :class="builderMode === 'page' ? 'bg-primary text-white shadow-sm' : 'text-gray-400'" > Page </button> 
+        <button @click="builderMode = 'library'" class="px-4 py-1 rounded text-xs font-medium transition-all" :class="builderMode === 'library' ? 'bg-primary text-white shadow-sm' : 'text-gray-400'" > Bibliothèque </button> 
+    </div> 
+    <!-- Sélecteur de Breakpoint --> 
+    <div class="absolute top-12 left-1/2 -translate-x-1/2 z-50 flex items-center bg-builder-bar-background border border-border rounded p-1 shadow-lg scale-90"> 
+        <button @click="currentBreakpoint = 'default'" class="p-2 rounded transition-all" :class="currentBreakpoint === 'default' ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'" title="Mobile (par défaut)" > <Smartphone class="h-4 w-4" /> </button> 
+        <button @click="currentBreakpoint = 'sm'" class="p-2 rounded transition-all" :class="currentBreakpoint === 'sm' ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'" title="Tablette (SM)" > <Tablet class="h-4 w-4" /> </button> 
+        <button @click="currentBreakpoint = 'md'" class="p-2 rounded transition-all" :class="currentBreakpoint === 'md' ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'" title="Tablette large (MD)" > 
+            <div class="relative"> 
+                <Tablet class="h-4 w-4" /> 
+                <div class="absolute -bottom-1 -right-1 w-1.5 h-1.5 bg-gray-500 rounded-full border border-builder-bar-background"></div> 
+            </div> 
+        </button> 
+        <button @click="currentBreakpoint = 'lg'" class="p-2 rounded transition-all" :class="currentBreakpoint === 'lg' ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'" title="Desktop (LG)" > <Monitor class="h-4 w-4" /> </button> 
+    </div> 
+</div>

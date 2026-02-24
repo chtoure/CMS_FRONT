@@ -4,7 +4,7 @@ import { ref, watch, provide, computed } from 'vue';
 import CanvaView from './CanvaView.vue';
 import ComponentView from './ComponentView.vue';
 import PropritiesView from './PropritiesView.vue';
-import { X, Menu, Undo, Redo, RefreshCw, Cloud } from 'lucide-vue-next';
+import { X, Menu, Undo, Redo, RefreshCw, Cloud, Monitor, Tablet, Smartphone } from 'lucide-vue-next';
 import Button from '../../components/ui/button/Button.vue';
 import type { AnyComponentInstance } from '../../type/component';
 
@@ -22,6 +22,7 @@ const libraryTree = ref<AnyComponentInstance[]>([]); // Arbre pour les composant
 const selectedId = ref<string | null>(null);
 const selectedSectionId = ref<string | null>(null);
 const builderMode = ref<'page' | 'library'>('page');
+const currentBreakpoint = ref<'default' | 'sm' | 'md' | 'lg'>('default');
 
 const selectComponent = (id: string | null) => {
   selectedId.value = id;
@@ -248,7 +249,8 @@ provide('builderState', {
   undo,
   redo,
   canUndo,
-  canRedo
+  canRedo,
+  currentBreakpoint
 });
 </script>
 
@@ -256,28 +258,69 @@ provide('builderState', {
   <div class="relative h-screen w-screen overflow-hidden bg-builder-background">
 
     <main 
-      class="absolute inset-y-0 z-0 transition-all duration-300 ease-in-out"
+      class="absolute inset-y-0 z-0 transition-all duration-300 ease-in-out flex"
       :style="{ 
         left: showComponentView ? '16rem' : '0', 
         right: showPropertiesView ? '16rem' : '0' 
       }"
     >
-      <!-- Sélecteur de Mode (Repositionné plus haut) -->
-      <div class="absolute top-0.5 left-1/2 -translate-x-1/2 z-50 flex items-center bg-builder-bar-background border border-border rounded p-1 shadow-lg scale-90">
-        <button 
-          @click="builderMode = 'page'"
-          class="px-4 py-1 rounded text-xs font-medium transition-all"
-          :class="builderMode === 'page' ? 'bg-primary text-white shadow-sm' : 'text-gray-400'"
-        >
-          Page
-        </button>
-        <button 
-          @click="builderMode = 'library'"
-          class="px-4 py-1 rounded text-xs font-medium transition-all"
-          :class="builderMode === 'library' ? 'bg-primary text-white shadow-sm' : 'text-gray-400'"
-        >
-          Bibliothèque
-        </button>
+      <!-- Barre d'outils (Mode & Breakpoint) -->
+      <div class="absolute top-0.5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 scale-90 transition-all duration-300">
+
+        <div class="p-1 scale-90 bg-builder-bar-background backdrop-blur-sm border border-border px-2 py-1 rounded shadow-lg flex items-center gap-2 text-[9px] tracking-wider font-bold">
+          <button 
+            @click="builderMode = 'page'"
+            class="px-4 py-1 rounded text-[10px] font-bold"
+            :class="builderMode === 'page' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'"
+          >
+            Page
+          </button>
+          <button 
+            @click="builderMode = 'library'"
+            class="px-4 py-1 rounded text-[10px] font-bold"
+            :class="builderMode === 'library' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'"
+          >
+            Bibliothèque
+          </button>
+        </div>
+
+        <!-- Séparateur -->
+        <!-- <div class="w-[1px] h-4 bg-border/50"></div> -->
+
+        <div class="scale-90 bg-builder-bar-background backdrop-blur-sm border border-border px-3 p-2 rounded shadow-lg flex items-center gap-2 text-[9px] tracking-wider font-bold">
+
+          <button 
+            @click="currentBreakpoint = 'default'"
+            :class="currentBreakpoint === 'default' ? 'text-primary' : 'text-gray-500 hover:opacity-70'"
+            title="Mobile (par défaut)"
+          >
+            <Smartphone class="h-4 w-4" />
+          </button>
+          <button 
+            @click="currentBreakpoint = 'sm'"
+            :class="currentBreakpoint === 'sm' ? 'text-primary' : 'text-gray-500 hover:opacity-70'"
+            title="Tablette (SM)"
+          >
+            <Tablet class="h-4 w-4" />
+          </button>
+          <button 
+            @click="currentBreakpoint = 'md'"
+            :class="currentBreakpoint === 'md' ? 'text-primary' : 'text-gray-500 hover:opacity-70'"
+            title="Tablette large (MD)"
+          >
+            <div class="relative">
+              <Tablet class="h-4 w-4" />
+              <div class="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 bg-gray-500 rounded-full border border-builder-bar-background"></div>
+            </div>
+          </button>
+          <button 
+            @click="currentBreakpoint = 'lg'"
+            :class="currentBreakpoint === 'lg' ? 'text-primary' : 'text-gray-500 hover:opacity-70'"
+            title="Desktop (LG)"
+          >
+            <Monitor class="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       <CanvaView />

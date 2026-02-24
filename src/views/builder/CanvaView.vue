@@ -17,6 +17,7 @@ const builderState = inject<{
   selectedId: { value: string | null };
   builderMode: { value: 'page' | 'library' };
   selectComponent: (id: string | null) => void;
+  currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' };
 }>('builderState');
 
 // Fallback pour la sécurité
@@ -47,7 +48,17 @@ const zoomIn = () => { if (scale.value < 2) scale.value += 0.1; };
 const zoomOut = () => { if (scale.value > 0.5) scale.value -= 0.1; };
 const resetZoom = () => { scale.value = 1; };
 
-const CANVAS_BASE_WIDTH = 800;
+const CANVAS_BASE_WIDTH = computed(() => {
+  const bp = builderState?.currentBreakpoint.value || 'default';
+  const widths = {
+    default: 390,
+    sm: 640,
+    md: 768,
+    lg: 1280
+  };
+  return widths[bp];
+});
+
 const CANVAS_BASE_HEIGHT = 1000;
 
 const canvasStyle = computed(() => ({
@@ -57,7 +68,7 @@ const canvasStyle = computed(() => ({
 
 // Dimensions "physiques" occupées par le zoom pour forcer le scroll
 const scaledAreaStyle = computed(() => ({
-  width: `${CANVAS_BASE_WIDTH * scale.value}px`,
+  width: `${CANVAS_BASE_WIDTH.value * scale.value}px`,
   height: `${CANVAS_BASE_HEIGHT * scale.value}px`,
 }));
 
@@ -153,8 +164,11 @@ watch(() => pageTree.value, (newVal) => {
         <div :style="scaledAreaStyle" class="relative mx-auto flex justify-center">
           
           <div 
-            class="device-wrapper absolute top-0 bg-white border border-dashed border-border origin-top transition-transform duration-200 ease-out box-border"
-            :style="canvasStyle"
+            class="device-wrapper absolute top-0 bg-white border border-dashed border-border origin-top transition-all duration-500 ease-in-out box-border"
+            :style="{ 
+               ...canvasStyle,
+               width: `${CANVAS_BASE_WIDTH}px`
+            }"
             @click.stop
           >
               <div 
@@ -248,6 +262,6 @@ watch(() => pageTree.value, (newVal) => {
 
 <style scoped>
 .device-wrapper {
-  width: 800px;
+  /* Supprimé au profit du style dynamique */
 }
 </style>

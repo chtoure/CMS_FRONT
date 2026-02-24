@@ -22,7 +22,7 @@ export function useBlockTemplate() {
     const payload: RegisterBlocTemplate = {
       componentId: component.componentDefinitionId!,
       order: order,
-      parentId: parentId || undefined,
+      parentId: parentId, // On envoie tel quel (number ou null)
       sectionId: is_custom ? undefined : sectionId,
       is_custom: is_custom,
       props: {
@@ -47,7 +47,7 @@ export function useBlockTemplate() {
 
     const payload: UpdateBlocTemplate = {
       order: order,
-      parentId: parentId || undefined,
+      parentId: parentId, // On envoie tel quel (number ou null)
       sectionId: is_custom ? undefined : sectionId,
       is_custom: is_custom,
       props: {

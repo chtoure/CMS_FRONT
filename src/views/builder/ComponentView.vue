@@ -107,7 +107,7 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
                 <div 
                   v-for="comp in components?.results" 
                   :key="comp.tag"
-                  class="flex flex-col items-center justify-center p-3 border border-builder-bar-border rounded cursor-grab hover:-translate-y-1 transition-all group"
+                  class="flex flex-col items-center justify-center p-3 border border-builder-bar-border rounded cursor-grab hover:-translate-y-1"
                 >
                   <component 
                     :is="getIcon(comp.icon)" 
@@ -143,14 +143,14 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
                 <div 
                   v-for="block in customComponents" 
                   :key="block.id"
-                  class="flex flex-col items-center justify-center p-3 border border-builder-bar-border rounded cursor-grab hover:-translate-y-1 transition-all group bg-blue-500/5 border-blue-500/20"
+                  class="flex flex-col items-center justify-center p-3 border border-builder-bar-border rounded cursor-grab hover:-translate-y-1"
                 >
                   <component 
                     :is="getIcon(block.component?.icon || 'Package')" 
                     class="h-6 w-6 mb-2 text-blue-400" 
                     stroke-width="1"
                   />
-                  <span class="text-[10px] text-center font-medium leading-tight text-white">
+                  <span class="text-[10px] text-center font-medium leading-tight text-text">
                     {{ block.name }}
                   </span>
                 </div>
