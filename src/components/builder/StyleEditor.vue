@@ -1,3 +1,4 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script lang="ts" setup>
 import { inject, computed, ref } from 'vue';
 import type { AnyComponentInstance } from '../../type/component';
@@ -18,19 +19,33 @@ const props = defineProps<{
 
 const builderState = inject<{
   pageTree: { value: (AnyComponentInstance | AnySectionInstance)[] };
+  libraryTree: { value: AnyComponentInstance[] };
   selectedId: { value: string | null };
+  builderMode: { value: 'page' | 'library' };
   selectComponent: (id: string | null) => void;
+  currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' };
 }>('builderState');
 
 // État pour les pickers de couleur
 const activePicker = ref<'bg' | 'text' | 'border' | null>(null);
 const showIndividualCorners = ref(false);
 
-// Helper pour extraire la valeur brute d'une propriété responsive
+// Helper pour extraire la valeur brute d'une propriété responsive par rapport au breakpoint actuel
 const getRawValue = (val: unknown): string | number | undefined => {
-  if (val && typeof val === 'object' && 'default' in val) {
-    return (val as { default: string | number }).default;
+  if (!val) return undefined;
+  const bp = builderState?.currentBreakpoint.value || 'default';
+  
+  if (typeof val === 'object' && val !== null && 'default' in val) {
+    const res = val as any;
+    // Cascade manuelle pour l'affichage dans l'input
+    if (res[bp] !== undefined) return res[bp];
+    
+    // Fallback selon la cascade
+    if (bp === 'lg' && res.md !== undefined) return res.md;
+    if ((bp === 'lg' || bp === 'md') && res.sm !== undefined) return res.sm;
+    return res.default;
   }
+  
   return (typeof val === 'string' || typeof val === 'number') ? val : undefined;
 };
 
@@ -59,7 +74,23 @@ const getHexValue = (val: unknown): string => {
 
 const updateStyle = (key: string, value: string | number | boolean | undefined) => {
   if (!builderState) return;
-  const newStyles = { ...props.element.styles, [key]: value };
+  const bp = builderState.currentBreakpoint.value;
+  
+  const currentVal = props.element.styles[key as keyof typeof props.element.styles];
+  let newValue: any;
+
+  if (typeof currentVal === 'object' && currentVal !== null && 'default' in currentVal) {
+    // C'est déjà un objet responsive
+    newValue = { ...currentVal, [bp]: value };
+  } else if (bp === 'default') {
+    // On est sur le défaut, on peut garder la valeur simple ou créer l'objet
+    newValue = value;
+  } else {
+    // On crée un objet responsive car on modifie un breakpoint spécifique
+    newValue = { default: currentVal, [bp]: value };
+  }
+
+  const newStyles = { ...props.element.styles, [key]: newValue };
   
   const updateTree = (items: (AnyComponentInstance | AnySectionInstance)[]): (AnyComponentInstance | AnySectionInstance)[] => {
     return items.map((item: any): any => {
@@ -73,7 +104,11 @@ const updateStyle = (key: string, value: string | number | boolean | undefined) 
     });
   };
   
-  builderState.pageTree.value = updateTree(builderState.pageTree.value);
+  if (builderState.builderMode.value === 'page') {
+    builderState.pageTree.value = updateTree(builderState.pageTree.value);
+  } else {
+    builderState.libraryTree.value = updateTree(builderState.libraryTree.value) as AnyComponentInstance[];
+  }
 };
 
 // Options
@@ -227,7 +262,7 @@ const showField = (fieldName: string) => {
 
     <!-- Section: Conteneur / Section Settings -->
     <div v-if="showField('columns') || showField('gap') || showField('direction') || showField('justify') || showField('align') || showField('borderWidth')" class="space-y-3">
-      <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">
+      <h4 class="text-[10px] tracking-wider text-primary font-black border-b border-white/10 pb-1">
         {{ isSection ? 'Propriétés Section' : 'Configuration Flex/Grid' }}
       </h4>
       <div class="grid grid-cols-2 gap-3">
@@ -278,7 +313,7 @@ const showField = (fieldName: string) => {
       </div>
       <!-- Section: Bordure -->
       <div v-if="showField('borderWidth')" class="space-y-3 pt-3 border-t border-white/10">
-         <h4 class="text-[10px] uppercase tracking-wider text-primary font-black pb-1">Bordure</h4>
+         <h4 class="text-[10px] tracking-wider text-primary font-black pb-1">Bordure</h4>
          <div class="grid grid-cols-2 gap-3">
             <div class="space-y-1.5">
                <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Épaisseur</Label>
@@ -496,4 +531,3 @@ const showField = (fieldName: string) => {
   outline: none !important;
 }
 </style>
-

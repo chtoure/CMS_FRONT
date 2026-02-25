@@ -15,13 +15,21 @@ interface Props {
 
 const props = defineProps<Props>();
 
+import { inject } from 'vue';
+
+const builderState = inject<{
+  currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+}>('builderState', { currentBreakpoint: { value: 'default' } } as any);
+
 // On utilise le buildStyles pour transformer l'objet styles en classes
 const computedClasses = computed(() => {
   return buildStyles('interactive', props.styles as Record<string, unknown>);
 });
 
 const computedInlineStyles = computed(() => {
-  return buildInlineStyles('interactive', props.styles as Record<string, unknown>);
+  const bp = builderState.currentBreakpoint.value;
+  return buildInlineStyles('interactive', props.styles as Record<string, unknown>, bp);
 });
 
 const handleClick = () => {

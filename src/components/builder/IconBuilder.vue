@@ -1,5 +1,6 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import * as Icons from 'lucide-vue-next';
 import type { StaticStyles } from '../../type/component';
 import { buildStyles, buildInlineStyles } from '../../lib/styleProcessor';
@@ -16,12 +17,17 @@ interface Props {
 
 const props = defineProps<Props>();
 
+const builderState = inject<{
+  currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
+}>('builderState', { currentBreakpoint: { value: 'default' } } as any);
+
 const computedClasses = computed(() => {
   return buildStyles('static', props.styles as Record<string, unknown>);
 });
 
 const computedInlineStyles = computed(() => {
-  return buildInlineStyles('static', props.styles as Record<string, unknown>);
+  const bp = builderState.currentBreakpoint.value;
+  return buildInlineStyles('static', props.styles as Record<string, unknown>, bp);
 });
 
 const IconComponent = computed(() => {
@@ -31,15 +37,19 @@ const IconComponent = computed(() => {
   }
   return Icons.HelpCircle; // Fallback icon
 });
+
+const iconProps = computed(() => ({
+  size: Number(props.data?.size) || 24,
+  color: props.data?.color || 'currentColor',
+  'stroke-width': Number(props.data?.strokeWidth) || 2
+}));
 </script>
 
 <template>
   <div :class="computedClasses" :style="computedInlineStyles">
     <component
       :is="IconComponent"
-      :size="props.data?.size || 24"
-      :color="props.data?.color || 'currentColor'"
-      :stroke-width="props.data?.strokeWidth || 2"
+      v-bind="iconProps"
     />
   </div>
 </template>

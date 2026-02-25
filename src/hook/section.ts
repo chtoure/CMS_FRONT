@@ -46,6 +46,8 @@ export function useSection() {
       method: 'GET'
     });
     const data = await handleResponse<Section[] | { results: Section[] }>(response);
+    console.log(data);
+
     return Array.isArray(data) ? data : (data.results || []);
   };
 

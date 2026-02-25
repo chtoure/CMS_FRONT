@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { 
   BaseStyles, 
   ComponentFamily, 
@@ -15,6 +16,28 @@ type StyleMapper<T> = { [K in keyof T]?: MapperFn<BaseType<NonNullable<T[K]>>> }
 // --- TYPE GUARDS ---
 function isResponsiveObject<T>(val: unknown): val is { default: T; sm?: T; md?: T; lg?: T } {
   return typeof val === 'object' && val !== null && 'default' in val;
+}
+
+/**
+ * Normalise une propriété responsive en s'assurant que chaque breakpoint a une valeur.
+ * Applique la cascade Mobile-first : default -> sm -> md -> lg
+ */
+function normalizeResponsiveProp<T>(val: unknown): { default: T; sm: T; md: T; lg: T } | null {
+  if (val === undefined || val === null) return null;
+  
+  if (!isResponsiveObject<T>(val)) {
+    const v = val as T;
+    return { default: v, sm: v, md: v, lg: v };
+  }
+
+  const res = { ...val } as { default: T; sm?: T; md?: T; lg?: T };
+  
+  // Cascade ascendante (Héritage)
+  if (res.sm === undefined) res.sm = res.default;
+  if (res.md === undefined) res.md = res.sm;
+  if (res.lg === undefined) res.lg = res.md;
+  
+  return res as { default: T; sm: T; md: T; lg: T };
 }
 
 // --- MAPPERS ---
@@ -104,15 +127,38 @@ const INTERACTIVE_MAPPER: StyleMapper<InteractiveStyles> = {
 // --- LOGIQUE DE RÉSOLUTION ---
 
 function resolveValue<T>(value: unknown, mapFn: MapperFn<T>): string {
-  if (isResponsiveObject<T>(value)) {
-    const classes: string[] = [];
-    if (value.default !== undefined) classes.push(mapFn(value.default));
-    if (value.sm !== undefined) classes.push(`sm:${mapFn(value.sm)}`);
-    if (value.md !== undefined) classes.push(`md:${mapFn(value.md)}`);
-    if (value.lg !== undefined) classes.push(`lg:${mapFn(value.lg)}`);
-    return classes.join(' ');
+  const normalized = normalizeResponsiveProp<T>(value);
+  if (!normalized) return '';
+
+  const classes: string[] = [];
+  
+  // Valeur par défaut (Mobile-first)
+  classes.push(mapFn(normalized.default));
+  
+  // On n'ajoute les préfixes responsive que si la valeur change par rapport au breakpoint précédent
+  if (normalized.sm !== normalized.default) {
+    classes.push(`sm:${mapFn(normalized.sm)}`);
   }
-  return value !== undefined ? mapFn(value as T) : '';
+  
+  if (normalized.md !== normalized.sm) {
+    classes.push(`md:${mapFn(normalized.md)}`);
+  }
+  
+  if (normalized.lg !== normalized.md) {
+    classes.push(`lg:${mapFn(normalized.lg)}`);
+  }
+  
+  return classes.filter(Boolean).join(' ');
+}
+
+/**
+ * Résout la valeur d'une propriété responsive pour un breakpoint spécifique
+ * en suivant la cascade Mobile-first.
+ */
+export function resolveValueForBreakpoint<T>(value: unknown, breakpoint: 'default' | 'sm' | 'md' | 'lg' = 'default'): T | undefined {
+  const normalized = normalizeResponsiveProp<T>(value);
+  if (!normalized) return undefined;
+  return normalized[breakpoint];
 }
 
 /**
@@ -198,18 +244,16 @@ export function buildLayoutStyles(styles?: Record<string, unknown>): string {
  */
 export function buildInlineStyles(
   family: ComponentFamily,
-  styles?: Record<string, unknown>
+  styles?: Record<string, unknown>,
+  breakpoint: 'default' | 'sm' | 'md' | 'lg' = 'default'
 ): Record<string, string> {
   if (!styles) return {};
 
   const inlineStyles: Record<string, string> = {};
 
-  // Helper pour extraire la valeur par défaut d'une propriété responsive
+  // Helper pour extraire la valeur pour le breakpoint actuel
   const getValue = (val: unknown): unknown => {
-    if (val && typeof val === 'object' && 'default' in val) {
-      return (val as { default: unknown }).default;
-    }
-    return val;
+    return resolveValueForBreakpoint(val, breakpoint);
   };
 
   // Couleur de fond
@@ -361,15 +405,15 @@ export function buildInlineStyles(
   return inlineStyles;
 }
 
-export function buildLayoutInlineStyles(styles?: Record<string, unknown>): Record<string, string> {
+export function buildLayoutInlineStyles(
+  styles?: Record<string, unknown>,
+  breakpoint: 'default' | 'sm' | 'md' | 'lg' = 'default'
+): Record<string, string> {
   if (!styles) return {};
   const inlineStyles: Record<string, string> = {};
 
   const getValue = (val: unknown): unknown => {
-    if (val && typeof val === 'object' && 'default' in val) {
-      return (val as { default: unknown }).default;
-    }
-    return val;
+    return resolveValueForBreakpoint(val, breakpoint);
   };
 
   // Helper for formatting dimensions
@@ -436,15 +480,15 @@ export function buildLayoutInlineStyles(styles?: Record<string, unknown>): Recor
   return inlineStyles;
 }
 
-export function buildVisualInlineStyles(styles?: Record<string, unknown>): Record<string, string> {
+export function buildVisualInlineStyles(
+  styles?: Record<string, unknown>,
+  breakpoint: 'default' | 'sm' | 'md' | 'lg' = 'default'
+): Record<string, string> {
   if (!styles) return {};
   const inlineStyles: Record<string, string> = {};
 
   const getValue = (val: unknown): unknown => {
-    if (val && typeof val === 'object' && 'default' in val) {
-      return (val as { default: unknown }).default;
-    }
-    return val;
+    return resolveValueForBreakpoint(val, breakpoint);
   };
 
   // Background, Borders, Radius, Opacity, Dimensions, Margins

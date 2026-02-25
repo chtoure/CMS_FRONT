@@ -1,5 +1,6 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, inject } from 'vue';
 import type { AnyComponentInstance } from '../../type/component';
 
 const props = defineProps<{
@@ -9,14 +10,19 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:element', 'select']);
 
+const builderState = inject<{
+  currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
+}>('builderState');
+
 const resizableRef = ref<HTMLElement | null>(null);
 
 const startResize = (e: MouseEvent, direction: string) => {
   e.preventDefault();
   e.stopPropagation();
   
-  if (!resizableRef.value) return;
+  if (!resizableRef.value || !builderState) return;
   
+  const bp = builderState.currentBreakpoint.value;
   const startX = e.clientX;
   const startY = e.clientY;
   
@@ -36,14 +42,25 @@ const startResize = (e: MouseEvent, direction: string) => {
     if (direction.includes('s')) newHeight = startHeight + deltaY;
     if (direction.includes('n')) newHeight = startHeight - deltaY;
     
-    // Update styles
-    const newStyles = { ...props.element.styles };
+    // Update styles responsively
+    const newStyles = { ...props.element.styles } as any;
     
+    const updateResponsiveStyle = (key: string, value: number) => {
+      const currentVal = newStyles[key];
+      if (typeof currentVal === 'object' && currentVal !== null && 'default' in currentVal) {
+        newStyles[key] = { ...currentVal, [bp]: value };
+      } else if (bp === 'default') {
+        newStyles[key] = value;
+      } else {
+        newStyles[key] = { default: currentVal, [bp]: value };
+      }
+    };
+
     if (direction.includes('e') || direction.includes('w')) {
-      newStyles.width = Math.max(10, Math.round(newWidth)); // Min width 10px
+      updateResponsiveStyle('width', Math.max(10, Math.round(newWidth)));
     }
     if (direction.includes('s') || direction.includes('n')) {
-      newStyles.height = Math.max(10, Math.round(newHeight)); // Min height 10px
+      updateResponsiveStyle('height', Math.max(10, Math.round(newHeight)));
     }
     
     emit('update:element', { ...props.element, styles: newStyles });

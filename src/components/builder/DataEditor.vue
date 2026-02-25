@@ -16,7 +16,9 @@ const props = defineProps<{
 
 const builderState = inject<{
   pageTree: { value: AnyComponentInstance[] };
+  libraryTree: { value: AnyComponentInstance[] };
   selectedId: { value: string | null };
+  builderMode: { value: 'page' | 'library' };
   selectComponent: (id: string | null) => void;
 }>('builderState');
 
@@ -37,7 +39,11 @@ const updateData = (key: string, value: string | number | boolean | object) => {
     });
   };
 
-  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  if (builderState.builderMode.value === 'page') {
+    builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  } else {
+    builderState.libraryTree.value = updateNode(builderState.libraryTree.value);
+  }
 };
 
 // Options

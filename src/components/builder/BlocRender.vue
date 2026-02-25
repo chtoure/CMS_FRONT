@@ -3,7 +3,7 @@ import { computed, inject, ref, watch } from 'vue';
 import { FAMILY_CAPABILITIES, type AnyComponentInstance } from '../../type/component';
 import { VueDraggable } from 'vue-draggable-plus';
 import { COMPONENT_MAP } from '../../registry/component_registry';
-import { buildLayoutStyles, buildLayoutInlineStyles } from '../../lib/styleProcessor';
+import { buildLayoutStyles, buildLayoutInlineStyles, resolveValueForBreakpoint } from '../../lib/styleProcessor';
 
 defineOptions({
   name: 'BlocRender'
@@ -45,7 +45,8 @@ const componentToRender = COMPONENT_MAP[props.element.tag];
 
 const builderState = inject<{ 
   selectedId: { value: string | null }, 
-  selectComponent: (id: string | null) => void 
+  selectComponent: (id: string | null) => void,
+  currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
 }>('builderState');
 
 const isSelected = computed(() => builderState?.selectedId.value === props.element.id);
@@ -60,24 +61,22 @@ const layoutClasses = computed(() => {
 });
 
 const layoutInlineStyles = computed(() => {
-  return buildLayoutInlineStyles(props.element.styles as Record<string, unknown>);
+  const bp = builderState?.currentBreakpoint.value || 'default';
+  return buildLayoutInlineStyles(props.element.styles as Record<string, unknown>, bp);
 });
 
-console.log('BlocRender mounting:', {
-  id: props.element.id,
-  tag: props.element.tag,
-  componentFound: !!componentToRender
-});
+// console.log('BlocRender mounting:', {
+//   id: props.element.id,
+//   tag: props.element.tag,
+//   componentFound: !!componentToRender
+// });
 const isSelectedChild = (id: string) => builderState?.selectedId.value === id;
 
 const formatSize = (value: unknown, defaultValue: string | undefined = undefined) => {
   if (value === undefined || value === null || value === '') return defaultValue;
   
-  let finalValue = value;
-  // Handle ResponsiveProp
-  if (typeof value === 'object' && value !== null && 'default' in (value as Record<string, unknown>)) {
-    finalValue = (value as { default: unknown }).default;
-  }
+  const bp = builderState?.currentBreakpoint.value || 'default';
+  const finalValue = resolveValueForBreakpoint(value, bp);
 
   if (finalValue === 'full') return '100%';
   if (typeof finalValue === 'number') return `${finalValue}px`;

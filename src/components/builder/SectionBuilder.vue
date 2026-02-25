@@ -14,9 +14,12 @@ interface Props {
 const props = defineProps<Props>();
 const emit = defineEmits(['update:section', 'select']);
 
+import { resolveValueForBreakpoint } from '../../lib/styleProcessor';
+
 const builderState = inject<{
   selectedId: { value: string | null };
   selectComponent: (id: string | null) => void;
+  currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' };
 }>('builderState');
 
 // Ref locale pour les enfants (blocs) de la section
@@ -40,10 +43,9 @@ const childrenModel = computed({
 
 const formatSize = (value: unknown, defaultValue: string | undefined = undefined) => {
   if (value === undefined || value === null || value === '') return defaultValue;
-  let finalValue = value;
-  if (typeof value === 'object' && value !== null && 'default' in (value as Record<string, unknown>)) {
-    finalValue = (value as Record<string, any>).default;
-  }
+  const bp = builderState?.currentBreakpoint.value || 'default';
+  const finalValue = resolveValueForBreakpoint(value, bp);
+  
   if (finalValue === 'full') return '100%';
   if (typeof finalValue === 'number') return `${finalValue}px`;
   if (typeof finalValue === 'string' && !isNaN(Number(finalValue)) && finalValue.trim() !== '') return `${finalValue}px`;
