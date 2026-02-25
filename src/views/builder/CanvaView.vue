@@ -110,7 +110,7 @@ watch(() => pageTree.value, (newVal) => {
     pageTree.value = newTree as AnySectionInstance[];
   }
   
-  console.log('PageTree updated:', JSON.parse(JSON.stringify(newVal)));
+  // console.log('PageTree updated:', JSON.parse(JSON.stringify(newVal)));
 }, { deep: true });
 </script>
 

@@ -25,6 +25,7 @@ export function useBlockTemplate() {
       parentId: parentId, // On envoie tel quel (number ou null)
       sectionId: is_custom ? undefined : sectionId,
       is_custom: is_custom,
+      modelId: component.modelId, // On passe le modelId si présent
       props: {
         styles: component.styles,
         data: component.data
@@ -125,6 +126,12 @@ export function useBlockTemplate() {
         if (!currentBlocTemplateId) {
           const newBlock = await useCreateBlockTemplate(node, parentId, i, sectionId, is_custom);
           currentBlocTemplateId = newBlock.id;
+          
+          // Mettre à jour les props de l'instance avec le retour du backend (héritage prototypal)
+          if (newBlock.props) {
+            node.styles = newBlock.props.styles || {};
+            node.data = newBlock.props.data || {};
+          }
         } else {
           await useUpdateBlockTemplate(node, parentId, i, sectionId, is_custom);
         }

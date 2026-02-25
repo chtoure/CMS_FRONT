@@ -144,6 +144,7 @@ interface AnyComponentInstance extends Omit<Component<AllStyles>, 'defaultProps'
   id: string; // UUID local
   blocTemplateId?: number; // ID backend (BlockTemplate)
   componentDefinitionId?: number; // ID du type de composant (table components)
+  modelId?: number; // ID du BlocTemplate servant de modèle (si is_custom == false mais basé sur un modèle)
   styles: AllStyles;
   data: Record<string, unknown>;
   children: AnyComponentInstance[]; 

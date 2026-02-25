@@ -30,7 +30,7 @@ function showToast(type: ToastType, message: string) {
     bodyClassName: "flex text-sm font-mono p-3 !text-text",
 
     hideProgressBar: true,
-    autoClose: 3000,
+    autoClose: 5000,
     theme: "auto",
 
     icon: () => h(typeIcons[type].icon, {

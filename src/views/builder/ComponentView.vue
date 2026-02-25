@@ -3,7 +3,7 @@ import * as Icons from 'lucide-vue-next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import CompositionDarkMode from '../../components/composition/CompositionDarkMode.vue';
 import { useGetBlocTemplatesComponentCustom, useGetComponents } from '../../hook/component';
-import {watch, type ComponentInstance, type Component as VueComponent } from 'vue';
+import {type ComponentInstance, type Component as VueComponent } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import type { AllStyles, AnyComponentInstance, Component } from '../../type/component';
 import type { BlocTemplate } from '../../type/bloc-template';
@@ -12,11 +12,11 @@ import type { BlocTemplate } from '../../type/bloc-template';
 const { data: components, isLoading } = useGetComponents();
 const { data: customComponents, isLoading: isLoadingCustom } = useGetBlocTemplatesComponentCustom();
 
-watch(components, () => {
-  console.log(components.value);
-})
+// watch(components, () => {
+//   console.log(components.value);
+// })
 
-console.log('custom components', customComponents.value);
+// console.log('custom components', customComponents.value);
 
 
 type IconName = keyof typeof Icons;
@@ -46,14 +46,14 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
     data: { ...element.defaultProps.data },
     children: [] as AnyComponentInstance[]
   };
-  console.log('Cloning component:', element);
-  console.log('Created instance:', instance);
+  // console.log('Cloning component:', element);
+  // console.log('Created instance:', instance);
   return instance as ComponentInstance<T>;
 };
 
 const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
   // On transforme le BlocTemplate stocké en instance active pour le builder
-  // Note: Si le bloc a des enfants, il faudra une logique récursive plus complexe plus tard.
+  // L'instance disposera d'un modelId pointant vers le BlocTemplate custom
   const instance: AnyComponentInstance = {
     id: crypto.randomUUID(),
     name: block.name,
@@ -62,9 +62,10 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
     family: block.component?.family || 'container',
     supportedActions: block.component?.supportedActions || [],
     componentDefinitionId: block.componentId,
+    modelId: block.id, // Liaison avec le modèle
     blocTemplateId: undefined, // Nouvelle instance sur la page
-    styles: block.props?.styles || {},
-    data: block.props?.data || {},
+    styles: {}, // On ne clone pas le style, on attend le retour du backend pour l'héritage
+    data: {}, // On ne clone pas les data
     children: [] // TODO: Récupérer les enfants si c'est un bloc complexe stocké
   };
   return instance;

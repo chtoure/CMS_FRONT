@@ -65,11 +65,11 @@ const layoutInlineStyles = computed(() => {
   return buildLayoutInlineStyles(props.element.styles as Record<string, unknown>, bp);
 });
 
-console.log('BlocRender mounting:', {
-  id: props.element.id,
-  tag: props.element.tag,
-  componentFound: !!componentToRender
-});
+// console.log('BlocRender mounting:', {
+//   id: props.element.id,
+//   tag: props.element.tag,
+//   componentFound: !!componentToRender
+// });
 const isSelectedChild = (id: string) => builderState?.selectedId.value === id;
 
 const formatSize = (value: unknown, defaultValue: string | undefined = undefined) => {
