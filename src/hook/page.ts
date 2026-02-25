@@ -1,5 +1,5 @@
 import { unref, type Ref } from "vue";
-import type { Page, PageFilter } from "../type/page";
+import type { Page, PageFilter, PageRenderResponse } from "../type/page";
 import { useQuery } from "@tanstack/vue-query";
 import api, { handleResponse } from "../api/fetchConfig";
 import type { Pagination } from "../type/pagination";
@@ -43,7 +43,23 @@ const useGetPage = (id: number | Ref<number>) => {
   });
 };
 
+
+
+const UseRenderPage = (slug: string | Ref<string>) => {
+  return useQuery({
+    queryKey: ["renderPage", slug],
+    queryFn: async () => {
+      const targetSlug = unref(slug);
+      return handleResponse<PageRenderResponse>(
+        await api(`/renderPage/${targetSlug}`)
+      );
+    },
+    enabled: !!unref(slug)
+  });
+};
+
 export {
   useGetPages,
-  useGetPage
+  useGetPage,
+  UseRenderPage
 };

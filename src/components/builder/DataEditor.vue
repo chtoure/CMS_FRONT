@@ -1,6 +1,7 @@
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script lang="ts" setup>
 import { ref, inject, computed, watch } from 'vue';
+import { useQueryClient } from "@tanstack/vue-query";
 import type { AnyComponentInstance, CliquableAction } from '../../type/component';
 import { ValueSource, type IComponentParams, type IContenusField, type IImageField, type IPropsSchemaField, type IParentField, type IStaticField } from '../../type/params';
 import Label from '../../components/ui/label/Label.vue';
@@ -12,6 +13,8 @@ import SelectContent from '../../components/ui/select/SelectContent.vue';
 import SelectItem from '../../components/ui/select/SelectItem.vue';
 import * as Icons from 'lucide-vue-next';
 import { Plus, Trash2, ChevronDown, Type, Image as ImageIcon, Database, Link as LinkIcon } from 'lucide-vue-next';
+
+const queryClient = useQueryClient();
 import { Button } from '../../components/ui/button';
 import { Checkbox } from '../../components/ui/checkbox';
 import { useGetContentTypes } from '../../hook/content-type';
@@ -127,10 +130,49 @@ const generateUniqueName = (label: string): string => {
   return `${slug || 'param'}_${suffix}`;
 };
 
+const mediaQuery = useGetMediaList({});
 const editingParam = ref<IComponentParams | null>(null);
 
 // Cache global pour les entrées CMS du bloc (ID -> data_json)
 const blockCMSData = ref<Record<number, any>>({});
+
+// Stockage des entrées brutes pour permettre une re-résolution propre
+const rawCMSEntries = ref<Record<number, any>>({});
+
+const resolveEntryMedia = (id: number) => {
+  const entry = rawCMSEntries.value[id];
+  if (!entry?.data_json) return;
+
+  const resolvedData = { ...entry.data_json };
+  const ctId = entry.contentTypeId;
+  const ct = contentTypeOptions.value?.results?.find((c: any) => c.id === ctId);
+
+  if (ct?.fields_schema) {
+    ct.fields_schema.forEach((f: any) => {
+      const isMedia = f.type === FieldType.MEDIA || f.type === 'media';
+      const value = resolvedData[f.name];
+      if (isMedia && value) {
+        const url = mediaQuery?.data.value?.results?.find((m: any) => m.id === value)?.file_path;
+        if (url) {
+          resolvedData[f.name] = url;
+        }
+      }
+    });
+  }
+
+  // Si on a une URL ou que la data a changé, on met à jour le cache réactif
+  if (JSON.stringify(blockCMSData.value[id]) !== JSON.stringify(resolvedData)) {
+    blockCMSData.value[id] = resolvedData;
+
+    // Propagation immédiate
+    const params = props.element.params || [];
+    params.forEach(p => {
+      if (p.type.source === ValueSource.CONTENUS && props.element.data[p.name] === id) {
+        updateData(p.name, id);
+      }
+    });
+  }
+};
 
 // Fonction pour charger les données CMS manquantes pour tout le bloc
 import api from '../../api/fetchConfig';
@@ -138,43 +180,68 @@ import { handleResponse } from '../../api/fetchConfig';
 
 const fetchBlockCMSData = async () => {
   const params = props.element.params || [];
-  const entryIdsToFetch = params
+  const usedEntryIds = params
     .filter(p => p.type.source === ValueSource.CONTENUS && (p.type as IContenusField).config.mode === 'single')
     .map(p => {
        const id = props.element.data[p.name];
        return typeof id === 'number' ? id : null;
     })
-    .filter((id): id is number => id !== null && !blockCMSData.value[id]);
+    .filter((id): id is number => id !== null);
 
-  if (entryIdsToFetch.length === 0) return;
+  if (usedEntryIds.length === 0) return;
 
-  // Récupération asynchrone pour chaque ID manquant
-  const fetchPromises = entryIdsToFetch.map(async (id) => {
-    try {
-      const resp = await api(`/content-entries/${id}`);
-      const entry = await handleResponse<any>(resp);
-      if (entry?.data_json) {
-        blockCMSData.value[id] = entry.data_json;
-        // Déclencher une propagation pour tous les paramètres liés à cet ID
-        const params = props.element.params || [];
-        params.forEach(p => {
-          if (p.type.source === ValueSource.CONTENUS && props.element.data[p.name] === id) {
-            updateData(p.name, id);
-          }
+  // 1. Charger les entrées manquantes
+  const idsToFetch = usedEntryIds.filter(id => !rawCMSEntries.value[id]);
+
+  if (idsToFetch.length > 0) {
+    const fetchPromises = idsToFetch.map(async (id) => {
+      try {
+        // On utilise fetchQuery pour passer par le cache global de Vue-Query
+        const entry = await queryClient.fetchQuery({
+          queryKey: ["content-entry", id],
+          queryFn: async () => {
+            const resp = await api(`/content-entries/${id}`);
+            return await handleResponse<any>(resp);
+          },
+          staleTime: 1000 * 60 * 5, // 5 minutes par défaut
         });
-      }
-    } catch (err) {
-      console.error(`Failed to fetch CMS entry ${id}`, err);
-    }
-  });
 
-  await Promise.all(fetchPromises);
+        if (entry) {
+          rawCMSEntries.value[id] = entry;
+          resolveEntryMedia(id);
+        }
+      } catch (err) {
+        console.error(`Failed to fetch CMS entry ${id}`, err);
+      }
+    });
+    await Promise.all(fetchPromises);
+  }
+
+  // 2. Toujours re-résoudre le cache pour les IDs utilisés (au cas où mediaQuery a changé)
+  usedEntryIds.forEach(id => resolveEntryMedia(id));
 };
 
-// On recharge le cache quand le composant change ou quand les données changent
-watch(() => [props.element.id, JSON.stringify(props.element.data)], () => {
+// On recharge le cache quand le composant change, quand les données changent, quand les types ou les médias reviennent
+watch(() => [props.element.id, JSON.stringify(props.element.data), mediaQuery.data.value, contentTypeOptions.value], () => {
   fetchBlockCMSData();
 }, { immediate: true });
+
+// Surveillance du cache global pour réagir aux updates externes d'entrées CMS
+import { onUnmounted } from 'vue';
+const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+  if (event.type === 'updated' && event.query.queryKey[0] === 'content-entry') {
+    const id = event.query.queryKey[1] as number;
+    // Si cette entrée est utilisée dans notre bloc, on la met à jour
+    if (rawCMSEntries.value[id]) {
+        rawCMSEntries.value[id] = event.query.state.data;
+        resolveEntryMedia(id);
+    }
+  }
+});
+
+onUnmounted(() => {
+  unsubscribe();
+});
 
 const toggleParam = (name: string) => {
   if (expandedParam.value === name) {
@@ -353,17 +420,13 @@ const propagateValueToChildren = (children: AnyComponentInstance[], parentParamN
         const pt = p.type as IParentField;
 
         if (isCMS) {
+
           // Liaison CMS : on utilise la parentKey pour extraire la valeur brute
           if (pt.parentKey && entryData) {
             const rawValue = entryData[pt.parentKey];
 
-            // Si l'enfant est une image, on s'attend à un objet ou une URL
-            if (p.type.source === ValueSource.PARENT && child.params.find(param => param.name === p.name)?.type.source === ValueSource.IMAGE) {
-               // On pourrait avoir besoin d'extraire le src si c'est un objet Media
-               newChildData[p.name] = typeof rawValue === 'object' ? (rawValue as any)?.url : rawValue;
-            } else {
-               newChildData[p.name] = rawValue;
-            }
+            // La valeur est déjà résolue dans le cache (URL pour les images, texte pour le reste)
+            newChildData[p.name] = rawValue;
             hasChanged = true;
           }
         } else {
@@ -427,11 +490,10 @@ const updateChildParamSource = (childId: string, paramName: string, source: Valu
                   const entryData = blockCMSData.value[entryId];
                   if (entryData) {
                     const rawValue = entryData[newType.parentKey];
-                    if (originalType === ValueSource.IMAGE) {
-                      node.data[paramName] = typeof rawValue === 'object' ? (rawValue as any)?.url : rawValue;
-                    } else {
-                      node.data[paramName] = rawValue;
-                    }
+                    // On utilise directement la valeur du cache (qui contient les URLs résolues)
+                    node.data[paramName] = rawValue;
+                    console.log("blockCMSData : ",blockCMSData.value);
+
                   }
                 }
               }
@@ -589,14 +651,12 @@ const handleEditingTypeChange = (val: unknown) => {
 const previewImage = ref('')
 
 
-const mediaQuery = useGetMediaList({});
 const changeMediaEditor = (id: number) => {
   if (!editingParam.value || id === null || id === undefined) return;
 
-  previewImage.value = mediaQuery?.data.value?.results?.find((m) => m.id === id)?.file_path || '';
-  (editingParam.value.type as IImageField).src = previewImage.value;
+  const url = mediaQuery?.data.value?.results?.find((m) => m.id === id)?.file_path || '';
+  (editingParam.value.type as IImageField).src = url;
   (editingParam.value.type as IImageField).id = id;
-
 }
 
 
@@ -905,7 +965,6 @@ const forceAriaHidden = (isOpen: boolean) => {
                       :modal="false"
                       @update:model-value="(val) => {
                         (editingParam!.type as any).config.entryId = val;
-                        updateData(editingParam!.name, val as any);
                       }"
                       :disabled="!isEditingContentTypeSelected"
                     >

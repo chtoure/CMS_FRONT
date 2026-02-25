@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { PageRevision } from "./page-revision.ts";
 import type { User } from "./user.ts";
 
@@ -32,9 +33,30 @@ interface PageFilter {
 }
 
 
+
+interface HydratedBlock {
+    id: number;
+    name: string;
+    order: number;
+    tag: string;
+    family: string;
+    styles: Record<string, any>;
+    data: Record<string, any>;
+    children: HydratedBlock[];
+}
+
+
+interface PageRenderResponse {
+    slug: string;
+    title?: string;
+    layout: HydratedBlock[];
+}
+
 export type {
     Page,
     RegisterPage,
     UpdatePage,
-    PageFilter
+    PageFilter,
+    PageRenderResponse,
+    HydratedBlock
 }
