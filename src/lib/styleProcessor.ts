@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { 
   BaseStyles, 
-  ComponentFamily, 
   ContainerStyles, 
   StaticStyles,
   InteractiveStyles,
-  ResponsiveProp
-} from "../type/component";
+} from "../type/style";
+import type { ComponentFamily, ResponsiveProp } from "../type/component";
 
 // --- TYPES UTILITAIRES ---
 type BaseType<T> = T extends ResponsiveProp<infer U> ? U : T;
@@ -117,11 +116,17 @@ const STATIC_MAPPER: StyleMapper<StaticStyles> = {
   fontWeight: (v) => `font-${v}`,
   textAlign: (v) => `text-${v}`,
   textColor: (v) => formatColor('text', v),
+  textDecoration: (v) => v === 'underline' ? 'underline' : 'no-underline',
 };
 
 const INTERACTIVE_MAPPER: StyleMapper<InteractiveStyles> = {
   variant: (v) => `btn-${v}`,
   size: (v) => `btn-sz-${v}`,
+  fontSize: (v) => formatDimension('text', v),
+  fontWeight: (v) => `font-${v}`,
+  textAlign: (v) => `text-${v}`,
+  textColor: (v) => formatColor('text', v),
+  textDecoration: (v) => v === 'underline' ? 'underline' : 'no-underline',
 };
 
 // --- LOGIQUE DE RÉSOLUTION ---
@@ -188,7 +193,7 @@ export function buildStyles(
   processMapper(PADDING_MAPPER);
   processMapper({ display: BASE_MAPPER.display });
 
-  if (family === 'container') processMapper(CONTAINER_LAYOUT_MAPPER);
+  if (['container', 'complex'].includes(family)) processMapper(CONTAINER_LAYOUT_MAPPER);
   else if (family === 'static') processMapper(STATIC_MAPPER);
   else if (family === 'interactive') processMapper(INTERACTIVE_MAPPER);
 
@@ -361,8 +366,8 @@ export function buildInlineStyles(
     }
   }
 
-  // Gap (pour les containers)
-  if (family === 'container' && styles.gap !== undefined) {
+  // Gap (pour les containers et complex)
+  if (['container', 'complex'].includes(family) && styles.gap !== undefined) {
     const gapValue = getValue(styles.gap);
     if (typeof gapValue === 'number') {
       inlineStyles.gap = `${gapValue}px`;
@@ -372,7 +377,7 @@ export function buildInlineStyles(
   }
 
   // Grid Columns (pour GridBuilder via container family)
-  if (family === 'container' && styles.columns !== undefined) {
+  if (['container', 'complex'].includes(family) && styles.columns !== undefined) {
     const colsValue = getValue(styles.columns);
     if (typeof colsValue === 'number' && colsValue > 0) {
       inlineStyles.gridTemplateColumns = `repeat(${colsValue}, minmax(0, 1fr))`;
@@ -380,8 +385,8 @@ export function buildInlineStyles(
     }
   }
 
-  // Font Size (pour static, input et interactive)
-  if (['static', 'input', 'interactive'].includes(family) && styles.fontSize !== undefined) {
+  // Font Size (pour static, input, interactive et complex)
+  if (['static', 'input', 'interactive', 'complex'].includes(family) && styles.fontSize !== undefined) {
     const fontSizeValue = getValue(styles.fontSize);
     if (typeof fontSizeValue === 'number') {
       inlineStyles.fontSize = `${fontSizeValue}px`;
@@ -390,8 +395,8 @@ export function buildInlineStyles(
     }
   }
 
-  // Text Color (pour static, input et interactive maintenant)
-  if (['static', 'input', 'interactive'].includes(family) && styles.textColor) {
+  // Text Color (pour static, input, interactive et complex)
+  if (['static', 'input', 'interactive', 'complex'].includes(family) && styles.textColor) {
     const textColorValue = getValue(styles.textColor);
     if (typeof textColorValue === 'string') {
       if (textColorValue.startsWith('#')) {
@@ -399,6 +404,14 @@ export function buildInlineStyles(
       } else if (!textColorValue.startsWith('text-')) {
         inlineStyles.color = `#${textColorValue}`;
       }
+    }
+  }
+
+  // Text Decoration
+  if (['static', 'input', 'interactive', 'complex'].includes(family) && styles.textDecoration) {
+    const tdValue = getValue(styles.textDecoration);
+    if (typeof tdValue === 'string') {
+      inlineStyles.textDecoration = tdValue;
     }
   }
 

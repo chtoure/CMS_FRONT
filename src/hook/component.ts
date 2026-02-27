@@ -12,11 +12,40 @@ const useGetComponents = () => {
   return useQuery({
     queryKey: ['builder-components'],
     queryFn: async () => {
-      return handleResponse<Pagination<AnyComponent>>(
+      const response = await handleResponse<Pagination<AnyComponent>>(
         await api(`/components`, {
           method: 'GET'
         })
       );
+
+      // Injection dynamique du composant Link si absent (en attendant le backend)
+      if (response && response.results) {
+        const hasLink = response.results.find(c => c.tag === 'LinkBuilder');
+        if (!hasLink) {
+          response.results.push({
+            id: 'link-builder-id', // ID temporaire
+            name: "Lien",
+            tag: "LinkBuilder",
+            icon: "ExternalLink",
+            family: "static",
+            supportedActions: ACTIONS_BY_FAMILY['static'],
+            defaultProps: {
+              styles: {
+                textColor: "#3b82f6", // Bleu par défaut
+                textAlign: "left"
+              },
+              data: {
+                text: "Lien personnalisé",
+                url: "",
+                target: "_self"
+              },
+              children: []
+            }
+          } as AnyComponent);
+        }
+      }
+
+      return response;
     }
   });
 };

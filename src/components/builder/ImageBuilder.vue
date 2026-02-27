@@ -1,3 +1,4 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { StaticStyles } from '../../type/component';
@@ -42,10 +43,19 @@ const imageStyles = computed(() => {
 </script>
 
 <template>
-  <img
-    :src="props.data?.src || 'https://via.placeholder.com/150'"
-    :alt="props.data?.alt || 'Image'"
-    :class="computedClasses"
-    :style="{ ...computedInlineStyles, ...imageStyles }"
-  />
+  <div 
+    class="flex w-full h-full"
+    :class="{
+      'justify-start': (props.styles as any)?.textAlign === 'left',
+      'justify-center': (props.styles as any)?.textAlign === 'center',
+      'justify-end': (props.styles as any)?.textAlign === 'right'
+    }"
+  >
+    <img
+      :src="props.data?.src || 'https://via.placeholder.com/150'"
+      :alt="props.data?.alt || 'Image'"
+      :class="computedClasses"
+      :style="{ ...computedInlineStyles, ...imageStyles }"
+    />
+  </div>
 </template>

@@ -81,9 +81,11 @@ const startResize = (e: MouseEvent, direction: string) => {
   <div 
     ref="resizableRef"
     class="relative w-full h-full" 
-    :class="{ 'ring-2 ring-gray-400 ring-offset-1': active }"
+    :class="{ 'ring-2 ring-gray-400': active }"
   >
-    <slot />
+    <div class="w-full h-full overflow-hidden">
+      <slot />
+    </div>
     
     <template v-if="active">
       <!-- Handles -->

@@ -100,8 +100,10 @@ const formatColor = (value: unknown) => {
       v-model="childrenModel"
       :group="{ name: 'blocks', put: true, pull: true }"
       :animation="150"
-      class="w-full h-full min-h-[80px] p-4 flex flex-wrap gap-4"
+      class="w-full h-full min-h-[80px] p-4"
       :class="{
+        'flex': formatSize(section.styles?.display) === 'flex' || !section.styles?.display,
+        'grid': formatSize(section.styles?.display) === 'grid',
         'flex-row': formatSize(section.styles?.direction) !== 'vertical',
         'flex-col': formatSize(section.styles?.direction) === 'vertical',
         'justify-start': formatSize(section.styles?.justify) === 'start',
@@ -111,6 +113,10 @@ const formatColor = (value: unknown) => {
         'items-start': formatSize(section.styles?.align) === 'start',
         'items-center': formatSize(section.styles?.align) === 'center',
         'items-end': formatSize(section.styles?.align) === 'end',
+      }"
+      :style="{
+        gap: formatSize(section.styles?.gap),
+        gridTemplateColumns: formatSize(section.styles?.display) === 'grid' ? `repeat(${section.styles?.columns || 1}, minmax(0, 1fr))` : undefined
       }"
     >
       <div 

@@ -9,6 +9,7 @@ import ResizerWrapper from '../../components/builder/ResizerWrapper.vue';
 import type { AnyComponentInstance } from '../../type/component';
 import type { AnySectionInstance } from '../../type/section';
 import { findComponentById } from '../../lib/treeUtils';
+import { resolveValueForBreakpoint } from '../../lib/styleProcessor';
 
 // Injection de l'état global
 const builderState = inject<{
@@ -112,6 +113,18 @@ watch(() => pageTree.value, (newVal) => {
   
   // console.log('PageTree updated:', JSON.parse(JSON.stringify(newVal)));
 }, { deep: true });
+
+const formatSize = (value: unknown, defaultValue: string | undefined = undefined) => {
+  if (value === undefined || value === null || value === '') return defaultValue;
+  
+  const bp = builderState?.currentBreakpoint.value || 'default';
+  const finalValue = resolveValueForBreakpoint(value, bp);
+
+  if (finalValue === 'full') return '100%';
+  if (typeof finalValue === 'number') return `${finalValue}px`;
+  if (typeof finalValue === 'string' && !isNaN(Number(finalValue)) && finalValue.trim() !== '') return `${finalValue}px`;
+  return finalValue as string;
+};
 </script>
 
 <template>
@@ -217,10 +230,14 @@ watch(() => pageTree.value, (newVal) => {
                  <div 
                    v-for="(element, index) in builderState!.libraryTree.value" 
                    :key="element.id"
-                   class="relative transition-all outline-none mb-12 w-full max-w-4xl bg-white/5 p-8 rounded-xl border border-white/10 group/lib-item"
+                   class="relative transition-all outline-none mb-12 bg-white/5 p-8 rounded-xl border border-white/10 group/lib-item max-w-full"
+                   :style="{
+                     width: formatSize(element.styles?.width, '100%'), 
+                     height: formatSize(element.styles?.height) 
+                   }"
                  >
                     <!-- Label du composant custom -->
-                    <div class="absolute -top-4 left-4 bg-primary text-white text-[10px] px-2 py-0.5 rounded shadow-lg opacity-80 group-hover/lib-item:opacity-100 transition-opacity">
+                    <div class="absolute top-2 left-4 bg-primary text-white text-[10px] px-2 py-0.5 rounded shadow-lg opacity-80 group-hover/lib-item:opacity-100 transition-opacity">
                       MODÈLE : {{ element.name }}
                     </div>
 
@@ -265,3 +282,4 @@ watch(() => pageTree.value, (newVal) => {
   /* Supprimé au profit du style dynamique */
 }
 </style>
+

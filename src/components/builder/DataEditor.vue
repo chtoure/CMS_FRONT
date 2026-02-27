@@ -218,5 +218,106 @@ const inputTypeOptions = [
        </div>
     </div>
 
+    <!-- Section: Slider -->
+    <div v-if="element.tag === 'SliderBuilder'" class="space-y-4">
+      <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Paramètres Slider</h4>
+      
+      <div class="grid grid-cols-2 gap-4">
+        <div class="flex items-center space-x-2">
+          <Checkbox id="autoPlay" :checked="(element.data.autoPlay as boolean)" @update:checked="(val: boolean | 'indeterminate') => updateData('autoPlay', !!val)" />
+          <Label for="autoPlay" class="text-[11px] text-gray-300">Auto-play</Label>
+        </div>
+        <div class="flex items-center space-x-2">
+          <Checkbox id="loop" :checked="(element.data.loop as boolean)" @update:checked="(val: boolean | 'indeterminate') => updateData('loop', !!val)" />
+          <Label for="loop" class="text-[11px] text-gray-300">Boucle</Label>
+        </div>
+      </div>
+
+      <div class="space-y-1.5">
+        <Label class="text-[11px] text-gray-400">Vitesse (ms)</Label>
+        <Input 
+          type="number" 
+          :model-value="(element.data.speed as number)" 
+          @update:model-value="(val: string | number) => updateData('speed', parseInt(val.toString()))"
+          class="h-8 text-xs bg-black/20 border-border/50"
+        />
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 pt-1">
+        <div class="flex items-center space-x-2">
+          <Checkbox id="showPagination" :checked="(element.data.showPagination as boolean)" @update:checked="(val: boolean | 'indeterminate') => updateData('showPagination', !!val)" />
+          <Label for="showPagination" class="text-[11px] text-gray-300">Pagination</Label>
+        </div>
+        <div class="flex items-center space-x-2">
+          <Checkbox id="showArrows" :checked="(element.data.showArrows as boolean)" @update:checked="(val: boolean | 'indeterminate') => updateData('showArrows', !!val)" />
+          <Label for="showArrows" class="text-[11px] text-gray-300">Flèches</Label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section: Accordion / FAQ -->
+    <div v-if="element.tag === 'AccordionBuilder'" class="space-y-4">
+      <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Paramètres Accordéon</h4>
+      
+      <div class="space-y-1.5">
+        <Label class="text-[11px] text-gray-400">Question / Titre</Label>
+        <Input 
+          :model-value="(element.data.title as string)" 
+          @update:model-value="(val: string | number) => updateData('title', val.toString())"
+          class="h-8 text-xs bg-black/20 border-border/50"
+        />
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="flex items-center space-x-2">
+          <Checkbox id="isOpen" :checked="(element.data.isOpen as boolean)" @update:checked="(val: boolean | 'indeterminate') => updateData('isOpen', !!val)" />
+          <Label for="isOpen" class="text-[11px] text-gray-300">Ouvert par défaut</Label>
+        </div>
+        <div class="space-y-1.5">
+          <Label class="text-[11px] text-gray-400">Vitesse Anim (ms)</Label>
+          <Input 
+            type="number" 
+            :model-value="(element.data.transitionSpeed as number)" 
+            @update:model-value="(val: string | number) => updateData('transitionSpeed', parseInt(val.toString()))"
+            class="h-8 text-xs bg-black/20 border-border/50"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Section: Lien -->
+    <div v-if="element.tag === 'LinkBuilder'" class="space-y-4">
+      <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Paramètres Lien</h4>
+      <div class="space-y-1.5">
+        <Label class="text-[11px] text-gray-400">Texte du lien</Label>
+        <Input 
+          :model-value="(element.data.text as string)" 
+          @update:model-value="(val) => updateData('text', val)"
+          class="h-8 text-xs bg-black/20 border-border/50"
+        />
+      </div>
+      <div class="space-y-1.5">
+        <Label class="text-[11px] text-gray-400">URL de destination</Label>
+        <Input 
+          :model-value="(element.data.url as string)" 
+          @update:model-value="(val) => updateData('url', val)"
+          class="h-8 text-xs bg-black/20 border-border/50"
+          placeholder="https://..."
+        />
+      </div>
+      <div class="space-y-1.5">
+        <Label class="text-[11px] text-gray-400">Cible (Target)</Label>
+        <Select :model-value="(element.data.target as string)" @update:model-value="(val) => val && updateData('target', val as string)">
+          <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+            <SelectValue placeholder="Cible" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_self">Même fenêtre (_self)</SelectItem>
+            <SelectItem value="_blank">Nouvelle fenêtre (_blank)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+
   </div>
 </template>

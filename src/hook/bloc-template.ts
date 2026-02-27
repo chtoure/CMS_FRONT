@@ -15,6 +15,9 @@ export function useBlockTemplate() {
    * Crée un nouveau BlockTemplate via l'API
    */
   const useCreateBlockTemplate = async (component: AnyComponentInstance, parentId: number | null, order: number, sectionId: number, is_custom = false): Promise<BlocTemplate> => {
+
+    console.log("component create", component);
+    
     if (!component.componentDefinitionId) {
       throw new Error(`Component definition ID missing for component ${component.name}`);
     };
@@ -379,22 +382,10 @@ export function useBlockTemplate() {
    * Inclut récursivement tous les enfants.
    */
   const saveAsCustom = async (component: AnyComponentInstance): Promise<AnyComponentInstance> => {
-    // 1. Cloner pour ne pas impacter l'instance sur la page
-    const clone = JSON.parse(JSON.stringify(component)) as AnyComponentInstance;
-
-    // 2. Fonction récursive pour nettoyer les IDs existants (on veut créer des nouveaux templates)
-    const stripIds = (node: AnyComponentInstance) => {
-      delete node.blocTemplateId;
-      if (node.children && node.children.length > 0) {
-        node.children.forEach(stripIds);
-      }
-    };
-    
-    stripIds(clone);
-
-    // 3. Utiliser useSyncTree pour sauvegarder tout l'arbre avec is_custom: true
-    // parentId: null, sectionId: 0 (ignoré), is_custom: true
-    const results = await useSyncTree([clone], null, 0, true);
+    // 1. Utiliser useSyncTree pour sauvegarder tout l'arbre avec is_custom: true
+    // On ne clone pas et on ne strip pas les IDs car on veut METTRE A JOUR les templates existants
+    // pour qu'ils deviennent des customs (modèles).
+    const results = await useSyncTree([component], null, 0, true);
     
     if (results.length > 0) {
       return results[0]!;
