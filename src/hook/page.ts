@@ -50,16 +50,20 @@ const UseRenderPage = (slug: string | Ref<string>) => {
     queryKey: ["renderPage", slug],
     queryFn: async () => {
       const targetSlug = unref(slug);
+      const endpoint = targetSlug ? `/renderPage/${targetSlug}` : `/renderPage`;
       return handleResponse<PageRenderResponse>(
-        await api(`/renderPage/${targetSlug}`)
+        await api(endpoint)
       );
     },
-    enabled: !!unref(slug)
+    // Ou on vérifie que slug n'est pas undefined/null
+    enabled: unref(slug) !== undefined
   });
 };
+
+
 
 export {
   useGetPages,
   useGetPage,
-  UseRenderPage
+  UseRenderPage,
 };

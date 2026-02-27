@@ -2,7 +2,7 @@
     import { computed, ref, watch } from 'vue'
     import CompositionTable from '@/components/composition/CompositionTable.vue'
     import Button from '@/components/ui/button/Button.vue'
-    import {ArrowLeft, Eye, MoreHorizontal, Pencil, Plus, X } from 'lucide-vue-next'
+    import {ArrowLeft, Eye, MoreHorizontal, Pencil, Plus, Rocket, X } from 'lucide-vue-next'
     import CompositionLoading from '../../components/composition/CompositionLoading.vue'
     import CompositionError from '../../components/composition/CompositionError.vue'
     import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
@@ -14,7 +14,7 @@
     import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue'
     import { useHead } from '@vueuse/head'
     import { useRouter } from 'vue-router'
-    import { useGetPageRevisions, useRegisterPageRevision } from '../../hook/page-revision'
+    import { useGetPageRevisions, useRegisterPageRevision, useUpdatePageRevisionStatus } from '../../hook/page-revision'
 
     const router = useRouter();
     useHead({
@@ -72,6 +72,7 @@
     const totalItems = computed(() => pageRevisionQuery.data.value?.count || 0);
 
     const pageRevisionRegister = useRegisterPageRevision();
+    const pageRevisionStatusUpdate = useUpdatePageRevisionStatus();
 
     const handleCreateRevision = async () => {
         try {
@@ -79,7 +80,7 @@
                 pageId: pageId.value,
                 status: 'DRAFT'
             });
-            
+
             if (newRevision && newRevision.id) {
                 router.push({
                     name: 'admin.page-revision.update',
@@ -88,6 +89,18 @@
             }
         } catch (error) {
             console.error('Failed to create page revision:', error);
+        }
+    }
+
+    const handlePublishRevision = async (id: number) => {
+        try {
+            await pageRevisionStatusUpdate.mutateAsync({
+                id: id,
+                status: 'PUBLISHED'
+            });
+            console.log('Revision published successfully');
+        } catch (error) {
+            console.error('Failed to publish page revision:', error);
         }
     }
 
@@ -114,10 +127,10 @@
                       <p class="text-background text-sm font-medium">Gérez vos pages visuels avec une précision chirurgicale.</p>
                   </div>
               </div>
-              
+
               <div class="flex items-center gap-4">
-                  <Button 
-                    class="rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95" 
+                  <Button
+                    class="rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95"
                     @click="handleCreateRevision"
                     :disabled="pageRevisionRegister.isPending.value"
                   >
@@ -172,6 +185,17 @@
                 </button>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              <DropdownMenuLabel v-if="row.status !== 'PUBLISHED'">
+                <button
+                  class="text-primary p-2 flex items-center gap-2 transition-all hover:scale-110 font-bold"
+                  @click="handlePublishRevision(row.id)"
+                  :disabled="pageRevisionStatusUpdate.isPending.value"
+                >
+                  <Rocket class="w-4 h-4" />
+                  {{ pageRevisionStatusUpdate.isPending.value ? 'Publication...' : 'Publier cette version' }}
+                </button>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator v-if="row.status !== 'PUBLISHED'" />
               <DropdownMenuLabel>
                 <a target="_blank" :href="`${$router.resolve({ name: 'admin.page-revision.update', params: { id: row.id } }).href}`" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
                   <Pencil class="w-4 h-4" /> Modifier
@@ -194,4 +218,3 @@
     </div>
   </div>
 </template>
- 

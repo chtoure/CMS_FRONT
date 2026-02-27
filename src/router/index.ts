@@ -226,7 +226,7 @@ const router = createRouter({
     },
 
     {
-        path: '/:slug',
+        path: '/:slug?',
         component: BuilderLayout,
         children: [
             {

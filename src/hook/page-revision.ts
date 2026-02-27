@@ -62,8 +62,27 @@ const useRegisterPageRevision = () => {
   });
 };
 
+const useUpdatePageRevisionStatus = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' }) => {
+      return handleResponse<PageRevision>(
+        await api(`/page-revision/${id}`, {
+          method: "PUT",
+          body: JSON.stringify({ status }),
+        })
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pages"] });
+      queryClient.invalidateQueries({ queryKey: ["renderPage"] });
+    },
+  });
+};
+
 export {
   useGetPageRevisions,
   useGetPageRevision,
-  useRegisterPageRevision
+  useRegisterPageRevision,
+  useUpdatePageRevisionStatus
 };

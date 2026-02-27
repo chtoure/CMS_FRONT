@@ -5,12 +5,14 @@ import { UseRenderPage } from '../../hook/page';
 import CompositionError from '../../components/composition/CompositionError.vue';
 import CompositionLoading from '../../components/composition/CompositionLoading.vue';
 import BlocRenderView from './BlocRenderView.vue';
+import NotFoundPage from '@/views/error/NotFoundPage.vue';
+
 
 
 const route = useRoute();
 
 // Extraction réactive du slug depuis l'URL
-const slug = computed(() => (route.params.slug as string) || 'accueil');
+const slug = computed(() => (route.params.slug as string));
 
 // 2. Appel du hook
 const {
@@ -21,9 +23,17 @@ const {
 } = UseRenderPage(slug);
 
 //  Mise à jour du titre du document (SEO)
+// Tri des sections par order
+const sortedSections = computed(() => {
+  if (!page.value?.layout) return [];
+  return [...page.value.layout].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+});
+
 watchEffect(() => {
   if (page.value?.slug) {
-    document.title = `${page.value.slug.toUpperCase()}`;
+    const cleanSlug = page.value.slug.replace(/\//g, '');
+    const formattedSlug = cleanSlug.charAt(0).toUpperCase() + cleanSlug.slice(1).toLowerCase();
+    document.title = slug.value === "" ? "Accueil" : formattedSlug;
   }
   console.log("data page Render : ",page.value);
 });
@@ -44,14 +54,14 @@ watchEffect(() => {
 
     <div v-else-if="page">
       <BlocRenderView
-        v-for="section in page.layout"
+        v-for="section in sortedSections"
         :key="section.id"
         :element="section"
       />
     </div>
 
-    <div v-else class="text-center p-10 text-gray-400">
-      Aucun contenu disponible pour cette page.
+    <div v-else>
+      <NotFoundPage />
     </div>
 
   </main>
