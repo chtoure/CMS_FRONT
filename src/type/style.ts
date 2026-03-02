@@ -40,6 +40,7 @@ export interface StaticStyles extends BaseStyles {
   fontWeight?: ResponsiveProp<string>;
   textAlign?: ResponsiveProp<'left' | 'center' | 'right' | 'justify'>;
   fontFamily?: ResponsiveProp<'sans' | 'serif' | 'mono' | 'heading'>;
+  fontStyle?: ResponsiveProp<'normal' | 'italic'>;
   textColor?: ResponsiveProp<string>;
   textDecoration?: ResponsiveProp<'none' | 'underline'>;
 }
@@ -52,6 +53,7 @@ export interface InteractiveStyles extends BaseStyles {
   fontWeight?: ResponsiveProp<string>;
   textAlign?: ResponsiveProp<'left' | 'center' | 'right' | 'justify'>;
   fontFamily?: ResponsiveProp<'sans' | 'serif' | 'mono' | 'heading'>;
+  fontStyle?: ResponsiveProp<'normal' | 'italic'>;
   textColor?: ResponsiveProp<string>;
   textDecoration?: ResponsiveProp<'none' | 'underline'>;
 }

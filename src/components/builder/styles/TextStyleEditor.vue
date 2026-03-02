@@ -33,6 +33,10 @@ const fontFamilyOptions = [
   { label: 'Heading', value: 'heading' },
   { label: 'Mono', value: 'mono' },
   { label: 'Serif', value: 'serif' },
+];
+
+const fontStyleOptions = [
+  { label: 'Normal', value: 'normal' },
   { label: 'Italic', value: 'italic' },
 ];
 </script>
@@ -85,6 +89,18 @@ const fontFamilyOptions = [
           </SelectTrigger>
           <SelectContent>
             <SelectItem v-for="opt in fontFamilyOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div class="space-y-1.5">
+        <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Style</Label>
+        <Select :model-value="(getRawValue(styles.fontStyle) as string)" @update:model-value="(val) => updateStyle('fontStyle', val)">
+          <SelectTrigger class="h-8 input-custom">
+            <SelectValue placeholder="Style" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="opt in fontStyleOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</SelectItem>
           </SelectContent>
         </Select>
       </div>
