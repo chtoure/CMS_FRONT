@@ -27,24 +27,6 @@ const displayOptions = [
   { label: 'Masqué', value: 'hidden' },
 ];
 
-// watcher to clear irrelevant layout props when display changes
-import { watch } from 'vue';
-
-watch(
-  () => getRawValue(styles.value.display),
-  (display) => {
-    if (display !== 'grid') {
-      updateStyle('columns', undefined);
-    }
-    if (display !== 'flex') {
-      updateStyle('direction', undefined);
-      updateStyle('justify', undefined);
-      updateStyle('align', undefined);
-    }
-  }
-);
-
-
 const justifyOptions = [
   { label: 'Début', value: 'start' },
   { label: 'Centre', value: 'center' },
@@ -73,7 +55,7 @@ const showFlexGrid = computed(() => {
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
           <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Affichage</Label>
-          <Select :model-value="(getRawValue(styles.display) as string || '')" @update:model-value="(val) => updateStyle('display', val as string)">
+          <Select :model-value="(getRawValue(styles.display) as string)" @update:model-value="(val) => updateStyle('display', val as string)">
             <SelectTrigger class="h-8 input-custom">
               <SelectValue placeholder="Display" />
             </SelectTrigger>
