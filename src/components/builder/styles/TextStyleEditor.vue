@@ -27,6 +27,13 @@ const fontWeightOptions = [
   { label: 'Semibold', value: 'semibold' },
   { label: 'Bold', value: 'bold' },
 ];
+
+const fontFamilyOptions = [
+  { label: 'Sans (default)', value: 'sans' },
+  { label: 'Heading', value: 'heading' },
+  { label: 'Mono', value: 'mono' },
+  { label: 'Serif', value: 'serif' },
+];
 </script>
 
 <template>
@@ -67,6 +74,18 @@ const fontWeightOptions = [
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      <div class="space-y-1.5">
+        <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Police</Label>
+        <Select :model-value="(getRawValue(styles.fontFamily) as string)" @update:model-value="(val) => updateStyle('fontFamily', val)">
+          <SelectTrigger class="h-8 input-custom">
+            <SelectValue placeholder="Police" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="opt in fontFamilyOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div class="space-y-1.5">
