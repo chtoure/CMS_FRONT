@@ -18,19 +18,12 @@ const builderState = inject<{
 }>('builderState', { currentBreakpoint: { value: 'default' } } as any);
 
 const computedClasses = computed(() => {
-  const visual = buildVisualStyles(props.styles as Record<string, unknown>);
-  const layout = buildLayoutStyles(props.styles as Record<string, unknown>);
-  return [visual, layout].filter(Boolean).join(' ');
+  return buildVisualStyles(props.styles as Record<string, unknown>);
 });
 
 const computedInlineStyles = computed(() => {
   const bp = builderState.currentBreakpoint.value;
-  const vis = buildVisualInlineStyles(props.styles as Record<string, unknown>, bp);
-  const lay = buildLayoutInlineStyles(props.styles as Record<string, unknown>, bp);
-  return {
-    ...vis,
-    ...lay
-  };
+  return buildVisualInlineStyles(props.styles as Record<string, unknown>, bp);
 });
 </script>
 
