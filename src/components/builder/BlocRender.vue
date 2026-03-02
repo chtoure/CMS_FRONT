@@ -46,7 +46,8 @@ const componentToRender = COMPONENT_MAP[props.element.tag];
 const builderState = inject<{ 
   selectedId: { value: string | null }, 
   selectComponent: (id: string | null) => void,
-  currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
+  currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' },
+  isDragging: { value: boolean }
 }>('builderState');
 
 const isSelected = computed(() => builderState?.selectedId.value === props.element.id);
@@ -102,7 +103,11 @@ const onDragEnd = () => {
     :styles="element.styles" 
     :data="element.data"
     class="relative group/renderer transition-all duration-200"
-    :class="{ 'ring-2 ring-gray-400 ring-inset z-10': isSelected, 'hover:ring-1 hover:ring-gray-300': !isSelected }"
+    :class="{ 
+      'ring-2 ring-gray-400 ring-inset z-10': isSelected, 
+      'hover:ring-1 hover:ring-gray-300': !isSelected,
+      'drop-zone-potential': builderState?.isDragging?.value && FAMILY_CAPABILITIES[element.family].canHaveChildren
+    }"
     @click="handleSelect"
   >
     <div 
@@ -123,8 +128,14 @@ const onDragEnd = () => {
           v-model="childrenModel"
           :group="{ name: 'blocks', put: true, pull: true }"
           :animation="150"
-          class="min-h-[50px] w-full h-full pb-10"
-          :class="layoutClasses"
+          class="w-full h-full transition-all duration-300"
+          :class="[
+            layoutClasses, 
+            { 
+              'drop-zone-active': builderState?.isDragging?.value,
+              'min-h-[40px]': childrenModel.length === 0 
+            }
+          ]"
           :style="layoutInlineStyles"
           @start="onDragStart"
           @end="onDragEnd"
@@ -135,7 +146,7 @@ const onDragEnd = () => {
             @click.stop="builderState?.selectComponent(child.id)"
             class="relative transition-all outline-none"
             :style="{
-              width: formatSize(child.styles?.width, '100%'), 
+              width: formatSize(child.styles?.width, undefined), 
               height: formatSize(child.styles?.height) 
             }"
           >
@@ -167,3 +178,21 @@ const onDragEnd = () => {
     </template>
   </component>
 </template>
+
+<style scoped>
+.drop-zone-active {
+  outline: 2px dashed #3b82f6;
+  outline-offset: -2px;
+  background-color: rgba(59, 130, 246, 0.03);
+}
+
+.drop-zone-potential {
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: -2px;
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+.drop-zone-active:empty {
+  padding: 10px !important;
+}
+</style>

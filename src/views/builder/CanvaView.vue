@@ -19,6 +19,7 @@ const builderState = inject<{
   builderMode: { value: 'page' | 'library' };
   selectComponent: (id: string | null) => void;
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' };
+  setIsDragging: (val: boolean) => void;
 }>('builderState');
 
 // Fallback pour la sécurité
@@ -197,7 +198,10 @@ const formatSize = (value: unknown, defaultValue: string | undefined = undefined
                 v-model="pageTree"
                 :group="{ name: 'blocks', put: true, pull: true }"
                 :animation="150"
+                :delay="100"
                 ghost-class="ghost-preview"
+                @start="builderState?.setIsDragging(true)"
+                @end="builderState?.setIsDragging(false)"
                 class="w-full min-h-[1000px] relative flex flex-col p-0 z-0 bg-white"
               >
                 <div 
@@ -224,13 +228,16 @@ const formatSize = (value: unknown, defaultValue: string | undefined = undefined
                 v-model="builderState!.libraryTree.value"
                 :group="{ name: 'blocks', put: true, pull: true }"
                 :animation="150"
+                :delay="100"
                 ghost-class="ghost-preview"
+                @start="builderState?.setIsDragging(true)"
+                @end="builderState?.setIsDragging(false)"
                 class="w-full min-h-[1000px] relative flex flex-col p-8 z-0 bg-transparent items-center"
               >
                  <div 
                    v-for="(element, index) in builderState!.libraryTree.value" 
                    :key="element.id"
-                   class="relative transition-all outline-none mb-12 bg-white/5 p-8 rounded-xl border border-white/10 group/lib-item max-w-full"
+                   class="relative transition-all outline-none mb-6 bg-white/5 p-1 rounded-sm border border-white/5 group/lib-item max-w-full"
                    :style="{
                      width: formatSize(element.styles?.width, '100%'), 
                      height: formatSize(element.styles?.height) 
@@ -280,6 +287,21 @@ const formatSize = (value: unknown, defaultValue: string | undefined = undefined
 <style scoped>
 .device-wrapper {
   /* Supprimé au profit du style dynamique */
+}
+
+:deep(.ghost-preview) {
+  opacity: 0.1 !important;
+  background: #3b82f6 !important;
+  border: 2px solid #3b82f6 !important;
+  border-radius: 8px !important;
+}
+
+:deep(.drag-handle) {
+  cursor: grab;
+}
+
+:deep(.drag-handle:active) {
+  cursor: grabbing;
 }
 </style>
 

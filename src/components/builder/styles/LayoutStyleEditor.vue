@@ -18,8 +18,7 @@ const props = defineProps<{
 
 const { getRawValue, updateStyle } = useStyleEditor(props.element);
 
-const styles = computed(() => props.element.styles as any);
-const isSection = computed(() => props.element.family === 'section');
+const styles = computed(() => props.element.styles as Record<string, unknown>);
 
 const displayOptions = [
   { label: 'Bloc', value: 'block' },
@@ -39,6 +38,7 @@ const alignOptions = [
   { label: 'Début', value: 'start' },
   { label: 'Centre', value: 'center' },
   { label: 'Fin', value: 'end' },
+  { label: 'Remplir', value: 'stretch' },
 ];
 
 const showFlexGrid = computed(() => {
@@ -55,7 +55,7 @@ const showFlexGrid = computed(() => {
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
           <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Affichage</Label>
-          <Select :model-value="(getRawValue(styles.display) as string)" @update:model-value="(val) => updateStyle('display', val)">
+          <Select :model-value="(getRawValue(styles.display) as string)" @update:model-value="(val) => updateStyle('display', val as string)">
             <SelectTrigger class="h-8 input-custom">
               <SelectValue placeholder="Display" />
             </SelectTrigger>
@@ -78,7 +78,7 @@ const showFlexGrid = computed(() => {
           </div>
           <div v-if="getRawValue(styles.display) === 'flex'" class="space-y-1.5">
             <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Direction</Label>
-            <Select :model-value="(getRawValue(styles.direction) as string)" @update:model-value="(val) => updateStyle('direction', val)">
+            <Select :model-value="(getRawValue(styles.direction) as string)" @update:model-value="(val) => updateStyle('direction', val as string)">
               <SelectTrigger class="h-8 input-custom">
                 <SelectValue placeholder="Direction" />
               </SelectTrigger>
@@ -93,7 +93,7 @@ const showFlexGrid = computed(() => {
         <div class="grid grid-cols-2 gap-3">
           <div class="space-y-1.5">
             <Label class="text-[11px] text-builder-bar-text !font-bold">Justifier</Label>
-            <Select :model-value="(getRawValue(styles.justify) as string)" @update:model-value="(val) => updateStyle('justify', val)">
+            <Select :model-value="(getRawValue(styles.justify) as string)" @update:model-value="(val) => updateStyle('justify', val as string)">
               <SelectTrigger class="h-8 input-custom">
                 <SelectValue placeholder="Justify" />
               </SelectTrigger>
@@ -104,7 +104,7 @@ const showFlexGrid = computed(() => {
           </div>
           <div class="space-y-1.5">
             <Label class="text-[11px] text-builder-bar-text !font-bold">Aligner</Label>
-            <Select :model-value="(getRawValue(styles.align) as string)" @update:model-value="(val) => updateStyle('align', val)">
+            <Select :model-value="(getRawValue(styles.align) as string)" @update:model-value="(val) => updateStyle('align', val as string)">
               <SelectTrigger class="h-8 input-custom">
                 <SelectValue placeholder="Align" />
               </SelectTrigger>

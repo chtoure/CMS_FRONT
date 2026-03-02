@@ -52,7 +52,7 @@ const imageStyles = computed(() => {
     }"
   >
     <img
-      :src="props.data?.src || 'https://via.placeholder.com/150'"
+      :src="props.data?.src || '/image.jpg'"
       :alt="props.data?.alt || 'Image'"
       :class="computedClasses"
       :style="{ ...computedInlineStyles, ...imageStyles }"

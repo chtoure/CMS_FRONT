@@ -23,9 +23,14 @@ const selectedId = ref<string | null>(null);
 const selectedSectionId = ref<string | null>(null);
 const builderMode = ref<'page' | 'library'>('page');
 const currentBreakpoint = ref<'default' | 'sm' | 'md' | 'lg'>('default');
+const isDragging = ref(false);
 
 const selectComponent = (id: string | null) => {
   selectedId.value = id;
+};
+
+const setIsDragging = (val: boolean) => {
+  isDragging.value = val;
 };
 
 const deleteComponent = async (id: string) => {
@@ -250,7 +255,9 @@ provide('builderState', {
   redo,
   canUndo,
   canRedo,
-  currentBreakpoint
+  currentBreakpoint,
+  isDragging,
+  setIsDragging
 });
 </script>
 

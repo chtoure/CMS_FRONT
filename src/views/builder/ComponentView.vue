@@ -12,6 +12,11 @@ import type { BlocTemplate } from '../../type/bloc-template';
 const { data: components, isLoading } = useGetComponents();
 const { data: customComponents, isLoading: isLoadingCustom } = useGetBlocTemplatesComponentCustom();
 
+import { inject } from 'vue';
+const builderState = inject<{
+  setIsDragging: (val: boolean) => void;
+}>('builderState');
+
 
 const allComponents = computed(() => {
   const base = components.value?.results || [];
@@ -109,6 +114,8 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
                 :group="{ name: 'blocks', pull: 'clone', put: false }"
                 :sort="false"
                 :clone="onClone" 
+                @start="builderState?.setIsDragging(true)"
+                @end="builderState?.setIsDragging(false)"
                 class="grid grid-cols-2 gap-2"
               >
                 <div 
@@ -145,6 +152,8 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
                 :group="{ name: 'blocks', pull: 'clone', put: false }"
                 :sort="false"
                 :clone="onCloneCustom" 
+                @start="builderState?.setIsDragging(true)"
+                @end="builderState?.setIsDragging(false)"
                 class="grid grid-cols-2 gap-2 col-span-2"
               >
                 <div 

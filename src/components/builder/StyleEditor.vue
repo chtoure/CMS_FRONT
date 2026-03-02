@@ -12,6 +12,7 @@ import ButtonStyleEditor from './styles/ButtonStyleEditor.vue';
 import SliderStyleEditor from './styles/SliderStyleEditor.vue';
 import AccordionStyleEditor from './styles/AccordionStyleEditor.vue';
 import LinkStyleEditor from './styles/LinkStyleEditor.vue';
+import NavbarStyleEditor from './styles/NavbarStyleEditor.vue';
 
 const props = defineProps<{
   element: AnyComponentInstance | AnySectionInstance;
@@ -27,6 +28,7 @@ const currentEditor = computed(() => {
   if (tag === 'LinkBuilder') return 'link';
   if (tag === 'SliderBuilder') return 'slider';
   if (tag === 'AccordionBuilder') return 'accordion';
+  if (tag === 'NavbarBuilder') return 'navbar';
   if (family === 'static') return 'text';
   if (family === 'container') return 'container';
   if (family === 'input') return 'text'; // On utilise l'éditeur texte pour les inputs par défaut
@@ -67,11 +69,16 @@ const currentEditor = computed(() => {
       <AccordionStyleEditor :element="(element as any)" />
     </template>
 
+    <!-- Navbar -->
+    <template v-else-if="currentEditor === 'navbar'">
+      <NavbarStyleEditor :element="(element as any)" />
+    </template>
+
     <!-- Texte / Static -->
     <template v-else-if="currentEditor === 'text'">
       <BaseStyleEditor :element="element" />
       <div class="mt-6">
-        <TextStyleEditor :element="element" />
+        <TextStyleEditor :element="(element as any)" />
       </div>
     </template>
 
@@ -79,7 +86,7 @@ const currentEditor = computed(() => {
     <template v-else-if="currentEditor === 'container'">
       <BaseStyleEditor :element="element" />
       <div class="mt-6">
-        <LayoutStyleEditor :element="element" />
+        <LayoutStyleEditor :element="(element as any)" />
       </div>
     </template>
 

@@ -23,7 +23,7 @@ const useGetComponents = () => {
         const hasLink = response.results.find(c => c.tag === 'LinkBuilder');
         if (!hasLink) {
           response.results.push({
-            id: 'link-builder-id', // ID temporaire
+            id: 998, // ID temporaire
             name: "Lien",
             tag: "LinkBuilder",
             icon: "ExternalLink",
@@ -38,6 +38,34 @@ const useGetComponents = () => {
                 text: "Lien personnalisé",
                 url: "",
                 target: "_self"
+              },
+              children: []
+            }
+          } as AnyComponent);
+        }
+
+        const hasNavbar = response.results.find(c => c.tag === 'NavbarBuilder');
+        if (!hasNavbar) {
+          response.results.push({
+            id: 999, // ID temporaire
+            name: "Navbar",
+            tag: "NavbarBuilder",
+            icon: "LayoutTemplate",
+            family: "container",
+            supportedActions: ACTIONS_BY_FAMILY['container'],
+            defaultProps: {
+              styles: {
+                width: "100%",
+                padding: "4",
+                bg: "#ffffff",
+                display: "flex",
+                direction: "horizontal",
+                justify: "space-between",
+                align: "center",
+                shadow: "sm"
+              },
+              data: {
+                isSticky: true
               },
               children: []
             }

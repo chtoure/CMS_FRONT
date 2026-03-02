@@ -11,4 +11,5 @@ export const COMPONENT_MAP: Record<string, VueComponent> = {
   SliderBuilder: defineAsyncComponent(() => import('@/components/builder/SliderBuilder.vue')),
   AccordionBuilder: defineAsyncComponent(() => import('@/components/builder/AccordionBuilder.vue')),
   LinkBuilder: defineAsyncComponent(() => import('@/components/builder/LinkBuilder.vue')),
+  NavbarBuilder: defineAsyncComponent(() => import('@/components/builder/NavbarBuilder.vue')),
 };

@@ -15,11 +15,11 @@ const props = defineProps<Props>();
 const emit = defineEmits(['update:section', 'select']);
 
 import { resolveValueForBreakpoint } from '../../lib/styleProcessor';
-
 const builderState = inject<{
   selectedId: { value: string | null };
   selectComponent: (id: string | null) => void;
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' };
+  isDragging: { value: boolean };
 }>('builderState');
 
 // Ref locale pour les enfants (blocs) de la section
@@ -100,8 +100,10 @@ const formatColor = (value: unknown) => {
       v-model="childrenModel"
       :group="{ name: 'blocks', put: true, pull: true }"
       :animation="150"
-      class="w-full h-full min-h-[80px] p-4"
+      class="w-full h-full transition-all duration-300"
       :class="{
+        'min-h-[80px]': childrenModel.length === 0,
+        'drop-zone-active': builderState?.isDragging?.value,
         'flex': formatSize(section.styles?.display) === 'flex' || !section.styles?.display,
         'grid': formatSize(section.styles?.display) === 'grid',
         'flex-row': formatSize(section.styles?.direction) !== 'vertical',
@@ -124,7 +126,7 @@ const formatColor = (value: unknown) => {
         :key="element.id"
         class="relative transition-all outline-none"
         :style="{
-          width: formatSize(element.styles?.width, '100%'), 
+          width: formatSize(element.styles?.width, undefined), 
           height: formatSize(element.styles?.height) 
         }"
       >
@@ -150,15 +152,23 @@ const formatColor = (value: unknown) => {
       </div>
     </VueDraggable>
 
-    <!-- Placeholder si vide -->
-    <div v-if="childrenModel.length === 0" class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
-      <p class="text-sm font-medium text-gray-400">Déposez vos composants ici</p>
-    </div>
+    
   </section>
 </template>
 
 <style scoped>
 .group\/section:hover {
   background-color: rgba(59, 130, 246, 0.02);
+}
+
+.drop-zone-active {
+  outline: 3px solid #3b82f6;
+  outline-offset: -3px;
+  background-color: rgba(59, 130, 246, 0.08);
+}
+
+/* On n'ajoute un petit padding que si c'est vide pour aider la zone de drop */
+.drop-zone-active:empty {
+  padding: 20px !important;
 }
 </style>
