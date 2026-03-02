@@ -45,6 +45,25 @@ const showFlexGrid = computed(() => {
   const display = getRawValue(styles.value.display);
   return display === 'flex' || display === 'grid';
 });
+
+// Ensure that if layout-specific properties are set, display remains flex/grid
+import { watch } from 'vue';
+
+watch(
+  () => [
+    getRawValue(styles.value.gap),
+    getRawValue(styles.value.justify),
+    getRawValue(styles.value.align)
+  ],
+  ([gap, justify, align]) => {
+    const disp = getRawValue(styles.value.display);
+    const wantsLayout = gap !== undefined && gap !== null || justify !== undefined && justify !== null || align !== undefined && align !== null;
+    if (wantsLayout && disp !== 'flex' && disp !== 'grid') {
+      updateStyle('display', 'flex');
+    }
+  }
+);
+
 </script>
 
 <template>
