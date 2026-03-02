@@ -72,6 +72,8 @@ const computedInlineStyles = computed(() => {
                   <CardBuilder :styles="props.data?.leftCardStyles" class="mr-4">
                     <template #default>
                       <slot name="left" />
+                      <!-- rendre aussi le slot par défaut pour la récursivité -->
+                      <slot />
                     </template>
                   </CardBuilder>
 
@@ -109,6 +111,8 @@ const computedInlineStyles = computed(() => {
             <CardBuilder :styles="props.data?.rightCardStyles" class="mb-4">
               <template #default>
                 <slot name="right" />
+                <!-- also render any default children passed by builder -->
+                <slot />
               </template>
             </CardBuilder>
             <!-- contenu générique ou via slot -->
