@@ -43,7 +43,13 @@ const alignOptions = [
 
 const showFlexGrid = computed(() => {
   const display = getRawValue(styles.value.display);
-  return display === 'flex' || display === 'grid';
+  // show controls if it's already flex/grid OR if any layout-related value is present
+  const hasLayout = [
+    getRawValue(styles.value.gap),
+    getRawValue(styles.value.justify),
+    getRawValue(styles.value.align)
+  ].some(v => v !== undefined && v !== null && v !== '');
+  return display === 'flex' || display === 'grid' || hasLayout;
 });
 
 // Ensure that if layout-specific properties are set, display remains flex/grid
