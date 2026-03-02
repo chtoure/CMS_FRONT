@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import type { AnyComponent, AnyComponentInstance } from '../type/component';
+import { ACTIONS_BY_FAMILY, type AnyComponent, type AnyComponentInstance } from '../type/component';
 import type { BlocTemplate, RegisterBlocTemplate, UpdateBlocTemplate } from '../type/bloc-template';
 import api, { handleResponse } from '../api/fetchConfig';
 import { useSection } from './section';
@@ -126,11 +126,13 @@ export function useBlockTemplate() {
       try {
         let currentBlocTemplateId = node.blocTemplateId;
 
+        // Debug: log the node and its intended parent
+        console.debug('useSyncTree syncing', node.name, 'parentId=', parentId, 'sectionId=', sectionId, 'existingBlocId=', currentBlocTemplateId);
+
         if (!currentBlocTemplateId) {
           const newBlock = await useCreateBlockTemplate(node, parentId, i, sectionId, is_custom);
           currentBlocTemplateId = newBlock.id;
           
-          // Mettre à jour les props de l'instance avec le retour du backend (héritage prototypal)
           if (newBlock.props) {
             node.styles = newBlock.props.styles || {};
             node.data = newBlock.props.data || {};
@@ -245,13 +247,72 @@ export function useBlockTemplate() {
     try {
       const componentsResponse = await api(`/components`, { method: 'GET' });
       const componentsResult = await handleResponse<{ results: AnyComponent[] }>(componentsResponse);
+      
+      // Injection dynamique des composants manquants (Link, Navbar) comme dans useGetComponents
+      // Cela évite qu'ils disparaissent si le backend ne les renvoie pas encore
+      if (componentsResult.results) {
+        const hasLink = componentsResult.results.find(c => c.tag === 'LinkBuilder');
+        if (!hasLink) {
+          componentsResult.results.push({
+            id: 998,
+            name: "Lien",
+            tag: "LinkBuilder",
+            icon: "ExternalLink",
+            family: "static",
+            supportedActions: ACTIONS_BY_FAMILY['static'],
+            defaultProps: {
+              styles: {
+                textColor: "#3b82f6",
+                textAlign: "left"
+              },
+              data: {
+                text: "Lien personnalisé",
+                url: "",
+                target: "_self"
+              },
+              children: []
+            }
+          } as AnyComponent);
+        }
+
+        const hasNavbar = componentsResult.results.find(c => c.tag === 'NavbarBuilder');
+        if (!hasNavbar) {
+          componentsResult.results.push({
+            id: 999,
+            name: "Navbar",
+            tag: "NavbarBuilder",
+            icon: "LayoutTemplate",
+            family: "container",
+            supportedActions: ACTIONS_BY_FAMILY['container'],
+            defaultProps: {
+              styles: {
+                width: "100%",
+                padding: "4",
+                bg: "#ffffff",
+                display: "flex",
+                direction: "horizontal",
+                justify: "space-between",
+                align: "center",
+                shadow: "sm"
+              },
+              data: {
+                isSticky: true
+              },
+              children: []
+            }
+          } as AnyComponent);
+        }
+      }
+
       const componentMap = new Map(componentsResult.results?.map(c => [c.id, c]));
+      
+      // This sort is incorrect as `order` is relative to the parent. It's removed.
+      // templates.sort((a, b) => a.order - b.order);
 
-      templates.sort((a, b) => a.order - b.order);
-
-      const nodeMap = new Map<number, AnyComponentInstance>();
+      const nodeMap = new Map<number | string, AnyComponentInstance>();
       const rootNodes: AnyComponentInstance[] = [];
 
+      // First pass: create all component instances from templates
       for (const t of templates) {
         const def = componentMap.get(t.componentId);
         if (!def) continue;
@@ -270,20 +331,46 @@ export function useBlockTemplate() {
           children: []
         };
         nodeMap.set(t.id, node);
+        nodeMap.set(String(t.id), node);
       }
 
+      let childrenPlaced = 0;
+      let orphans = 0;
+
+      // Second pass: build the tree structure by linking children to their parents
       for (const t of templates) {
-        const node = nodeMap.get(t.id);
+        const node = nodeMap.get(t.id) || nodeMap.get(String(t.id));
         if (!node) continue;
 
-        if (t.parentId && nodeMap.has(t.parentId)) {
-          const parent = nodeMap.get(t.parentId)!;
-          parent.children.push(node);
+        if (t.parentId != null) {
+          const parentKey = nodeMap.has(t.parentId) ? t.parentId : String(t.parentId);
+          if (nodeMap.has(parentKey)) {
+            const parent = nodeMap.get(parentKey)!;
+            parent.children.push(node);
+            childrenPlaced++;
+          } else {
+            console.warn(`buildTreeFromTemplates: parent ${t.parentId} not found for child ${t.id} (${node.name})`);
+            rootNodes.push(node); // Treat as a root node if parent is missing
+            orphans++;
+          }
         } else {
           rootNodes.push(node);
         }
       }
 
+      // Third pass: sort children for every node and sort root nodes based on their 'order' property
+      const orderMap = new Map(templates.map(t => [t.id, t.order]));
+
+      for (const node of nodeMap.values()) {
+        if (node.children && node.children.length > 1) {
+          node.children.sort((a, b) => (orderMap.get(a.blocTemplateId!) ?? 0) - (orderMap.get(b.blocTemplateId!) ?? 0));
+        }
+      }
+
+      rootNodes.sort((a, b) => (orderMap.get(a.blocTemplateId!) ?? 0) - (orderMap.get(b.blocTemplateId!) ?? 0));
+
+      console.log(`buildTreeFromTemplates summary: ${rootNodes.length} roots, ${childrenPlaced} children placed, ${orphans} orphans`);
+      
       return rootNodes;
     } catch (error) {
       console.error('Failed to build tree from templates:', error);
@@ -299,7 +386,17 @@ export function useBlockTemplate() {
       const response = await api(`/bloc-template-tree/${sectionId}`, { method: 'GET' });
       const data = await handleResponse<BlocTemplate[] | { results: BlocTemplate[] }>(response);
       const templates: BlocTemplate[] = Array.isArray(data) ? data : (data.results || []);
-      return buildTreeFromTemplates(templates);
+      
+      console.log(`fetchTree (sectionId=${sectionId}): received ${templates.length} templates from API`, templates);
+      
+      // Log template hierarchy for debugging
+      templates.forEach((t, idx) => {
+        console.debug(`  [${idx}] id=${t.id}, parentId=${t.parentId}, name=${t.name}`);
+      });
+      
+      const tree = await buildTreeFromTemplates(templates);
+      console.log(`fetchTree (sectionId=${sectionId}): built tree with ${tree.length} root nodes`);
+      return tree;
     } catch (error) {
       console.error('Failed to fetch tree:', error);
       return [];
