@@ -33,6 +33,7 @@ const fontFamilyOptions = [
   { label: 'Heading', value: 'heading' },
   { label: 'Mono', value: 'mono' },
   { label: 'Serif', value: 'serif' },
+  { label: 'Italic', value: 'italic' },
 ];
 </script>
 

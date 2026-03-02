@@ -114,7 +114,7 @@ const PADDING_MAPPER: StyleMapper<any> = {
 const STATIC_MAPPER: StyleMapper<StaticStyles> = {
   fontSize: (v) => formatDimension('text', v),
   fontWeight: (v) => `font-${v}`,
-  fontFamily: (v) => `font-${v}`,
+  fontFamily: (v) => (v === 'italic' ? 'italic' : `font-${v}`),
   textAlign: (v) => `text-${v}`,
   textColor: (v) => formatColor('text', v),
   textDecoration: (v) => v === 'underline' ? 'underline' : 'no-underline',
@@ -125,7 +125,7 @@ const INTERACTIVE_MAPPER: StyleMapper<InteractiveStyles> = {
   size: (v) => `btn-sz-${v}`,
   fontSize: (v) => formatDimension('text', v),
   fontWeight: (v) => `font-${v}`,
-  fontFamily: (v) => `font-${v}`,
+  fontFamily: (v) => (v === 'italic' ? 'italic' : `font-${v}`),
   textAlign: (v) => `text-${v}`,
   textColor: (v) => formatColor('text', v),
   textDecoration: (v) => v === 'underline' ? 'underline' : 'no-underline',
