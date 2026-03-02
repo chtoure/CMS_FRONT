@@ -228,12 +228,7 @@ const prev = () => {
       </button>
     </div>
 
-    <!-- Empty State -->
-    <div v-if="childrenCount === 0" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-100/30 border-2 border-dashed border-gray-300/50 rounded-xl m-4">
-      <Layout class="w-8 h-8 text-gray-400 mb-2 opacity-20" />
-      <span class="text-xs text-gray-400 font-medium">Slider Vide</span>
-      <span class="text-[10px] text-gray-400/70">Déposez des diapositives ici</span>
-    </div>
+
   </div>
 </template>
 

@@ -197,8 +197,9 @@ const formatSize = (value: unknown, defaultValue: string | undefined = undefined
                 v-if="builderState?.builderMode.value === 'page'"
                 v-model="pageTree"
                 :group="{ name: 'blocks', put: true, pull: true }"
-                :animation="150"
-                :delay="100"
+                :animation="100"
+                :delay="0"
+                :delay-on-touch-only="true"
                 ghost-class="ghost-preview"
                 @start="builderState?.setIsDragging(true)"
                 @end="builderState?.setIsDragging(false)"
@@ -227,8 +228,9 @@ const formatSize = (value: unknown, defaultValue: string | undefined = undefined
                 v-else
                 v-model="builderState!.libraryTree.value"
                 :group="{ name: 'blocks', put: true, pull: true }"
-                :animation="150"
-                :delay="100"
+                :animation="100"
+                :delay="0"
+                :delay-on-touch-only="true"
                 ghost-class="ghost-preview"
                 @start="builderState?.setIsDragging(true)"
                 @end="builderState?.setIsDragging(false)"
@@ -290,10 +292,12 @@ const formatSize = (value: unknown, defaultValue: string | undefined = undefined
 }
 
 :deep(.ghost-preview) {
-  opacity: 0.1 !important;
+  opacity: 0.25 !important;
   background: #3b82f6 !important;
   border: 2px solid #3b82f6 !important;
-  border-radius: 8px !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
+  transform: scaleY(0.95) !important;
 }
 
 :deep(.drag-handle) {
@@ -302,6 +306,12 @@ const formatSize = (value: unknown, defaultValue: string | undefined = undefined
 
 :deep(.drag-handle:active) {
   cursor: grabbing;
+}
+
+:deep(.sortable-ghost) {
+  opacity: 0.2 !important;
+  background: rgba(59, 130, 246, 0.1) !important;
+  border: 1px dashed #3b82f6 !important;
 }
 </style>
 

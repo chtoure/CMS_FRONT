@@ -1,10 +1,12 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
-import { computed, ref, watch, inject } from 'vue';
+import { computed, inject } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import type { AnyComponentInstance } from '../../type/component';
 import type { AnySectionInstance } from '../../type/section';
 import BlocRender from './BlocRender.vue';
 import ResizerWrapper from './ResizerWrapper.vue';
+import { resolveValueForBreakpoint } from '../../lib/styleProcessor';
 
 interface Props {
   section: AnySectionInstance;
@@ -12,121 +14,159 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-const emit = defineEmits(['update:section', 'select']);
+const emit = defineEmits<{
+  'update:section': [value: AnySectionInstance]
+  'select': [id: string]
+}>();
 
-import { resolveValueForBreakpoint } from '../../lib/styleProcessor';
 const builderState = inject<{
-  selectedId: { value: string | null };
-  selectComponent: (id: string | null) => void;
-  currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' };
-  isDragging: { value: boolean };
+  selectedId: { value: string | null }
+  selectComponent: (id: string | null) => void
+  currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
+  isDragging: { value: boolean }
 }>('builderState');
 
-// Ref locale pour les enfants (blocs) de la section
-const localChildren = ref<AnyComponentInstance[]>([...props.section.children]);
+// Computed réactifs
+const isDraggingOver = computed(() => builderState?.isDragging?.value ?? false);
 
-// Sync descendante (ex: chargement initial)
-watch(() => props.section.children, (newVal) => {
-  if (JSON.stringify(newVal) !== JSON.stringify(localChildren.value)) {
-    localChildren.value = [...newVal];
-  }
-}, { deep: true });
+const displayValue = computed(() => resolveValueForBreakpoint(props.section.styles?.display, builderState?.currentBreakpoint.value || 'default') || 'flex');
+const directionValue = computed(() => resolveValueForBreakpoint(props.section.styles?.direction, builderState?.currentBreakpoint.value || 'default'));
+const justifyValue = computed(() => resolveValueForBreakpoint(props.section.styles?.justify, builderState?.currentBreakpoint.value || 'default'));
+const alignValue = computed(() => resolveValueForBreakpoint(props.section.styles?.align, builderState?.currentBreakpoint.value || 'default'));
 
-// Computed pour v-model
-const childrenModel = computed({
-  get: () => localChildren.value,
-  set: (val) => {
-    localChildren.value = val;
-    emit('update:section', { ...props.section, children: val });
-  }
-});
-
-const formatSize = (value: unknown, defaultValue: string | undefined = undefined) => {
+// Utilitaires
+const formatSize = (value: unknown, defaultValue?: string): string | undefined => {
   if (value === undefined || value === null || value === '') return defaultValue;
   const bp = builderState?.currentBreakpoint.value || 'default';
   const finalValue = resolveValueForBreakpoint(value, bp);
   
   if (finalValue === 'full') return '100%';
   if (typeof finalValue === 'number') return `${finalValue}px`;
-  if (typeof finalValue === 'string' && !isNaN(Number(finalValue)) && finalValue.trim() !== '') return `${finalValue}px`;
+  if (typeof finalValue === 'string' && !isNaN(Number(finalValue)) && finalValue.trim() !== '') {
+    return `${finalValue}px`;
+  }
   return finalValue as string;
 };
-const formatColor = (value: unknown) => {
+
+const formatColor = (value: unknown): string | undefined => {
   const raw = formatSize(value);
   if (!raw || typeof raw !== 'string') return undefined;
-  if (raw.startsWith('#') || raw.startsWith('rgba') || raw.startsWith('hsl') || raw.startsWith('bg-') || raw.startsWith('text-') || raw.startsWith('border-')) {
+  
+  // Si c'est déjà une couleur CSS valide
+  if (raw.startsWith('#') || raw.startsWith('rgba') || raw.startsWith('hsl') || 
+      raw.startsWith('rgb') || raw.startsWith('var(')) {
     return raw;
   }
-  // Si c'est un hexagone de 6 caractères sans #
+  
+  // Si c'est un nom de classe Tailwind
+  if (raw.startsWith('bg-') || raw.startsWith('text-') || raw.startsWith('border-')) {
+    return raw;
+  }
+  
+  // Si c'est un hex sans #
   if (/^[0-9A-Fa-f]{6}$/.test(raw)) {
     return `#${raw}`;
   }
+  
   return raw;
 };
+
+// Handlers
+const handleSelect = (e: MouseEvent) => {
+  e.stopPropagation();
+  emit('select', props.section.id);
+  builderState?.selectComponent(props.section.id);
+};
+
+const handleChildrenChange = (newChildren: AnyComponentInstance[]) => {
+  emit('update:section', {
+    ...props.section,
+    children: newChildren
+  });
+};
+
+const handleChildUpdate = (index: number, newChild: AnyComponentInstance) => {
+  const newChildren = [...props.section.children];
+  newChildren[index] = newChild;
+  handleChildrenChange(newChildren);
+};
+
+// Classes dynamiques
+const sectionClasses = computed(() => {
+  const classes: Record<string, boolean> = {
+    'ring-2 ring-blue-500 ring-inset z-10': props.active,
+    'flex': displayValue.value === 'flex' || !displayValue.value,
+    'grid': displayValue.value === 'grid',
+    'hidden': displayValue.value === 'hidden',
+    'flex-row': directionValue.value !== 'vertical',
+    'flex-col': directionValue.value === 'vertical',
+  };
+  
+  // Justify
+  if (justifyValue.value === 'start') classes['justify-start'] = true;
+  if (justifyValue.value === 'center') classes['justify-center'] = true;
+  if (justifyValue.value === 'end') classes['justify-end'] = true;
+  if (justifyValue.value === 'between') classes['justify-between'] = true;
+  
+  // Align
+  if (alignValue.value === 'start') classes['items-start'] = true;
+  if (alignValue.value === 'center') classes['items-center'] = true;
+  if (alignValue.value === 'end') classes['items-end'] = true;
+  
+  return classes;
+});
+
+const sectionStyles = computed(() => ({
+  backgroundColor: formatColor(props.section.styles?.bg),
+  padding: formatSize(props.section.styles?.padding),
+  opacity: props.section.styles?.opacity as any,
+  gap: formatSize(props.section.styles?.gap),
+  borderWidth: formatSize(props.section.styles?.borderWidth),
+  borderColor: formatColor(props.section.styles?.borderColor),
+  borderStyle: formatSize(props.section.styles?.borderStyle) as any,
+  gridTemplateColumns: displayValue.value === 'grid' 
+    ? `repeat(${props.section.styles?.columns || 1}, minmax(0, 1fr))` 
+    : undefined
+}));
+
+const draggableClasses = computed(() => ({
+  'min-h-[80px]': props.section.children.length === 0,
+  'drop-zone-active': isDraggingOver,
+}));
 </script>
 
 <template>
   <section 
     class="relative w-full min-h-[100px] border-b border-dashed border-gray-200 transition-colors group/section"
-    :class="{ 
-      'ring-2 ring-primary ring-inset z-10': active,
-      'flex': formatSize(section.styles?.display) === 'flex',
-      'grid': formatSize(section.styles?.display) === 'grid',
-      'hidden': formatSize(section.styles?.display) === 'hidden',
-    }"
-    :style="{
-      backgroundColor: formatColor(section.styles?.bg),
-      padding: formatSize(section.styles?.padding),
-      opacity: section.styles?.opacity as any,
-      gap: formatSize(section.styles?.gap),
-      flexDirection: (formatSize(section.styles?.direction) === 'vertical' ? 'column' : 'row') as any,
-      justifyContent: formatSize(section.styles?.justify) as any,
-      alignItems: formatSize(section.styles?.align) as any,
-      borderWidth: formatSize(section.styles?.borderWidth),
-      borderColor: formatColor(section.styles?.borderColor),
-      borderStyle: formatSize(section.styles?.borderStyle) as any,
-    }"
-    @click.stop="emit('select', section.id)"
+    :class="sectionClasses"
+    :style="sectionStyles"
+    @click.stop="handleSelect"
   >
     <!-- Label Section -->
     <div 
-      v-if="active"
-      class="absolute -top-6 left-0 bg-primary text-white text-[10px] px-2 py-0.5 rounded-t-sm font-bold uppercase z-50 shadow-md"
+      v-if="props.active"
+      class="absolute -top-6 left-0 bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded-t-sm font-bold uppercase z-50 shadow-md"
     >
-      Section #{{ section.sectionId || 'New' }}
+      Section #{{ props.section.sectionId || 'New' }}
     </div>
 
+    <!-- VueDraggable Container -->
     <VueDraggable
-      v-model="childrenModel"
+      :model-value="props.section.children"
       :group="{ name: 'blocks', put: true, pull: true }"
-      :animation="150"
-      class="w-full h-full transition-all duration-300"
-      :class="{
-        'min-h-[80px]': childrenModel.length === 0,
-        'drop-zone-active': builderState?.isDragging?.value,
-        'flex': formatSize(section.styles?.display) === 'flex' || !section.styles?.display,
-        'grid': formatSize(section.styles?.display) === 'grid',
-        'flex-row': formatSize(section.styles?.direction) !== 'vertical',
-        'flex-col': formatSize(section.styles?.direction) === 'vertical',
-        'justify-start': formatSize(section.styles?.justify) === 'start',
-        'justify-center': formatSize(section.styles?.justify) === 'center',
-        'justify-end': formatSize(section.styles?.justify) === 'end',
-        'justify-between': formatSize(section.styles?.justify) === 'between',
-        'items-start': formatSize(section.styles?.align) === 'start',
-        'items-center': formatSize(section.styles?.align) === 'center',
-        'items-end': formatSize(section.styles?.align) === 'end',
-      }"
-      :style="{
-        gap: formatSize(section.styles?.gap),
-        gridTemplateColumns: formatSize(section.styles?.display) === 'grid' ? `repeat(${section.styles?.columns || 1}, minmax(0, 1fr))` : undefined
-      }"
+      :animation="100"
+      :delay="0"
+      ghost-class="ghost-item"
+      class="w-full transition-all duration-300"
+      :class="draggableClasses"
+      @update:model-value="handleChildrenChange"
     >
       <div 
-        v-for="(element, index) in childrenModel" 
+        v-for="(element, index) in props.section.children" 
         :key="element.id"
-        class="relative transition-all outline-none"
+        class="relative transition-all"
         :style="{
-          width: formatSize(element.styles?.width, undefined), 
+          width: formatSize(element.styles?.width), 
           height: formatSize(element.styles?.height) 
         }"
       >
@@ -134,25 +174,15 @@ const formatColor = (value: unknown) => {
           :element="element"
           :active="builderState?.selectedId.value === element.id" 
           @click.stop="builderState?.selectComponent(element.id)"
-          @update:element="(newVal: AnyComponentInstance) => {
-            const newChildren = [...childrenModel];
-            newChildren[index] = newVal;
-            childrenModel = newChildren;
-          }"
+          @update:element="(newVal) => handleChildUpdate(index, newVal)"
         >
           <BlocRender
             :element="element" 
-            @update:element="(newVal: AnyComponentInstance) => {
-              const newChildren = [...childrenModel];
-              newChildren[index] = newVal;
-              childrenModel = newChildren;
-            }"
+            @update:element="(newVal) => handleChildUpdate(index, newVal)"
           />
         </ResizerWrapper>
       </div>
     </VueDraggable>
-
-    
   </section>
 </template>
 
@@ -162,13 +192,14 @@ const formatColor = (value: unknown) => {
 }
 
 .drop-zone-active {
-  outline: 3px solid #3b82f6;
-  outline-offset: -3px;
+  outline: 2px dashed #3b82f6;
+  outline-offset: -2px;
   background-color: rgba(59, 130, 246, 0.08);
 }
 
-/* On n'ajoute un petit padding que si c'est vide pour aider la zone de drop */
-.drop-zone-active:empty {
-  padding: 20px !important;
+:deep(.ghost-item) {
+  opacity: 0.2 !important;
+  background: #3b82f6 !important;
+  border-radius: 4px;
 }
 </style>
