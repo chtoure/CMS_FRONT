@@ -385,8 +385,25 @@ export function useBlockTemplate() {
     try {
       const response = await api(`/bloc-template-tree/${sectionId}`, { method: 'GET' });
       const data = await handleResponse<BlocTemplate[] | { results: BlocTemplate[] }>(response);
-      const templates: BlocTemplate[] = Array.isArray(data) ? data : (data.results || []);
+      let templates: BlocTemplate[] = Array.isArray(data) ? data : (data.results || []);
       
+      // some API versions return nested children arrays, flatten them recursively
+      const flattenTemplates = (list: BlocTemplate[], parentId: number | null = null): BlocTemplate[] => {
+        let output: BlocTemplate[] = [];
+        for (const t of list) {
+          const { children, ...rest } = t as any;
+          output.push({ ...rest, parentId } as BlocTemplate);
+          if (children && Array.isArray(children) && children.length) {
+            output.push(...flattenTemplates(children, t.id));
+          }
+        }
+        return output;
+      };
+
+      const originalCount = templates.length;
+      templates = flattenTemplates(templates);
+      console.log(`fetchTree (sectionId=${sectionId}): flattened ${originalCount} templates into ${templates.length}`);
+
       console.log(`fetchTree (sectionId=${sectionId}): received ${templates.length} templates from API`, templates);
       
       // Log template hierarchy for debugging
