@@ -29,7 +29,11 @@ const builderState = inject<{
 // Computed réactifs
 const isDraggingOver = computed(() => builderState?.isDragging?.value ?? false);
 
-const displayValue = computed(() => resolveValueForBreakpoint(props.section.styles?.display, builderState?.currentBreakpoint.value || 'default') || 'flex');
+const displayValue = computed(() => {
+  // return empty string when not explicitly set so the panel can show placeholder
+  const val = resolveValueForBreakpoint(props.section.styles?.display, builderState?.currentBreakpoint.value || 'default');
+  return val === undefined || val === null ? '' : (String(val) as string);
+});
 const directionValue = computed(() => resolveValueForBreakpoint(props.section.styles?.direction, builderState?.currentBreakpoint.value || 'default'));
 const justifyValue = computed(() => resolveValueForBreakpoint(props.section.styles?.justify, builderState?.currentBreakpoint.value || 'default'));
 const alignValue = computed(() => resolveValueForBreakpoint(props.section.styles?.align, builderState?.currentBreakpoint.value || 'default'));
@@ -95,7 +99,7 @@ const handleChildUpdate = (index: number, newChild: AnyComponentInstance) => {
 const sectionClasses = computed(() => {
   const classes: Record<string, boolean> = {
     'ring-2 ring-blue-500 ring-inset z-10': props.active,
-    'flex': displayValue.value === 'flex' || !displayValue.value,
+    'flex': displayValue.value === 'flex' || displayValue.value === '',
     'grid': displayValue.value === 'grid',
     'hidden': displayValue.value === 'hidden',
     'flex-row': directionValue.value !== 'vertical',
