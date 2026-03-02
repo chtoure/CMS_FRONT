@@ -49,18 +49,23 @@ export function useStyleEditor(element: AnyComponentInstance | AnySectionInstanc
     if (!builderState) return;
     const bp = builderState.currentBreakpoint.value;
     const currentVal = (element.styles as any)[key];
-    let newValue: any;
+    let newStyles = { ...element.styles } as any;
 
-    if (typeof currentVal === 'object' && currentVal !== null && 'default' in currentVal) {
-      newValue = { ...currentVal, [bp]: value };
-    } else if (bp === 'default') {
-      newValue = value;
+    if (value === undefined || value === null || value === '') {
+      // Remove the property entirely when unsetting
+      delete newStyles[key];
     } else {
-      newValue = { default: currentVal, [bp]: value };
+      let newValue: any;
+      if (typeof currentVal === 'object' && currentVal !== null && 'default' in currentVal) {
+        newValue = { ...currentVal, [bp]: value };
+      } else if (bp === 'default') {
+        newValue = value;
+      } else {
+        newValue = { default: currentVal, [bp]: value };
+      }
+      newStyles[key] = newValue;
     }
 
-    const newStyles = { ...element.styles, [key]: newValue };
-    
     const updateTree = (items: (AnyComponentInstance | AnySectionInstance)[]): (AnyComponentInstance | AnySectionInstance)[] => {
       return items.map((item: any): any => {
         if (item.id === element.id) {
