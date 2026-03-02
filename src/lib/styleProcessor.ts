@@ -415,6 +415,14 @@ export function buildInlineStyles(
     }
   }
 
+  // Text Align
+  if (['static', 'input', 'interactive', 'complex'].includes(family) && styles.textAlign) {
+    const taValue = getValue(styles.textAlign);
+    if (typeof taValue === 'string' && ['left', 'center', 'right', 'justify'].includes(taValue)) {
+      inlineStyles.textAlign = taValue;
+    }
+  }
+
   return inlineStyles;
 }
 

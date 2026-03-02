@@ -38,7 +38,7 @@ export interface ContainerStyles extends BaseStyles {
 export interface StaticStyles extends BaseStyles {
   fontSize?: ResponsiveProp<string>;
   fontWeight?: ResponsiveProp<string>;
-  textAlign?: ResponsiveProp<'left' | 'center' | 'right'>;
+  textAlign?: ResponsiveProp<'left' | 'center' | 'right' | 'justify'>;
   textColor?: ResponsiveProp<string>;
   textDecoration?: ResponsiveProp<'none' | 'underline'>;
 }
@@ -49,7 +49,7 @@ export interface InteractiveStyles extends BaseStyles {
   size?: string;
   fontSize?: ResponsiveProp<string>;
   fontWeight?: ResponsiveProp<string>;
-  textAlign?: ResponsiveProp<'left' | 'center' | 'right'>;
+  textAlign?: ResponsiveProp<'left' | 'center' | 'right' | 'justify'>;
   textColor?: ResponsiveProp<string>;
   textDecoration?: ResponsiveProp<'none' | 'underline'>;
 }
