@@ -6,8 +6,6 @@ import MainLayout from '@/layout/MainLayout.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import MediaListView from '@/views/media/MediaListView.vue'
 import MediaUpdateView from '@/views/media/MediaUpdateView.vue'
-// import VariableListView from '../views/variable/VariableListView.vue'
-import TestView from '../views/variable/TestView.vue'
 import { setupAuthGuard } from './authGuard'
 import SettingsView from '@/views/user/SettingsView.vue'
 import ChangePasswordView from '../views/auth/ChangePasswordView.vue'
@@ -86,11 +84,6 @@ const router = createRouter({
                       path: 'media/update/:id',
                       name: 'admin.media.update',
                       component: MediaUpdateView
-                    },
-                    {
-                      path: 'variable',
-                      name: 'admin.variable',
-                      component: TestView
                     },
                     {
                       path: 'settings',

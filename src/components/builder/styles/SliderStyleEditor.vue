@@ -21,6 +21,7 @@ const { getRawValue, getHexValue, updateStyle } = useStyleEditor(props.element);
 
 const activePicker = ref<'arrowColor' | 'arrowBg' | 'pagColor' | 'pagActiveColor' | null>(null);
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const styles = computed(() => props.element.styles as any);
 
 const easeOptions = [

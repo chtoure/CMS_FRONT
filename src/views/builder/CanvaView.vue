@@ -10,6 +10,7 @@ import type { AnyComponentInstance } from '../../type/component';
 import type { AnySectionInstance } from '../../type/section';
 import { findComponentById } from '../../lib/treeUtils';
 import { resolveValueForBreakpoint } from '../../lib/styleProcessor';
+import { useVariableResolver } from '../../hook/variable';
 
 // Injection de l'état global
 const builderState = inject<{
@@ -21,6 +22,8 @@ const builderState = inject<{
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' };
   setIsDragging: (val: boolean) => void;
 }>('builderState');
+
+const { resolveValue } = useVariableResolver();
 
 // Fallback pour la sécurité
 const pageTree = computed({
@@ -119,7 +122,11 @@ const formatSize = (value: unknown, defaultValue: string | undefined = undefined
   if (value === undefined || value === null || value === '') return defaultValue;
   
   const bp = builderState?.currentBreakpoint.value || 'default';
-  const finalValue = resolveValueForBreakpoint(value, bp);
+  
+  // 1. Résoudre la variable potentielle
+  const resolvedVar = resolveValue(value as any);
+  // 2. Résoudre le responsive
+  const finalValue = resolveValueForBreakpoint(resolvedVar, bp);
 
   if (finalValue === 'full') return '100%';
   if (typeof finalValue === 'number') return `${finalValue}px`;
@@ -314,4 +321,3 @@ const formatSize = (value: unknown, defaultValue: string | undefined = undefined
   border: 1px dashed #3b82f6 !important;
 }
 </style>
-

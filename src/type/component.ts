@@ -34,6 +34,14 @@ type ResponsiveProp<T = string> = T | {
   lg?: T;        
 };
 
+type VariableProperty<T> = {
+  type: 'static';
+  value: T;
+} | {
+  type: 'variable';
+  value: string; 
+};
+
 import type { 
   BaseStyles, 
   ContainerStyles, 
@@ -118,7 +126,8 @@ export type {
   InputStyles,
   AllStyles,
   ComponentProps,
-  sectionStyle
+  sectionStyle,
+  VariableProperty,
 }
 
 export {

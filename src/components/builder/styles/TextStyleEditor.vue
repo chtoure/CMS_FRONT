@@ -10,6 +10,7 @@ import SelectValue from '../../ui/select/SelectValue.vue';
 import SelectContent from '../../ui/select/SelectContent.vue';
 import SelectItem from '../../ui/select/SelectItem.vue';
 import CompositionColorPicker from '../../composition/CompositionColorPicker.vue';
+import VariableInputControl from '../../../hook/VariableInputControl.vue';
 
 const props = defineProps<{
   element: AnyComponentInstance;
@@ -18,6 +19,7 @@ const props = defineProps<{
 const { getRawValue, getHexValue, updateStyle } = useStyleEditor(props.element);
 
 const activePicker = ref<'text' | null>(null);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const styles = computed(() => props.element.styles as any);
 
 const fontWeightOptions = [
@@ -48,36 +50,54 @@ const fontStyleOptions = [
       
       <div class="space-y-2">
         <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Couleur du texte</Label>
-        <CompositionColorPicker 
-          :is-open="activePicker === 'text'"
-          :initial-color="'#' + getHexValue(styles.textColor)"
-          @close="activePicker = null"
-          @color-change="(hex) => updateStyle('textColor', hex)"
+        <VariableInputControl
+          :model-value="styles.textColor"
+          @update:model-value="(val) => updateStyle('textColor', val)"
+          variable-type="COLOR"
         >
-          <template #trigger>
-            <button @click="activePicker = 'text'" class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:bg-white/5 transition-colors">
-              <div class="w-4 h-4 rounded-sm border border-builder-bar-border" :style="{ backgroundColor: '#' + getHexValue(styles.textColor) }"></div>
-              <span class="text-gray-300 font-mono truncate">{{ getRawValue(styles.textColor) || 'Inherit' }}</span>
-            </button>
-          </template>
-        </CompositionColorPicker>
+          <CompositionColorPicker 
+            :is-open="activePicker === 'text'"
+            :initial-color="'#' + getHexValue(styles.textColor)"
+            @close="activePicker = null"
+            @color-change="(hex) => updateStyle('textColor', { type: 'static', value: hex })"
+          >
+            <template #trigger>
+              <button @click="activePicker = 'text'" class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:bg-white/5 transition-colors">
+                <div class="w-4 h-4 rounded-sm border border-builder-bar-border" :style="{ backgroundColor: '#' + getHexValue(styles.textColor) }"></div>
+                <span class="text-gray-300 font-mono truncate">{{ getRawValue(styles.textColor) || 'Inherit' }}</span>
+              </button>
+            </template>
+          </CompositionColorPicker>
+        </VariableInputControl>
       </div>
 
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
           <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Taille (px)</Label>
-          <Input type="number" :model-value="getRawValue(styles.fontSize)" @update:model-value="(val) => updateStyle('fontSize', val)" class="h-8 input-custom" />
+          <VariableInputControl
+            :model-value="styles.fontSize"
+            @update:model-value="(val) => updateStyle('fontSize', val)"
+            variable-type="NUMBER"
+          >
+            <Input 
+              type="number" 
+              :model-value="getRawValue(styles.fontSize)" 
+              @update:model-value="(val) => updateStyle('fontSize', Number(val))" 
+              class="h-8 input-custom" />
+          </VariableInputControl>
         </div>
         <div class="space-y-1.5">
           <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Poids</Label>
-          <Select :model-value="(getRawValue(styles.fontWeight) as string)" @update:model-value="(val) => updateStyle('fontWeight', val)">
-            <SelectTrigger class="h-8 input-custom">
-              <SelectValue placeholder="Poids" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem v-for="opt in fontWeightOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</SelectItem>
-            </SelectContent>
-          </Select>
+          <VariableInputControl :model-value="styles.fontWeight" @update:model-value="(val) => updateStyle('fontWeight', val)" variable-type="STRING">
+            <Select :model-value="(getRawValue(styles.fontWeight) as string)" @update:model-value="(val) => updateStyle('fontWeight', { type: 'static', value: val })">
+              <SelectTrigger class="h-8 input-custom">
+                <SelectValue placeholder="Poids" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="opt in fontWeightOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</SelectItem>
+              </SelectContent>
+            </Select>
+          </VariableInputControl>
         </div>
       </div>
 
@@ -133,6 +153,11 @@ const fontStyleOptions = [
             <span class="text-xs font-bold underline">U</span>
             <span class="ml-2 text-[10px] uppercase tracking-tighter">Souligner</span>
           </button>
+          <!-- <div>
+            <p>test</p>
+            <BaseInputVariable />
+          </div> -->
+          
         </div>
       </div>
     </div>
