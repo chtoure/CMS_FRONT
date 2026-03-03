@@ -1,29 +1,47 @@
 <script setup lang="ts">
 interface Props {
-  label?: string;
-  icon?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
-  labelPosition?: 'top' | 'left';
+  cols?: number;
+  gap?: 'sm' | 'md' | 'lg';
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  labelPosition: 'top'
+withDefaults(defineProps<Props>(), {
+  cols: 2,
+  gap: 'md'
 });
 </script>
 
 <template>
-  <div :class="{
-    'flex flex-col gap-1.5': labelPosition === 'top',
-    'flex items-center gap-2': labelPosition === 'left',
-  }">
-    <label v-if="label" class="text-[10px] font-bold uppercase text-builder-bar-text/80 tracking-wider flex items-center gap-1">
-      <component v-if="icon" :is="icon" class="w-3 h-3 opacity-60" />
-      {{ label }}
-    </label>
-    <div :class="{ 'flex-1': labelPosition === 'left' }">
-      <slot />
-    </div>
+  <div :class="['property-row', `cols-${cols}`, `gap-${gap}`]">
+    <slot />
   </div>
 </template>
 
 <style scoped>
+.property-row {
+  display: grid;
+}
+
+.property-row.cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.property-row.cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.property-row.cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.property-row.gap-sm {
+  gap: 0.5rem;
+}
+
+.property-row.gap-md {
+  gap: 0.625rem;
+}
+
+.property-row.gap-lg {
+  gap: 0.75rem;
+}
 </style>
