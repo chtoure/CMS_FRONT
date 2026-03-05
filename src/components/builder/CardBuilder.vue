@@ -2,7 +2,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { ContainerStyles } from '../../type/component';
-import { buildVisualStyles, buildVisualInlineStyles } from '../../lib/styleProcessor';
+import { buildCardStyles, buildCardInlineStyles } from '../../lib/style/cardProcessor';
+import { useVariableResolver } from '../../hook/variable';
+import { inject } from 'vue';
 
 interface Props {
   styles?: ContainerStyles;
@@ -11,19 +13,19 @@ interface Props {
 
 const props = defineProps<Props>();
 
-import { inject } from 'vue';
-
 const builderState = inject<{
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
 }>('builderState', { currentBreakpoint: { value: 'default' } } as any);
 
+const { resolveValue } = useVariableResolver();
+
 const computedClasses = computed(() => {
-  return buildVisualStyles(props.styles as Record<string, unknown>);
+  return buildCardStyles(props.styles as Record<string, unknown>, resolveValue);
 });
 
 const computedInlineStyles = computed(() => {
   const bp = builderState.currentBreakpoint.value;
-  return buildVisualInlineStyles(props.styles as Record<string, unknown>, bp);
+  return buildCardInlineStyles(props.styles as Record<string, unknown>, bp, resolveValue);
 });
 </script>
 

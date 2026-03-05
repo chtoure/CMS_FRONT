@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue';
 import type { ContainerStyles } from '../../type/component';
-import { buildVisualStyles, buildVisualInlineStyles } from '../../lib/styleProcessor';
+import { buildNavbarStyles, buildNavbarInlineStyles } from '../../lib/style/navbarProcessor';
+import { useVariableResolver } from '../../hook/variable';
 import CardBuilder from './CardBuilder.vue';
 
 interface Props {
@@ -23,6 +24,8 @@ const builderState = inject<{
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }>('builderState', { currentBreakpoint: { value: 'default' } } as any);
+
+const { resolveValue } = useVariableResolver();
 
 const isOpen = ref(false);
 
@@ -49,12 +52,12 @@ const toggle = () => {
 };
 
 const computedClasses = computed(() => {
-  return buildVisualStyles(props.styles as Record<string, unknown>);
+  return buildNavbarStyles(props.styles as Record<string, unknown>, resolveValue);
 });
 
 const computedInlineStyles = computed(() => {
   const bp = builderState.currentBreakpoint.value;
-  return buildVisualInlineStyles(props.styles as Record<string, unknown>, bp);
+  return buildNavbarInlineStyles(props.styles as Record<string, unknown>, bp, resolveValue);
 });
 
 
@@ -67,15 +70,24 @@ const computedInlineStyles = computed(() => {
   >
       <div class="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex items-center justify-between py-4">
-              <div class="flex items-center font-bold">
+              <div class="flex items-center font-bold flex-1">
                   <!-- zone de drop gauche -->
-                  <CardBuilder :styles="props.data?.leftCardStyles" class="mr-4">
-                    <template #default>
-                      <slot name="left" />
-                      <!-- rendre aussi le slot par défaut pour la récursivité -->
-                      <slot />
-                    </template>
-                  </CardBuilder>
+                  <template v-for="child in (props as any).children?.filter((c: any) => c.data?.slot === 'left')" :key="child.id">
+                    <CardBuilder v-bind="child" class="mr-4 flex-1">
+                       <template #default>
+                          <component 
+                            v-for="subChild in child.children" 
+                            :is="subChild.tag" 
+                            :key="subChild.id"
+                            v-bind="subChild"
+                          />
+                       </template>
+                    </CardBuilder>
+                  </template>
+
+                  <!-- Si pas de zones configurées (legacy) -->
+                  <slot v-if="!(props as any).children?.some((c: any) => c.data?.slot === 'left')" name="left" />
+                  <slot v-if="!(props as any).children?.some((c: any) => c.data?.slot === 'left')" />
 
                   <!-- bouton toggle mobile -->
                   <button 
@@ -92,12 +104,23 @@ const computedInlineStyles = computed(() => {
                       </svg>
                   </button>
               </div>
+
               <!-- droite zone visible sur large uniquement -->
-              <CardBuilder :styles="props.data?.rightCardStyles" class="ml-4 hidden lg:block">
-                <template #default>
-                  <slot name="right" />
+              <div class="hidden lg:flex flex-1 justify-end">
+                <template v-for="child in (props as any).children?.filter((c: any) => c.data?.slot === 'right')" :key="child.id">
+                  <CardBuilder v-bind="child" class="ml-4 flex-1">
+                     <template #default>
+                        <component 
+                          v-for="subChild in child.children" 
+                          :is="subChild.tag" 
+                          :key="subChild.id"
+                          v-bind="subChild"
+                        />
+                     </template>
+                  </CardBuilder>
                 </template>
-              </CardBuilder>
+                <slot v-if="!(props as any).children?.some((c: any) => c.data?.slot === 'right')" name="right" />
+              </div>
           </div>
       </div>
 
@@ -108,15 +131,21 @@ const computedInlineStyles = computed(() => {
       >
           <div class="px-4 py-3 space-y-2">
             <!-- zone de drop droite (mobile menu) -->
-            <CardBuilder :styles="props.data?.rightCardStyles" class="mb-4">
-              <template #default>
-                <slot name="right" />
-                <!-- also render any default children passed by builder -->
-                <slot />
-              </template>
-            </CardBuilder>
+            <template v-for="child in (props as any).children?.filter((c: any) => c.data?.slot === 'right')" :key="child.id">
+              <CardBuilder v-bind="child" class="mb-4">
+                 <template #default>
+                    <component 
+                      v-for="subChild in child.children" 
+                      :is="subChild.tag" 
+                      :key="subChild.id"
+                      v-bind="subChild"
+                    />
+                 </template>
+              </CardBuilder>
+            </template>
             <!-- contenu générique ou via slot -->
             <slot name="menu" />
+            <slot v-if="!(props as any).children?.some((c: any) => c.data?.slot === 'right')" />
           </div>
       </div>
   </header>

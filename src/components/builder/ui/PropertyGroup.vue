@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ChevronDown } from 'lucide-vue-next';
-import type { Component } from 'vue';
+import { type Component, onMounted } from 'vue';
 
 interface Props {
   title: string;
@@ -12,7 +12,15 @@ const props = withDefaults(defineProps<Props>(), {
   defaultOpen: true
 });
 
-const isOpen = defineModel<boolean>('open', { default: props.defaultOpen });
+// 1. On déclare le modèle sans l'option 'default' pour éviter l'erreur de hoisting
+const isOpen = defineModel<boolean>('open');
+
+// 2. On initialise la valeur au montage du composant si v-model n'est pas utilisé
+onMounted(() => {
+  if (isOpen.value === undefined) {
+    isOpen.value = props.defaultOpen;
+  }
+});
 
 const toggleOpen = () => {
   isOpen.value = !isOpen.value;
@@ -21,28 +29,32 @@ const toggleOpen = () => {
 
 <template>
   <div class="property-group">
-    <!-- Header collapsible -->
     <button
       @click="toggleOpen"
-      class="w-full flex items-center gap-2 px-3 py-2.5 rounded transition-all hover:bg-white/5 active:bg-white/10"
+      class="w-full flex items-center gap-2 px-3 py-2.5 rounded transition-all hover:bg-white/5 active:bg-white/10 group"
     >
       <ChevronDown 
-        :class="['w-3.5 h-3.5 transition-transform', isOpen ? 'rotate-0' : '-rotate-90']"
+        :class="['w-3.5 h-3.5 transition-transform duration-200', isOpen ? 'rotate-0' : '-rotate-90']"
       />
-      <component v-if="icon" :is="icon" class="w-3.5 h-3.5 text-primary/70" />
+      
+      <component 
+        v-if="icon" 
+        :is="icon" 
+        class="w-3.5 h-3.5 text-primary/70" 
+      />
+
       <h4 class="text-[11px] font-bold uppercase tracking-wider text-builder-bar-text flex-1 text-left">
         {{ title }}
       </h4>
     </button>
 
-    <!-- Content -->
     <transition
-      enter-active-class="transition-all duration-200"
-      enter-from-class="max-h-0 overflow-hidden opacity-0"
-      enter-to-class="max-h-96 overflow-visible opacity-100"
-      leave-active-class="transition-all duration-200"
-      leave-from-class="max-h-96 overflow-visible opacity-100"
-      leave-to-class="max-h-0 overflow-hidden opacity-0"
+      enter-active-class="transition-all duration-300 ease-out"
+      enter-from-class="max-h-0 opacity-0 overflow-hidden"
+      enter-to-class="max-h-[1000px] opacity-100"
+      leave-active-class="transition-all duration-200 ease-in"
+      leave-from-class="max-h-[1000px] opacity-100"
+      leave-to-class="max-h-0 opacity-0 overflow-hidden"
     >
       <div v-show="isOpen" class="pl-1 pr-3 pb-3 space-y-2">
         <slot />
@@ -55,6 +67,6 @@ const toggleOpen = () => {
 .property-group {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.1rem;
 }
 </style>

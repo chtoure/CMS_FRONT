@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { inject } from 'vue';
 import type { AnyComponentInstance, VariableProperty } from '../type/component';
 import type { AnySectionInstance } from '../type/section';
+import { useVariableResolver } from './variable';
 
 export function useStyleEditor(element: AnyComponentInstance | AnySectionInstance) {
   const builderState = inject<{
@@ -11,6 +13,8 @@ export function useStyleEditor(element: AnyComponentInstance | AnySectionInstanc
     selectComponent: (id: string | null) => void;
     currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' };
   }>('builderState');
+  
+  const { resolveValue } = useVariableResolver();
 
   const updateComponentStyle = (newStyles: any) => {
     if (!builderState) return;
@@ -33,20 +37,19 @@ export function useStyleEditor(element: AnyComponentInstance | AnySectionInstanc
     }
   };
 
-  const updateStyle = (key: string, value: any) => {
+  const updateStyles = (updates: Record<string, any>) => {
     if (!builderState) return;
 
-    let finalValue;
+    const newStyles = { ...element.styles };
+    const bp = builderState.currentBreakpoint.value;
 
-    // Case 1: The incoming value is a complete VariableProperty object
-    if (typeof value === 'object' && value !== null && 'type' in value && 'value' in value) {
+    Object.entries(updates).forEach(([key, value]) => {
+      let finalValue;
+
+      if (typeof value === 'object' && value !== null && 'type' in value && 'value' in value) {
         finalValue = value;
-    } 
-    // Case 2: The incoming value is a primitive for responsive editing
-    else {
-        const bp = builderState.currentBreakpoint.value;
+      } else {
         const currentProp = (element.styles as any)[key] as VariableProperty<any> | undefined;
-
         if (currentProp?.type === 'variable') {
             console.warn(`Cannot apply responsive edit to a property linked to a variable.`);
             return;
@@ -55,23 +58,29 @@ export function useStyleEditor(element: AnyComponentInstance | AnySectionInstanc
         const currentStaticValue = currentProp?.value;
 
         if (bp === 'default') {
-            if (typeof currentStaticValue === 'object' && currentStaticValue !== null && 'default' in currentStaticValue) {
-                finalValue = { type: 'static', value: { ...currentStaticValue, default: value } };
-            } else {
-                finalValue = { type: 'static', value: value };
-            }
+          if (typeof currentStaticValue === 'object' && currentStaticValue !== null && 'default' in currentStaticValue) {
+            finalValue = { type: 'static', value: { ...currentStaticValue, default: value } };
+          } else {
+            finalValue = { type: 'static', value: value };
+          }
         } else {
-            let newResponsiveValue;
-            if (typeof currentStaticValue === 'object' && currentStaticValue !== null && 'default' in currentStaticValue) {
-                newResponsiveValue = { ...currentStaticValue, [bp]: value };
-            } else {
-                newResponsiveValue = { default: currentStaticValue, [bp]: value };
-            }
-            finalValue = { type: 'static', value: newResponsiveValue };
+          let newResponsiveValue;
+          if (typeof currentStaticValue === 'object' && currentStaticValue !== null && 'default' in currentStaticValue) {
+            newResponsiveValue = { ...currentStaticValue, [bp]: value };
+          } else {
+            newResponsiveValue = { default: currentStaticValue, [bp]: value };
+          }
+          finalValue = { type: 'static', value: newResponsiveValue };
         }
-    }
-    
-    updateComponentStyle({ ...element.styles, [key]: finalValue });
+      }
+      (newStyles as any)[key] = finalValue;
+    });
+
+    updateComponentStyle(newStyles);
+  };
+
+  const updateStyle = (key: string, value: any) => {
+    updateStyles({ [key]: value });
   };
 
   const getRawValue = (prop: unknown): string | number | undefined => {
@@ -82,6 +91,7 @@ export function useStyleEditor(element: AnyComponentInstance | AnySectionInstanc
     if (typeof prop === 'object' && prop !== null && 'type' in prop && 'value' in prop) {
         const varProp = prop as VariableProperty<any>;
         if (varProp.type === 'variable') {
+            // Return the name for the key, but we might want the resolved value for display
             return varProp.value;
         }
         valueToProcess = varProp.value;
@@ -95,15 +105,22 @@ export function useStyleEditor(element: AnyComponentInstance | AnySectionInstanc
       if ((bp === 'lg' || bp === 'md') && res.sm !== undefined) return res.sm;
       return res.default;
     }
-    
+
     return (typeof valueToProcess === 'string' || typeof valueToProcess === 'number') ? valueToProcess : undefined;
   };
 
+  const getResolvedValue = (prop: unknown): any => {
+    return resolveValue(prop as any);
+  };
+
   const getHexValue = (prop: unknown): string => {
-    const raw = getRawValue(prop);
+    const raw = getResolvedValue(prop);
     if (!raw || typeof raw !== 'string') return 'FFFFFF';
     
+    // Si c'est déjà un hex
     const cleanRaw = raw.startsWith('#') ? raw.slice(1) : raw;
+    if (/^[0-9A-Fa-f]{6,8}$/.test(cleanRaw)) return cleanRaw;
+
     const jitMatch = cleanRaw.match(/\[#([0-9A-Fa-f]{6})\]/);
     if (jitMatch && jitMatch[1]) return jitMatch[1];
     
@@ -115,15 +132,16 @@ export function useStyleEditor(element: AnyComponentInstance | AnySectionInstanc
     };
 
     if (tailwindMap[cleanRaw]) return tailwindMap[cleanRaw];
-    if (/^[0-9A-Fa-f]{6,8}$/.test(cleanRaw)) return cleanRaw;
     
-    return 'CCCCCC'; // Fallback for non-color strings (like variable keys)
+    return 'CCCCCC'; 
   };
 
   return {
     builderState,
     getRawValue,
+    getResolvedValue,
     getHexValue,
-    updateStyle
+    updateStyle,
+    updateStyles
   }
 }

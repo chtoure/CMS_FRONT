@@ -9,7 +9,7 @@ import ResizerWrapper from '../../components/builder/ResizerWrapper.vue';
 import type { AnyComponentInstance } from '../../type/component';
 import type { AnySectionInstance } from '../../type/section';
 import { findComponentById } from '../../lib/treeUtils';
-import { resolveValueForBreakpoint } from '../../lib/styleProcessor';
+import { formatSize } from '../../lib/style/core';
 import { useVariableResolver } from '../../hook/variable';
 
 // Injection de l'état global
@@ -23,7 +23,6 @@ const builderState = inject<{
   setIsDragging: (val: boolean) => void;
 }>('builderState');
 
-const { resolveValue } = useVariableResolver();
 
 // Fallback pour la sécurité
 const pageTree = computed({
@@ -118,21 +117,7 @@ watch(() => pageTree.value, (newVal) => {
   // console.log('PageTree updated:', JSON.parse(JSON.stringify(newVal)));
 }, { deep: true });
 
-const formatSize = (value: unknown, defaultValue: string | undefined = undefined) => {
-  if (value === undefined || value === null || value === '') return defaultValue;
-  
-  const bp = builderState?.currentBreakpoint.value || 'default';
-  
-  // 1. Résoudre la variable potentielle
-  const resolvedVar = resolveValue(value as any);
-  // 2. Résoudre le responsive
-  const finalValue = resolveValueForBreakpoint(resolvedVar, bp);
-
-  if (finalValue === 'full') return '100%';
-  if (typeof finalValue === 'number') return `${finalValue}px`;
-  if (typeof finalValue === 'string' && !isNaN(Number(finalValue)) && finalValue.trim() !== '') return `${finalValue}px`;
-  return finalValue as string;
-};
+// La fonction formatSize locale est supprimée car on utilise celle de core.ts
 </script>
 
 <template>

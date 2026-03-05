@@ -1,61 +1,47 @@
-<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import type { StaticStyles } from '../../type/component';
-import { buildStyles, buildInlineStyles } from '../../lib/styleProcessor';
+import { buildImageStyles, buildImageInlineStyles } from '../../lib/style/imageProcessor';
+import { useVariableResolver } from '../../hook/variable';
 
 interface Props {
   styles?: StaticStyles;
   data?: {
-    src?: string;
-    alt?: string;
-    width?: number | string;
-    height?: number | string;
-    objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
+    src?: any;
+    alt?: any;
+    objectFit?: any;
   };
 }
 
 const props = defineProps<Props>();
 
-import { inject } from 'vue';
-
 const builderState = inject<{
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
 }>('builderState', { currentBreakpoint: { value: 'default' } } as any);
 
+const { resolveValue } = useVariableResolver();
+
 const computedClasses = computed(() => {
-  return buildStyles('static', props.styles as Record<string, unknown>);
+  return buildImageStyles(props.styles as Record<string, unknown>, resolveValue);
 });
 
 const computedInlineStyles = computed(() => {
   const bp = builderState.currentBreakpoint.value;
-  return buildInlineStyles('static', props.styles as Record<string, unknown>, bp);
+  return buildImageInlineStyles(props.styles as Record<string, unknown>, bp, resolveValue);
 });
 
-const imageStyles = computed(() => {
-  const { width, height, objectFit } = props.data || {};
-  return {
-    width: width ? (typeof width === 'number' ? `${width}px` : width) : '100%',
-    height: height ? (typeof height === 'number' ? `${height}px` : height) : 'auto',
-    objectFit: objectFit || 'cover',
-  };
-});
+const imageSrc = computed(() => (resolveValue(props.data?.src) as string) || 'https://via.placeholder.com/400x300?text=Image+Builder');
+const imageAlt = computed(() => (resolveValue(props.data?.alt) as string) || '');
+const objectFit = computed(() => (resolveValue(props.data?.objectFit) as any) || 'cover');
 </script>
 
 <template>
-  <div 
-    class="flex w-full h-full"
-    :class="{
-      'justify-start': (props.styles as any)?.textAlign === 'left',
-      'justify-center': (props.styles as any)?.textAlign === 'center',
-      'justify-end': (props.styles as any)?.textAlign === 'right'
-    }"
-  >
+  <div class="overflow-hidden" :class="computedClasses" :style="computedInlineStyles">
     <img
-      :src="props.data?.src || '/image.jpg'"
-      :alt="props.data?.alt || 'Image'"
-      :class="computedClasses"
-      :style="{ ...computedInlineStyles, ...imageStyles }"
+      :src="imageSrc"
+      :alt="imageAlt"
+      class="w-full h-full"
+      :style="{ objectFit: objectFit }"
     />
   </div>
 </template>

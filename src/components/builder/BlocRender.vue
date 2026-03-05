@@ -4,7 +4,10 @@ import { computed, inject } from 'vue';
 import { FAMILY_CAPABILITIES, type AnyComponentInstance } from '../../type/component';
 import { VueDraggable } from 'vue-draggable-plus';
 import { COMPONENT_MAP } from '../../registry/component_registry';
-import { buildLayoutStyles, buildLayoutInlineStyles, resolveValueForBreakpoint } from '../../lib/styleProcessor';
+import { buildBlocLayoutStyles, buildBlocLayoutInlineStyles } from '../../lib/style/blocProcessor';
+import { formatSize } from '../../lib/style/core';
+import { useVariableResolver } from '../../hook/variable';
+import ResizerWrapper from './ResizerWrapper.vue';
 
 defineOptions({
   name: 'BlocRender'
@@ -28,17 +31,19 @@ const builderState = inject<{
   isDragging: { value: boolean }
 }>('builderState');
 
+const { resolveValue } = useVariableResolver();
+
 // Computed réactifs
 const isSelected = computed(() => builderState?.selectedId.value === props.element.id);
 const canHaveChildren = computed(() => FAMILY_CAPABILITIES[props.element.family].canHaveChildren);
 
 const layoutClasses = computed(() => {
-  return buildLayoutStyles(props.element.styles as Record<string, unknown>);
+  return buildBlocLayoutStyles(props.element.styles as Record<string, unknown>, resolveValue);
 });
 
 const layoutInlineStyles = computed(() => {
   const bp = builderState?.currentBreakpoint.value || 'default';
-  return buildLayoutInlineStyles(props.element.styles as Record<string, unknown>, bp);
+  return buildBlocLayoutInlineStyles(props.element.styles as Record<string, unknown>, bp, resolveValue);
 });
 
 const isDraggingOver = computed(() => builderState?.isDragging?.value ?? false);
@@ -63,22 +68,7 @@ const handleChildUpdate = (index: number, newChild: AnyComponentInstance) => {
   handleChildrenChange(newChildren);
 };
 
-// Utilités
-const formatSize = (value: unknown, defaultValue?: string): string | undefined => {
-  if (value === undefined || value === null || value === '') return defaultValue;
-  
-  const bp = builderState?.currentBreakpoint.value || 'default';
-  const finalValue = resolveValueForBreakpoint(value, bp);
 
-  if (finalValue === 'full') return '100%';
-  if (typeof finalValue === 'number') return `${finalValue}px`;
-  if (typeof finalValue === 'string' && !isNaN(Number(finalValue)) && finalValue.trim() !== '') {
-    return `${finalValue}px`;
-  }
-  return finalValue as string;
-};
-
-import ResizerWrapper from './ResizerWrapper.vue';
 </script>
 
 <template>
@@ -134,8 +124,8 @@ import ResizerWrapper from './ResizerWrapper.vue';
             :key="child.id"
             class="relative transition-all"
             :style="{
-              width: formatSize(child.styles?.width), 
-              height: formatSize(child.styles?.height) 
+              width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue), 
+              height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue) 
             }"
             @click.stop="builderState?.selectComponent(child.id)"
           >

@@ -1,44 +1,78 @@
 <script lang="ts" setup>
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { computed } from 'vue';
 import type { AnyComponentInstance } from '../../../type/component';
 import BaseStyleEditor from './BaseStyleEditor.vue';
 import TextStyleEditor from './TextStyleEditor.vue';
-import Label from '../../ui/label/Label.vue';
-import Input from '../../ui/input/Input.vue';
+import PropertyGroup from '../ui/PropertyGroup.vue';
+import ButtonGroup from '../ui/ButtonGroup.vue';
 import { useStyleEditor } from '../../../hook/useStyleEditor';
+import { MousePointer2 } from 'lucide-vue-next';
 
 const props = defineProps<{
   element: AnyComponentInstance;
 }>();
 
 const { getRawValue, updateStyle } = useStyleEditor(props.element);
+
+const variantOptions = [
+  { label: 'Def', value: 'default', tooltip: 'Default' },
+  { label: 'Out', value: 'outline', tooltip: 'Outline' },
+  { label: 'Ghost', value: 'ghost', tooltip: 'Ghost' },
+  { label: 'Link', value: 'link', tooltip: 'Link' },
+];
+
+const sizeOptions = [
+  { label: 'XS', value: 'xs' },
+  { label: 'SM', value: 'sm' },
+  { label: 'MD', value: 'default' },
+  { label: 'LG', value: 'lg' },
+];
+
+const appearanceWhitelist = [
+  'rounded', 
+  'shadow', 
+  'opacity', 
+  'bg', 
+  'borderWidth', 
+  'borderColor', 
+  'borderStyle'
+];
+
+const styles = computed(() => props.element.styles as any);
 </script>
 
 <template>
-  <div class="space-y-6">
-    <BaseStyleEditor :element="element" />
+  <div class="space-y-4">
     <TextStyleEditor :element="element" />
     
-    <div class="space-y-3">
-      <h4 class="text-[10px] tracking-wider text-primary font-black border-b border-white/10 pb-1">Bouton Spécifique</h4>
-      <div class="grid grid-cols-2 gap-3">
+    <BaseStyleEditor 
+      :element="element" 
+      :whitelist="appearanceWhitelist" 
+    />
+    
+    <PropertyGroup title="Button Settings" :open="true" :icon="MousePointer2">
+      <div class="space-y-4">
         <div class="space-y-1.5">
-          <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Variante</Label>
-          <Input :model-value="getRawValue(element.styles.variant)" @update:model-value="(val) => updateStyle('variant', val)" class="h-8 input-custom" placeholder="ex: default, outline" />
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter">Variant</label>
+          <ButtonGroup 
+            :model-value="(getRawValue(styles.variant) as string)" 
+            @update:model-value="(val) => updateStyle('variant', val)"
+            :options="variantOptions"
+            size="sm"
+          />
         </div>
+
         <div class="space-y-1.5">
-          <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Taille</Label>
-          <Input :model-value="getRawValue(element.styles.size)" @update:model-value="(val) => updateStyle('size', val)" class="h-8 input-custom" placeholder="ex: sm, md, lg" />
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter">Size</label>
+          <ButtonGroup 
+            :model-value="(getRawValue(styles.size) as string)" 
+            @update:model-value="(val) => updateStyle('size', val)"
+            :options="sizeOptions"
+            size="sm"
+          />
         </div>
       </div>
-    </div>
+    </PropertyGroup>
   </div>
 </template>
-
-<style scoped>
-.input-custom {
-  @apply h-8 w-full !rounded px-3 py-1 text-[11px] shadow-sm transition-all outline-none !font-mono;
-  background-color: var(--builder-input-bg);
-  border: 1px solid var(--builder-input-border);
-  color: var(--builder-input-text);
-}
-</style>

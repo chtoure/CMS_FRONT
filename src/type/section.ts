@@ -52,6 +52,7 @@ interface UpdateSection {
 
 interface AnySectionInstance {
   id: string;
+  name?: string;
   sectionId?: number;
   order: number;
   family: 'section';

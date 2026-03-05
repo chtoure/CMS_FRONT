@@ -38,6 +38,8 @@ interface ContainerStyles extends BaseStyles {
 interface StaticStyles extends BaseStyles {
   fontSize?: VariableProperty<ResponsiveProp<string>>;
   fontWeight?: VariableProperty<ResponsiveProp<string>>;
+  fontFamily?: VariableProperty<ResponsiveProp<string>>;
+  fontStyle?: VariableProperty<ResponsiveProp<'normal' | 'italic'>>;
   textAlign?: VariableProperty<ResponsiveProp<'left' | 'center' | 'right'>>;
   textColor?: VariableProperty<ResponsiveProp<string>>;
   textDecoration?: VariableProperty<ResponsiveProp<'none' | 'underline'>>;
@@ -59,6 +61,7 @@ interface InputStyles extends BaseStyles {
   fontSize?: VariableProperty<ResponsiveProp<string>>;
   fontWeight?: VariableProperty<ResponsiveProp<string>>;
   textColor?: VariableProperty<ResponsiveProp<string>>;
+  fontStyle?: VariableProperty<ResponsiveProp<'normal' | 'italic'>>;
 }
 
 // Famille : Complex / Spécifiques

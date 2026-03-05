@@ -1,14 +1,14 @@
 <script setup lang="ts" generic="T">
 import { computed, watch } from 'vue';
 import { Webhook } from 'lucide-vue-next';
-import type { VariableProperty } from '../type/component';
-import { useGetVariables } from './variable';
-import DropdownMenu from '../components/ui/dropdown-menu/DropdownMenu.vue';
-import DropdownMenuTrigger from '../components/ui/dropdown-menu/DropdownMenuTrigger.vue';
-import DropdownMenuContent from '../components/ui/dropdown-menu/DropdownMenuContent.vue';
-import DropdownMenuLabel from '../components/ui/dropdown-menu/DropdownMenuLabel.vue';
-import DropdownMenuSeparator from '../components/ui/dropdown-menu/DropdownMenuSeparator.vue';
-import DropdownMenuItem from '../components/ui/dropdown-menu/DropdownMenuItem.vue';
+import DropdownMenu from '../ui/dropdown-menu/DropdownMenu.vue';
+import DropdownMenuTrigger from '../ui/dropdown-menu/DropdownMenuTrigger.vue';
+import DropdownMenuContent from '../ui/dropdown-menu/DropdownMenuContent.vue';
+import DropdownMenuLabel from '../ui/dropdown-menu/DropdownMenuLabel.vue';
+import DropdownMenuSeparator from '../ui/dropdown-menu/DropdownMenuSeparator.vue';
+import DropdownMenuItem from '../ui/dropdown-menu/DropdownMenuItem.vue';
+import type { VariableProperty } from '../../type/component';
+import { useGetVariables } from '../../hook/variable';
 
 
 const props = defineProps<{

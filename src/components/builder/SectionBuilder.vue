@@ -2,11 +2,12 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
-import type { AnyComponentInstance } from '../../type/component';
 import type { AnySectionInstance } from '../../type/section';
 import BlocRender from './BlocRender.vue';
 import ResizerWrapper from './ResizerWrapper.vue';
-import { resolveValueForBreakpoint } from '../../lib/styleProcessor';
+import { formatSize } from '../../lib/style/core';
+import { buildSectionStyles, buildSectionInlineStyles } from '../../lib/style/sectionProcessor';
+import { useVariableResolver } from '../../hook/variable';
 
 interface Props {
   section: AnySectionInstance;
@@ -26,54 +27,10 @@ const builderState = inject<{
   isDragging: { value: boolean }
 }>('builderState');
 
+const { resolveValue } = useVariableResolver();
+
 // Computed réactifs
 const isDraggingOver = computed(() => builderState?.isDragging?.value ?? false);
-
-const displayValue = computed(() => {
-  // return empty string when not explicitly set so the panel can show placeholder
-  const val = resolveValueForBreakpoint(props.section.styles?.display, builderState?.currentBreakpoint.value || 'default');
-  return val === undefined || val === null ? '' : (String(val) as string);
-});
-const directionValue = computed(() => resolveValueForBreakpoint(props.section.styles?.direction, builderState?.currentBreakpoint.value || 'default'));
-const justifyValue = computed(() => resolveValueForBreakpoint(props.section.styles?.justify, builderState?.currentBreakpoint.value || 'default'));
-const alignValue = computed(() => resolveValueForBreakpoint(props.section.styles?.align, builderState?.currentBreakpoint.value || 'default'));
-
-// Utilitaires
-const formatSize = (value: unknown, defaultValue?: string): string | undefined => {
-  if (value === undefined || value === null || value === '') return defaultValue;
-  const bp = builderState?.currentBreakpoint.value || 'default';
-  const finalValue = resolveValueForBreakpoint(value, bp);
-  
-  if (finalValue === 'full') return '100%';
-  if (typeof finalValue === 'number') return `${finalValue}px`;
-  if (typeof finalValue === 'string' && !isNaN(Number(finalValue)) && finalValue.trim() !== '') {
-    return `${finalValue}px`;
-  }
-  return finalValue as string;
-};
-
-const formatColor = (value: unknown): string | undefined => {
-  const raw = formatSize(value);
-  if (!raw || typeof raw !== 'string') return undefined;
-  
-  // Si c'est déjà une couleur CSS valide
-  if (raw.startsWith('#') || raw.startsWith('rgba') || raw.startsWith('hsl') || 
-      raw.startsWith('rgb') || raw.startsWith('var(')) {
-    return raw;
-  }
-  
-  // Si c'est un nom de classe Tailwind
-  if (raw.startsWith('bg-') || raw.startsWith('text-') || raw.startsWith('border-')) {
-    return raw;
-  }
-  
-  // Si c'est un hex sans #
-  if (/^[0-9A-Fa-f]{6}$/.test(raw)) {
-    return `#${raw}`;
-  }
-  
-  return raw;
-};
 
 // Handlers
 const handleSelect = (e: MouseEvent) => {
@@ -82,107 +39,81 @@ const handleSelect = (e: MouseEvent) => {
   builderState?.selectComponent(props.section.id);
 };
 
-const handleChildrenChange = (newChildren: AnyComponentInstance[]) => {
+const handleChildrenChange = (newChildren: any[]) => {
   emit('update:section', {
     ...props.section,
     children: newChildren
   });
 };
 
-const handleChildUpdate = (index: number, newChild: AnyComponentInstance) => {
+const handleElementUpdate = (index: number, newElement: any) => {
   const newChildren = [...props.section.children];
-  newChildren[index] = newChild;
+  newChildren[index] = newElement;
   handleChildrenChange(newChildren);
 };
 
 // Classes dynamiques
 const sectionClasses = computed(() => {
-  const classes: Record<string, boolean> = {
-    'ring-2 ring-blue-500 ring-inset z-10': props.active,
-    'flex': displayValue.value === 'flex' || displayValue.value === '',
-    'grid': displayValue.value === 'grid',
-    'hidden': displayValue.value === 'hidden',
-    'flex-row': directionValue.value !== 'vertical',
-    'flex-col': directionValue.value === 'vertical',
-  };
-  
-  // Justify
-  if (justifyValue.value === 'start') classes['justify-start'] = true;
-  if (justifyValue.value === 'center') classes['justify-center'] = true;
-  if (justifyValue.value === 'end') classes['justify-end'] = true;
-  if (justifyValue.value === 'between') classes['justify-between'] = true;
-  
-  // Align
-  if (alignValue.value === 'start') classes['items-start'] = true;
-  if (alignValue.value === 'center') classes['items-center'] = true;
-  if (alignValue.value === 'end') classes['items-end'] = true;
-  
-  return classes;
+  return [
+    { 'ring-2 ring-blue-500 ring-inset z-10': props.active },
+    buildSectionStyles(props.section.styles as Record<string, unknown>, resolveValue)
+  ];
 });
 
-const sectionStyles = computed(() => ({
-  backgroundColor: formatColor(props.section.styles?.bg),
-  padding: formatSize(props.section.styles?.padding),
-  opacity: props.section.styles?.opacity as any,
-  gap: formatSize(props.section.styles?.gap),
-  borderWidth: formatSize(props.section.styles?.borderWidth),
-  borderColor: formatColor(props.section.styles?.borderColor),
-  borderStyle: formatSize(props.section.styles?.borderStyle) as any,
-  gridTemplateColumns: displayValue.value === 'grid' 
-    ? `repeat(${props.section.styles?.columns || 1}, minmax(0, 1fr))` 
-    : undefined
-}));
+const sectionStyles = computed(() => {
+  const bp = builderState?.currentBreakpoint.value || 'default';
+  return buildSectionInlineStyles(props.section.styles as Record<string, unknown>, bp, resolveValue);
+});
 
 const draggableClasses = computed(() => ({
   'min-h-[80px]': props.section.children.length === 0,
-  'drop-zone-active': isDraggingOver,
+  'drop-zone-active': isDraggingOver.value
 }));
+
 </script>
 
 <template>
-  <section 
-    class="relative w-full min-h-[100px] border-b border-dashed border-gray-200 transition-colors group/section"
+  <section
+    class="relative group/section transition-all duration-200"
     :class="sectionClasses"
     :style="sectionStyles"
-    @click.stop="handleSelect"
+    @click="handleSelect"
   >
-    <!-- Label Section -->
+    <!-- Label de section sélectionnée -->
     <div 
-      v-if="props.active"
-      class="absolute -top-6 left-0 bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded-t-sm font-bold uppercase z-50 shadow-md"
+      v-if="active"
+      class="absolute -top-6 left-0 bg-blue-600 text-white text-[10px] px-3 py-1 rounded-t-sm font-bold uppercase z-50 shadow-lg"
     >
-      Section #{{ props.section.sectionId || 'New' }}
+      Section: {{ section.name || "Sans titre" }}
     </div>
 
-    <!-- VueDraggable Container -->
+    <!-- Conteneur Draggable pour les blocs -->
     <VueDraggable
-      :model-value="props.section.children"
+      :model-value="section.children"
       :group="{ name: 'blocks', put: true, pull: true }"
-      :animation="100"
-      :delay="0"
+      :animation="150"
       ghost-class="ghost-item"
-      class="w-full transition-all duration-300"
+      class="w-full h-full p-1"
       :class="draggableClasses"
       @update:model-value="handleChildrenChange"
     >
-      <div 
-        v-for="(element, index) in props.section.children" 
+      <div
+        v-for="(element, index) in section.children"
         :key="element.id"
         class="relative transition-all"
         :style="{
-          width: formatSize(element.styles?.width), 
-          height: formatSize(element.styles?.height) 
+          width: formatSize(element.styles?.width, builderState?.currentBreakpoint.value, resolveValue), 
+          height: formatSize(element.styles?.height, builderState?.currentBreakpoint.value, resolveValue) 
         }"
       >
         <ResizerWrapper
           :element="element"
-          :active="builderState?.selectedId.value === element.id" 
-          @click.stop="builderState?.selectComponent(element.id)"
-          @update:element="(newVal) => handleChildUpdate(index, newVal)"
+          :active="builderState?.selectedId.value === element.id"
+          @update:element="(newElem) => handleElementUpdate(index, newElem)"
         >
           <BlocRender
-            :element="element" 
-            @update:element="(newVal) => handleChildUpdate(index, newVal)"
+            :element="element"
+            @update:element="(newElem) => handleElementUpdate(index, newElem)"
           />
         </ResizerWrapper>
       </div>
@@ -191,18 +122,14 @@ const draggableClasses = computed(() => ({
 </template>
 
 <style scoped>
-.group\/section:hover {
-  background-color: rgba(59, 130, 246, 0.02);
-}
-
 .drop-zone-active {
   outline: 2px dashed #3b82f6;
-  outline-offset: -2px;
-  background-color: rgba(59, 130, 246, 0.08);
+  outline-offset: -4px;
+  background-color: rgba(59, 130, 246, 0.05);
 }
 
 :deep(.ghost-item) {
-  opacity: 0.2 !important;
+  opacity: 0.3;
   background: #3b82f6 !important;
   border-radius: 4px;
 }

@@ -1,16 +1,22 @@
 <script lang="ts" setup>
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { computed } from 'vue';
 import type { AnyComponentInstance } from '../../../type/component';
 import type { AnySectionInstance } from '../../../type/section';
 import { useStyleEditor } from '../../../hook/useStyleEditor';
-import Label from '../../ui/label/Label.vue';
-import Select from '../../ui/select/Select.vue';
-import SelectTrigger from '../../ui/select/SelectTrigger.vue';
-import SelectValue from '../../ui/select/SelectValue.vue';
-import SelectContent from '../../ui/select/SelectContent.vue';
-import SelectItem from '../../ui/select/SelectItem.vue';
-import Input from '../../ui/input/Input.vue';
-import DimensionInput from '../DimensionInput.vue';
+import PropertyGroup from '../ui/PropertyGroup.vue';
+import PropertyInput from '../ui/PropertyInput.vue';
+import ButtonGroup from '../ui/ButtonGroup.vue';
+import AlignmentMatrix from '../ui/AlignmentMatrix.vue';
+import { 
+  Layout, 
+  ArrowRight, 
+  ArrowDown, 
+  Maximize2, 
+  GripHorizontal,
+  Box,
+  EyeOff
+} from 'lucide-vue-next';
 
 const props = defineProps<{
   element: AnyComponentInstance | AnySectionInstance;
@@ -18,112 +24,103 @@ const props = defineProps<{
 
 const { getRawValue, updateStyle } = useStyleEditor(props.element);
 
-const styles = computed(() => props.element.styles as Record<string, unknown>);
+const styles = computed(() => props.element.styles as any);
 
 const displayOptions = [
-  { label: 'Bloc', value: 'block' },
-  { label: 'Flex', value: 'flex' },
-  { label: 'Grille', value: 'grid' },
-  { label: 'Masqué', value: 'hidden' },
+  { value: 'block', icon: Box, tooltip: 'Block' },
+  { value: 'flex', icon: Layout, tooltip: 'Auto Layout (Flex)' },
+  { value: 'grid', icon: GripHorizontal, tooltip: 'Grid' },
+  { value: 'hidden', icon: EyeOff, tooltip: 'Hidden' },
 ];
 
-const justifyOptions = [
-  { label: 'Début', value: 'start' },
-  { label: 'Centre', value: 'center' },
-  { label: 'Fin', value: 'end' },
-  { label: 'Entre', value: 'between' },
+const directionOptions = [
+  { value: 'horizontal', icon: ArrowRight, tooltip: 'Horizontal' },
+  { value: 'vertical', icon: ArrowDown, tooltip: 'Vertical' },
 ];
 
-const alignOptions = [
-  { label: 'Début', value: 'start' },
-  { label: 'Centre', value: 'center' },
-  { label: 'Fin', value: 'end' },
-  { label: 'Remplir', value: 'stretch' },
-];
+const showFlex = computed(() => getRawValue(styles.value.display) === 'flex');
+const showGrid = computed(() => getRawValue(styles.value.display) === 'grid');
 
-const showFlexGrid = computed(() => {
-  const display = getRawValue(styles.value.display);
-  return display === 'flex' || display === 'grid';
-});
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="space-y-3">
-      <h4 class="text-[10px] tracking-wider text-primary font-black border-b border-white/10 pb-1">Structure & Flux</h4>
-      
-      <div class="grid grid-cols-2 gap-3">
+  <div class="space-y-4">
+    <!-- Structure Section -->
+    <PropertyGroup title="Structure" :open="true">
+      <div class="space-y-3">
         <div class="space-y-1.5">
-          <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Affichage</Label>
-          <Select :model-value="(getRawValue(styles.display) as string)" @update:model-value="(val) => updateStyle('display', val as string)">
-            <SelectTrigger class="h-8 input-custom">
-              <SelectValue placeholder="Display" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem v-for="opt in displayOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div v-if="getRawValue(styles.display) === 'grid'" class="space-y-1.5">
-          <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Colonnes</Label>
-          <Input type="number" :model-value="getRawValue(styles.columns)" @update:model-value="(val) => updateStyle('columns', parseInt(val.toString()))" class="h-8 input-custom" />
-        </div>
-      </div>
-
-      <div v-if="showFlexGrid" class="space-y-4 pt-2">
-        <div class="grid grid-cols-2 gap-3">
-          <div class="space-y-1.5">
-            <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Gap</Label>
-            <DimensionInput :model-value="getRawValue(styles.gap)" @update:model-value="(val: any) => updateStyle('gap', val)" />
-          </div>
-          <div v-if="getRawValue(styles.display) === 'flex'" class="space-y-1.5">
-            <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Direction</Label>
-            <Select :model-value="(getRawValue(styles.direction) as string)" @update:model-value="(val) => updateStyle('direction', val as string)">
-              <SelectTrigger class="h-8 input-custom">
-                <SelectValue placeholder="Direction" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="horizontal">Horizontal</SelectItem>
-                <SelectItem value="vertical">Vertical</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text/50 uppercase tracking-tighter">Display</label>
+          <ButtonGroup 
+            :model-value="(getRawValue(styles.display) as string)" 
+            @update:model-value="(val) => updateStyle('display', val)"
+            :options="displayOptions"
+          />
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
-          <div class="space-y-1.5">
-            <Label class="text-[11px] text-builder-bar-text !font-bold">Justifier</Label>
-            <Select :model-value="(getRawValue(styles.justify) as string)" @update:model-value="(val) => updateStyle('justify', val as string)">
-              <SelectTrigger class="h-8 input-custom">
-                <SelectValue placeholder="Justify" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="opt in justifyOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div class="space-y-1.5">
-            <Label class="text-[11px] text-builder-bar-text !font-bold">Aligner</Label>
-            <Select :model-value="(getRawValue(styles.align) as string)" @update:model-value="(val) => updateStyle('align', val as string)">
-              <SelectTrigger class="h-8 input-custom">
-                <SelectValue placeholder="Align" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="opt in alignOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <div v-if="showGrid" class="space-y-1.5">
+          <PropertyInput 
+            label="Columns" 
+            type="number" 
+            :model-value="getRawValue(styles.columns)" 
+            @update:model-value="(val) => updateStyle('columns', parseInt(val.toString()))"
+            :icon="GripHorizontal"
+          />
         </div>
       </div>
-    </div>
+    </PropertyGroup>
+
+    <!-- Auto Layout Section (Flex) -->
+    <PropertyGroup v-if="showFlex" title="Auto Layout" :open="true" :icon="Layout">
+      <div class="space-y-4">
+        <!-- Direction & Wrap -->
+        <div class="flex items-center justify-between">
+          <ButtonGroup 
+            :model-value="(getRawValue(styles.direction) as string)" 
+            @update:model-value="(val) => updateStyle('direction', val)"
+            :options="directionOptions"
+            size="sm"
+            class="!w-auto"
+          />
+          <!-- Add wrap toggle here if needed -->
+        </div>
+
+        <!-- Alignment Matrix & Gap -->
+        <div class="flex gap-4">
+          <AlignmentMatrix 
+            :justify="(getRawValue(styles.justify) as string)"
+            :align="(getRawValue(styles.align) as string)"
+            @update:justify="(val) => updateStyle('justify', val)"
+            @update:align="(val) => updateStyle('align', val)"
+          />
+          
+          <div class="flex-1 space-y-2">
+            <PropertyInput 
+              label="Gap" 
+              :model-value="getRawValue(styles.gap)" 
+              @update:model-value="(val) => updateStyle('gap', val)"
+              :icon="Maximize2"
+            />
+            <div class="text-[9px] text-builder-bar-text/40 font-mono mt-1">
+              Spacing between items
+            </div>
+          </div>
+        </div>
+
+        <!-- Secondary Alignment (Space Between) -->
+        <div class="space-y-1.5">
+          <button 
+            @click="updateStyle('justify', getRawValue(styles.justify) === 'between' ? 'start' : 'between')"
+            :class="[
+              'w-full h-7 px-2 flex items-center justify-center rounded text-[10px] font-bold border transition-all',
+              getRawValue(styles.justify) === 'between'
+                ? 'bg-primary/20 border-primary/50 text-white'
+                : 'bg-builder-input-bg border-builder-bar-border text-builder-bar-text/60 hover:bg-white/5'
+            ]"
+          >
+            {{ getRawValue(styles.justify) === 'between' ? 'Space Between: Active' : 'Enable Space Between' }}
+          </button>
+        </div>
+      </div>
+    </PropertyGroup>
   </div>
 </template>
-
-<style scoped>
-.input-custom {
-  @apply h-8 w-full !rounded px-3 py-1 text-[11px] shadow-sm transition-all outline-none !font-mono;
-  background-color: var(--builder-input-bg);
-  border: 1px solid var(--builder-input-border);
-  color: var(--builder-input-text);
-}
-</style>

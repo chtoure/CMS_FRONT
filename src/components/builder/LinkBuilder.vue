@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue';
 import type { LinkStyles } from '../../type/style';
-import { buildStyles, buildInlineStyles } from '../../lib/styleProcessor';
+import { buildLinkStyles, buildLinkInlineStyles } from '../../lib/style/linkProcessor';
+import { resolveValueForBreakpoint } from '../../lib/style/core';
+import { useVariableResolver } from '../../hook/variable';
 
 interface Props {
   styles?: LinkStyles;
   data?: {
-    text?: string;
-    url?: string;
-    target?: '_blank' | '_self';
+    text?: any;
+    url?: any;
+    target?: any;
   };
 }
 
@@ -18,16 +20,19 @@ const builderState = inject<{
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
 }>('builderState', { currentBreakpoint: { value: 'default' } } as any);
 
+const { resolveValue } = useVariableResolver();
+
 const computedClasses = computed(() => {
-  return buildStyles('static', props.styles as Record<string, unknown>);
+  return buildLinkStyles(props.styles as Record<string, unknown>, resolveValue);
 });
 
 const computedInlineStyles = computed(() => {
   const bp = builderState.currentBreakpoint.value;
-  const allStyles = buildInlineStyles('static', props.styles as Record<string, unknown>, bp);
+  const allStyles = buildLinkInlineStyles(props.styles as Record<string, unknown>, bp, resolveValue);
   
   // Retirer textAlign du lien car il va être appliqué au wrapper parent
-  const { textAlign: _, ...linkStyles } = allStyles;
+  const { textAlign: _textAlign, ...linkStyles } = allStyles;
+  void _textAlign;
   
   return linkStyles;
 });
@@ -38,13 +43,7 @@ const wrapperInlineStyles = computed(() => {
   const inlineStyles: Record<string, string> = {};
   
   if (props.styles?.textAlign) {
-    let textAlignValue = props.styles.textAlign;
-    
-    // Gérer les responsive props
-    if (typeof textAlignValue === 'object' && textAlignValue !== null && 'default' in textAlignValue) {
-      const responsive = textAlignValue as any;
-      textAlignValue = responsive[bp] || responsive.default;
-    }
+    const textAlignValue = resolveValueForBreakpoint(props.styles.textAlign, bp, resolveValue);
     
     if (typeof textAlignValue === 'string' && ['left', 'center', 'right', 'justify'].includes(textAlignValue)) {
       inlineStyles.textAlign = textAlignValue;
@@ -53,19 +52,23 @@ const wrapperInlineStyles = computed(() => {
   
   return inlineStyles;
 });
+
+const linkText = computed(() => (resolveValue(props.data?.text) as string) || 'Lien');
+const linkUrl = computed(() => (resolveValue(props.data?.url) as string) || '#');
+const linkTarget = computed(() => (resolveValue(props.data?.target) as string) || '_self');
 </script>
 
 <template>
   <div :style="wrapperInlineStyles">
     <a
-      :href="props.data?.url || '#'"
-      :target="props.data?.target || '_self'"
+      :href="linkUrl"
+      :target="linkTarget"
       :class="computedClasses"
       :style="computedInlineStyles"
-      class="hover:underline transition-all"
-      @click.prevent="!props.data?.url && null"
+      class="inline-block hover:underline transition-all"
+      @click.prevent="!linkUrl && null"
     >
-      {{ props.data?.text || 'Lien' }}
+      {{ linkText }}
     </a>
   </div>
 </template>

@@ -6,13 +6,18 @@ import type { AnySectionInstance } from '../../type/section';
 
 // Imports des éditeurs (pourraient être asynchrones pour optimiser, mais ici on reste simple pour la flexibilité)
 import BaseStyleEditor from './styles/BaseStyleEditor.vue';
-import LayoutStyleEditor from './styles/LayoutStyleEditor.vue';
-import TextStyleEditor from './styles/TextStyleEditor.vue';
+import SectionStyleEditor from './styles/SectionStyleEditor.vue';
+import BlocStyleEditor from './styles/BlocStyleEditor.vue';
+import ImageStyleEditor from './styles/ImageStyleEditor.vue';
+import IconStyleEditor from './styles/IconStyleEditor.vue';
+import CardStyleEditor from './styles/CardStyleEditor.vue';
+import InputStyleEditor from './styles/InputStyleEditor.vue';
 import ButtonStyleEditor from './styles/ButtonStyleEditor.vue';
 import SliderStyleEditor from './styles/SliderStyleEditor.vue';
 import AccordionStyleEditor from './styles/AccordionStyleEditor.vue';
 import LinkStyleEditor from './styles/LinkStyleEditor.vue';
 import NavbarStyleEditor from './styles/NavbarStyleEditor.vue';
+import TextStyleEditor from './styles/TextStyleEditor.vue';
 
 const props = defineProps<{
   element: AnyComponentInstance | AnySectionInstance;
@@ -24,14 +29,17 @@ const currentEditor = computed(() => {
   const tag = (props.element as any).tag;
 
   if (family === 'section') return 'section';
+  if (tag === 'BlocRender' || family === 'container') return 'bloc';
   if (tag === 'ButtonBuilder') return 'button';
   if (tag === 'LinkBuilder') return 'link';
   if (tag === 'SliderBuilder') return 'slider';
   if (tag === 'AccordionBuilder') return 'accordion';
   if (tag === 'NavbarBuilder') return 'navbar';
+  if (tag === 'ImageBuilder') return 'image';
+  if (tag === 'IconBuilder') return 'icon';
+  if (tag === 'CardBuilder') return 'card';
+  if (tag === 'InputBuilder') return 'input';
   if (family === 'static') return 'text';
-  if (family === 'container') return 'container';
-  if (family === 'input') return 'text'; // On utilise l'éditeur texte pour les inputs par défaut
   
   return 'base';
 });
@@ -43,10 +51,32 @@ const currentEditor = computed(() => {
     
     <!-- Section -->
     <template v-if="currentEditor === 'section'">
-      <BaseStyleEditor :element="element" :whitelist="['padding', 'bg', 'opacity', 'borderWidth', 'borderColor', 'borderStyle']" />
-      <div class="mt-6">
-        <LayoutStyleEditor :element="(element as any)" />
-      </div>
+      <SectionStyleEditor :element="(element as any)" />
+    </template>
+
+    <!-- Bloc -->
+    <template v-else-if="currentEditor === 'bloc'">
+      <BlocStyleEditor :element="(element as any)" />
+    </template>
+
+    <!-- Image -->
+    <template v-else-if="currentEditor === 'image'">
+      <ImageStyleEditor :element="(element as any)" />
+    </template>
+
+    <!-- Icon -->
+    <template v-else-if="currentEditor === 'icon'">
+      <IconStyleEditor :element="(element as any)" />
+    </template>
+
+    <!-- Card -->
+    <template v-else-if="currentEditor === 'card'">
+      <CardStyleEditor :element="(element as any)" />
+    </template>
+
+    <!-- Input -->
+    <template v-else-if="currentEditor === 'input'">
+      <InputStyleEditor :element="(element as any)" />
     </template>
 
     <!-- Bouton -->
@@ -76,18 +106,7 @@ const currentEditor = computed(() => {
 
     <!-- Texte / Static -->
     <template v-else-if="currentEditor === 'text'">
-      <BaseStyleEditor :element="element" />
-      <div class="mt-6">
-        <TextStyleEditor :element="(element as any)" />
-      </div>
-    </template>
-
-    <!-- Conteneur -->
-    <template v-else-if="currentEditor === 'container'">
-      <BaseStyleEditor :element="element" />
-      <div class="mt-6">
-        <LayoutStyleEditor :element="(element as any)" />
-      </div>
+      <TextStyleEditor :element="(element as any)" />
     </template>
 
     <!-- Par défaut : Base -->
