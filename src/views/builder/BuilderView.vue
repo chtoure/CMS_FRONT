@@ -19,6 +19,7 @@ const showPropertiesView = ref(false);
 const pageTree = ref<AnySectionInstance[]>([]);
 const selectedId = ref<string | null>(null);
 const selectedSectionId = ref<string | null>(null);
+const cmsCache = ref<Record<string, any>>({}); // Cache global pour les données CMS du builder
 
 const selectComponent = (id: string | null) => {
   selectedId.value = id;
@@ -28,7 +29,7 @@ const deleteComponent = async (id: string) => {
   let blocTemplateIdToDelete: number | null = null;
   let sectionIdToDelete: number | null = null;
   let isSection = false;
-  
+
   // Supprimer une section
   const sectionIndex = pageTree.value.findIndex(s => s.id === id);
   if (sectionIndex !== -1) {
@@ -57,7 +58,7 @@ const deleteComponent = async (id: string) => {
         return true;
       });
     };
-    
+
     pageTree.value = removeFromSections(pageTree.value);
   }
 
@@ -96,11 +97,11 @@ const handleKeyDown = (e: KeyboardEvent) => {
     // Vérifier si l'utilisateur n'est pas en train d'écrire
     const activeElement = document.activeElement;
     const isInput = activeElement && (
-      activeElement.tagName === 'INPUT' || 
-      activeElement.tagName === 'TEXTAREA' || 
+      activeElement.tagName === 'INPUT' ||
+      activeElement.tagName === 'TEXTAREA' ||
       activeElement.getAttribute('contenteditable') === 'true'
     );
-    
+
     if (!isInput && selectedId.value) {
       deleteComponent(selectedId.value);
     }
@@ -124,7 +125,7 @@ const { autoSave, isSaving, fetchAll, deleteBlockTemplate, useDeleteSection } = 
 // --- Gestion de l'historique et de la Sauvegarde ---
 const history = ref<string[]>([JSON.stringify(pageTree.value)]);
 const historyIndex = ref(0);
-const isInternalChange = ref(false); 
+const isInternalChange = ref(false);
 
 const loadInitialData = async () => {
   if (!pageRevisionId.value) return;
@@ -160,7 +161,7 @@ watch(pageTree, async (newVal) => {
   // 2. Déclencher l'auto-save
   const syncedTree = await autoSave(newVal, pageRevisionId.value);
   if (syncedTree) {
-    // Vérifier si l'état actuel est toujours le même que celui envoyé (newState) 
+    // Vérifier si l'état actuel est toujours le même que celui envoyé (newState)
     // pour éviter d'écraser des changements (comme une suppression) survenus pendant la sauvegarde
     if (JSON.stringify(pageTree.value) === newState) {
       isInternalChange.value = true;
@@ -197,18 +198,19 @@ provide('builderState', {
   undo,
   redo,
   canUndo,
-  canRedo
+  canRedo,
+  cmsCache
 });
 </script>
 
 <template>
   <div class="relative h-screen w-screen overflow-hidden bg-builder-background">
 
-    <main 
+    <main
       class="absolute inset-y-0 z-0 transition-all duration-300 ease-in-out"
-      :style="{ 
-        left: showComponentView ? '16rem' : '0', 
-        right: showPropertiesView ? '16rem' : '0' 
+      :style="{
+        left: showComponentView ? '16rem' : '0',
+        right: showPropertiesView ? '16rem' : '0'
       }"
     >
       <CanvaView />
@@ -259,23 +261,23 @@ provide('builderState', {
 
       <!-- Groupe Undo/Redo -->
       <div class="flex items-center gap-1 bg-builder-bar-background rounded-md shadow-lg p-1 border border-border">
-        
+
         <!-- Indicateur de sauvegarde -->
         <div class="flex items-center px-2 text-xs text-gray-400 border-r border-gray-700 mr-1" title="Statut de sauvegarde">
              <RefreshCw v-if="isSaving" class="h-3 w-3 animate-spin text-blue-400" />
              <Cloud v-else class="h-3 w-3 text-green-400" />
         </div>
 
-        <Button 
-          @click="undo" 
+        <Button
+          @click="undo"
           :disabled="!canUndo"
           class="p-1.5 text-white hover:bg-gray-700 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           title="Annuler (Ctrl+Z)"
         >
           <Undo class="h-4 w-4" />
         </Button>
-        <Button 
-          @click="redo" 
+        <Button
+          @click="redo"
           :disabled="!canRedo"
           class="p-1.5 text-white hover:bg-gray-700 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           title="Rétablir (Ctrl+Y)"

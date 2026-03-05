@@ -66,6 +66,19 @@ interface ContentEntryFilter {
 }
 
 
+interface contenusQueryFilters {
+    mode?: 'query' | 'single';
+    limit?: number | undefined;
+    sortBy?: string | undefined;
+    order?: 'asc' | 'desc' | undefined;
+    taxonomyFilters?: {
+      taxonomyId?: number | undefined;
+      termIds?: number[] | undefined;
+      operator?: 'AND' | 'OR' | undefined;
+    } | undefined;
+}
+
+
 export {
   type JsonValue,
   type IContentData,
@@ -75,6 +88,7 @@ export {
   type IContentEntry,
   type RegisterContentEntry,
   type UpdateContentEntry,
-  type ContentEntryFilter
+  type ContentEntryFilter,
+  type contenusQueryFilters
 }
 

@@ -122,20 +122,40 @@ const sortedChildren = computed(() => {
         'items-end': formatSize(element.styles?.align) === 'end',
       }"
     >
-      <div
-        v-for="child in sortedChildren"
-        :key="child.id"
-        class="relative transition-all outline-none"
-        :style="{
-          width: formatSize(child.styles?.width, '100%'),
-          height: formatSize(child.styles?.height)
-        }"
-      >
-        <BlocRenderView
-          :element="child"
-          :parent-data="finalData"
-        />
-      </div>
+      <template v-for="child in sortedChildren" :key="child.id">
+        <!-- Cas 1 : Itération activée pour cet enfant lié à une liste -->
+        <template v-if="element.data?.isIterated && (child.data as any)?.linkedQueryParamName">
+          <div
+            v-for="(item, itemIndex) in (finalData[(child.data as any).linkedQueryParamName] || [])"
+            :key="`${child.id}-${itemIndex}`"
+            class="relative transition-all outline-none"
+            :style="{
+              width: formatSize(child.styles?.width, '100%'),
+              height: formatSize(child.styles?.height)
+            }"
+          >
+            <BlocRenderView
+              :element="child"
+              :parent-data="{ ...finalData, _inherited_item: item }"
+            />
+          </div>
+        </template>
+
+        <!-- Cas 2 : Affichage standard -->
+        <div
+          v-else
+          class="relative transition-all outline-none"
+          :style="{
+            width: formatSize(child.styles?.width, '100%'),
+            height: formatSize(child.styles?.height)
+          }"
+        >
+          <BlocRenderView
+            :element="child"
+            :parent-data="finalData"
+          />
+        </div>
+      </template>
     </div>
   </section>
 
@@ -153,20 +173,40 @@ const sortedChildren = computed(() => {
         :class="layoutClasses"
         :style="layoutInlineStyles"
       >
-        <div
-          v-for="child in sortedChildren"
-          :key="child.id"
-          class="relative transition-all outline-none"
-          :style="{
-            width: formatSize(child.styles?.width, '100%'),
-            height: formatSize(child.styles?.height)
-          }"
-        >
-          <BlocRenderView
-            :element="child"
-            :parent-data="finalData"
-          />
-        </div>
+        <template v-for="child in sortedChildren" :key="child.id">
+          <!-- Cas 1 : Itération -->
+          <template v-if="element.data?.isIterated && (child.data as any)?.linkedQueryParamName">
+            <div
+              v-for="(item, itemIndex) in (finalData[(child.data as any).linkedQueryParamName] || [])"
+              :key="`${child.id}-${itemIndex}`"
+              class="relative transition-all outline-none"
+              :style="{
+                width: formatSize(child.styles?.width, '100%'),
+                height: formatSize(child.styles?.height)
+              }"
+            >
+              <BlocRenderView
+                :element="child"
+                :parent-data="{ ...finalData, _inherited_item: item }"
+              />
+            </div>
+          </template>
+
+          <!-- Cas 2 : Standard -->
+          <div
+            v-else
+            class="relative transition-all outline-none"
+            :style="{
+              width: formatSize(child.styles?.width, '100%'),
+              height: formatSize(child.styles?.height)
+            }"
+          >
+            <BlocRenderView
+              :element="child"
+              :parent-data="finalData"
+            />
+          </div>
+        </template>
       </div>
     </template>
   </component>

@@ -32,6 +32,7 @@ const builderState = inject<{
   pageTree: { value: AnyComponentInstance[] };
   selectedId: { value: string | null };
   selectComponent: (id: string | null) => void;
+  cmsCache: { value: Record<string, any> };
 }>('builderState');
 
 
@@ -79,6 +80,10 @@ const sourceOptions = [
 const allowedSources = computed(() => COMPONENT_SOURCE_MAPPING[props.element.tag] || []);
 const canAddParams = computed(() => allowedSources.value.length > 0);
 const paramDynamic = computed(() => props.element.family === 'container');
+const hasLinkedChildren = computed(() => {
+  if (!props.element.children) return false;
+  return props.element.children.some(child => (child.data as any).linkedQueryParamName);
+});
 
 const filteredSourceOptions = computed(() => {
   return sourceOptions.filter(opt => allowedSources.value.includes(opt.value as ValueSource));
@@ -133,14 +138,20 @@ const generateUniqueName = (label: string): string => {
 const mediaQuery = useGetMediaList({});
 const editingParam = ref<IComponentParams | null>(null);
 
-// Cache global pour les entrées CMS du bloc (ID -> data_json)
-const blockCMSData = ref<Record<number, any>>({});
+// Cache global pour les entrées CMS du bloc (ID -> data_json OU ParamName -> Liste d'objets)
+const blockCMSData = computed({
+  get: () => builderState?.cmsCache.value || {},
+  set: (val) => {
+    if (builderState) builderState.cmsCache.value = val;
+  }
+});
 
 // Stockage des entrées brutes pour permettre une re-résolution propre
 const rawCMSEntries = ref<Record<number, any>>({});
 
-const resolveEntryMedia = (id: number) => {
-  const entry = rawCMSEntries.value[id];
+const resolveEntryMedia = (id: number | string) => {
+  if (id === undefined || id === null) return;
+  const entry = typeof id === 'number' ? rawCMSEntries.value[id] : null;
   if (!entry?.data_json) return;
 
   const resolvedData = { ...entry.data_json };
@@ -167,7 +178,7 @@ const resolveEntryMedia = (id: number) => {
     // Propagation immédiate
     const params = props.element.params || [];
     params.forEach(p => {
-      if (p.type.source === ValueSource.CONTENUS && props.element.data[p.name] === id) {
+      if (p.type.source === ValueSource.CONTENUS && (p.type as IContenusField).config.mode === 'single' && props.element.data[p.name] === id) {
         updateData(p.name, id);
       }
     });
@@ -180,6 +191,8 @@ import { handleResponse } from '../../api/fetchConfig';
 
 const fetchBlockCMSData = async () => {
   const params = props.element.params || [];
+
+  // 1. Gérer les entrées uniques (Single)
   const usedEntryIds = params
     .filter(p => p.type.source === ValueSource.CONTENUS && (p.type as IContenusField).config.mode === 'single')
     .map(p => {
@@ -188,42 +201,135 @@ const fetchBlockCMSData = async () => {
     })
     .filter((id): id is number => id !== null);
 
-  if (usedEntryIds.length === 0) return;
-
-  // 1. Charger les entrées manquantes
-  const idsToFetch = usedEntryIds.filter(id => !rawCMSEntries.value[id]);
-
-  if (idsToFetch.length > 0) {
-    const fetchPromises = idsToFetch.map(async (id) => {
-      try {
-        // On utilise fetchQuery pour passer par le cache global de Vue-Query
-        const entry = await queryClient.fetchQuery({
-          queryKey: ["content-entry", id],
-          queryFn: async () => {
-            const resp = await api(`/content-entries/${id}`);
-            return await handleResponse<any>(resp);
-          },
-          staleTime: 1000 * 60 * 5, // 5 minutes par défaut
-        });
-
-        if (entry) {
-          rawCMSEntries.value[id] = entry;
-          resolveEntryMedia(id);
+  if (usedEntryIds.length > 0) {
+    const idsToFetch = usedEntryIds.filter(id => !rawCMSEntries.value[id]);
+    if (idsToFetch.length > 0) {
+      await Promise.all(idsToFetch.map(async (id) => {
+        try {
+          const entry = await queryClient.fetchQuery({
+            queryKey: ["content-entry", id],
+            queryFn: async () => {
+              const resp = await api(`/content-entries/${id}`);
+              return await handleResponse<any>(resp);
+            },
+            staleTime: 1000 * 60 * 5,
+          });
+          if (entry) {
+            rawCMSEntries.value[id] = entry;
+            resolveEntryMedia(id);
+          }
+        } catch (err) {
+          console.error(`Failed to fetch CMS entry ${id}`, err);
         }
-      } catch (err) {
-        console.error(`Failed to fetch CMS entry ${id}`, err);
-      }
-    });
-    await Promise.all(fetchPromises);
+      }));
+    }
+    usedEntryIds.forEach(id => resolveEntryMedia(id));
   }
 
-  // 2. Toujours re-résoudre le cache pour les IDs utilisés (au cas où mediaQuery a changé)
-  usedEntryIds.forEach(id => resolveEntryMedia(id));
+  // 2. Gérer les requêtes (Query)
+  const queryParams = params.filter(p => p.type.source === ValueSource.CONTENUS && (p.type as IContenusField).config.mode === 'query');
+
+  if (queryParams.length > 0) {
+    await Promise.all(queryParams.map(async (p) => {
+      const type = p.type as IContenusField;
+      const config = type.config as any; // IContenusQuery
+
+      try {
+        const queryParams = new URLSearchParams();
+        if (config.limit) queryParams.append('limit', config.limit.toString());
+        if (config.sortBy) queryParams.append('sortBy', config.sortBy);
+        if (config.order) queryParams.append('order', config.order);
+
+        const resp = await api(`/content-entries/id/${type.contentTypeId}?${queryParams.toString()}`);
+        const data = await handleResponse<any>(resp);
+
+        const results = Array.isArray(data) ? data : data?.results;
+
+        if (results && Array.isArray(results)) {
+          const resolvedResults = results.map((entry: any) => {
+            // Stockage individuel dans le cache brut pour réutilisation
+            if (entry.id !== undefined && entry.id !== null) {
+              rawCMSEntries.value[entry.id] = entry;
+            }
+
+            // Résolution des médias
+            const ct = contentTypeOptions.value?.results?.find((c: any) => c.id === type.contentTypeId);
+            const resolvedData = { ...entry.data_json };
+
+            if (ct?.fields_schema) {
+              ct.fields_schema.forEach((f: any) => {
+                const isMedia = f.type === FieldType.MEDIA || f.type === 'media';
+                const value = resolvedData[f.name];
+                if (isMedia && value) {
+                  const url = mediaQuery?.data.value?.results?.find((m: any) => m.id === value)?.file_path;
+                  if (url) resolvedData[f.name] = url;
+                }
+              });
+            }
+
+            // On met aussi à jour le cache individuel par ID
+            if (entry.id !== undefined && entry.id !== null) {
+              blockCMSData.value[entry.id] = resolvedData;
+            }
+            return resolvedData;
+          });
+
+          // Stockage de la liste complète sous le nom du paramètre
+          blockCMSData.value[p.name] = resolvedResults;
+        }
+      } catch (err) {
+        console.error(`Failed to fetch query for param ${p.name}`, err);
+      }
+    }));
+  }
 };
 
 // On recharge le cache quand le composant change, quand les données changent, quand les types ou les médias reviennent
-watch(() => [props.element.id, JSON.stringify(props.element.data), mediaQuery.data.value, contentTypeOptions.value], () => {
-  fetchBlockCMSData();
+watch(() => [props.element.id, JSON.stringify(props.element.data), mediaQuery.data.value, contentTypeOptions.value], async (newVal, oldVal) => {
+  const isNewElement = oldVal && newVal[0] !== oldVal[0];
+  await fetchBlockCMSData();
+
+  // NOUVEAU : Propagation automatique après le fetch pour rafraîchir les enfants
+  if (props.element.children && props.element.children.length > 0) {
+    const params = props.element.params || [];
+    const queryParams = params.filter(p => p.type.source === ValueSource.CONTENUS && (p.type as IContenusField).config.mode === 'query');
+
+    let updatedChildren = [...props.element.children];
+    let hasChanges = false;
+
+    queryParams.forEach(p => {
+      const list = blockCMSData.value[p.name];
+      const firstItem = (list && list.length > 0) ? list[0] : null;
+
+      updatedChildren = updatedChildren.map(child => {
+        if ((child.data as any).linkedQueryParamName === p.name) {
+          hasChanges = true;
+          // On injecte l'item et on propage récursivement
+          const updatedChild = {
+            ...child,
+            data: { ...child.data, _inherited_item: firstItem }
+          };
+          if (updatedChild.children) {
+            updatedChild.children = propagateValueToChildren(updatedChild.children, '_inherited_query', firstItem);
+          }
+          return updatedChild;
+        }
+        return child;
+      });
+    });
+
+    if (hasChanges && builderState && !isNewElement) {
+       // On ne met à jour que si on n'a pas changé d'élément pour éviter les boucles infinies de montage
+       const updateTree = (nodes: AnyComponentInstance[]): AnyComponentInstance[] => {
+         return nodes.map(node => {
+           if (node.id === props.element.id) return { ...node, children: updatedChildren };
+           if (node.children) return { ...node, children: updateTree(node.children) };
+           return node;
+         });
+       };
+       builderState.pageTree.value = updateTree(builderState.pageTree.value);
+    }
+  }
 }, { immediate: true });
 
 // Surveillance du cache global pour réagir aux updates externes d'entrées CMS
@@ -394,6 +500,51 @@ const updateData = (key: string, value: string | number | boolean | object) => {
   };
 
   builderState.pageTree.value = updateNode(builderState.pageTree.value);
+
+  // Cas spécial : si on change un paramètre qui est une Query, on propage aussi (si besoin)
+  // Mais ici on propage via props.element.data
+};
+
+// Fonction pour mettre à jour la liaison Query d'un container enfant
+const updateChildLinkedQuery = (childId: string, queryParamName: string | null) => {
+  if (!builderState) return;
+
+  const updateNode = (nodes: AnyComponentInstance[]): AnyComponentInstance[] => {
+    return nodes.map((node) => {
+      if (node.id === props.element.id && node.children) {
+        return {
+          ...node,
+          children: node.children.map(child => {
+            if (child.id === childId) {
+               // On cherche le contentTypeId correspondant au paramètre choisi
+               const parentParam = props.element.params.find(p => p.name === queryParamName);
+               const contentTypeId = parentParam?.type.source === ValueSource.CONTENUS ? parentParam.type.contentTypeId : undefined;
+
+               const updated = {
+                 ...child,
+                 data: {
+                   ...child.data,
+                   linkedQueryParamName: queryParamName || undefined,
+                   linkedQueryContentTypeId: contentTypeId
+                 }
+               };
+
+               // Si on lie, on essaie d'injecter le premier item de la liste pour l'aperçu
+               if (queryParamName && blockCMSData.value[queryParamName]?.length > 0) {
+                 (updated.data as any)._inherited_item = blockCMSData.value[queryParamName][0];
+               }
+               return updated;
+            }
+            return child;
+          })
+        };
+      }
+      if (node.children) return { ...node, children: updateNode(node.children) };
+      return node;
+    });
+  };
+
+  builderState.pageTree.value = updateNode(builderState.pageTree.value);
 };
 
 // Fonction récursive pour propager une valeur aux enfants liés
@@ -419,17 +570,15 @@ const propagateValueToChildren = (children: AnyComponentInstance[], parentParamN
       if (p.type.source === ValueSource.PARENT && p.type.parentParamName === parentParamName) {
         const pt = p.type as IParentField;
 
-        if (isCMS) {
-
-          // Liaison CMS : on utilise la parentKey pour extraire la valeur brute
-          if (pt.parentKey && entryData) {
-            const rawValue = entryData[pt.parentKey];
-
-            // La valeur est déjà résolue dans le cache (URL pour les images, texte pour le reste)
+        if (isCMS || parentParamName === '_inherited_query') {
+          // Liaison CMS ou Héritage de Liste : on utilise la parentKey pour extraire la valeur
+          const sourceData = isCMS ? entryData : newValue;
+          if (pt.parentKey && sourceData) {
+            const rawValue = (sourceData as any)[pt.parentKey];
             newChildData[p.name] = rawValue;
             hasChanged = true;
           }
-        } else {
+        } else if (parentParamName !== '_inherited_query') {
           // Liaison directe (Static/Image)
           newChildData[p.name] = newValue;
           hasChanged = true;
@@ -467,7 +616,7 @@ const updateChildParamSource = (childId: string, paramName: string, source: Valu
               const currentParentName = parentParamName || (p.type.source === ValueSource.PARENT ? (p.type as IParentField).parentParamName : '');
               const elementParams = props.element.params || [];
               const parentParam = elementParams.find(pp => pp.name === currentParentName);
-              const isCMS = parentParam?.type.source === ValueSource.CONTENUS;
+              const isCMS = currentParentName === '_inherited_query' || parentParam?.type.source === ValueSource.CONTENUS;
 
               // Détermination du type cible (Static ou Image)
               // Si on vient d'un type original, on le stocke
@@ -486,8 +635,9 @@ const updateChildParamSource = (childId: string, paramName: string, source: Valu
                 if (!isCMS) {
                   node.data[paramName] = props.element.data[currentParentName];
                 } else if (newType.parentKey) {
-                  const entryId = props.element.data[currentParentName] as any;
-                  const entryData = blockCMSData.value[entryId];
+                  const entryData = currentParentName === '_inherited_query'
+                                    ? props.element.data._inherited_item
+                                    : blockCMSData.value[props.element.data[currentParentName] as any];
                   if (entryData) {
                     const rawValue = entryData[newType.parentKey];
                     // On utilise directement la valeur du cache (qui contient les URLs résolues)
@@ -526,18 +676,32 @@ const updateChildParamSource = (childId: string, paramName: string, source: Valu
 
 // Récupère les paramètres parents compatibles avec un type de paramètre enfant
 const getCompatibleParentParams = (childParam: IComponentParams) => {
-  // Utilise targetType si déjà lié, sinon le type direct
   const childType = childParam.type.source === ValueSource.PARENT
                     ? (childParam.type as IParentField).targetType
                     : childParam.type.source;
 
-  const params = props.element.params || [];
+  const params = [...(props.element.params || [])];
+
+  // VIRTUAL PARAM : Si le composant ACTUEL est lui-même lié à une Query
+  const linkedQuery = (props.element.data as any).linkedQueryParamName;
+
+  if (linkedQuery) {
+    params.push({
+      name: '_inherited_query',
+      label: `Liste: ${linkedQuery}`,
+      type: { source: ValueSource.CONTENUS, contentTypeId: 0, config: { mode: 'single' } }
+    } as any);
+  }
+
   return params.filter(p => {
-    // Si l'enfant est statique, il peut se lier à un parent statique OR à un parent CMS (qui fournira des champs texte)
+    // EXCLUSION : On ne propose jamais un paramètre de type 'query' pour un héritage de paramètre individuel
+    if (p.type.source === ValueSource.CONTENUS && (p.type as IContenusField).config.mode === 'query') {
+      return false;
+    }
+
     if (childType === ValueSource.STATIC) {
       return p.type.source === ValueSource.STATIC || p.type.source === ValueSource.CONTENUS;
     }
-    // Si l'enfant est image, il peut se lier à un parent image OR à un parent CMS (qui fournira des champs Media)
     if (childType === ValueSource.IMAGE) {
       return p.type.source === ValueSource.IMAGE || p.type.source === ValueSource.CONTENUS;
     }
@@ -546,12 +710,41 @@ const getCompatibleParentParams = (childParam: IComponentParams) => {
 };
 
 // Récupère les champs du CMS compatibles avec un type de paramètre enfant
-const getCompatibleCMSFields = (parentParamName: string, childParam: IComponentParams) => {
+const getCompatibleCMSFields = (parentParamName: string | undefined, childParam: IComponentParams, childId: string) => {
   const params = props.element.params || [];
-  const parentParam = params.find(p => p.name === parentParamName);
-  if (parentParam?.type.source !== ValueSource.CONTENUS) return [];
 
-  const contentTypeId = parentParam.type.contentTypeId;
+  let contentTypeId: number | undefined;
+
+  if (parentParamName === '_inherited_query') {
+    contentTypeId = (props.element.data as any).linkedQueryContentTypeId;
+  } else if (parentParamName) {
+    const parentParam = params.find(p => p.name === parentParamName);
+    if (parentParam?.type.source === ValueSource.CONTENUS) {
+      contentTypeId = parentParam.type.contentTypeId;
+    }
+  } else {
+    // Si pas de parentParamName, on regarde si le composant enfant lui-même est lié à une Query
+    const findChild = (nodes: AnyComponentInstance[]): AnyComponentInstance | null => {
+      for (const node of nodes) {
+        if (node.id === childId) return node;
+        if (node.children) {
+          const found = findChild(node.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    const childNode = findChild(props.element.children || []);
+    const linkedQuery = (childNode?.data as any)?.linkedQueryParamName;
+    if (linkedQuery) {
+      const parentParam = params.find(p => p.name === linkedQuery);
+      if (parentParam?.type.source === ValueSource.CONTENUS) {
+        contentTypeId = parentParam.type.contentTypeId;
+      }
+    }
+  }
+
+  if (!contentTypeId) return [];
   const contentType = contentTypeOptions.value?.results?.find((ct: any) => ct.id === contentTypeId);
   if (!contentType) return [];
 
@@ -680,6 +873,27 @@ const forceAriaHidden = (isOpen: boolean) => {
 
 <template>
   <div class="space-y-6 pb-20 p-1">
+    <!-- Section: Itération Automatique -->
+    <div v-if="paramDynamic && hasLinkedChildren" class="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-lg p-3 mb-6">
+      <div class="flex items-center gap-2">
+        <div class="p-1.5 bg-primary/20 rounded-md">
+          <Icons.Repeat class="h-4 w-4 text-primary" />
+        </div>
+        <div>
+          <p class="text-xs font-bold text-white uppercase tracking-wider">Mode Itération</p>
+          <p class="text-[10px] text-primary/70">Répéter ce bloc pour chaque item de la liste</p>
+        </div>
+      </div>
+      <Button
+        size="sm"
+        :variant="element.data.isIterated ? 'default' : 'outline'"
+        class="h-7 text-[10px] px-4 font-bold transition-all"
+        :class="{ 'bg-primary text-black hover:bg-primary/90': element.data.isIterated }"
+        @click="updateData('isIterated', !element.data.isIterated)"
+      >
+        {{ element.data.isIterated ? 'ACTIVÉ' : 'DÉSACTIVÉ' }}
+      </Button>
+    </div>
 
     <!-- Section: Gestion des Paramètres -->
     <div v-if="canAddParams" class="space-y-4">
@@ -810,34 +1024,46 @@ const forceAriaHidden = (isOpen: boolean) => {
 
             <!-- Mode: Query -->
             <div v-if="(newParam.type as any).config.mode === 'query'" class="space-y-3">
-              <div class="grid grid-cols-3 gap-2">
-                <div class="space-y-1.5">
-                  <Label class="text-[11px] text-gray-400">Limite</Label>
-                  <Input type="number" v-model.number="(newParam.type as any).config.limit" class="h-8 text-xs bg-black/40 border-border/30" />
-                </div>
+              <div class="space-y-1.5">
+                <Label class="text-[11px] text-gray-400">Limite</Label>
+                <Input
+                  v-model.number="(newParam.type as any).config.limit"
+                  type="number"
+                  placeholder="Illimité"
+                  class="h-8 text-xs bg-black/40 border-border/30"
+                />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
                 <div class="space-y-1.5">
                   <Label class="text-[11px] text-gray-400">Trier par</Label>
-                  <Input v-model="(newParam.type as any).config.sortBy" placeholder="id" class="h-8 text-xs bg-black/40 border-border/30" />
+                  <Input
+                    v-model="(newParam.type as any).config.sortBy"
+                    placeholder="Champ (ex: title)"
+                    class="h-8 text-xs bg-black/40 border-border/30"
+                  />
                 </div>
                 <div class="space-y-1.5">
                   <Label class="text-[11px] text-gray-400">Ordre</Label>
-                  <Select :model-value="(newParam.type as any).config.order" :modal="false" @update:model-value="(val) => (newParam.type as any).config.order = val">
+                  <Select
+                    v-model="(newParam.type as any).config.order"
+                    :modal="false"
+                  >
                     <SelectTrigger class="h-8 text-xs bg-black/40 border-border/30">
                       <SelectValue placeholder="Ordre" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem v-for="ord in orderOptions" :key="ord.value" :value="ord.value">
-                        {{ ord.label }}
+                      <SelectItem v-for="opt in orderOptions" :key="opt.value" :value="opt.value">
+                        {{ opt.label }}
                       </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
             </div>
-          </div>
-          <div class="flex gap-2 pt-1">
-            <Button size="sm" class="flex-1 h-7 text-[10px]" @click="addParameter">Ajouter</Button>
-            <Button size="sm" variant="ghost" class="flex-1 h-7 text-[10px]" @click="showAddForm = false">Annuler</Button>
+            <div class="flex gap-2 pt-1">
+              <Button size="sm" class="flex-1 h-7 text-[10px]" @click="addParameter">Ajouter</Button>
+              <Button size="sm" variant="ghost" class="flex-1 h-7 text-[10px]" @click="showAddForm = false">Annuler</Button>
+            </div>
           </div>
         </div>
       </transition>
@@ -980,27 +1206,41 @@ const forceAriaHidden = (isOpen: boolean) => {
                   </div>
 
                   <!-- Mode: Query -->
-                  <div v-if="(editingParam.type as any).config.mode === 'query'" class="grid grid-cols-3 gap-2">
+                  <div v-if="(editingParam.type as any).config.mode === 'query'" class="space-y-3">
                     <div class="space-y-1.5">
                       <Label class="text-[11px] text-gray-400">Limite</Label>
-                      <Input type="number" v-model.number="(editingParam.type as any).config.limit" class="h-8 text-xs bg-black/20 border-border/50" />
+                      <Input
+                        v-model.number="(editingParam.type as any).config.limit"
+                        type="number"
+                        placeholder="Illimité"
+                        class="h-8 text-xs bg-black/20 border-border/50"
+                      />
                     </div>
-                    <div class="space-y-1.5">
-                      <Label class="text-[11px] text-gray-400">Trier par</Label>
-                      <Input v-model="(editingParam.type as any).config.sortBy" class="h-8 text-xs bg-black/20 border-border/50" />
-                    </div>
-                    <div class="space-y-1.5">
-                      <Label class="text-[11px] text-gray-400">Ordre</Label>
-                      <Select :model-value="(editingParam.type as any).config.order" :modal="false" @update:model-value="(val) => (editingParam?.type as any).config.order = val">
-                        <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
-                          <SelectValue placeholder="Ordre" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem v-for="ord in orderOptions" :key="ord.value" :value="ord.value">
-                            {{ ord.label }}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <div class="grid grid-cols-2 gap-3">
+                      <div class="space-y-1.5">
+                        <Label class="text-[11px] text-gray-400">Trier par</Label>
+                        <Input
+                          v-model="(editingParam.type as any).config.sortBy"
+                          placeholder="Champ (ex: title)"
+                          class="h-8 text-xs bg-black/20 border-border/50"
+                        />
+                      </div>
+                      <div class="space-y-1.5">
+                        <Label class="text-[11px] text-gray-400">Ordre</Label>
+                        <Select
+                          v-model="(editingParam.type as any).config.order"
+                          :modal="false"
+                        >
+                          <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+                            <SelectValue placeholder="Ordre" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem v-for="opt in orderOptions" :key="opt.value" :value="opt.value">
+                              {{ opt.label }}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1044,6 +1284,28 @@ const forceAriaHidden = (isOpen: boolean) => {
         <div class="flex items-center gap-2 border-b border-white/5 pb-1 mb-2">
           <component :is="getIcon(child.icon)" class="h-3 w-3 text-gray-400" />
           <span class="text-[10px] font-bold text-gray-300">{{ child.name }}</span>
+          <div v-if="child.family === 'container'" class="ml-auto flex items-center gap-2">
+             <Select
+                :model-value="(child.data as any).linkedQueryParamName"
+                :modal="false"
+                @update:model-value="(val) => updateChildLinkedQuery(child.id, val as string)"
+                @update:open="forceAriaHidden"
+             >
+                <SelectTrigger class="h-6 text-[9px] bg-black/40 border-border/30 w-24">
+                  <SelectValue placeholder="Lier liste..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem :value="null">Aucune</SelectItem>
+                  <SelectItem
+                    v-for="p in element.params.filter(p => p.type.source === ValueSource.CONTENUS && (p.type as IContenusField).config.mode === 'query')"
+                    :key="p.name"
+                    :value="p.name"
+                  >
+                    {{ p.label }}
+                  </SelectItem>
+                </SelectContent>
+             </Select>
+          </div>
         </div>
 
         <div v-for="p in child.params" :key="p.name" class="space-y-2">
@@ -1086,7 +1348,7 @@ const forceAriaHidden = (isOpen: boolean) => {
              </div>
 
              <!-- Si le paramètre parent est choisi ET de type CONTENUS, on demande le champ source (parentKey) -->
-             <div v-if="(p.type as IParentField).parentParamName && element.params.find(pp => pp.name === (p.type as IParentField).parentParamName)?.type.source === ValueSource.CONTENUS" class="space-y-1">
+             <div v-if="(p.type as IParentField).parentParamName && ((p.type as IParentField).parentParamName === '_inherited_query' || element.params.find(pp => pp.name === (p.type as IParentField).parentParamName)?.type.source === ValueSource.CONTENUS)" class="space-y-1">
                 <Label class="text-[9px] text-gray-500">Champ Source (CMS)</Label>
                  <Select
                   :model-value="(p.type as IParentField).parentKey"
@@ -1102,7 +1364,7 @@ const forceAriaHidden = (isOpen: boolean) => {
                     <SelectValue placeholder="Choisir le champ..." />
                   </SelectTrigger>
                   <SelectContent :modal="false">
-                    <SelectItem v-for="cf in getCompatibleCMSFields((p.type as IParentField).parentParamName, p)" :key="cf.value" :value="cf.value">
+                    <SelectItem v-for="cf in getCompatibleCMSFields((p.type as IParentField).parentParamName, p, child.id)" :key="cf.value" :value="cf.value">
                       {{ cf.label }}
                     </SelectItem>
                   </SelectContent>
