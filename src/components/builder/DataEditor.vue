@@ -174,14 +174,6 @@ const resolveEntryMedia = (id: number | string) => {
   // Si on a une URL ou que la data a changé, on met à jour le cache réactif
   if (JSON.stringify(blockCMSData.value[id]) !== JSON.stringify(resolvedData)) {
     blockCMSData.value[id] = resolvedData;
-
-    // Propagation immédiate
-    const params = props.element.params || [];
-    params.forEach(p => {
-      if (p.type.source === ValueSource.CONTENUS && (p.type as IContenusField).config.mode === 'single' && props.element.data[p.name] === id) {
-        updateData(p.name, id);
-      }
-    });
   }
 };
 
@@ -285,51 +277,9 @@ const fetchBlockCMSData = async () => {
 };
 
 // On recharge le cache quand le composant change, quand les données changent, quand les types ou les médias reviennent
-watch(() => [props.element.id, JSON.stringify(props.element.data), mediaQuery.data.value, contentTypeOptions.value], async (newVal, oldVal) => {
-  const isNewElement = oldVal && newVal[0] !== oldVal[0];
+watch(() => [props.element.id, JSON.stringify(props.element.data), mediaQuery.data.value, contentTypeOptions.value], async () => {
   await fetchBlockCMSData();
-
-  // NOUVEAU : Propagation automatique après le fetch pour rafraîchir les enfants
-  if (props.element.children && props.element.children.length > 0) {
-    const params = props.element.params || [];
-    const queryParams = params.filter(p => p.type.source === ValueSource.CONTENUS && (p.type as IContenusField).config.mode === 'query');
-
-    let updatedChildren = [...props.element.children];
-    let hasChanges = false;
-
-    queryParams.forEach(p => {
-      const list = blockCMSData.value[p.name];
-      const firstItem = (list && list.length > 0) ? list[0] : null;
-
-      updatedChildren = updatedChildren.map(child => {
-        if ((child.data as any).linkedQueryParamName === p.name) {
-          hasChanges = true;
-          // On injecte l'item et on propage récursivement
-          const updatedChild = {
-            ...child,
-            data: { ...child.data, _inherited_item: firstItem }
-          };
-          if (updatedChild.children) {
-            updatedChild.children = propagateValueToChildren(updatedChild.children, '_inherited_query', firstItem);
-          }
-          return updatedChild;
-        }
-        return child;
-      });
-    });
-
-    if (hasChanges && builderState && !isNewElement) {
-       // On ne met à jour que si on n'a pas changé d'élément pour éviter les boucles infinies de montage
-       const updateTree = (nodes: AnyComponentInstance[]): AnyComponentInstance[] => {
-         return nodes.map(node => {
-           if (node.id === props.element.id) return { ...node, children: updatedChildren };
-           if (node.children) return { ...node, children: updateTree(node.children) };
-           return node;
-         });
-       };
-       builderState.pageTree.value = updateTree(builderState.pageTree.value);
-    }
-  }
+  console.log("blockCMSData", blockCMSData.value);
 }, { immediate: true });
 
 // Surveillance du cache global pour réagir aux updates externes d'entrées CMS

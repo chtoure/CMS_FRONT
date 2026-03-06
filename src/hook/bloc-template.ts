@@ -78,6 +78,13 @@ export function useBlockTemplate() {
             if (!currentSectionId) {
                 const newSection = await useCreateSection(section as AnySectionInstance, pageRevisionId);
                 currentSectionId = newSection.id;
+
+                // CONTOURNEMENT BACKEND: Le POST ignore les styles/bloc_json. On force un Update juste après.
+                try {
+                    await useUpdateSection(currentSectionId, section);
+                } catch (e) {
+                    console.error("Failed to force update after create section", e);
+                }
             } else {
                 await useUpdateSection(currentSectionId, section);
             }
@@ -125,6 +132,13 @@ export function useBlockTemplate() {
         if (!currentBlocTemplateId) {
           const newBlock = await useCreateBlockTemplate(node, parentId, i, sectionId);
           currentBlocTemplateId = newBlock.id;
+
+          // CONTOURNEMENT BACKEND: Le POST ignore les props (styles, data, params). On force un Update juste après la création.
+          try {
+              await useUpdateBlockTemplate({ ...node, blocTemplateId: currentBlocTemplateId } as AnyComponentInstance, parentId, i, sectionId);
+          } catch (e) {
+              console.error("Failed to force update after create block", e);
+          }
         } else {
           await useUpdateBlockTemplate(node, parentId, i, sectionId);
         }
@@ -306,6 +320,7 @@ export function useBlockTemplate() {
     fetchAll,
     deleteBlockTemplate,
     useDeleteSection,
+    useSyncAll,
     isSaving
   };
 }

@@ -15,6 +15,7 @@
     import { useHead } from '@vueuse/head'
     import { useRouter } from 'vue-router'
     import { useGetPageRevisions, useRegisterPageRevision, useUpdatePageRevisionStatus } from '../../hook/page-revision'
+    import { useBlockTemplate } from '../../hook/bloc-template'
 
     const router = useRouter();
     useHead({
@@ -73,6 +74,9 @@
 
     const pageRevisionRegister = useRegisterPageRevision();
     const pageRevisionStatusUpdate = useUpdatePageRevisionStatus();
+    const { fetchAll, useSyncAll, useDeleteSection, deleteBlockTemplate } = useBlockTemplate();
+
+    const isPublishing = ref<number | null>(null);
 
     const handleCreateRevision = async () => {
         try {
@@ -92,15 +96,111 @@
         }
     }
 
-    const handlePublishRevision = async (id: number) => {
+    // Nouvelle logique de publication (Recyclage de l'ancienne version)
+    const handlePublishRevision = async (targetRevisionId: number) => {
         try {
+            isPublishing.value = targetRevisionId;
+            const allRevisions = pageRevisionQuery.data.value?.results || [];
+
+            // 1. Trouver la version publiée actuelle
+            const currentPublished = allRevisions.find(r => r.status === 'PUBLISHED');
+
+            // Fonction récursive pour supprimer les anciens IDs sur tout l'arbre
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const cleanComponentIds = (components: any[]): any[] => {
+                if (!components || !Array.isArray(components)) return [];
+                return components.map(c => ({
+                    ...c,
+                    id: undefined,
+                    blocTemplateId: undefined,
+                    children: cleanComponentIds(c.children)
+                }));
+            };
+
+            // 2. Préparer l'arbre complet de la révision cible (celle qu'on veut publier)
+            const targetTreeRaw = await fetchAll(targetRevisionId);
+            // Copie profonde pour s'assurer qu'absolument aucune référence n'est partagée
+            const targetTree = JSON.parse(JSON.stringify(targetTreeRaw || []));
+
+            const treeToClone = targetTree.map((section: any) => ({
+                ...section,
+                id: undefined, // forcer la création d'un nouvel UUID côté frontend
+                sectionId: undefined, // forcer Create au lieu de Update dans useSyncAll
+                children: cleanComponentIds(section.children)
+            }));
+
+            // 3. Passer la révision cible en PUBLISHED
             await pageRevisionStatusUpdate.mutateAsync({
-                id: id,
+                id: targetRevisionId,
                 status: 'PUBLISHED'
             });
-            console.log('Revision published successfully');
+
+            // 4. Gérer le clonage dans une révision DOIT rester en DRAFT (Brouillon)
+            if (currentPublished && currentPublished.id !== targetRevisionId) {
+                // S'il y avait déjà une version publiée, on la recycle :
+                // - on la repasse en DRAFT
+                await pageRevisionStatusUpdate.mutateAsync({
+                    id: currentPublished.id,
+                    status: 'DRAFT'
+                });
+
+                // - on supprime ses anciennes sections (en purgeant d'abord les blocs pour éviter les contraintes de clés étrangères)
+                const oldTree = await fetchAll(currentPublished.id);
+
+                // Fonction pour supprimer tous les blocs récursivement de bas en haut
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const deleteBlocksRecursively = async (nodes: any[]) => {
+                    if (!nodes || nodes.length === 0) return;
+                    for (const node of nodes) {
+                        if (node.children && node.children.length > 0) {
+                            await deleteBlocksRecursively(node.children);
+                        }
+                        if (node.blocTemplateId) {
+                            await deleteBlockTemplate(node.blocTemplateId);
+                        }
+                    }
+                };
+
+                for (const section of oldTree) {
+                    if (section.sectionId) {
+                        try {
+                            await deleteBlocksRecursively(section.children || []);
+                            await useDeleteSection(section.sectionId);
+                        } catch (e) {
+                            console.error("Failed to delete old section or its blocks", e);
+                        }
+                    }
+                }
+
+                // - on copie les sections de la cible vers cette ancienne révision recyclée
+                if (treeToClone.length > 0) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    await useSyncAll(treeToClone as any, currentPublished.id);
+                }
+            } else if (!currentPublished) {
+                // S'il n'y avait AUCUNE version publiée avant (première publication de la page) :
+                // On crée une nouvelle révision Brouillon pour accueillir les futures modifications
+                const maxVersion = allRevisions.reduce((max, r) => Math.max(max, r.version || 0), 0);
+                const newRevision = await pageRevisionRegister.mutateAsync({
+                    pageId: pageId.value,
+                    status: 'DRAFT',
+                    version: maxVersion + 1
+                });
+
+                if (newRevision && newRevision.id && treeToClone.length > 0) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    await useSyncAll(treeToClone as any, newRevision.id);
+                }
+            }
+
+            console.log('Revision published and clone processed successfully');
         } catch (error) {
             console.error('Failed to publish page revision:', error);
+            alert("Erreur lors de la publication. Veuillez réessayer.");
+        } finally {
+            isPublishing.value = null;
+            // Rafraîchir la liste complète
+            pageRevisionQuery.refetch();
         }
     }
 
@@ -189,14 +289,14 @@
                 <button
                   class="text-primary p-2 flex items-center gap-2 transition-all hover:scale-110 font-bold"
                   @click="handlePublishRevision(row.id)"
-                  :disabled="pageRevisionStatusUpdate.isPending.value"
+                  :disabled="isPublishing === row.id"
                 >
-                  <Rocket class="w-4 h-4" />
-                  {{ pageRevisionStatusUpdate.isPending.value ? 'Publication...' : 'Publier cette version' }}
+                  <Rocket class="w-4 h-4" :class="{ 'animate-pulse text-indigo-500': isPublishing === row.id }" />
+                  {{ isPublishing === row.id ? 'Publication en cours...' : 'Publier cette version' }}
                 </button>
               </DropdownMenuLabel>
               <DropdownMenuSeparator v-if="row.status !== 'PUBLISHED'" />
-              <DropdownMenuLabel>
+              <DropdownMenuLabel v-if="row.status !== 'PUBLISHED'">
                 <a target="_blank" :href="`${$router.resolve({ name: 'admin.page-revision.update', params: { id: row.id } }).href}`" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
                   <Pencil class="w-4 h-4" /> Modifier
                 </a>
