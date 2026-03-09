@@ -61,12 +61,12 @@ const borderStyleOptions = [
 <template>
   <div class="space-y-4">
     <!-- Position / Dimensions Section -->
-    <PropertyGroup v-if="showField('width') || showField('height') || showField('padding')" title="Position" :open="true">
+    <PropertyGroup v-if="showField('width') || showField('height') || showField('padding')" title="Position" :open="true" :icon="Layers">
       <div class="space-y-4">
         <PropertyRow v-if="showField('width') || showField('height')">
           <PropertyInput 
             v-if="showField('width')"
-            type="number"
+            type="text"
             label="W"
             :model-value="getRawValue(styles.width)"
             @update:model-value="(val) => updateStyle('width', val)"
@@ -85,7 +85,7 @@ const borderStyleOptions = [
           <PropertyInput 
             v-if="showField('height')"
             label="H"
-            type="number"
+            type="text"
             :model-value="getRawValue(styles.height)"
             @update:model-value="(val) => updateStyle('height', val)"
             placeholder="auto"
@@ -158,7 +158,7 @@ const borderStyleOptions = [
     </PropertyGroup>
 
     <!-- Appearance Section -->
-    <PropertyGroup v-if="showField('rounded') || showField('shadow') || showField('opacity')" title="Appearance" :open="true">
+    <PropertyGroup v-if="showField('rounded') || showField('shadow') || showField('opacity')" title="Apparance" :open="true">
       <div class="space-y-4">
         <!-- Opacity & Radius -->
         <PropertyRow>
@@ -190,7 +190,6 @@ const borderStyleOptions = [
             />
         </div>
 
-        <!-- Shadow -->
         <div v-if="showField('shadow')" class="space-y-1.5">
           <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Shadow</label>
           <ButtonGroup 

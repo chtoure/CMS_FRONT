@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue';
-import type { ContainerStyles } from '../../type/component';
+import type { ContainerStyles, AnyComponentInstance } from '../../type/component';
 import { buildBlocLayoutStyles, buildBlocLayoutInlineStyles } from '../../lib/style/blocProcessor';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { resolveValueForBreakpoint } from '../../lib/style/core';
@@ -11,6 +11,8 @@ interface Props {
   data?: {
     slides?: any;
   };
+  element?: AnyComponentInstance;
+  children?: AnyComponentInstance[];
 }
 
 const props = defineProps<Props>();

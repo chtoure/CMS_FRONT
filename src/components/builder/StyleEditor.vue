@@ -16,7 +16,6 @@ import ButtonStyleEditor from './styles/ButtonStyleEditor.vue';
 import SliderStyleEditor from './styles/SliderStyleEditor.vue';
 import AccordionStyleEditor from './styles/AccordionStyleEditor.vue';
 import LinkStyleEditor from './styles/LinkStyleEditor.vue';
-import NavbarStyleEditor from './styles/NavbarStyleEditor.vue';
 import TextStyleEditor from './styles/TextStyleEditor.vue';
 
 const props = defineProps<{
@@ -34,7 +33,6 @@ const currentEditor = computed(() => {
   if (tag === 'LinkBuilder') return 'link';
   if (tag === 'SliderBuilder') return 'slider';
   if (tag === 'AccordionBuilder') return 'accordion';
-  if (tag === 'NavbarBuilder') return 'navbar';
   if (tag === 'ImageBuilder') return 'image';
   if (tag === 'IconBuilder') return 'icon';
   if (tag === 'CardBuilder') return 'card';
@@ -99,10 +97,6 @@ const currentEditor = computed(() => {
       <AccordionStyleEditor :element="(element as any)" />
     </template>
 
-    <!-- Navbar -->
-    <template v-else-if="currentEditor === 'navbar'">
-      <NavbarStyleEditor :element="(element as any)" />
-    </template>
 
     <!-- Texte / Static -->
     <template v-else-if="currentEditor === 'text'">

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { InteractiveStyles, CliquableAction } from '../../type/component';
+import type { InteractiveStyles, CliquableAction, AnyComponentInstance } from '../../type/component';
 import { executeAction } from '../../registry/cliquable';
 import { buildButtonStyles, buildButtonInlineStyles } from '../../lib/style/buttonProcessor';
 import { useVariableResolver } from '../../hook/variable';
@@ -9,15 +9,18 @@ import { inject } from 'vue';
 interface Props {
   styles?: InteractiveStyles;
   data?: {
-    content?: any;
-    cliquable?: any;
+    content?: string | Record<string, unknown>;
+    cliquable?: CliquableAction;
   };
+  element?: AnyComponentInstance;
+  children?: AnyComponentInstance[];
 }
 
 const props = defineProps<Props>();
 
 const builderState = inject<{
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
+  toggleVisibility?: (id: string) => void
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }>('builderState', { currentBreakpoint: { value: 'default' } } as any);
 
@@ -35,16 +38,25 @@ const computedInlineStyles = computed(() => {
 const content = computed(() => (resolveValue(props.data?.content) as string) || 'Nouveau Bouton');
 
 const handleClick = () => {
-  const cliquable = resolveValue(props.data?.cliquable);
+  const cliquable = resolveValue(props.data?.cliquable) as CliquableAction;
   if (cliquable) {
-    executeAction(cliquable as CliquableAction);
+    switch (cliquable.action) {
+      case 'TOGGLE_VISIBILITY':
+        if ((cliquable.action_params as { targetId?: string }).targetId && builderState.toggleVisibility) {
+          builderState.toggleVisibility((cliquable.action_params as { targetId?: string }).targetId as string);
+        }
+        break;
+      default:
+        console.warn(`Action ${cliquable.action} non reconnue`);
+        executeAction(cliquable); // Fallback to executeAction for other cases
+        break;
+    }
   }
 };
 </script>
 
 <template>
   <button
-    disabled="true"
     :class="[
       'inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 w-full',
       computedClasses

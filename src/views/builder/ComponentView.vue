@@ -38,6 +38,25 @@ const getIcon = (name: string): VueComponent => {
 };
 
 
+const deepCloneInstance = (node: AnyComponentInstance): AnyComponentInstance => {
+  let definitionId = node.componentDefinitionId;
+  
+  // Si l'ID de définition est manquant (cas des default children), on tente de le trouver par tag
+  if (!definitionId && allComponents.value) {
+    const componentDef = allComponents.value.find((c: Component<AllStyles>) => c.tag === node.tag);
+    if (componentDef) {
+      definitionId = componentDef.id;
+    }
+  }
+
+  return {
+    ...node,
+    id: crypto.randomUUID(),
+    componentDefinitionId: definitionId,
+    children: node.children ? node.children.map(deepCloneInstance) : []
+  };
+};
+
 const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<T> => {
   const instance = {
     id: crypto.randomUUID(),
@@ -49,9 +68,11 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
     componentDefinitionId: element.id, // Stocker l'ID du type de composant pour le backend
     styles: { ...element.defaultProps.styles } as T,
     data: { ...element.defaultProps.data },
-    children: [] as AnyComponentInstance[]
+    children: element.defaultProps.children 
+      ? element.defaultProps.children.map(deepCloneInstance)
+      : [] as AnyComponentInstance[]
   };
-  // console.log('Cloning component:', element);
+  console.log('Cloning component:', element.tag, 'with children:', instance.children.length);
   // console.log('Created instance:', instance);
   return instance as ComponentInstance<T>;
 };

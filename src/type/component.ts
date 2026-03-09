@@ -5,7 +5,8 @@ import type { sectionStyle } from './section';
 type NavigateAction = { action: 'NAVIGATE_TO'; action_params: { url: string } };
 type AlertAction = { action: 'SHOW_ALERT'; action_params: { message: string } };
 type ModalAction = { action: 'OPEN_MODAL'; action_params: { modalId: string } };
-type CliquableAction = NavigateAction | AlertAction | ModalAction;
+type ToggleVisibilityAction = { action: 'TOGGLE_VISIBILITY'; action_params: { targetId: string } };
+type CliquableAction = NavigateAction | AlertAction | ModalAction | ToggleVisibilityAction;
 
 // Familles et Capacités
 type ComponentFamily = 'static' | 'interactive' | 'container' | 'input' | 'complex';
@@ -20,10 +21,10 @@ const FAMILY_CAPABILITIES: Record<ComponentFamily, { canHaveChildren: boolean }>
 
 const ACTIONS_BY_FAMILY: Record<ComponentFamily, CliquableAction['action'][]> = {
   static: [],
-  interactive: ['NAVIGATE_TO', 'SHOW_ALERT', 'OPEN_MODAL'],
-  container: ['OPEN_MODAL'],
+  interactive: ['NAVIGATE_TO', 'SHOW_ALERT', 'OPEN_MODAL', 'TOGGLE_VISIBILITY'],
+  container: ['OPEN_MODAL', 'TOGGLE_VISIBILITY'],
   input: ['SHOW_ALERT'],
-  complex: ['NAVIGATE_TO', 'OPEN_MODAL'],
+  complex: ['NAVIGATE_TO', 'OPEN_MODAL', 'TOGGLE_VISIBILITY'],
 };
 
 // Support Responsif
@@ -111,6 +112,7 @@ export type {
   NavigateAction,
   AlertAction,
   ModalAction,
+  ToggleVisibilityAction,
   CliquableAction,
   ComponentFamily,
   ResponsiveProp,

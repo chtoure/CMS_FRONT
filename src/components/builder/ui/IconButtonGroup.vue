@@ -2,24 +2,24 @@
 import type { Component } from 'vue';
 
 interface Props {
-  options: { value: string | number; icon: Component; tooltip?: string }[];
-  modelValue?: string | number | null | (string | number)[];
+  options: { value: string | number | boolean; icon: Component; tooltip?: string }[];
+  modelValue?: string | number | boolean | null | (string | number | boolean)[];
   multiple?: boolean;
 }
 
 const props = defineProps<Props>();
 const emit = defineEmits(['update:modelValue']);
 
-function isActive(val: string | number) {
+function isActive(val: string | number | boolean) {
   if (props.multiple && Array.isArray(props.modelValue)) {
-    return props.modelValue.includes(val);
+    return (props.modelValue as (string | number | boolean)[]).includes(val);
   }
   return props.modelValue === val;
 }
 
-function select(val: string | number) {
+function select(val: string | number | boolean) {
   if (props.multiple && Array.isArray(props.modelValue)) {
-    const newValues = [...(props.modelValue as (string | number)[])];
+    const newValues = [...(props.modelValue as (string | number | boolean)[])];
     const idx = newValues.indexOf(val);
     if (idx > -1) newValues.splice(idx, 1);
     else newValues.push(val);
@@ -34,7 +34,7 @@ function select(val: string | number) {
   <div class="flex items-center gap-1">
     <button
       v-for="opt in options"
-      :key="opt.value"
+      :key="String(opt.value)"
       @click="select(opt.value)"
       :title="opt.tooltip"
       :class="[

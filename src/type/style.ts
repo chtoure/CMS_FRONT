@@ -38,11 +38,10 @@ interface ContainerStyles extends BaseStyles {
 interface StaticStyles extends BaseStyles {
   fontSize?: VariableProperty<ResponsiveProp<string>>;
   fontWeight?: VariableProperty<ResponsiveProp<string>>;
-  fontFamily?: VariableProperty<ResponsiveProp<string>>;
-  fontStyle?: VariableProperty<ResponsiveProp<'normal' | 'italic'>>;
   textAlign?: VariableProperty<ResponsiveProp<'left' | 'center' | 'right'>>;
   textColor?: VariableProperty<ResponsiveProp<string>>;
   textDecoration?: VariableProperty<ResponsiveProp<'none' | 'underline'>>;
+  bg?: VariableProperty<ResponsiveProp<string>>;
 }
 
 // Famille : Interactive (Boutons, liens)

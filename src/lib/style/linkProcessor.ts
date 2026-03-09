@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { resolveValue, resolveValueForBreakpoint } from "./core";
 import { TYPOGRAPHY_MAPPER, VISUAL_MAPPER } from "./shared";
-import { applyTypographyInline, applyLayoutInline, applyVisualInline } from "./common";
+import { applyTypographyInline, applyLayoutInline, applyVisualInline, } from "./common";
 
 export function buildLinkStyles(styles?: Record<string, unknown>, resolver?: (v: unknown) => unknown): string {
   if (!styles) return '';

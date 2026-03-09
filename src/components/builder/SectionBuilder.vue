@@ -66,7 +66,7 @@ const sectionStyles = computed(() => {
 });
 
 const draggableClasses = computed(() => ({
-  'min-h-[80px]': props.section.children.length === 0,
+  'min-h-[120px]': props.section.children.length === 0,
   'drop-zone-active': isDraggingOver.value
 }));
 

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { resolveValue, resolveValueForBreakpoint } from "./core";
 import { TYPOGRAPHY_MAPPER, VISUAL_MAPPER, EXTERNAL_MAPPER } from "./shared";
-import { applyTypographyInline, applyLayoutInline } from "./common";
+import { applyTypographyInline, applyLayoutInline, applyVisualInline } from "./common";
 
 export function buildTextStyles(styles?: Record<string, unknown>, resolver?: (v: unknown) => unknown): string {
   if (!styles) return '';
@@ -30,6 +30,7 @@ export function buildTextInlineStyles(
 
   applyTypographyInline(inline, styles, getValue);
   applyLayoutInline(inline, styles, getValue);
+  applyVisualInline(inline, styles, getValue);
   
   return inline;
 }

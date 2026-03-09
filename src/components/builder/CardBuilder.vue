@@ -1,7 +1,7 @@
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { ContainerStyles } from '../../type/component';
+import type { ContainerStyles, AnyComponentInstance } from '../../type/component';
 import { buildCardStyles, buildCardInlineStyles } from '../../lib/style/cardProcessor';
 import { useVariableResolver } from '../../hook/variable';
 import { inject } from 'vue';
@@ -9,6 +9,8 @@ import { inject } from 'vue';
 interface Props {
   styles?: ContainerStyles;
   data?: Record<string, unknown>;
+  element?: AnyComponentInstance;
+  children?: AnyComponentInstance[];
 }
 
 const props = defineProps<Props>();

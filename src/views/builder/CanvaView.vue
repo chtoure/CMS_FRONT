@@ -10,7 +10,6 @@ import type { AnyComponentInstance } from '../../type/component';
 import type { AnySectionInstance } from '../../type/section';
 import { findComponentById } from '../../lib/treeUtils';
 import { formatSize } from '../../lib/style/core';
-import { useVariableResolver } from '../../hook/variable';
 
 // Injection de l'état global
 const builderState = inject<{
@@ -154,7 +153,7 @@ watch(() => pageTree.value, (newVal) => {
         </span>
         <template v-if="selectedElement">
           <span class="text-gray-700">/</span>
-          <span class="text-primary">{{ 'name' in selectedElement ? selectedElement.name : 'Section' }}</span>
+          <span class="text-primary">{{ 'name' in selectedElement ? selectedElement.tag : 'Section' }}</span>
         </template>
 
       </div>

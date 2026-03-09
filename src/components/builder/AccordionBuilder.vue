@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue';
-import type { ContainerStyles } from '../../type/component';
+import type { ContainerStyles, AnyComponentInstance } from '../../type/component';
 import { buildBlocLayoutStyles, buildBlocLayoutInlineStyles } from '../../lib/style/blocProcessor';
 import { useVariableResolver } from '../../hook/variable';
 
@@ -9,6 +9,8 @@ interface Props {
   data?: {
     items?: any;
   };
+  element?: AnyComponentInstance;
+  children?: AnyComponentInstance[];
 }
 
 const props = defineProps<Props>();

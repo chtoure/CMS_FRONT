@@ -29,6 +29,10 @@ const { getRawValue, getHexValue, updateStyle, updateStyles } = useStyleEditor(p
 
 const activePicker = ref<'text' | 'bg' | null>(null);
 const styles = computed(() => props.element.styles as any);
+
+console.log("stylessssssssssssssssssssssss",styles.value);
+
+
 const fontWeightOptions = [
   { label: 'L', value: 'light', tooltip: 'Light' },
   { label: 'R', value: 'normal', tooltip: 'Regular' },
@@ -52,7 +56,18 @@ const fontStyleOptions = [
   { value: 'italic', icon: Italic, tooltip: 'Italic' },
 ];
 
-const layoutWhitelist = ['width', 'height', 'padding', 'marginTop', 'marginBottom'];
+const layoutWhitelist = [
+  'width', 
+  'height', 
+  'padding', 
+  'marginTop', 
+  'marginBottom', 
+  'rounded', 
+  'shadow', 
+  'opacity', 
+  'bg',
+  'borderWidth'
+];
 </script>
 
 <template>
@@ -157,34 +172,7 @@ const layoutWhitelist = ['width', 'height', 'padding', 'marginTop', 'marginBotto
               multiple
             />
           </div>
-          <div>
-            <div class="">
-              <VariableInputControl
-          :model-value="styles.bg"
-          variable-type="COLOR"
-        >
-          <CompositionColorPicker 
-            :is-open="activePicker === 'bg'"
-            :initial-color="'#' + getHexValue(styles.bg)"
-            @close="activePicker = null"
-            @color-change="(hex) => updateStyle('bg', { type: 'static', value: hex })"
-          >
-            <template #trigger>
-              <button 
-                @click="activePicker = 'bg'" 
-                class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80 transition-colors"
-              >
-                <div 
-                  class="w-4 h-4 rounded-sm border border-builder-bar-border shrink-0" 
-                  :style="{ backgroundColor: '#' + getHexValue(styles.bg) }"
-                />
-                <span class="text-builder-bar-text/60 font-mono text-[10px] flex-1 text-left truncate">{{ getRawValue(styles.bg) || 'Transparent' }}</span>
-              </button>
-            </template>
-          </CompositionColorPicker>
-        </VariableInputControl>
-            </div>
-          </div>
+
         </div>
       </div>
     </PropertyGroup>

@@ -204,6 +204,7 @@ const inputTypeOptions = [
                 <SelectItem value="NAVIGATE_TO">Naviguer vers URL</SelectItem>
                 <SelectItem value="SHOW_ALERT">Afficher Alerte</SelectItem>
                 <SelectItem value="OPEN_MODAL">Ouvrir Modal</SelectItem>
+                <SelectItem value="TOGGLE_VISIBILITY">Toggle Visibilité</SelectItem>
               </SelectContent>
             </Select>
          </div>
@@ -211,9 +212,14 @@ const inputTypeOptions = [
             <Label class="text-[11px] text-gray-400">URL de destination</Label>
             <Input :model-value="((element.data.cliquable as Extract<CliquableAction, { action: 'NAVIGATE_TO' }>).action_params?.url)" @update:model-value="(val) => updateData('cliquable', { ...(element.data.cliquable as object), action_params: { url: val } })" class="h-8 text-xs bg-black/20 border-border/50" />
          </div>
-         <div v-if="(element.data.cliquable as CliquableAction).action === 'SHOW_ALERT'" class="space-y-1.5">
+          <div v-if="(element.data.cliquable as CliquableAction).action === 'SHOW_ALERT'" class="space-y-1.5">
             <Label class="text-[11px] text-gray-400">Message d'alerte</Label>
             <Input :model-value="((element.data.cliquable as Extract<CliquableAction, { action: 'SHOW_ALERT' }>).action_params?.message)" @update:model-value="(val) => updateData('cliquable', { ...(element.data.cliquable as object), action_params: { message: val } })" class="h-8 text-xs bg-black/20 border-border/50" />
+         </div>
+         <div v-if="(element.data.cliquable as CliquableAction).action === 'TOGGLE_VISIBILITY'" class="space-y-1.5">
+            <Label class="text-[11px] text-gray-400">ID de la cible (Auto-toggle)</Label>
+            <Input :model-value="((element.data.cliquable as Extract<CliquableAction, { action: 'TOGGLE_VISIBILITY' }>).action_params?.targetId)" @update:model-value="(val) => updateData('cliquable', { ...(element.data.cliquable as object), action_params: { targetId: val } })" class="h-8 text-xs bg-black/20 border-border/50" placeholder="ex: Card-12345" />
+            <p class="text-[9px] text-gray-500 italic">L'ID se trouve en haut du composant quand il est sélectionné.</p>
          </div>
        </div>
     </div>

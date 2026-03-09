@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue';
-import type { StaticStyles } from '../../type/component';
+import type { StaticStyles, AnyComponentInstance } from '../../type/component';
 import { buildImageStyles, buildImageInlineStyles } from '../../lib/style/imageProcessor';
 import { useVariableResolver } from '../../hook/variable';
 
@@ -11,6 +11,8 @@ interface Props {
     alt?: any;
     objectFit?: any;
   };
+  element?: AnyComponentInstance;
+  children?: AnyComponentInstance[];
 }
 
 const props = defineProps<Props>();

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue';
 import type { LinkStyles } from '../../type/style';
+import type { AnyComponentInstance } from '../../type/component';
 import { buildLinkStyles, buildLinkInlineStyles } from '../../lib/style/linkProcessor';
 import { resolveValueForBreakpoint } from '../../lib/style/core';
 import { useVariableResolver } from '../../hook/variable';
@@ -8,16 +9,19 @@ import { useVariableResolver } from '../../hook/variable';
 interface Props {
   styles?: LinkStyles;
   data?: {
-    text?: any;
-    url?: any;
-    target?: any;
+    text?: string;
+    url?: string;
+    target?: string;
   };
+  element?: AnyComponentInstance;
+  children?: AnyComponentInstance[];
 }
 
 const props = defineProps<Props>();
 
 const builderState = inject<{
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 }>('builderState', { currentBreakpoint: { value: 'default' } } as any);
 
 const { resolveValue } = useVariableResolver();

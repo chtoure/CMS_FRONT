@@ -12,6 +12,7 @@ const emit = defineEmits(['update:element', 'select']);
 
 const builderState = inject<{
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
+  isDragging?: { value: boolean }
 }>('builderState');
 
 const resizableRef = ref<HTMLElement | null>(null);
@@ -99,6 +100,13 @@ const startResize = (e: MouseEvent, direction: string) => {
     
     <!-- Resize Handles - Visible quand actif -->
     <template v-if="active">
+      <div 
+        class="absolute inset-0 z-40 transition-all"
+        :class="{ 
+          'pointer-events-none opacity-0': builderState?.isDragging?.value,
+          'pointer-events-auto': !builderState?.isDragging?.value 
+        }"
+      >
       <!-- Coins (8px) -->
       <div 
         class="resize-handle resize-handle-nw cursor-nw-resize" 
@@ -142,6 +150,7 @@ const startResize = (e: MouseEvent, direction: string) => {
         @mousedown.stop="startResize($event, 'e')" 
         title="Redimensionner droit"
       />
+      </div>
     </template>
   </div>
 </template>

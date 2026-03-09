@@ -1,10 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ref } from 'vue';
 import { type AnyComponentInstance } from '../type/component';
 import type { BlocTemplate, RegisterBlocTemplate, UpdateBlocTemplate } from '../type/bloc-template';
 import api, { handleResponse } from '../api/fetchConfig';
 import { useSection } from './section';
 import type { AnySectionInstance } from '../type/section';
-import { INJECTED_COMPONENTS, isTemporalComponent } from '../lib/constants/components';
 
 export function useBlockTemplate() {
   const isSaving = ref(false);
@@ -17,33 +17,11 @@ export function useBlockTemplate() {
    */
   const useCreateBlockTemplate = async (component: AnyComponentInstance, parentId: number | null, order: number, sectionId: number, is_custom = false): Promise<BlocTemplate> => {
 
-    console.log("component create", component);
-    
     if (!component.componentDefinitionId) {
       throw new Error(`Component definition ID missing for component ${component.name}`);
     };
 
-    // Si c'est un composant temporaire (Lien, Navbar), on ne tente même pas l'API
-    // car le backend ne les connaît pas et renverrait une 400.
-    if (isTemporalComponent(component.componentDefinitionId)) {
-        return {
-            id: Number(`998${Math.floor(Math.random() * 1000)}`),
-            name: component.name,
-            componentId: component.componentDefinitionId,
-            order: order,
-            parentId: parentId || undefined,
-            sectionId: sectionId,
-            is_custom: is_custom,
-            props: {
-                styles: component.styles,
-                data: component.data
-            },
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            archive: false,
-            archivedAt: null
-        } as BlocTemplate;
-    }
+
 
     const payload: RegisterBlocTemplate = {
       componentId: component.componentDefinitionId!,
@@ -71,11 +49,6 @@ export function useBlockTemplate() {
    */
   const useUpdateBlockTemplate = async (component: AnyComponentInstance, parentId: number | null, order: number, sectionId: number, is_custom = false) => {
     if (!component.blocTemplateId) return;
-
-    // Si blocTemplateId est une chaîne ou un fake ID, on ignore la persistence backend pour ce bloc
-    if (typeof component.blocTemplateId === 'string' || isTemporalComponent(component.blocTemplateId)) {
-        return;
-    }
 
     const payload: UpdateBlocTemplate = {
       order: order,
@@ -154,27 +127,10 @@ export function useBlockTemplate() {
       try {
         let currentBlocTemplateId = node.blocTemplateId;
 
-        console.debug('useSyncTree syncing', node.name, 'parentId=', parentId, 'sectionId=', sectionId, 'existingBlocId=', currentBlocTemplateId);
-
         if (!currentBlocTemplateId) {
-          try {
-            const newBlock = await useCreateBlockTemplate(node, parentId, i, sectionId, is_custom);
-            currentBlocTemplateId = newBlock.id;
-            
-            if (newBlock.props) {
-              node.styles = newBlock.props.styles || {};
-              node.data = newBlock.props.data || {};
-            }
-          } catch (error) {
-            // Si c'est un composant non supporté par le backend (400), on garde un ID local
-            // pour permettre l'édition mais on log l'erreur
-            if (isTemporalComponent(node.componentDefinitionId)) {
-                console.warn(`Sync skipped for injected component ${node.name} (Backend support pending)`);
-                currentBlocTemplateId = Number(`998${Math.floor(Math.random() * 1000)}`); // ID local temporaire
-            } else {
-                throw error;
-            }
-          }
+          console.debug('useSyncTree ATTEMPT CREATE', node.name, 'tag=', node.tag, 'parentId=', parentId);
+          const newBlock = await useCreateBlockTemplate(node, parentId, i, sectionId, is_custom);
+          currentBlocTemplateId = newBlock.id;
         } else {
           await useUpdateBlockTemplate(node, parentId, i, sectionId, is_custom);
         }
@@ -287,13 +243,7 @@ export function useBlockTemplate() {
       
       const componentResults = componentsResult.results || [];
       
-      // Injection dynamique des composants manquants
-      INJECTED_COMPONENTS.forEach(injected => {
-        if (!componentResults.find(c => c.tag === injected.tag)) {
-            componentResults.push(injected);
-        }
-      });
-
+      
       const componentMap = new Map(componentResults.map(c => [c.id, c]));
       const nodeMap = new Map<number | string, AnyComponentInstance>();
       const rootNodes: AnyComponentInstance[] = [];
@@ -412,7 +362,6 @@ export function useBlockTemplate() {
   };
 
   const deleteBlockTemplate = async (blocTemplateId: number) => {
-    if (isTemporalComponent(blocTemplateId)) return;
     try {
       const response = await api(`/bloc-template/${blocTemplateId}`, {
         method: 'DELETE'

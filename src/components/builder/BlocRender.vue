@@ -29,6 +29,7 @@ const builderState = inject<{
   selectComponent: (id: string | null) => void
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
   isDragging: { value: boolean }
+  isVisible: (id: string) => boolean
 }>('builderState');
 
 const { resolveValue } = useVariableResolver();
@@ -47,6 +48,7 @@ const layoutInlineStyles = computed(() => {
 });
 
 const isDraggingOver = computed(() => builderState?.isDragging?.value ?? false);
+const isVisible = computed(() => builderState?.isVisible(props.element.id) ?? true);
 
 // Handlers
 const handleSelect = (e: MouseEvent) => {
@@ -77,13 +79,18 @@ const handleChildUpdate = (index: number, newChild: AnyComponentInstance) => {
     :is="componentToRender" 
     :styles="element.styles" 
     :data="element.data"
+    :element="element"
+    :children="element.children"
     class="relative group/renderer transition-all duration-200"
     :class="{ 
       'ring-2 ring-blue-500 ring-inset z-10': isSelected, 
       'hover:ring-1 hover:ring-gray-300': !isSelected && !isDraggingOver,
-      'drop-zone-potential': isDraggingOver && canHaveChildren
+      'drop-zone-potential': isDraggingOver && canHaveChildren,
+      'opacity-40 grayscale-[0.5] border-2 border-dashed border-red-500/30': !isVisible && !isSelected,
     }"
+    v-show="isVisible || isSelected"
     @click="handleSelect"
+    @update:element="(newVal: AnyComponentInstance) => emit('update:element', newVal)"
   >
     <!-- Overlay interactif pour composants sans enfants -->
     <div 
@@ -113,7 +120,8 @@ const handleChildUpdate = (index: number, newChild: AnyComponentInstance) => {
             layoutClasses, 
             { 
               'drop-zone-active': isDraggingOver,
-              'min-h-[40px]': !element.children || element.children.length === 0 
+              'min-h-[80px] p-4': !element.children || element.children.length === 0,
+              'p-2': element.children && element.children.length > 0 && isDraggingOver
             }
           ]"
           :style="layoutInlineStyles"
@@ -154,8 +162,12 @@ const handleChildUpdate = (index: number, newChild: AnyComponentInstance) => {
 }
 
 .drop-zone-potential {
+  outline: 1px dashed rgba(59, 130, 246, 0.5);
+  outline-offset: -1px;
+}
+
+.drop-zone-potential:hover {
   outline: 2px solid #3b82f6 !important;
-  outline-offset: -2px;
   background-color: rgba(59, 130, 246, 0.05);
 }
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { InputStyles } from '../../type/component';
+import type { InputStyles, AnyComponentInstance } from '../../type/component';
 import { buildInputStyles, buildInputInlineStyles } from '../../lib/style/inputProcessor';
 import { useVariableResolver } from '../../hook/variable';
 import { inject } from 'vue';
@@ -17,6 +17,8 @@ interface Props {
     required?: any;
     disabled?: any;
   };
+  element?: AnyComponentInstance;
+  children?: AnyComponentInstance[];
 }
 
 const props = defineProps<Props>();

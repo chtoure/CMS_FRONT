@@ -24,6 +24,15 @@ const selectedSectionId = ref<string | null>(null);
 const builderMode = ref<'page' | 'library'>('page');
 const currentBreakpoint = ref<'default' | 'sm' | 'md' | 'lg'>('default');
 const isDragging = ref(false);
+const toggleStates = ref<Record<string, boolean>>({});
+
+const toggleVisibility = (id: string) => {
+  toggleStates.value[id] = !toggleStates.value[id];
+};
+
+const isVisible = (id: string) => {
+  return toggleStates.value[id] !== false; // Visible par défaut
+};
 
 const selectComponent = (id: string | null) => {
   selectedId.value = id;
@@ -257,7 +266,10 @@ provide('builderState', {
   canRedo,
   currentBreakpoint,
   isDragging,
-  setIsDragging
+  setIsDragging,
+  toggleStates,
+  toggleVisibility,
+  isVisible
 });
 </script>
 

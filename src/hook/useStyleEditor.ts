@@ -40,11 +40,18 @@ export function useStyleEditor(element: AnyComponentInstance | AnySectionInstanc
   const updateStyles = (updates: Record<string, any>) => {
     if (!builderState) return;
 
+    console.log("updatesssssssssss", updates);
+    
+
     const newStyles = { ...element.styles };
     const bp = builderState.currentBreakpoint.value;
 
     Object.entries(updates).forEach(([key, value]) => {
       let finalValue;
+
+      console.log("keyyyyyyyyy", key);
+      console.log("valueeeeeee", value);
+      
 
       if (typeof value === 'object' && value !== null && 'type' in value && 'value' in value) {
         finalValue = value;
@@ -86,6 +93,9 @@ export function useStyleEditor(element: AnyComponentInstance | AnySectionInstanc
   const getRawValue = (prop: unknown): string | number | undefined => {
     if (!prop) return undefined;
 
+    console.log("proppppppppppp", prop);
+    
+
     let valueToProcess = prop;
 
     if (typeof prop === 'object' && prop !== null && 'type' in prop && 'value' in prop) {
@@ -106,6 +116,8 @@ export function useStyleEditor(element: AnyComponentInstance | AnySectionInstanc
       return res.default;
     }
 
+    console.log("valueToProcess", valueToProcess);
+    
     return (typeof valueToProcess === 'string' || typeof valueToProcess === 'number') ? valueToProcess : undefined;
   };
 

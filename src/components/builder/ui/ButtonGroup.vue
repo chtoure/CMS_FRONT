@@ -2,8 +2,8 @@
 import type { Component } from 'vue';
 
 interface Props {
-  options: { label?: string; value: string | number; icon?: Component; tooltip?: string }[];
-  modelValue?: string | number | null;
+  options: { label?: string; value: string | number | boolean; icon?: Component; tooltip?: string }[];
+  modelValue?: string | number | boolean | null;
   size?: 'sm' | 'md';
 }
 
@@ -15,7 +15,7 @@ const emit = defineEmits(['update:modelValue']);
   <div class="flex bg-builder-input-bg border border-builder-bar-border rounded overflow-hidden p-0.5 w-full">
     <button
       v-for="opt in options"
-      :key="opt.value"
+      :key="String(opt.value)"
       @click="emit('update:modelValue', opt.value)"
       :title="opt.tooltip"
       :class="[

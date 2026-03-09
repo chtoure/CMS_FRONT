@@ -1,7 +1,7 @@
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { StaticStyles } from '../../type/component';
+import type { StaticStyles, AnyComponentInstance } from '../../type/component';
 import { buildTextStyles, buildTextInlineStyles } from '../../lib/style/textProcessor';
 import { useVariableResolver } from '../../hook/variable';
 import { inject } from 'vue';
@@ -12,6 +12,8 @@ interface Props {
     content?: any;
     tag?: any;
   };
+  element?: AnyComponentInstance;
+  children?: AnyComponentInstance[];
 }
 
 const props = defineProps<Props>();
@@ -28,7 +30,6 @@ const computedClasses = computed(() => {
       buildTextStyles(props.styles as Record<string, unknown>, resolveValue)
   ];
 });
-
 
 const computedInlineStyles = computed(() => {
   const bp = builderState.currentBreakpoint.value;
