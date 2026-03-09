@@ -5,6 +5,7 @@ interface Variable {
   name: string
   value: string
   collectionId: number
+  collection?: Collection
 }
 
 interface Collection {

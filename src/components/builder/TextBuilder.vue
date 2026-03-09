@@ -1,34 +1,43 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { StaticStyles } from '../../type/component';
-import { buildStyles, buildInlineStyles } from '../../lib/styleProcessor';
+import type { StaticStyles, AnyComponentInstance } from '../../type/component';
+import { buildTextStyles, buildTextInlineStyles } from '../../lib/style/textProcessor';
+import { useVariableResolver } from '../../hook/variable';
+import { inject } from 'vue';
 
 interface Props {
   styles?: StaticStyles;
   data?: {
-    content?: string;
-    tag?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'p' | 'span';
+    content?: any;
+    tag?: any;
   };
+  element?: AnyComponentInstance;
+  children?: AnyComponentInstance[];
 }
 
 const props = defineProps<Props>();
-
-import { inject } from 'vue';
 
 const builderState = inject<{
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
 }>('builderState', { currentBreakpoint: { value: 'default' } } as any);
 
+const { resolveValue } = useVariableResolver();
+
 const computedClasses = computed(() => {
-  return buildStyles('static', props.styles as Record<string, unknown>);
+  return [
+      'inline-block w-full min-h-[1em] break-words',
+      buildTextStyles(props.styles as Record<string, unknown>, resolveValue)
+  ];
 });
 
 const computedInlineStyles = computed(() => {
   const bp = builderState.currentBreakpoint.value;
-  return buildInlineStyles('static', props.styles as Record<string, unknown>, bp);
+  return buildTextInlineStyles(props.styles as Record<string, unknown>, bp, resolveValue);
 });
 
-const tag = computed(() => props.data?.tag || 'p');
+const tag = computed(() => (resolveValue(props.data?.tag) as string) || 'p');
+const content = computed(() => (resolveValue(props.data?.content) as string) || 'Texte par défaut');
 </script>
 
 <template>
@@ -37,6 +46,6 @@ const tag = computed(() => props.data?.tag || 'p');
     :class="computedClasses"
     :style="computedInlineStyles"
   >
-    {{ props.data?.content || 'Texte par défaut' }}
+    {{ content }}
   </component>
 </template>

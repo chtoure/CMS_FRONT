@@ -9,6 +9,7 @@ import ResizerWrapper from '../../components/builder/ResizerWrapper.vue';
 import type { AnyComponentInstance } from '../../type/component';
 import type { AnySectionInstance } from '../../type/section';
 import { findComponentById } from '../../lib/treeUtils';
+import { formatSize } from '../../lib/style/core';
 
 // Injection de l'état global
 const builderState = inject<{
@@ -18,7 +19,9 @@ const builderState = inject<{
   builderMode: { value: 'page' | 'library' };
   selectComponent: (id: string | null) => void;
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' };
+  setIsDragging: (val: boolean) => void;
 }>('builderState');
+
 
 // Fallback pour la sécurité
 const pageTree = computed({
@@ -112,6 +115,8 @@ watch(() => pageTree.value, (newVal) => {
   
   // console.log('PageTree updated:', JSON.parse(JSON.stringify(newVal)));
 }, { deep: true });
+
+// La fonction formatSize locale est supprimée car on utilise celle de core.ts
 </script>
 
 <template>
@@ -148,7 +153,7 @@ watch(() => pageTree.value, (newVal) => {
         </span>
         <template v-if="selectedElement">
           <span class="text-gray-700">/</span>
-          <span class="text-primary">{{ 'name' in selectedElement ? selectedElement.name : 'Section' }}</span>
+          <span class="text-primary">{{ 'name' in selectedElement ? selectedElement.tag : 'Section' }}</span>
         </template>
 
       </div>
@@ -183,8 +188,12 @@ watch(() => pageTree.value, (newVal) => {
                 v-if="builderState?.builderMode.value === 'page'"
                 v-model="pageTree"
                 :group="{ name: 'blocks', put: true, pull: true }"
-                :animation="150"
+                :animation="100"
+                :delay="0"
+                :delay-on-touch-only="true"
                 ghost-class="ghost-preview"
+                @start="builderState?.setIsDragging(true)"
+                @end="builderState?.setIsDragging(false)"
                 class="w-full min-h-[1000px] relative flex flex-col p-0 z-0 bg-white"
               >
                 <div 
@@ -210,17 +219,25 @@ watch(() => pageTree.value, (newVal) => {
                 v-else
                 v-model="builderState!.libraryTree.value"
                 :group="{ name: 'blocks', put: true, pull: true }"
-                :animation="150"
+                :animation="100"
+                :delay="0"
+                :delay-on-touch-only="true"
                 ghost-class="ghost-preview"
+                @start="builderState?.setIsDragging(true)"
+                @end="builderState?.setIsDragging(false)"
                 class="w-full min-h-[1000px] relative flex flex-col p-8 z-0 bg-transparent items-center"
               >
                  <div 
                    v-for="(element, index) in builderState!.libraryTree.value" 
                    :key="element.id"
-                   class="relative transition-all outline-none mb-12 w-full max-w-4xl bg-white/5 p-8 rounded-xl border border-white/10 group/lib-item"
+                   class="relative transition-all outline-none mb-6 bg-white/5 p-1 rounded-sm border border-white/5 group/lib-item max-w-full"
+                   :style="{
+                     width: formatSize(element.styles?.width, '100%'), 
+                     height: formatSize(element.styles?.height) 
+                   }"
                  >
                     <!-- Label du composant custom -->
-                    <div class="absolute -top-4 left-4 bg-primary text-white text-[10px] px-2 py-0.5 rounded shadow-lg opacity-80 group-hover/lib-item:opacity-100 transition-opacity">
+                    <div class="absolute top-2 left-4 bg-primary text-white text-[10px] px-2 py-0.5 rounded shadow-lg opacity-80 group-hover/lib-item:opacity-100 transition-opacity">
                       MODÈLE : {{ element.name }}
                     </div>
 
@@ -263,5 +280,28 @@ watch(() => pageTree.value, (newVal) => {
 <style scoped>
 .device-wrapper {
   /* Supprimé au profit du style dynamique */
+}
+
+:deep(.ghost-preview) {
+  opacity: 0.25 !important;
+  background: #3b82f6 !important;
+  border: 2px solid #3b82f6 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
+  transform: scaleY(0.95) !important;
+}
+
+:deep(.drag-handle) {
+  cursor: grab;
+}
+
+:deep(.drag-handle:active) {
+  cursor: grabbing;
+}
+
+:deep(.sortable-ghost) {
+  opacity: 0.2 !important;
+  background: rgba(59, 130, 246, 0.1) !important;
+  border: 1px dashed #3b82f6 !important;
 }
 </style>

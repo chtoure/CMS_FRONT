@@ -10,7 +10,7 @@ import type { AnyComponentInstance } from '../../type/component';
 import type { AnySectionInstance } from '../../type/section';
 import StyleEditor from '../../components/builder/StyleEditor.vue';
 import DataEditor from '../../components/builder/DataEditor.vue';
-import { MousePointer2 } from 'lucide-vue-next';
+import { MousePointer2, Webhook } from 'lucide-vue-next';
 
 // Injection de l'état global
 const builderState = inject<{
@@ -23,6 +23,8 @@ const builderState = inject<{
 
 import { useBlockTemplate } from '../../hook/bloc-template';
 import { Save } from 'lucide-vue-next';
+import CompositionModal from '../../components/composition/CompositionModal.vue';
+import VariableListView from '../variable/VariableListView.vue';
 const { saveAsCustom } = useBlockTemplate();
 
 const handleSaveAsCustom = async () => {
@@ -56,12 +58,19 @@ const selectedElement = computed(() => {
       
       <div v-if="selectedElement" class="relative p-2 flex-1 overflow-y-auto">
         <div class=" flex flex-col gap-2 items-start justify-between pb-3">
-          <div>
-            <p class="text-md font-bold text-builder-bar-text">
-              {{ 'name' in selectedElement ? selectedElement.name : 'Section' }}
-            </p>
+          <div class="flex flex-row gap-4 items-center w-full">
             <p v-if="'tag' in selectedElement" class="text-xs text-gray-500 font-mono">{{ selectedElement.tag }}</p>
             <p v-else class="text-xs text-gray-500 font-mono">Layout Section</p>
+            <CompositionModal title="Variables">
+              <template #trigger>
+                <button class="hover:text-primary">
+                  <Webhook class="w-3.5 h-3.5" />
+                </button>
+              </template>
+              <template #content>
+                <VariableListView />
+              </template>
+            </CompositionModal>
           </div>
           
           <!-- Save as Custom Button -->

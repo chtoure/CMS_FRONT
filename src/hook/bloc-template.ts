@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ref } from 'vue';
-import type { AnyComponent, AnyComponentInstance } from '../type/component';
+import { type AnyComponentInstance } from '../type/component';
 import type { BlocTemplate, RegisterBlocTemplate, UpdateBlocTemplate } from '../type/bloc-template';
 import api, { handleResponse } from '../api/fetchConfig';
 import { useSection } from './section';
@@ -15,17 +16,20 @@ export function useBlockTemplate() {
    * Crée un nouveau BlockTemplate via l'API
    */
   const useCreateBlockTemplate = async (component: AnyComponentInstance, parentId: number | null, order: number, sectionId: number, is_custom = false): Promise<BlocTemplate> => {
+
     if (!component.componentDefinitionId) {
       throw new Error(`Component definition ID missing for component ${component.name}`);
     };
 
+
+
     const payload: RegisterBlocTemplate = {
       componentId: component.componentDefinitionId!,
       order: order,
-      parentId: parentId, // On envoie tel quel (number ou null)
+      parentId: parentId,
       sectionId: is_custom ? undefined : sectionId,
       is_custom: is_custom,
-      modelId: component.modelId, // On passe le modelId si présent
+      modelId: component.modelId,
       props: {
         styles: component.styles,
         data: component.data
@@ -48,7 +52,7 @@ export function useBlockTemplate() {
 
     const payload: UpdateBlocTemplate = {
       order: order,
-      parentId: parentId, // On envoie tel quel (number ou null)
+      parentId: parentId,
       sectionId: is_custom ? undefined : sectionId,
       is_custom: is_custom,
       props: {
@@ -124,14 +128,9 @@ export function useBlockTemplate() {
         let currentBlocTemplateId = node.blocTemplateId;
 
         if (!currentBlocTemplateId) {
+          console.debug('useSyncTree ATTEMPT CREATE', node.name, 'tag=', node.tag, 'parentId=', parentId);
           const newBlock = await useCreateBlockTemplate(node, parentId, i, sectionId, is_custom);
           currentBlocTemplateId = newBlock.id;
-          
-          // Mettre à jour les props de l'instance avec le retour du backend (héritage prototypal)
-          if (newBlock.props) {
-            node.styles = newBlock.props.styles || {};
-            node.data = newBlock.props.data || {};
-          }
         } else {
           await useUpdateBlockTemplate(node, parentId, i, sectionId, is_custom);
         }
@@ -201,7 +200,6 @@ export function useBlockTemplate() {
       saveTimeout.value = window.setTimeout(async () => {
         isSaving.value = true;
         try {
-          // Pour la bibliothèque, parentId est null au début, sectionId est 0 (ignoré car is_custom=true)
           const syncedTree = await useSyncTree(nodes, null, 0, true);
           lastSavedState.value = JSON.stringify(syncedTree);
           console.log('Library auto-save success');
@@ -240,13 +238,14 @@ export function useBlockTemplate() {
    */
   const buildTreeFromTemplates = async (templates: BlocTemplate[]): Promise<AnyComponentInstance[]> => {
     try {
-      const componentsResponse = await api(`/components`, { method: 'GET' });
-      const componentsResult = await handleResponse<{ results: AnyComponent[] }>(componentsResponse);
-      const componentMap = new Map(componentsResult.results?.map(c => [c.id, c]));
-
-      templates.sort((a, b) => a.order - b.order);
-
-      const nodeMap = new Map<number, AnyComponentInstance>();
+      const response = await api(`/components`, { method: 'GET' });
+      const componentsResult = await handleResponse<{ results: any[] }>(response);
+      
+      const componentResults = componentsResult.results || [];
+      
+      
+      const componentMap = new Map(componentResults.map(c => [c.id, c]));
+      const nodeMap = new Map<number | string, AnyComponentInstance>();
       const rootNodes: AnyComponentInstance[] = [];
 
       for (const t of templates) {
@@ -273,13 +272,25 @@ export function useBlockTemplate() {
         const node = nodeMap.get(t.id);
         if (!node) continue;
 
-        if (t.parentId && nodeMap.has(t.parentId)) {
-          const parent = nodeMap.get(t.parentId)!;
-          parent.children.push(node);
+        if (t.parentId != null) {
+          const parent = nodeMap.get(t.parentId);
+          if (parent) {
+            parent.children.push(node);
+          } else {
+            rootNodes.push(node);
+          }
         } else {
           rootNodes.push(node);
         }
       }
+
+      const orderMap = new Map(templates.map(t => [t.id, t.order]));
+      for (const node of nodeMap.values()) {
+        if (node.children && node.children.length > 1) {
+          node.children.sort((a, b) => (orderMap.get(a.blocTemplateId!) ?? 0) - (orderMap.get(b.blocTemplateId!) ?? 0));
+        }
+      }
+      rootNodes.sort((a, b) => (orderMap.get(a.blocTemplateId!) ?? 0) - (orderMap.get(b.blocTemplateId!) ?? 0));
 
       return rootNodes;
     } catch (error) {
@@ -295,17 +306,28 @@ export function useBlockTemplate() {
     try {
       const response = await api(`/bloc-template-tree/${sectionId}`, { method: 'GET' });
       const data = await handleResponse<BlocTemplate[] | { results: BlocTemplate[] }>(response);
-      const templates: BlocTemplate[] = Array.isArray(data) ? data : (data.results || []);
-      return buildTreeFromTemplates(templates);
+      let templates: BlocTemplate[] = Array.isArray(data) ? data : (data.results || []);
+      
+      const flattenTemplates = (list: BlocTemplate[], parentId: number | null = null): BlocTemplate[] => {
+        const output: BlocTemplate[] = [];
+        for (const t of list) {
+          const { children, ...rest } = t as any;
+          output.push({ ...rest, parentId } as BlocTemplate);
+          if (children && Array.isArray(children) && children.length) {
+            output.push(...flattenTemplates(children, t.id));
+          }
+        }
+        return output;
+      };
+
+      templates = flattenTemplates(templates);
+      return await buildTreeFromTemplates(templates);
     } catch (error) {
       console.error('Failed to fetch tree:', error);
       return [];
     }
   };
 
-  /**
-   * Récupère l'arbre complet de tous les composants personnalisés (is_custom: true)
-   */
   const fetchCustomTree = async (): Promise<AnyComponentInstance[]> => {
     try {
       const templates = await fetchCustomBlocks();
@@ -316,13 +338,9 @@ export function useBlockTemplate() {
     }
   };
 
-  /**
-   * Récupère l'arbre complet (Sections + Blocs)
-   */
   const fetchAll = async (pageRevisionId: number): Promise<AnySectionInstance[]> => {
     try {
       const sections = await useGetSections(pageRevisionId);
-      
       const syncedSections: AnySectionInstance[] = [];
       for (const s of sections) {
           const rootNodes = await fetchTree(s.id);
@@ -335,19 +353,14 @@ export function useBlockTemplate() {
               children: rootNodes
           });
       }
-
       lastSavedState.value = JSON.stringify(syncedSections);
       return syncedSections;
-
     } catch (error) {
       console.error('Failed to fetch full tree:', error);
       return [];
     }
   };
 
-  /**
-   * Supprime un BlockTemplate du backend
-   */
   const deleteBlockTemplate = async (blocTemplateId: number) => {
     try {
       const response = await api(`/bloc-template/${blocTemplateId}`, {
@@ -360,9 +373,6 @@ export function useBlockTemplate() {
     }
   };
 
-  /**
-   * Récupère tous les BlocTemplates personnalisés (is_custom: true)
-   */
   const fetchCustomBlocks = async (): Promise<BlocTemplate[]> => {
     try {
       const response = await api('/bloc-templates-components-custom', { method: 'GET' });
@@ -374,28 +384,8 @@ export function useBlockTemplate() {
     }
   };
 
-  /**
-   * Enregistre un composant existant comme un nouveau composant personnalisé (is_custom: true)
-   * Inclut récursivement tous les enfants.
-   */
   const saveAsCustom = async (component: AnyComponentInstance): Promise<AnyComponentInstance> => {
-    // 1. Cloner pour ne pas impacter l'instance sur la page
-    const clone = JSON.parse(JSON.stringify(component)) as AnyComponentInstance;
-
-    // 2. Fonction récursive pour nettoyer les IDs existants (on veut créer des nouveaux templates)
-    const stripIds = (node: AnyComponentInstance) => {
-      delete node.blocTemplateId;
-      if (node.children && node.children.length > 0) {
-        node.children.forEach(stripIds);
-      }
-    };
-    
-    stripIds(clone);
-
-    // 3. Utiliser useSyncTree pour sauvegarder tout l'arbre avec is_custom: true
-    // parentId: null, sectionId: 0 (ignoré), is_custom: true
-    const results = await useSyncTree([clone], null, 0, true);
-    
+    const results = await useSyncTree([component], null, 0, true);
     if (results.length > 0) {
       return results[0]!;
     }

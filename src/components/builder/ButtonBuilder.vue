@@ -1,47 +1,62 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { InteractiveStyles, CliquableAction } from '../../type/component';
+import type { InteractiveStyles, CliquableAction, AnyComponentInstance } from '../../type/component';
 import { executeAction } from '../../registry/cliquable';
-import { buildStyles, buildInlineStyles } from '../../lib/styleProcessor';
+import { buildButtonStyles, buildButtonInlineStyles } from '../../lib/style/buttonProcessor';
+import { useVariableResolver } from '../../hook/variable';
+import { inject } from 'vue';
 
 interface Props {
-  // Respect de la structure séparée
   styles?: InteractiveStyles;
   data?: {
-    content?: string;
+    content?: string | Record<string, unknown>;
     cliquable?: CliquableAction;
   };
+  element?: AnyComponentInstance;
+  children?: AnyComponentInstance[];
 }
 
 const props = defineProps<Props>();
 
-import { inject } from 'vue';
-
 const builderState = inject<{
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
+  toggleVisibility?: (id: string) => void
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }>('builderState', { currentBreakpoint: { value: 'default' } } as any);
 
-// On utilise le buildStyles pour transformer l'objet styles en classes
+const { resolveValue } = useVariableResolver();
+
 const computedClasses = computed(() => {
-  return buildStyles('interactive', props.styles as Record<string, unknown>);
+  return buildButtonStyles(props.styles as Record<string, unknown>, resolveValue);
 });
 
 const computedInlineStyles = computed(() => {
   const bp = builderState.currentBreakpoint.value;
-  return buildInlineStyles('interactive', props.styles as Record<string, unknown>, bp);
+  return buildButtonInlineStyles(props.styles as Record<string, unknown>, bp, resolveValue);
 });
 
+const content = computed(() => (resolveValue(props.data?.content) as string) || 'Nouveau Bouton');
+
 const handleClick = () => {
-  if (props.data?.cliquable) {
-    executeAction(props.data.cliquable);
+  const cliquable = resolveValue(props.data?.cliquable) as CliquableAction;
+  if (cliquable) {
+    switch (cliquable.action) {
+      case 'TOGGLE_VISIBILITY':
+        if ((cliquable.action_params as { targetId?: string }).targetId && builderState.toggleVisibility) {
+          builderState.toggleVisibility((cliquable.action_params as { targetId?: string }).targetId as string);
+        }
+        break;
+      default:
+        console.warn(`Action ${cliquable.action} non reconnue`);
+        executeAction(cliquable); // Fallback to executeAction for other cases
+        break;
+    }
   }
 };
 </script>
 
 <template>
   <button
-  disabled="true"
     :class="[
       'inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 w-full',
       computedClasses
@@ -49,6 +64,6 @@ const handleClick = () => {
     :style="computedInlineStyles"
     @click="handleClick"
   >
-    {{ props.data?.content || 'Nouveau Bouton' }}
+    {{ content }}
   </button>
 </template>

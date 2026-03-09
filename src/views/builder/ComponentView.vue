@@ -3,20 +3,25 @@ import * as Icons from 'lucide-vue-next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import CompositionDarkMode from '../../components/composition/CompositionDarkMode.vue';
 import { useGetBlocTemplatesComponentCustom, useGetComponents } from '../../hook/component';
-import {type ComponentInstance, type Component as VueComponent } from 'vue';
+import { computed, type ComponentInstance, type Component as VueComponent } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
-import type { AllStyles, AnyComponentInstance, Component } from '../../type/component';
+import type { AllStyles, AnyComponentInstance, Component, BaseStyles } from '../../type/component';
 import type { BlocTemplate } from '../../type/bloc-template';
 
 
 const { data: components, isLoading } = useGetComponents();
 const { data: customComponents, isLoading: isLoadingCustom } = useGetBlocTemplatesComponentCustom();
 
-// watch(components, () => {
-//   console.log(components.value);
-// })
+import { inject } from 'vue';
+const builderState = inject<{
+  setIsDragging: (val: boolean) => void;
+}>('builderState');
 
-// console.log('custom components', customComponents.value);
+
+const allComponents = computed(() => {
+  const base = components.value?.results || [];
+  return [...base];
+});
 
 
 type IconName = keyof typeof Icons;
@@ -33,6 +38,25 @@ const getIcon = (name: string): VueComponent => {
 };
 
 
+const deepCloneInstance = (node: AnyComponentInstance): AnyComponentInstance => {
+  let definitionId = node.componentDefinitionId;
+  
+  // Si l'ID de définition est manquant (cas des default children), on tente de le trouver par tag
+  if (!definitionId && allComponents.value) {
+    const componentDef = allComponents.value.find((c: Component<AllStyles>) => c.tag === node.tag);
+    if (componentDef) {
+      definitionId = componentDef.id;
+    }
+  }
+
+  return {
+    ...node,
+    id: crypto.randomUUID(),
+    componentDefinitionId: definitionId,
+    children: node.children ? node.children.map(deepCloneInstance) : []
+  };
+};
+
 const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<T> => {
   const instance = {
     id: crypto.randomUUID(),
@@ -44,9 +68,11 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
     componentDefinitionId: element.id, // Stocker l'ID du type de composant pour le backend
     styles: { ...element.defaultProps.styles } as T,
     data: { ...element.defaultProps.data },
-    children: [] as AnyComponentInstance[]
+    children: element.defaultProps.children 
+      ? element.defaultProps.children.map(deepCloneInstance)
+      : [] as AnyComponentInstance[]
   };
-  // console.log('Cloning component:', element);
+  console.log('Cloning component:', element.tag, 'with children:', instance.children.length);
   // console.log('Created instance:', instance);
   return instance as ComponentInstance<T>;
 };
@@ -54,6 +80,12 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
 const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
   // On transforme le BlocTemplate stocké en instance active pour le builder
   // L'instance disposera d'un modelId pointant vers le BlocTemplate custom
+  
+  // Extraire les dimensions si elles existent pour un pré-rendu fluide
+  const initialStyles: BaseStyles = {};
+  if (block.props?.styles?.width) initialStyles.width = block.props.styles.width;
+  if (block.props?.styles?.height) initialStyles.height = block.props.styles.height;
+
   const instance: AnyComponentInstance = {
     id: crypto.randomUUID(),
     name: block.name,
@@ -64,7 +96,7 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
     componentDefinitionId: block.componentId,
     modelId: block.id, // Liaison avec le modèle
     blocTemplateId: undefined, // Nouvelle instance sur la page
-    styles: {}, // On ne clone pas le style, on attend le retour du backend pour l'héritage
+    styles: initialStyles, // On clone les dimensions pour le préchargement visuel
     data: {}, // On ne clone pas les data
     children: [] // TODO: Récupérer les enfants si c'est un bloc complexe stocké
   };
@@ -98,15 +130,17 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
 
             <div v-else >
               <VueDraggable
-                v-model="components.results!"
+                v-model="allComponents"
                 :animation="150"
                 :group="{ name: 'blocks', pull: 'clone', put: false }"
                 :sort="false"
                 :clone="onClone" 
+                @start="builderState?.setIsDragging(true)"
+                @end="builderState?.setIsDragging(false)"
                 class="grid grid-cols-2 gap-2"
               >
                 <div 
-                  v-for="comp in components?.results" 
+                  v-for="comp in allComponents" 
                   :key="comp.tag"
                   class="flex flex-col items-center justify-center p-3 border border-builder-bar-border rounded cursor-grab hover:-translate-y-1"
                 >
@@ -139,6 +173,8 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
                 :group="{ name: 'blocks', pull: 'clone', put: false }"
                 :sort="false"
                 :clone="onCloneCustom" 
+                @start="builderState?.setIsDragging(true)"
+                @end="builderState?.setIsDragging(false)"
                 class="grid grid-cols-2 gap-2 col-span-2"
               >
                 <div 
