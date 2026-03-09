@@ -40,16 +40,13 @@ const content = computed(() => (resolveValue(props.data?.content) as string) || 
 const handleClick = () => {
   const cliquable = resolveValue(props.data?.cliquable) as CliquableAction;
   if (cliquable) {
-    switch (cliquable.action) {
-      case 'TOGGLE_VISIBILITY':
-        if ((cliquable.action_params as { targetId?: string }).targetId && builderState.toggleVisibility) {
-          builderState.toggleVisibility((cliquable.action_params as { targetId?: string }).targetId as string);
-        }
-        break;
-      default:
-        console.warn(`Action ${cliquable.action} non reconnue`);
-        executeAction(cliquable); // Fallback to executeAction for other cases
-        break;
+    if (cliquable.action === 'TOGGLE_VISIBILITY') {
+      const targetId = (cliquable.action_params as { targetId?: string }).targetId;
+      if (targetId && builderState.toggleVisibility) {
+        builderState.toggleVisibility(targetId);
+      }
+    } else {
+      executeAction(cliquable);
     }
   }
 };
@@ -64,6 +61,7 @@ const handleClick = () => {
     :style="computedInlineStyles"
     @click="handleClick"
   >
+    <slot />
     {{ content }}
   </button>
 </template>

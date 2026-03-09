@@ -29,7 +29,8 @@ const builderState = inject<{
   selectComponent: (id: string | null) => void
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
   isDragging: { value: boolean }
-  isVisible: (id: string) => boolean
+  toggleStates: { value: Record<string, boolean> }
+  isVisible: (id: string, backendId?: number | null) => boolean
 }>('builderState');
 
 const { resolveValue } = useVariableResolver();
@@ -48,11 +49,13 @@ const layoutInlineStyles = computed(() => {
 });
 
 const isDraggingOver = computed(() => builderState?.isDragging?.value ?? false);
-const isVisible = computed(() => builderState?.isVisible(props.element.id) ?? true);
+const isVisible = computed(() => {
+  return builderState?.isVisible(props.element.id, props.element.blocTemplateId) ?? true;
+});
 
 // Handlers
-const handleSelect = (e: MouseEvent) => {
-  e.stopPropagation();
+const handleSelect = (e?: MouseEvent) => {
+  if (e) e.stopPropagation();
   builderState?.selectComponent(props.element.id);
 };
 
@@ -86,24 +89,35 @@ const handleChildUpdate = (index: number, newChild: AnyComponentInstance) => {
       'ring-2 ring-blue-500 ring-inset z-10': isSelected, 
       'hover:ring-1 hover:ring-gray-300': !isSelected && !isDraggingOver,
       'drop-zone-potential': isDraggingOver && canHaveChildren,
-      'opacity-40 grayscale-[0.5] border-2 border-dashed border-red-500/30': !isVisible && !isSelected,
+      'opacity-20 grayscale-[0.8] border-2 border-dashed border-red-500/50': !isVisible,
     }"
     v-show="isVisible || isSelected"
     @click="handleSelect"
     @update:element="(newVal: AnyComponentInstance) => emit('update:element', newVal)"
   >
-    <!-- Overlay interactif pour composants sans enfants -->
+    <!-- Overlay interactif pour composants sans enfants (Sélection) -->
+    <!-- On le désactive pour les types interactifs (boutons) pour qu'ils reçoivent le clic direct -->
     <div 
-      v-if="!canHaveChildren" 
-      class="absolute inset-0 z-[5] cursor-pointer"
+      v-if="!canHaveChildren && !isSelected && element.family !== 'interactive'" 
+      class="absolute inset-0 z-[5] cursor-pointer shadow-none"
+      @click.stop="handleSelect"
     />
 
     <!-- Label du composant sélectionné -->
     <div 
       v-if="isSelected"
-      class="absolute -top-5 left-0 bg-blue-500 text-white text-[9px] px-2 py-0.5 rounded-t-sm font-bold uppercase z-50 shadow-md"
+      class="absolute -top-5 left-0 bg-blue-500 text-white text-[9px] px-2 py-0.5 rounded-t-sm font-bold uppercase z-50 shadow-md whitespace-nowrap flex items-center gap-2"
     >
-      {{ element.name }}
+      <span>{{ element.name }}</span>
+      <span v-if="element.blocTemplateId" class="opacity-70 border-l border-white/30 pl-2">ID: {{ element.blocTemplateId }}</span>
+    </div>
+
+    <!-- Badge Caché -->
+    <div 
+      v-if="!isVisible"
+      class="absolute top-0 right-0 bg-red-600 text-white text-[8px] px-1.5 py-0.5 rounded-bl-sm z-[60] font-black uppercase pointer-events-none shadow-sm"
+    >
+      Caché
     </div>
 
     <!-- Zone de drop pour conteneurs -->
