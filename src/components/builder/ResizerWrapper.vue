@@ -101,52 +101,51 @@ const startResize = (e: MouseEvent, direction: string) => {
     <!-- Resize Handles - Visible quand actif -->
     <template v-if="active">
       <div 
-        class="absolute inset-0 z-40 transition-all"
+        class="absolute inset-0 z-40 transition-all pointer-events-none"
         :class="{ 
-          'pointer-events-none opacity-0': builderState?.isDragging?.value,
-          'pointer-events-auto': !builderState?.isDragging?.value 
+          'opacity-0': builderState?.isDragging?.value
         }"
       >
       <!-- Coins (8px) -->
       <div 
-        class="resize-handle resize-handle-nw cursor-nw-resize" 
+        class="resize-handle resize-handle-nw cursor-nw-resize pointer-events-auto" 
         @mousedown.stop="startResize($event, 'nw')" 
         title="Redimensionner (haut-gauche)"
       />
       <div 
-        class="resize-handle resize-handle-ne cursor-ne-resize" 
+        class="resize-handle resize-handle-ne cursor-ne-resize pointer-events-auto" 
         @mousedown.stop="startResize($event, 'ne')" 
         title="Redimensionner (haut-droit)"
       />
       <div 
-        class="resize-handle resize-handle-sw cursor-sw-resize" 
+        class="resize-handle resize-handle-sw cursor-sw-resize pointer-events-auto" 
         @mousedown.stop="startResize($event, 'sw')" 
         title="Redimensionner (bas-gauche)"
       />
       <div 
-        class="resize-handle resize-handle-se cursor-se-resize" 
+        class="resize-handle resize-handle-se cursor-se-resize pointer-events-auto" 
         @mousedown.stop="startResize($event, 'se')" 
         title="Redimensionner (bas-droit)"
       />
       
       <!-- Côtés (6px height/width) -->
       <div 
-        class="resize-handle-side resize-handle-n cursor-n-resize" 
+        class="resize-handle-side resize-handle-n cursor-n-resize pointer-events-auto" 
         @mousedown.stop="startResize($event, 'n')" 
         title="Redimensionner haut"
       />
       <div 
-        class="resize-handle-side resize-handle-s cursor-s-resize" 
+        class="resize-handle-side resize-handle-s cursor-s-resize pointer-events-auto" 
         @mousedown.stop="startResize($event, 's')" 
         title="Redimensionner bas"
       />
       <div 
-        class="resize-handle-side resize-handle-w cursor-w-resize" 
+        class="resize-handle-side resize-handle-w cursor-w-resize pointer-events-auto" 
         @mousedown.stop="startResize($event, 'w')" 
         title="Redimensionner gauche"
       />
       <div 
-        class="resize-handle-side resize-handle-e cursor-e-resize" 
+        class="resize-handle-side resize-handle-e cursor-e-resize pointer-events-auto" 
         @mousedown.stop="startResize($event, 'e')" 
         title="Redimensionner droit"
       />

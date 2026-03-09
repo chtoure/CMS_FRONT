@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { inject } from 'vue';
-import type { AnyComponentInstance, CliquableAction } from '../../type/component';
+import type { AnyComponentInstance, AnySectionInstance, CliquableAction } from '../../type/component';
 import Label from '../../components/ui/label/Label.vue';
 import Input from '../../components/ui/input/Input.vue';
 import Select from '../../components/ui/select/Select.vue';
@@ -8,6 +8,7 @@ import SelectTrigger from '../../components/ui/select/SelectTrigger.vue';
 import SelectValue from '../../components/ui/select/SelectValue.vue';
 import SelectContent from '../../components/ui/select/SelectContent.vue';
 import SelectItem from '../../components/ui/select/SelectItem.vue';
+import { computed } from 'vue';
 import { Checkbox } from '../../components/ui/checkbox';
 
 const props = defineProps<{
@@ -45,6 +46,28 @@ const updateData = (key: string, value: string | number | boolean | object) => {
     builderState.libraryTree.value = updateNode(builderState.libraryTree.value);
   }
 };
+
+// Extraire tous les composants avec leurs noms et IDs (backend en priorité)
+const allComponents = computed(() => {
+  const tree = builderState?.pageTree.value || [];
+  const list: { label: string; value: string }[] = [];
+
+  const traverse = (nodes: (AnyComponentInstance | AnySectionInstance)[]) => {
+    nodes.forEach(node => {
+      if ('tag' in node) {
+        const id = (node as AnyComponentInstance).blocTemplateId?.toString() || node.id;
+        list.push({
+          label: `${node.name} (${id})`,
+          value: id
+        });
+      }
+      if (node.children) traverse(node.children as (AnyComponentInstance | AnySectionInstance)[]);
+    });
+  };
+
+  traverse(tree);
+  return list;
+});
 
 // Options
 const tagOptions = [
@@ -217,9 +240,24 @@ const inputTypeOptions = [
             <Input :model-value="((element.data.cliquable as Extract<CliquableAction, { action: 'SHOW_ALERT' }>).action_params?.message)" @update:model-value="(val) => updateData('cliquable', { ...(element.data.cliquable as object), action_params: { message: val } })" class="h-8 text-xs bg-black/20 border-border/50" />
          </div>
          <div v-if="(element.data.cliquable as CliquableAction).action === 'TOGGLE_VISIBILITY'" class="space-y-1.5">
-            <Label class="text-[11px] text-gray-400">ID de la cible (Auto-toggle)</Label>
-            <Input :model-value="((element.data.cliquable as Extract<CliquableAction, { action: 'TOGGLE_VISIBILITY' }>).action_params?.targetId)" @update:model-value="(val) => updateData('cliquable', { ...(element.data.cliquable as object), action_params: { targetId: val } })" class="h-8 text-xs bg-black/20 border-border/50" placeholder="ex: Card-12345" />
-            <p class="text-[9px] text-gray-500 italic">L'ID se trouve en haut du composant quand il est sélectionné.</p>
+            <Label class="text-[11px] text-gray-400">Cible (Composant à basculer)</Label>
+            <Select 
+              :model-value="((element.data.cliquable as Extract<CliquableAction, { action: 'TOGGLE_VISIBILITY' }>).action_params?.targetId)" 
+              @update:model-value="(val) => val && updateData('cliquable', { ...(element.data.cliquable as object), action_params: { targetId: val } })"
+            >
+              <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+                <SelectValue placeholder="Choisir un composant..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="comp in allComponents" :key="comp.value" :value="comp.value">
+                  {{ comp.label }}
+                </SelectItem>
+                <SelectItem v-if="allComponents.length === 0" disabled value="none">
+                  Aucun composant trouvé
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p class="text-[9px] text-gray-500 italic">Sélectionnez le composant qui doit apparaître ou disparaître au clic.</p>
          </div>
        </div>
     </div>

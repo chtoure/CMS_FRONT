@@ -26,12 +26,27 @@ const currentBreakpoint = ref<'default' | 'sm' | 'md' | 'lg'>('default');
 const isDragging = ref(false);
 const toggleStates = ref<Record<string, boolean>>({});
 
-const toggleVisibility = (id: string) => {
-  toggleStates.value[id] = !toggleStates.value[id];
+const toggleVisibility = (id: string | number) => {
+  const key = id.toString();
+  const wasVisible = toggleStates.value[key] !== false;
+  
+  // On crée un nouvel objet pour forcer la réactivité de Vue
+  toggleStates.value = {
+    ...toggleStates.value,
+    [key]: !wasVisible
+  };
+  
+  console.log(`[TOGGLE ACTION] Target: ${key} | Was Visible: ${wasVisible} | Now Visible: ${!wasVisible}`);
 };
 
-const isVisible = (id: string) => {
-  return toggleStates.value[id] !== false; // Visible par défaut
+const isVisible = (id: string, backendId?: number | null) => {
+  const isLocalHidden = toggleStates.value[id] === false;
+  const isBackendHidden = backendId != null && toggleStates.value[backendId.toString()] === false;
+  
+  const finalVisible = !isLocalHidden && !isBackendHidden;
+  
+  // Logique de log silencieux sauf si changement ou debug
+  return finalVisible;
 };
 
 const selectComponent = (id: string | null) => {
