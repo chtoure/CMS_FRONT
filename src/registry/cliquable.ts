@@ -1,3 +1,4 @@
+import router from "../router";
 type CliquableAction = 'NAVIGATE_TO' | 'SHOW_ALERT' | 'OPEN_MODAL';
 
 
@@ -12,10 +13,10 @@ type Cliquable = NavigateAction | AlertAction | ModalAction;
 
 export const executeAction = (cliquable: Cliquable) => {
   const { action, action_params } = cliquable;
-  
+
     switch (action) {
       case 'NAVIGATE_TO':
-        window.location.href = action_params.url;
+        router.push(action_params.url);
         break;
       case 'SHOW_ALERT':
         alert(action_params.message);
