@@ -66,7 +66,8 @@ const layoutWhitelist = [
   'shadow', 
   'opacity', 
   'bg',
-  'borderWidth'
+  'borderWidth',
+  'borderColor'
 ];
 </script>
 
@@ -105,7 +106,7 @@ const layoutWhitelist = [
             label="Size" 
             type="number" 
             :model-value="getRawValue(styles.fontSize)" 
-            @update:model-value="(val) => updateStyle('fontSize', Number(val))"
+            @update:model-value="(val) => updateStyle('fontSize', parseInt(val.toString()) || 0)"
             :icon="FontIcon"
           >
             <template #action>

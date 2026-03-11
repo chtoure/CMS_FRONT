@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { inject } from 'vue';
-import type { AnyComponentInstance, AnySectionInstance, CliquableAction } from '../../type/component';
+import type { AnyComponentInstance, CliquableAction } from '../../type/component';
+import type { AnySectionInstance } from '../../type/section';
 import Label from '../../components/ui/label/Label.vue';
 import Input from '../../components/ui/input/Input.vue';
 import Select from '../../components/ui/select/Select.vue';
@@ -9,7 +10,14 @@ import SelectValue from '../../components/ui/select/SelectValue.vue';
 import SelectContent from '../../components/ui/select/SelectContent.vue';
 import SelectItem from '../../components/ui/select/SelectItem.vue';
 import { computed } from 'vue';
-import { Checkbox } from '../../components/ui/checkbox';
+import BaseSwitch from '../base/BaseSwitch.vue';
+
+const easeOptions = [
+  { label: 'Ease', value: 'ease-in-out' },
+  { label: 'Linear', value: 'linear' },
+  { label: 'In', value: 'ease-in' },
+  { label: 'Out', value: 'ease-out' },
+];
 
 const props = defineProps<{
   element: AnyComponentInstance;
@@ -23,10 +31,21 @@ const builderState = inject<{
   selectComponent: (id: string | null) => void;
 }>('builderState');
 
-const updateData = (key: string, value: string | number | boolean | object) => {
+const updateData = (key: string, value: any) => {
   if (!builderState) return;
   
-  const newData = { ...props.element.data, [key]: value };
+  const currentVal = props.element.data[key];
+  let finalValue = value;
+
+  // Si la donnée actuelle est un objet avec 'type' et 'value', on préserve cette structure
+  if (currentVal && typeof currentVal === 'object' && 'type' in currentVal && 'value' in currentVal) {
+    finalValue = { ...currentVal, value };
+  } else {
+    // Sinon on force la structure réactive par défaut
+    finalValue = { type: 'static', value };
+  }
+  
+  const newData = { ...props.element.data, [key]: finalValue };
   
   const updateNode = (nodes: AnyComponentInstance[]): AnyComponentInstance[] => {
     return nodes.map((node: AnyComponentInstance): AnyComponentInstance => {
@@ -45,6 +64,13 @@ const updateData = (key: string, value: string | number | boolean | object) => {
   } else {
     builderState.libraryTree.value = updateNode(builderState.libraryTree.value);
   }
+};
+
+const getDataValue = (val: any): any => {
+  if (val && typeof val === 'object' && 'value' in val) {
+    return val.value;
+  }
+  return val;
 };
 
 // Extraire tous les composants avec leurs noms et IDs (backend en priorité)
@@ -106,14 +132,14 @@ const inputTypeOptions = [
       <div class="space-y-1.5">
         <Label class="text-[11px] text-gray-400">Texte affiché</Label>
         <Input 
-          :model-value="(element.data.content as string)" 
+          :model-value="getDataValue(element.data.content)" 
           @update:model-value="(val) => updateData('content', val)"
           class="h-20 text-xs px-2 py-1 align-top bg-black/20 border-border/50"
         />
       </div>
       <div v-if="element.tag === 'TextBuilder'" class="space-y-1.5">
         <Label class="text-[11px] text-gray-400">Balise HTML</Label>
-        <Select :model-value="(element.data.tag as string)" @update:model-value="(val) => val && updateData('tag', val as string)">
+        <Select :model-value="getDataValue(element.data.tag)" @update:model-value="(val) => val && updateData('tag', val as string)">
           <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
             <SelectValue placeholder="Tag" />
           </SelectTrigger>
@@ -129,25 +155,25 @@ const inputTypeOptions = [
       <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Paramètres Image</h4>
       <div class="space-y-1.5">
         <Label class="text-[11px] text-gray-400">URL Source (src)</Label>
-        <Input :model-value="(element.data.src as string)" @update:model-value="(val) => updateData('src', val)" class="h-8 text-xs bg-black/20 border-border/50" />
+        <Input :model-value="getDataValue(element.data.src)" @update:model-value="(val) => updateData('src', val)" class="h-8 text-xs bg-black/20 border-border/50" />
       </div>
       <div class="space-y-1.5">
         <Label class="text-[11px] text-gray-400">Texte alternatif (alt)</Label>
-        <Input :model-value="(element.data.alt as string)" @update:model-value="(val) => updateData('alt', val)" class="h-8 text-xs bg-black/20 border-border/50" />
+        <Input :model-value="getDataValue(element.data.alt)" @update:model-value="(val) => updateData('alt', val)" class="h-8 text-xs bg-black/20 border-border/50" />
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Largeur</Label>
-          <Input :model-value="(element.data.width as string | number)" @update:model-value="(val) => updateData('width', val)" class="h-8 text-xs bg-black/20 border-border/50" placeholder="ex: 100% ou 300" />
+          <Input :model-value="getDataValue(element.data.width)" @update:model-value="(val) => updateData('width', val)" class="h-8 text-xs bg-black/20 border-border/50" placeholder="ex: 100% ou 300" />
         </div>
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Hauteur</Label>
-          <Input :model-value="(element.data.height as string | number)" @update:model-value="(val) => updateData('height', val)" class="h-8 text-xs bg-black/20 border-border/50" placeholder="ex: auto ou 300" />
+          <Input :model-value="getDataValue(element.data.height)" @update:model-value="(val) => updateData('height', val)" class="h-8 text-xs bg-black/20 border-border/50" placeholder="ex: auto ou 300" />
         </div>
       </div>
       <div class="space-y-1.5">
         <Label class="text-[11px] text-gray-400">Ajustement (Object Fit)</Label>
-        <Select :model-value="(element.data.objectFit as string)" @update:model-value="(val) => val && updateData('objectFit', val as string)">
+        <Select :model-value="getDataValue(element.data.objectFit)" @update:model-value="(val) => val && updateData('objectFit', val as string)">
           <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
             <SelectValue placeholder="Fit" />
           </SelectTrigger>
@@ -163,16 +189,16 @@ const inputTypeOptions = [
       <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Paramètres Icône</h4>
       <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Nom Lucide (ex: Star)</Label>
-          <Input :model-value="(element.data.icon as string)" @update:model-value="(val) => updateData('icon', val)" class="h-8 text-xs bg-black/20 border-border/50" />
+          <Input :model-value="getDataValue(element.data.icon)" @update:model-value="(val) => updateData('icon', val)" class="h-8 text-xs bg-black/20 border-border/50" />
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Taille (px)</Label>
-          <Input type="number" :model-value="(element.data.size as number)" @update:model-value="(val) => updateData('size', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
+          <Input type="number" :model-value="getDataValue(element.data.size) || ''" @update:model-value="(val) => updateData('size', parseInt(val.toString()) || 0)" class="h-8 text-xs bg-black/20 border-border/50" />
         </div>
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Épaisseur trait</Label>
-          <Input type="number" :model-value="(element.data.strokeWidth as number)" @update:model-value="(val) => updateData('strokeWidth', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
+          <Input type="number" :model-value="getDataValue(element.data.strokeWidth) || ''" @update:model-value="(val) => updateData('strokeWidth', parseInt(val.toString()) || 0)" class="h-8 text-xs bg-black/20 border-border/50" />
         </div>
       </div>
     </div>
@@ -183,17 +209,17 @@ const inputTypeOptions = [
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Label</Label>
-          <Input :model-value="(element.data.label as string)" @update:model-value="(val) => updateData('label', val)" class="h-8 text-xs bg-black/20 border-border/50" />
+          <Input :model-value="getDataValue(element.data.label)" @update:model-value="(val) => updateData('label', val)" class="h-8 text-xs bg-black/20 border-border/50" />
         </div>
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Placeholder</Label>
-          <Input :model-value="(element.data.placeholder as string)" @update:model-value="(val) => updateData('placeholder', val)" class="h-8 text-xs bg-black/20 border-border/50" />
+          <Input :model-value="getDataValue(element.data.placeholder)" @update:model-value="(val) => updateData('placeholder', val)" class="h-8 text-xs bg-black/20 border-border/50" />
         </div>
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Type de saisie</Label>
-          <Select :model-value="(element.data.type as string)" @update:model-value="(val) => val && updateData('type', val as string)">
+          <Select :model-value="getDataValue(element.data.type)" @update:model-value="(val) => val && updateData('type', val as string)">
             <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
               <SelectValue placeholder="Type" />
             </SelectTrigger>
@@ -204,12 +230,12 @@ const inputTypeOptions = [
         </div>
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Nom technique (name)</Label>
-          <Input :model-value="(element.data.name as string)" @update:model-value="(val) => updateData('name', val)" class="h-8 text-xs bg-black/20 border-border/50" />
+          <Input :model-value="getDataValue(element.data.name)" @update:model-value="(val) => updateData('name', val)" class="h-8 text-xs bg-black/20 border-border/50" />
         </div>
       </div>
-      <div class="flex items-center space-x-2 pt-1">
-        <Checkbox id="required" :checked="(element.data.required as boolean)" @update:checked="(val: boolean | 'indeterminate') => updateData('required', !!val)" />
+      <div class="flex items-center justify-between pt-1">
         <label for="required" class="text-[11px] text-gray-300 cursor-pointer">Requis pour soumission</label>
+        <BaseSwitch id="required" :model-value="!!getDataValue(element.data.required)" @update:model-value="(val) => updateData('required', val)" />
       </div>
     </div>
 
@@ -266,14 +292,39 @@ const inputTypeOptions = [
     <div v-if="element.tag === 'SliderBuilder'" class="space-y-4">
       <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Paramètres Slider</h4>
       
-      <div class="grid grid-cols-2 gap-4">
-        <div class="flex items-center space-x-2">
-          <Checkbox id="autoPlay" :checked="(element.data.autoPlay as boolean)" @update:checked="(val: boolean | 'indeterminate') => updateData('autoPlay', !!val)" />
-          <Label for="autoPlay" class="text-[11px] text-gray-300">Auto-play</Label>
+      <div class="grid grid-cols-1 gap-4">
+        <div class="space-y-1.5">
+          <Label class="text-[11px] text-gray-400">Duration (ms)</Label>
+          <Input 
+            type="number" 
+            :model-value="getDataValue(element.data.transitionDuration)" 
+            @update:model-value="(val) => updateData('transitionDuration', parseInt(val.toString()) || 500)"
+            placeholder="500"
+            class="h-8 text-xs bg-black/20 border-border/50"
+          />
         </div>
-        <div class="flex items-center space-x-2">
-          <Checkbox id="loop" :checked="(element.data.loop as boolean)" @update:checked="(val: boolean | 'indeterminate') => updateData('loop', !!val)" />
+      </div>
+
+      <div class="space-y-1.5 pt-1">
+        <Label class="text-[11px] text-gray-400">Animation Ease</Label>
+        <Select :model-value="getDataValue(element.data.transitionEase) || 'ease-in-out'" @update:model-value="(val) => val && updateData('transitionEase', val as string)">
+          <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+            <SelectValue placeholder="Ease" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="opt in easeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 pt-2 border-t border-white/10">
+        <div class="flex items-center justify-between col-span-1">
+          <Label for="autoPlay" class="text-[11px] text-gray-300">Auto-play</Label>
+          <BaseSwitch id="autoPlay" :model-value="!!getDataValue(element.data.autoPlay)" @update:model-value="(val) => updateData('autoPlay', val)" />
+        </div>
+        <div class="flex items-center justify-between col-span-1">
           <Label for="loop" class="text-[11px] text-gray-300">Boucle</Label>
+          <BaseSwitch id="loop" :model-value="!!getDataValue(element.data.loop)" @update:model-value="(val) => updateData('loop', val)" />
         </div>
       </div>
 
@@ -281,23 +332,24 @@ const inputTypeOptions = [
         <Label class="text-[11px] text-gray-400">Vitesse (ms)</Label>
         <Input 
           type="number" 
-          :model-value="(element.data.speed as number)" 
+          :model-value="getDataValue(element.data.speed)" 
           @update:model-value="(val: string | number) => updateData('speed', parseInt(val.toString()))"
           class="h-8 text-xs bg-black/20 border-border/50"
         />
       </div>
 
       <div class="grid grid-cols-2 gap-4 pt-1">
-        <div class="flex items-center space-x-2">
-          <Checkbox id="showPagination" :checked="(element.data.showPagination as boolean)" @update:checked="(val: boolean | 'indeterminate') => updateData('showPagination', !!val)" />
+        <div class="flex items-center justify-between col-span-1">
           <Label for="showPagination" class="text-[11px] text-gray-300">Pagination</Label>
+          <BaseSwitch id="showPagination" :model-value="getDataValue(element.data.showPagination) !== false" @update:model-value="(val) => updateData('showPagination', val)" />
         </div>
-        <div class="flex items-center space-x-2">
-          <Checkbox id="showArrows" :checked="(element.data.showArrows as boolean)" @update:checked="(val: boolean | 'indeterminate') => updateData('showArrows', !!val)" />
+        <div class="flex items-center justify-between col-span-1">
           <Label for="showArrows" class="text-[11px] text-gray-300">Flèches</Label>
+          <BaseSwitch id="showArrows" :model-value="getDataValue(element.data.showArrows) !== false" @update:model-value="(val) => updateData('showArrows', val)" />
         </div>
       </div>
     </div>
+
 
     <!-- Section: Accordion / FAQ -->
     <div v-if="element.tag === 'AccordionBuilder'" class="space-y-4">
@@ -312,22 +364,33 @@ const inputTypeOptions = [
         />
       </div>
 
+      <div class="space-y-1.5">
+        <Label class="text-[11px] text-gray-400">Réponse / Contenu</Label>
+        <textarea
+          :value="getDataValue(element.data.content) || ''"
+          @input="(e: Event) => updateData('content', (e.target as HTMLTextAreaElement).value)"
+          rows="4"
+          class="w-full text-xs px-2 py-1.5 bg-black/20 border border-border/50 rounded text-white/80 placeholder-white/30 resize-none focus:outline-none focus:border-primary/50 leading-relaxed"
+          placeholder="Entrez la réponse ici..."
+        />
+      </div>
+
       <div class="grid grid-cols-2 gap-4">
-        <div class="flex items-center space-x-2">
-          <Checkbox id="isOpen" :checked="(element.data.isOpen as boolean)" @update:checked="(val: boolean | 'indeterminate') => updateData('isOpen', !!val)" />
-          <Label for="isOpen" class="text-[11px] text-gray-300">Ouvert par défaut</Label>
-        </div>
+      <div class="flex items-center justify-between pt-1">
+        <Label for="isOpen" class="text-[11px] text-gray-300">Ouvert par défaut</Label>
+        <BaseSwitch id="isOpen" :model-value="!!getDataValue(element.data.isOpen)" @update:model-value="(val) => updateData('isOpen', val)" />
+      </div>
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Vitesse Anim (ms)</Label>
           <Input 
             type="number" 
-            :model-value="(element.data.transitionSpeed as number)" 
-            @update:model-value="(val: string | number) => updateData('transitionSpeed', parseInt(val.toString()))"
+            :model-value="getDataValue(element.data.transitionSpeed)" 
             class="h-8 text-xs bg-black/20 border-border/50"
           />
         </div>
       </div>
     </div>
+
 
     <!-- Section: Lien -->
     <div v-if="element.tag === 'LinkBuilder'" class="space-y-4">
@@ -335,23 +398,21 @@ const inputTypeOptions = [
       <div class="space-y-1.5">
         <Label class="text-[11px] text-gray-400">Texte du lien</Label>
         <Input 
-          :model-value="(element.data.text as string)" 
-          @update:model-value="(val) => updateData('text', val)"
+          :model-value="getDataValue(element.data.text)" 
           class="h-8 text-xs bg-black/20 border-border/50"
         />
       </div>
       <div class="space-y-1.5">
         <Label class="text-[11px] text-gray-400">URL de destination</Label>
         <Input 
-          :model-value="(element.data.url as string)" 
-          @update:model-value="(val) => updateData('url', val)"
+          :model-value="getDataValue(element.data.url)" 
           class="h-8 text-xs bg-black/20 border-border/50"
           placeholder="https://..."
         />
       </div>
       <div class="space-y-1.5">
         <Label class="text-[11px] text-gray-400">Cible (Target)</Label>
-        <Select :model-value="(element.data.target as string)" @update:model-value="(val) => val && updateData('target', val as string)">
+        <Select :model-value="getDataValue(element.data.target)" @update:model-value="(val) => val && updateData('target', val as string)">
           <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
             <SelectValue placeholder="Cible" />
           </SelectTrigger>

@@ -27,7 +27,7 @@ const emit = defineEmits<{
 
 <template>
   <div :class="['property-input', compact ? 'compact' : '']">
-    <div class="flex items-center justify-between h-7 px-2 bg-builder-input-bg border border-builder-bar-border rounded hover:border-builder-bar-border/80 transition-all focus-within:border-primary group">
+    <div class="flex items-center justify-between h-7 px-2 bg-builder-input-bg border border-builder-bar-border rounded hover:border-builder-bar-border transition-all focus-within:border-primary group">
       <!-- Icon/Label Area -->
       <div class="flex items-center gap-1.5 shrink-0 opacity-40 group-hover:opacity-60 transition-opacity">
         <component v-if="icon" :is="icon" class="w-3.5 h-3.5" />

@@ -46,7 +46,7 @@ const showGrid = computed(() => getRawValue(styles.value.display) === 'grid');
 <template>
   <div class="space-y-4">
     <!-- Structure Section -->
-    <PropertyGroup title="Structure" :open="true">
+    <PropertyGroup v-if="!('tag' in element && element.tag === 'SliderBuilder')" title="Structure" :open="true">
       <div class="space-y-3">
         <div class="space-y-1.5">
           <label class="text-[10px] font-mono font-bold text-builder-bar-text/50 uppercase tracking-tighter">Display</label>
@@ -73,35 +73,42 @@ const showGrid = computed(() => getRawValue(styles.value.display) === 'grid');
     <PropertyGroup v-if="showFlex" title="Auto Layout" :open="true" :icon="Layout">
       <div class="space-y-4">
         <!-- Direction & Wrap -->
-        <div class="flex items-center justify-between">
-          <ButtonGroup 
-            :model-value="(getRawValue(styles.direction) as string)" 
-            @update:model-value="(val) => updateStyle('direction', val)"
-            :options="directionOptions"
-            size="sm"
-            class="!w-auto"
-          />
-          <!-- Add wrap toggle here if needed -->
-        </div>
+        
 
         <!-- Alignment Matrix & Gap -->
-        <div class="flex gap-4">
-          <AlignmentMatrix 
-            :justify="(getRawValue(styles.justify) as string)"
-            :align="(getRawValue(styles.align) as string)"
-            @update:justify="(val) => updateStyle('justify', val)"
-            @update:align="(val) => updateStyle('align', val)"
-          />
-          
-          <div class="flex-1 space-y-2">
-            <PropertyInput 
-              label="Gap" 
-              :model-value="getRawValue(styles.gap)" 
-              @update:model-value="(val) => updateStyle('gap', val)"
-              :icon="Maximize2"
+        <div class="grid grid-cols-2 gap-1 items-start">
+          <div class="space-y-1.5">
+            <!-- <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter block ml-0.5">Alignment</label> -->
+            <AlignmentMatrix 
+              :justify="(getRawValue(styles.justify) as string)"
+              :align="(getRawValue(styles.align) as string)"
+              @update:justify="(val) => updateStyle('justify', val)"
+              @update:align="(val) => updateStyle('align', val)"
             />
-            <div class="text-[9px] text-builder-bar-text/40 font-mono mt-1">
-              Spacing between items
+          </div>
+          
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <ButtonGroup 
+                :model-value="(getRawValue(styles.direction) as string)" 
+                @update:model-value="(val) => updateStyle('direction', val)"
+                :options="directionOptions"
+                size="sm"
+                class="!w-auto"
+              />
+              <!-- Add wrap toggle here if needed -->
+            </div>
+
+
+            <div class="space-y-1.5">
+              <!-- <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter block ml-0.5">Spacing (Gap)</label> -->
+              <PropertyInput 
+                label="" 
+                :model-value="getRawValue(styles.gap)" 
+                @update:model-value="(val) => updateStyle('gap', val)"
+                :icon="Maximize2"
+                placeholder="0"
+              />
             </div>
           </div>
         </div>

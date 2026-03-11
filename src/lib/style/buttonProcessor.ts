@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { resolveValue, resolveValueForBreakpoint } from "./core";
 import { TYPOGRAPHY_MAPPER, VISUAL_MAPPER } from "./shared";
 import { applyTypographyInline, applyLayoutInline, applyVisualInline } from "./common";
@@ -6,8 +5,6 @@ import { applyTypographyInline, applyLayoutInline, applyVisualInline } from "./c
 const BUTTON_STYLE_MAPPER = {
   ...TYPOGRAPHY_MAPPER,
   ...VISUAL_MAPPER,
-  variant: (v: any) => `btn-${v}`,
-  size: (v: any) => `btn-sz-${v}`,
 };
 
 export function buildButtonStyles(styles?: Record<string, unknown>, resolver?: (v: unknown) => unknown): string {
@@ -16,8 +13,9 @@ export function buildButtonStyles(styles?: Record<string, unknown>, resolver?: (
   
   (Object.keys(BUTTON_STYLE_MAPPER) as Array<keyof typeof BUTTON_STYLE_MAPPER>).forEach(key => {
     const value = styles[key];
-    if (value !== undefined) {
-      classes.push(resolveValue(value, BUTTON_STYLE_MAPPER[key], resolver));
+    const mapper = (BUTTON_STYLE_MAPPER as Record<string, (v: unknown) => string>)[key];
+    if (value !== undefined && mapper) {
+      classes.push(resolveValue(value, mapper, resolver));
     }
   });
 
