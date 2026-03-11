@@ -169,6 +169,36 @@ const history = ref<string[]>([JSON.stringify(pageTree.value)]);
 const historyIndex = ref(0);
 const isInternalChange = ref(false);
 
+/**
+ * Merge uniquement les blocTemplateId depuis l'arbre synced vers l'arbre courant.
+ * Cela permet de propager les IDs backend des nouveaux noeuds
+ * sans écraser les données/styles de l'arbre courant.
+ */
+const mergeBlocTemplateIds = (
+  currentNodes: (AnyComponentInstance | AnySectionInstance)[],
+  syncedNodes: (AnyComponentInstance | AnySectionInstance)[]
+) => {
+  for (let i = 0; i < currentNodes.length; i++) {
+    const current = currentNodes[i] as any;
+    const synced = syncedNodes[i] as any;
+    if (!current || !synced) continue;
+
+    // Propager le blocTemplateId si ce noeud vient d'être créé
+    if (!current.blocTemplateId && synced.blocTemplateId) {
+      current.blocTemplateId = synced.blocTemplateId;
+    }
+    // Même chose pour sectionId
+    if (!current.sectionId && synced.sectionId) {
+      current.sectionId = synced.sectionId;
+    }
+
+    // Propager récursivement dans les enfants
+    if (current.children && synced.children) {
+      mergeBlocTemplateIds(current.children, synced.children);
+    }
+  }
+};
+
 const loadInitialData = async () => {
   if (!pageRevisionId.value) return;
   isInternalChange.value = true;
@@ -204,9 +234,12 @@ watch(pageTree, async (newVal) => {
   historyIndex.value++;
 
   const syncedTree = await autoSave(newVal, pageRevisionId.value);
-  if (syncedTree && JSON.stringify(pageTree.value) === newState) {
+  // On ne remplace PAS pageTree par syncedTree car le timing asynchrone ferait perdre
+  // des modifications qui ont eu lieu PENDANT la sauvegarde.
+  // On merge uniquement les blocTemplateId manquants (nouveaux noeuds qui viennent d'être créés).
+  if (syncedTree) {
     isInternalChange.value = true;
-    pageTree.value = syncedTree;
+    mergeBlocTemplateIds(pageTree.value, syncedTree);
   }
 }, { deep: true });
 
@@ -224,9 +257,9 @@ watch(libraryTree, async (newVal) => {
   historyIndex.value++;
 
   const syncedTree = await autoSaveLibrary(newVal);
-  if (syncedTree && JSON.stringify(libraryTree.value) === newState) {
+  if (syncedTree) {
     isInternalChange.value = true;
-    libraryTree.value = syncedTree as any;
+    mergeBlocTemplateIds(libraryTree.value, syncedTree);
   }
 }, { deep: true });
 

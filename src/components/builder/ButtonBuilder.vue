@@ -27,7 +27,19 @@ const builderState = inject<{
 const { resolveValue } = useVariableResolver();
 
 const computedClasses = computed(() => {
-  return buildButtonStyles(props.styles as Record<string, unknown>, resolveValue);
+  const classes = [buildButtonStyles(props.styles as Record<string, unknown>, resolveValue)];
+
+  // Alignement Flex
+  const align = resolveValue((props.styles as Record<string, any>)?.textAlign) || 'center';
+  const flexAlignMap: Record<string, string> = {
+    'left': 'justify-start text-left',
+    'center': 'justify-center text-center',
+    'right': 'justify-end text-right',
+    'justify': 'justify-between text-justify'
+  };
+  classes.push(flexAlignMap[align as string] || 'justify-center text-center');
+
+  return classes.filter(Boolean).join(' ');
 });
 
 const computedInlineStyles = computed(() => {
@@ -55,13 +67,12 @@ const handleClick = () => {
 <template>
   <button
     :class="[
-      'inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 w-full',
+      'inline-flex items-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 w-full',
       computedClasses
     ]"
     :style="computedInlineStyles"
     @click="handleClick"
   >
-    <slot />
     {{ content }}
   </button>
 </template>

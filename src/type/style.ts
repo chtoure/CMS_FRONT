@@ -6,7 +6,7 @@ interface BaseStyles {
   marginTop?: VariableProperty<ResponsiveProp<number | string>>;
   marginBottom?: VariableProperty<ResponsiveProp<number | string>>;
   padding?: VariableProperty<ResponsiveProp<number | string>>;
-  
+
   // Propriétés d'apparence
   bg?: VariableProperty<ResponsiveProp<string>>;
   rounded?: VariableProperty<ResponsiveProp<string | number>>;
@@ -77,7 +77,21 @@ interface SliderStyles extends ContainerStyles {
 }
 
 interface AccordionStyles extends BaseStyles {
-  // Styles spécifiques à l'Accordéon
+  // Question (header)
+  questionFontSize?: VariableProperty<ResponsiveProp<string>>;
+  questionFontWeight?: VariableProperty<ResponsiveProp<string>>;
+  questionColor?: VariableProperty<ResponsiveProp<string>>;
+  questionBg?: VariableProperty<ResponsiveProp<string>>;
+  questionPadding?: VariableProperty<ResponsiveProp<number | string>>;
+  // Réponse (body)
+  answerFontSize?: VariableProperty<ResponsiveProp<string>>;
+  answerFontWeight?: VariableProperty<ResponsiveProp<string>>;
+  answerColor?: VariableProperty<ResponsiveProp<string>>;
+  answerBg?: VariableProperty<ResponsiveProp<string>>;
+  answerPadding?: VariableProperty<ResponsiveProp<number | string>>;
+  // Séparateur
+  dividerColor?: VariableProperty<ResponsiveProp<string>>;
+  dividerWidth?: VariableProperty<ResponsiveProp<number>>;
 }
 
 // Famille : Link
@@ -86,13 +100,13 @@ interface LinkStyles extends StaticStyles {
 }
 
 // Union de tous les styles possibles
-type AllStyles = 
-  | ContainerStyles 
-  | StaticStyles 
-  | InteractiveStyles 
-  | InputStyles 
-  | SliderStyles 
-  | AccordionStyles 
+type AllStyles =
+  | ContainerStyles
+  | StaticStyles
+  | InteractiveStyles
+  | InputStyles
+  | SliderStyles
+  | AccordionStyles
   | LinkStyles
   | BaseStyles;
 

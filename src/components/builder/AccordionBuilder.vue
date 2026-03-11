@@ -1,13 +1,22 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { computed, inject, ref } from 'vue';
-import type { ContainerStyles, AnyComponentInstance } from '../../type/component';
+import type { AccordionStyles } from '../../type/style';
+import type { AnyComponentInstance } from '../../type/component';
+import {
+  buildAccordionContainerInlineStyles,
+  buildAccordionQuestionInlineStyles,
+} from '../../lib/style/accordionProcessor';
 import { buildBlocLayoutStyles, buildBlocLayoutInlineStyles } from '../../lib/style/blocProcessor';
 import { useVariableResolver } from '../../hook/variable';
 
 interface Props {
-  styles?: ContainerStyles;
+  styles?: AccordionStyles;
   data?: {
-    items?: any;
+    title?: string;
+    content?: string;
+    isOpen?: boolean;
+    transitionSpeed?: number;
   };
   element?: AnyComponentInstance;
   children?: AnyComponentInstance[];
@@ -21,48 +30,117 @@ const builderState = inject<{
 
 const { resolveValue } = useVariableResolver();
 
-const openIndex = ref<number | null>(0);
+// État ouvert/fermé — initialisé depuis data.isOpen
+const isOpen = ref<boolean>(
+  resolveValue(props.data?.isOpen) === true
+);
 
-const computedClasses = computed(() => {
-  return buildBlocLayoutStyles(props.styles as Record<string, unknown>, resolveValue);
+const toggle = () => { isOpen.value = !isOpen.value; };
+
+// ─── Styles ────────────────────────────────────────────────────────────────
+const bp = computed(() => builderState.currentBreakpoint.value);
+const rawStyles = computed(() => props.styles as Record<string, unknown> | undefined);
+
+const containerClasses = computed(() =>
+  buildBlocLayoutStyles(rawStyles.value as Record<string, unknown>, resolveValue)
+);
+
+const containerInlineStyles = computed(() => ({
+  ...buildBlocLayoutInlineStyles(rawStyles.value as Record<string, unknown>, bp.value, resolveValue),
+  ...buildAccordionContainerInlineStyles(rawStyles.value, bp.value, resolveValue),
+}));
+
+const questionInlineStyles = computed(() =>
+  buildAccordionQuestionInlineStyles(rawStyles.value, bp.value, resolveValue)
+);
+
+
+
+// ─── Données ───────────────────────────────────────────────────────────────
+const title = computed(() =>
+  (resolveValue(props.data?.title) as string) || 'Question'
+);
+const content = computed(() =>
+  (resolveValue(props.data?.content) as string) || 'Réponse de l\'accordéon'
+);
+
+const transitionDuration = computed(() => {
+  const speed = resolveValue(props.data?.transitionSpeed);
+  return typeof speed === 'number' && speed > 0 ? speed : 300;
 });
 
-const computedInlineStyles = computed(() => {
-  const bp = builderState.currentBreakpoint.value;
-  return buildBlocLayoutInlineStyles(props.styles as Record<string, unknown>, bp, resolveValue);
-});
+// ─── Callbacks de transition (en dehors du template pour éviter les lint) ──
+function onEnter(el: Element, done: () => void) {
+  const target = el as HTMLElement;
+  const dur = transitionDuration.value;
+  target.style.overflow = 'hidden';
+  target.style.maxHeight = '0';
+  target.style.opacity = '0';
+  window.requestAnimationFrame(() => {
+    target.style.transition = `max-height ${dur}ms ease, opacity ${dur}ms ease`;
+    target.style.maxHeight = target.scrollHeight + 'px';
+    target.style.opacity = '1';
+    window.setTimeout(done, dur);
+  });
+}
 
-const items = computed(() => {
-  const rawItems = resolveValue(props.data?.items) as any[];
-  if (!rawItems || !Array.isArray(rawItems)) {
-    return [
-      { title: 'Item 1', content: 'Contenu de l\'item 1' },
-      { title: 'Item 2', content: 'Contenu de l\'item 2' }
-    ];
-  }
-  return rawItems.map(item => ({
-    title: resolveValue(item.title) as string,
-    content: resolveValue(item.content) as string
-  }));
-});
+function onLeave(el: Element, done: () => void) {
+  const target = el as HTMLElement;
+  const dur = transitionDuration.value;
+  target.style.overflow = 'hidden';
+  target.style.maxHeight = target.scrollHeight + 'px';
+  target.style.opacity = '1';
+  window.requestAnimationFrame(() => {
+    target.style.transition = `max-height ${dur}ms ease, opacity ${dur}ms ease`;
+    target.style.maxHeight = '0';
+    target.style.opacity = '0';
+    window.setTimeout(done, dur);
+  });
+}
 </script>
 
 <template>
-  <div :class="computedClasses" :style="computedInlineStyles">
-    <div v-for="(item, index) in items" :key="index" class="border-b border-gray-200">
-      <button 
-        class="w-full py-4 px-6 text-left font-medium flex justify-between items-center bg-white"
-        @click="openIndex = openIndex === index ? null : index"
+  <div :class="[containerClasses, 'overflow-hidden w-full transition-all duration-300']" :style="containerInlineStyles">
+
+    <!-- Bouton Question -->
+    <button
+      class="w-full flex justify-between items-center text-left focus:outline-none"
+      :style="[questionInlineStyles, !questionInlineStyles.padding ? { padding: '12px 16px' } : {}]"
+      @click="toggle"
+      type="button"
+    >
+      <span class="flex-1 font-medium">{{ title }}</span>
+      <!-- Icône chevron animé -->
+      <svg
+        class="shrink-0 ml-3"
+        :style="{
+          transition: `transform ${transitionDuration}ms ease`,
+          transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+        }"
+        xmlns="http://www.w3.org/2000/svg"
+        width="16" height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
       >
-        <span>{{ item.title }}</span>
-        <i class="ph-caret-down transition-transform duration-200" :class="{ 'rotate-180': openIndex === index }"></i>
-      </button>
-      <div 
-        v-if="openIndex === index" 
-        class="px-6 py-4 bg-gray-50 animate-fade-in whitespace-pre-wrap"
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+    </button>
+
+
+    <!-- Panneau Réponse avec transition JS -->
+    <Transition :css="false" @enter="onEnter" @leave="onLeave">
+      <div
+        v-if="isOpen"
+        :style="[questionInlineStyles, !questionInlineStyles.padding ? { padding: '12px 16px' } : {}]"
+        class="whitespace-pre-wrap"
       >
-        {{ item.content }}
+        {{ content }}
       </div>
-    </div>
+    </Transition>
+
   </div>
 </template>

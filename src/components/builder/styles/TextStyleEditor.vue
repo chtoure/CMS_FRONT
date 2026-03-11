@@ -10,12 +10,12 @@ import IconButtonGroup from '../ui/IconButtonGroup.vue';
 import CompositionColorPicker from '../../composition/CompositionColorPicker.vue';
 import VariableInputControl from '../../../type/VariableInputControl.vue';
 import BaseStyleEditor from './BaseStyleEditor.vue';
-import { 
-  Type, 
-  Type as FontIcon, 
-  AlignCenter, 
-  AlignLeft, 
-  AlignRight, 
+import {
+  Type,
+  Type as FontIcon,
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   AlignJustify,
   Underline,
   Italic
@@ -57,16 +57,17 @@ const fontStyleOptions = [
 ];
 
 const layoutWhitelist = [
-  'width', 
-  'height', 
-  'padding', 
-  'marginTop', 
-  'marginBottom', 
-  'rounded', 
-  'shadow', 
-  'opacity', 
+  'width',
+  'height',
+  'padding',
+  'marginTop',
+  'marginBottom',
+  'rounded',
+  'shadow',
+  'opacity',
   'bg',
-  'borderWidth'
+  'borderWidth',
+  'borderColor'
 ];
 </script>
 
@@ -80,8 +81,8 @@ const layoutWhitelist = [
             <span class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter">Font</span>
           </div>
           <div class="space-y-2">
-            <select 
-              :value="getRawValue(styles.fontFamily)" 
+            <select
+              :value="getRawValue(styles.fontFamily)"
               @input="(e: any) => updateStyle('fontFamily', e.target.value)"
               class="flex-1 h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[11px] px-2 outline-none focus:border-primary"
             >
@@ -89,8 +90,8 @@ const layoutWhitelist = [
               <option value="heading">Outfit (Heading)</option>
               <option value="mono">Roboto Mono</option>
             </select>
-            <ButtonGroup 
-              :model-value="(getRawValue(styles.fontWeight) as string)" 
+            <ButtonGroup
+              :model-value="(getRawValue(styles.fontWeight) as string)"
               @update:model-value="(val) => updateStyle('fontWeight', val)"
               :options="fontWeightOptions"
               size="sm"
@@ -101,11 +102,11 @@ const layoutWhitelist = [
 
         <!-- Font Size & Line Height & Align -->
         <div class="grid grid-cols-2 gap-3">
-          <PropertyInput 
-            label="Size" 
-            type="number" 
-            :model-value="getRawValue(styles.fontSize)" 
-            @update:model-value="(val) => updateStyle('fontSize', Number(val))"
+          <PropertyInput
+            label="Size"
+            type="number"
+            :model-value="getRawValue(styles.fontSize)"
+            @update:model-value="(val) => updateStyle('fontSize', parseInt(val.toString()) || 0)"
             :icon="FontIcon"
           >
             <template #action>
@@ -116,10 +117,10 @@ const layoutWhitelist = [
               />
             </template>
           </PropertyInput>
-          
+
           <div class="flex items-end justify-end">
-            <IconButtonGroup 
-              :model-value="(getRawValue(styles.textAlign) as string | number)" 
+            <IconButtonGroup
+              :model-value="(getRawValue(styles.textAlign) as string | number)"
               @update:model-value="(val) => updateStyle('textAlign', val as string)"
               :options="textAlignOptions"
             />
@@ -136,19 +137,19 @@ const layoutWhitelist = [
                 @update:model-value="(val) => updateStyle('textColor', val)"
                 variable-type="COLOR"
               >
-                <CompositionColorPicker 
+                <CompositionColorPicker
                   :is-open="activePicker === 'text'"
                   :initial-color="'#' + getHexValue(styles.textColor)"
                   @close="activePicker = null"
                   @color-change="(hex) => updateStyle('textColor', { type: 'static', value: hex })"
                 >
                   <template #trigger>
-                    <button 
-                      @click="activePicker = 'text'" 
+                    <button
+                      @click="activePicker = 'text'"
                       class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80 transition-colors"
                     >
-                      <div 
-                        class="w-4 h-4 rounded-sm border border-builder-bar-border shrink-0" 
+                      <div
+                        class="w-4 h-4 rounded-sm border border-builder-bar-border shrink-0"
                         :style="{ backgroundColor: '#' + getHexValue(styles.textColor) }"
                       />
                       <span class="text-builder-bar-text/60 font-mono text-[10px] truncate">{{ getRawValue(styles.textColor) || 'Inherit' }}</span>
@@ -157,9 +158,9 @@ const layoutWhitelist = [
                 </CompositionColorPicker>
               </VariableInputControl>
             </div>
-            
-            <IconButtonGroup 
-              :model-value="[(getRawValue(styles.textDecoration) as string | number), (getRawValue(styles.fontStyle) as string | number)].filter(Boolean)" 
+
+            <IconButtonGroup
+              :model-value="[(getRawValue(styles.textDecoration) as string | number), (getRawValue(styles.fontStyle) as string | number)].filter(Boolean)"
               @update:model-value="(val) => {
                  if (Array.isArray(val)) {
                    updateStyles({

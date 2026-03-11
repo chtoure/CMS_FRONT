@@ -38,7 +38,7 @@ const currentEditor = computed(() => {
   if (tag === 'CardBuilder') return 'card';
   if (tag === 'InputBuilder') return 'input';
   if (family === 'static') return 'text';
-  
+
   return 'base';
 });
 </script>
@@ -46,66 +46,66 @@ const currentEditor = computed(() => {
 <template>
   <div class="pb-20 p-1">
     <!-- Dispatcher d'éditeurs -->
-    
+
     <!-- Section -->
     <template v-if="currentEditor === 'section'">
-      <SectionStyleEditor :element="(element as any)" />
+      <SectionStyleEditor :key="element.id" :element="(element as any)" />
     </template>
 
     <!-- Bloc -->
     <template v-else-if="currentEditor === 'bloc'">
-      <BlocStyleEditor :element="(element as any)" />
+      <BlocStyleEditor :key="element.id" :element="(element as any)" />
     </template>
 
     <!-- Image -->
     <template v-else-if="currentEditor === 'image'">
-      <ImageStyleEditor :element="(element as any)" />
+      <ImageStyleEditor :key="element.id" :element="(element as any)" />
     </template>
 
     <!-- Icon -->
     <template v-else-if="currentEditor === 'icon'">
-      <IconStyleEditor :element="(element as any)" />
+      <IconStyleEditor :key="element.id" :element="(element as any)" />
     </template>
 
     <!-- Card -->
     <template v-else-if="currentEditor === 'card'">
-      <CardStyleEditor :element="(element as any)" />
+      <CardStyleEditor :key="element.id" :element="(element as any)" />
     </template>
 
     <!-- Input -->
     <template v-else-if="currentEditor === 'input'">
-      <InputStyleEditor :element="(element as any)" />
+      <InputStyleEditor :key="element.id" :element="(element as any)" />
     </template>
 
     <!-- Bouton -->
     <template v-else-if="currentEditor === 'button'">
-      <ButtonStyleEditor :element="(element as any)" />
+      <ButtonStyleEditor :key="element.id" :element="(element as any)" />
     </template>
 
     <!-- Lien -->
     <template v-else-if="currentEditor === 'link'">
-      <LinkStyleEditor :element="(element as any)" />
+      <LinkStyleEditor :key="element.id" :element="(element as any)" />
     </template>
 
     <!-- Slider -->
     <template v-else-if="currentEditor === 'slider'">
-      <SliderStyleEditor :element="(element as any)" />
+      <SliderStyleEditor :key="element.id" :element="(element as any)" />
     </template>
 
     <!-- Accordéon -->
     <template v-else-if="currentEditor === 'accordion'">
-      <AccordionStyleEditor :element="(element as any)" />
+      <AccordionStyleEditor :key="element.id" :element="(element as any)" />
     </template>
 
 
     <!-- Texte / Static -->
     <template v-else-if="currentEditor === 'text'">
-      <TextStyleEditor :element="(element as any)" />
+      <TextStyleEditor :key="element.id" :element="(element as any)" />
     </template>
 
     <!-- Par défaut : Base -->
     <template v-else>
-      <BaseStyleEditor :element="element" />
+      <BaseStyleEditor :key="element.id" :element="element" />
     </template>
   </div>
 </template>

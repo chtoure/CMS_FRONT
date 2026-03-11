@@ -9,6 +9,17 @@ export const WEIGHT_MAP: Record<string, string> = {
   'bold': '700',
 };
 
+export const SHADOW_MAP: Record<string, string> = {
+  'none': 'none',
+  'sm': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+  'default': '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+  'md': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+  'lg': '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+  'xl': '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+  '2xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
+  'inner': 'inset 0 2px 4px 0 rgb(0 0 0 / 0.05)',
+};
+
 const FONT_ALIASES = ['sans', 'heading', 'mono'];
 
 /**
@@ -128,11 +139,40 @@ export function applyVisualInline(
   if (styles.borderStyle) {
     const val = getValue(styles.borderStyle);
     if (val) inline.borderStyle = val as string;
+  } else if (styles.borderColor || styles.borderWidth) {
+    // Par défaut 'solid' si on a une bordure mais pas de style défini
+    inline.borderStyle = 'solid';
   }
 
   if (styles.rounded !== undefined) {
     const val = getValue(styles.rounded);
     if (isNumeric(val)) inline.borderRadius = `${val}px`;
-    else if (val) inline.borderRadius = val as string;
+    else if (val && val !== 'none') {
+        const map: Record<string, string> = { 'sm': '2px', 'md': '4px', 'lg': '8px', 'full': '9999px' };
+        inline.borderRadius = map[val as string] || val as string;
+    }
+  }
+
+  // Arrondis individuels
+  const corners = {
+    roundedTopLeft: 'borderTopLeftRadius',
+    roundedTopRight: 'borderTopRightRadius',
+    roundedBottomLeft: 'borderBottomLeftRadius',
+    roundedBottomRight: 'borderBottomRightRadius'
+  };
+
+  Object.entries(corners).forEach(([prop, styleKey]) => {
+    if (styles[prop] !== undefined) {
+      const val = getValue(styles[prop]);
+      if (isNumeric(val)) inline[styleKey] = `${val}px`;
+      else if (val) inline[styleKey] = val as string;
+    }
+  });
+
+  if (styles.shadow) {
+    const val = getValue(styles.shadow);
+    if (val && val !== 'none') {
+      inline.boxShadow = SHADOW_MAP[val as string] || val as string;
+    }
   }
 }

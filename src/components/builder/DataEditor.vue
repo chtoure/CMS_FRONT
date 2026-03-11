@@ -31,7 +31,9 @@ const props = defineProps<{
 const builderState = inject<{
   pageTree: { value: AnyComponentInstance[] };
   libraryTree: { value: AnyComponentInstance[] };
+  libraryTree: { value: AnyComponentInstance[] };
   selectedId: { value: string | null };
+  builderMode: { value: 'page' | 'library' };
   builderMode: { value: 'page' | 'library' };
   selectComponent: (id: string | null) => void;
   cmsCache: { value: Record<string, any> };
@@ -1334,11 +1336,11 @@ const forceAriaHidden = (isOpen: boolean) => {
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Largeur</Label>
-          <Input :model-value="(element.data.width as string | number)" @update:model-value="(val) => updateData('width', val)" class="h-8 text-xs bg-black/20 border-border/50" placeholder="ex: 100% ou 300" />
+          <Input :model-value="getDataValue(element.data.width)" @update:model-value="(val) => updateData('width', val)" class="h-8 text-xs bg-black/20 border-border/50" placeholder="ex: 100% ou 300" />
         </div>
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Hauteur</Label>
-          <Input :model-value="(element.data.height as string | number)" @update:model-value="(val) => updateData('height', val)" class="h-8 text-xs bg-black/20 border-border/50" placeholder="ex: auto ou 300" />
+          <Input :model-value="getDataValue(element.data.height)" @update:model-value="(val) => updateData('height', val)" class="h-8 text-xs bg-black/20 border-border/50" placeholder="ex: auto ou 300" />
         </div>
       </div>
       <div class="space-y-1.5">
@@ -1360,11 +1362,11 @@ const forceAriaHidden = (isOpen: boolean) => {
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Taille (px)</Label>
-          <Input type="number" :model-value="(element.data.size as number)" @update:model-value="(val) => updateData('size', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
+          <Input type="number" :model-value="getDataValue(element.data.size) || ''" @update:model-value="(val) => updateData('size', parseInt(val.toString()) || 0)" class="h-8 text-xs bg-black/20 border-border/50" />
         </div>
         <div class="space-y-1.5">
           <Label class="text-[11px] text-gray-400">Épaisseur trait</Label>
-          <Input type="number" :model-value="(element.data.strokeWidth as number)" @update:model-value="(val) => updateData('strokeWidth', parseInt(val.toString()))" class="h-8 text-xs bg-black/20 border-border/50" />
+          <Input type="number" :model-value="getDataValue(element.data.strokeWidth) || ''" @update:model-value="(val) => updateData('strokeWidth', parseInt(val.toString()) || 0)" class="h-8 text-xs bg-black/20 border-border/50" />
         </div>
       </div>
     </div>
@@ -1406,6 +1408,7 @@ const forceAriaHidden = (isOpen: boolean) => {
                 <SelectItem value="SHOW_ALERT">Afficher Alerte</SelectItem>
                 <SelectItem value="OPEN_MODAL">Ouvrir Modal</SelectItem>
                 <SelectItem value="TOGGLE_VISIBILITY">Toggle Visibilité</SelectItem>
+                <SelectItem value="TOGGLE_VISIBILITY">Toggle Visibilité</SelectItem>
               </SelectContent>
             </Select>
          </div>
@@ -1414,10 +1417,167 @@ const forceAriaHidden = (isOpen: boolean) => {
             <Input :model-value="((element.data.cliquable as Extract<CliquableAction, { action: 'NAVIGATE_TO' }>).action_params?.url)" @update:model-value="(val) => updateData('cliquable', { ...(element.data.cliquable as object), action_params: { url: val } })" class="h-8 text-xs bg-black/20 border-border/50" />
          </div>
           <div v-if="(element.data.cliquable as CliquableAction).action === 'SHOW_ALERT'" class="space-y-1.5">
+          <div v-if="(element.data.cliquable as CliquableAction).action === 'SHOW_ALERT'" class="space-y-1.5">
             <Label class="text-[11px] text-gray-400">Message d'alerte</Label>
             <Input :model-value="((element.data.cliquable as Extract<CliquableAction, { action: 'SHOW_ALERT' }>).action_params?.message)" @update:model-value="(val) => updateData('cliquable', { ...(element.data.cliquable as object), action_params: { message: val } })" class="h-8 text-xs bg-black/20 border-border/50" />
          </div>
+         <div v-if="(element.data.cliquable as CliquableAction).action === 'TOGGLE_VISIBILITY'" class="space-y-1.5">
+            <Label class="text-[11px] text-gray-400">Cible (Composant à basculer)</Label>
+            <Select
+              :model-value="((element.data.cliquable as Extract<CliquableAction, { action: 'TOGGLE_VISIBILITY' }>).action_params?.targetId)"
+              @update:model-value="(val) => val && updateData('cliquable', { ...(element.data.cliquable as object), action_params: { targetId: val } })"
+            >
+              <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+                <SelectValue placeholder="Choisir un composant..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="comp in allComponents" :key="comp.value" :value="comp.value">
+                  {{ comp.label }}
+                </SelectItem>
+                <SelectItem v-if="allComponents.length === 0" disabled value="none">
+                  Aucun composant trouvé
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p class="text-[9px] text-gray-500 italic">Sélectionnez le composant qui doit apparaître ou disparaître au clic.</p>
+         </div>
        </div>
+    </div>
+
+    <!-- Section: Slider -->
+    <div v-if="element.tag === 'SliderBuilder'" class="space-y-4">
+      <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Paramètres Slider</h4>
+
+      <div class="grid grid-cols-1 gap-4">
+        <div class="space-y-1.5">
+          <Label class="text-[11px] text-gray-400">Duration (ms)</Label>
+          <Input
+            type="number"
+            :model-value="getDataValue(element.data.transitionDuration)"
+            @update:model-value="(val) => updateData('transitionDuration', parseInt(val.toString()) || 500)"
+            placeholder="500"
+            class="h-8 text-xs bg-black/20 border-border/50"
+          />
+        </div>
+      </div>
+
+      <div class="space-y-1.5 pt-1">
+        <Label class="text-[11px] text-gray-400">Animation Ease</Label>
+        <Select :model-value="getDataValue(element.data.transitionEase) || 'ease-in-out'" @update:model-value="(val) => val && updateData('transitionEase', val as string)">
+          <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+            <SelectValue placeholder="Ease" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="opt in easeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 pt-2 border-t border-white/10">
+        <div class="flex items-center justify-between col-span-1">
+          <Label for="autoPlay" class="text-[11px] text-gray-300">Auto-play</Label>
+          <BaseSwitch id="autoPlay" :model-value="!!getDataValue(element.data.autoPlay)" @update:model-value="(val) => updateData('autoPlay', val)" />
+        </div>
+        <div class="flex items-center justify-between col-span-1">
+          <Label for="loop" class="text-[11px] text-gray-300">Boucle</Label>
+          <BaseSwitch id="loop" :model-value="!!getDataValue(element.data.loop)" @update:model-value="(val) => updateData('loop', val)" />
+        </div>
+      </div>
+
+      <div class="space-y-1.5">
+        <Label class="text-[11px] text-gray-400">Vitesse (ms)</Label>
+        <Input
+          type="number"
+          :model-value="getDataValue(element.data.speed)"
+          @update:model-value="(val: string | number) => updateData('speed', parseInt(val.toString()))"
+          class="h-8 text-xs bg-black/20 border-border/50"
+        />
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 pt-1">
+        <div class="flex items-center justify-between col-span-1">
+          <Label for="showPagination" class="text-[11px] text-gray-300">Pagination</Label>
+          <BaseSwitch id="showPagination" :model-value="getDataValue(element.data.showPagination) !== false" @update:model-value="(val) => updateData('showPagination', val)" />
+        </div>
+        <div class="flex items-center justify-between col-span-1">
+          <Label for="showArrows" class="text-[11px] text-gray-300">Flèches</Label>
+          <BaseSwitch id="showArrows" :model-value="getDataValue(element.data.showArrows) !== false" @update:model-value="(val) => updateData('showArrows', val)" />
+        </div>
+      </div>
+    </div>
+
+
+    <!-- Section: Accordion / FAQ -->
+    <div v-if="element.tag === 'AccordionBuilder'" class="space-y-4">
+      <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Paramètres Accordéon</h4>
+
+      <div class="space-y-1.5">
+        <Label class="text-[11px] text-gray-400">Question / Titre</Label>
+        <Input
+          :model-value="(element.data.title as string)"
+          @update:model-value="(val: string | number) => updateData('title', val.toString())"
+          class="h-8 text-xs bg-black/20 border-border/50"
+        />
+      </div>
+
+      <div class="space-y-1.5">
+        <Label class="text-[11px] text-gray-400">Réponse / Contenu</Label>
+        <textarea
+          :value="getDataValue(element.data.content) || ''"
+          @input="(e: Event) => updateData('content', (e.target as HTMLTextAreaElement).value)"
+          rows="4"
+          class="w-full text-xs px-2 py-1.5 bg-black/20 border border-border/50 rounded text-white/80 placeholder-white/30 resize-none focus:outline-none focus:border-primary/50 leading-relaxed"
+          placeholder="Entrez la réponse ici..."
+        />
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+      <div class="flex items-center justify-between pt-1">
+        <Label for="isOpen" class="text-[11px] text-gray-300">Ouvert par défaut</Label>
+        <BaseSwitch id="isOpen" :model-value="!!getDataValue(element.data.isOpen)" @update:model-value="(val) => updateData('isOpen', val)" />
+      </div>
+        <div class="space-y-1.5">
+          <Label class="text-[11px] text-gray-400">Vitesse Anim (ms)</Label>
+          <Input
+            type="number"
+            :model-value="getDataValue(element.data.transitionSpeed)"
+            class="h-8 text-xs bg-black/20 border-border/50"
+          />
+        </div>
+      </div>
+    </div>
+
+
+    <!-- Section: Lien -->
+    <div v-if="element.tag === 'LinkBuilder'" class="space-y-4">
+      <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Paramètres Lien</h4>
+      <div class="space-y-1.5">
+        <Label class="text-[11px] text-gray-400">Texte du lien</Label>
+        <Input
+          :model-value="getDataValue(element.data.text)"
+          class="h-8 text-xs bg-black/20 border-border/50"
+        />
+      </div>
+      <div class="space-y-1.5">
+        <Label class="text-[11px] text-gray-400">URL de destination</Label>
+        <Input
+          :model-value="getDataValue(element.data.url)"
+          class="h-8 text-xs bg-black/20 border-border/50"
+          placeholder="https://..."
+        />
+      </div>
+      <div class="space-y-1.5">
+        <Label class="text-[11px] text-gray-400">Cible (Target)</Label>
+        <Select :model-value="getDataValue(element.data.target)" @update:model-value="(val) => val && updateData('target', val as string)">
+          <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+            <SelectValue placeholder="Cible" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_self">Même fenêtre (_self)</SelectItem>
+            <SelectItem value="_blank">Nouvelle fenêtre (_blank)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
     </div>
 
   </div>

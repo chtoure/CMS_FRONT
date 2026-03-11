@@ -38,7 +38,13 @@ const { resolveValue } = useVariableResolver();
 
 // Computed réactifs
 const isSelected = computed(() => builderState?.selectedId.value === props.element.id);
-const canHaveChildren = computed(() => FAMILY_CAPABILITIES[props.element.family].canHaveChildren);
+const canHaveChildren = computed(() => {
+  // Le bouton ne doit plus être un conteneur
+  if (props.element.tag === 'ButtonBuilder') return false;
+  // Le slider est un conteneur
+  if (props.element.tag === 'SliderBuilder') return true;
+  return FAMILY_CAPABILITIES[props.element.family]?.canHaveChildren || false;
+});
 
 const layoutClasses = computed(() => {
   return buildBlocLayoutStyles(props.element.styles as Record<string, unknown>, resolveValue);
@@ -110,7 +116,6 @@ const handleChildUpdate = (index: number, newChild: AnyComponentInstance) => {
       class="absolute -top-5 left-0 bg-blue-500 text-white text-[9px] px-2 py-0.5 rounded-t-sm font-bold uppercase z-50 shadow-md whitespace-nowrap flex items-center gap-2"
     >
       <span>{{ element.name }}</span>
-      <span v-if="element.blocTemplateId" class="opacity-70 border-l border-white/30 pl-2">ID: {{ element.blocTemplateId }}</span>
     </div>
 
     <!-- Badge Caché -->
