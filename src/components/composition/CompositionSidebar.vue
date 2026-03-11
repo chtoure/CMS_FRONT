@@ -96,7 +96,6 @@ const navItems = computed<NavItem[]>(() =>{
 
   const baseItems: NavItem[]= [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: 'admin.dashboard' },
     { id: 'media', label: 'Media', icon: FolderOpen, href: 'admin.media'},
-    { id: 'variable', label: 'Variable', icon: Database, href: 'admin.variable' },
     {
       id: 'admin',
       label: 'Admin',

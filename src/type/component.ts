@@ -6,23 +6,26 @@ import type { sectionStyle } from './section';
 type NavigateAction = { action: 'NAVIGATE_TO'; action_params: { url: string } };
 type AlertAction = { action: 'SHOW_ALERT'; action_params: { message: string } };
 type ModalAction = { action: 'OPEN_MODAL'; action_params: { modalId: string } };
-type CliquableAction = NavigateAction | AlertAction | ModalAction;
+type ToggleVisibilityAction = { action: 'TOGGLE_VISIBILITY'; action_params: { targetId: string } };
+type CliquableAction = NavigateAction | AlertAction | ModalAction | ToggleVisibilityAction;
 
 // Familles et Capacités
-type ComponentFamily = 'static' | 'interactive' | 'container' | 'input';
+type ComponentFamily = 'static' | 'interactive' | 'container' | 'input' | 'complex';
 
 const FAMILY_CAPABILITIES: Record<ComponentFamily, { canHaveChildren: boolean }> = {
   static: { canHaveChildren: false },
   interactive: { canHaveChildren: false },
   container: { canHaveChildren: true },
   input: { canHaveChildren: false },
+  complex: { canHaveChildren: true },
 };
 
 const ACTIONS_BY_FAMILY: Record<ComponentFamily, CliquableAction['action'][]> = {
   static: [],
-  interactive: ['NAVIGATE_TO', 'SHOW_ALERT', 'OPEN_MODAL'],
-  container: ['OPEN_MODAL'],
+  interactive: ['NAVIGATE_TO', 'SHOW_ALERT', 'OPEN_MODAL', 'TOGGLE_VISIBILITY'],
+  container: ['OPEN_MODAL', 'TOGGLE_VISIBILITY'],
   input: ['SHOW_ALERT'],
+  complex: ['NAVIGATE_TO', 'OPEN_MODAL', 'TOGGLE_VISIBILITY'],
 };
 
 // Support Responsif
@@ -33,8 +36,15 @@ type ResponsiveProp<T = string> = T | {
   lg?: T;
 };
 
-// types/styles.ts
+type VariableProperty<T> = {
+  type: 'static';
+  value: T;
+} | {
+  type: 'variable';
+  value: string; 
+};
 
+<<<<<<< HEAD
 // Interface de base contenant toutes les propriétés communes
 interface BaseStyles {
   // Propriétés de mise en page
@@ -96,6 +106,16 @@ interface InputStyles extends BaseStyles {
 
 // types/component.ts
 type AllStyles = ContainerStyles | StaticStyles | InteractiveStyles | InputStyles | BaseStyles;
+=======
+import type { 
+  BaseStyles, 
+  ContainerStyles, 
+  StaticStyles, 
+  InteractiveStyles, 
+  InputStyles, 
+  AllStyles 
+} from './style';
+>>>>>>> 7700cfe75fe36402794d4c48a9a2da39f049762c
 
 
 
@@ -147,6 +167,7 @@ interface AnyComponentInstance extends Omit<Component<AllStyles>, 'defaultProps'
   id: string; // UUID local
   blocTemplateId?: number; // ID backend (BlockTemplate)
   componentDefinitionId?: number; // ID du type de composant (table components)
+  modelId?: number; // ID du BlocTemplate servant de modèle (si is_custom == false mais basé sur un modèle)
   styles: AllStyles;
   params: IComponentParams[];
   data: Record<string, unknown>;
@@ -159,6 +180,7 @@ export type {
   NavigateAction,
   AlertAction,
   ModalAction,
+  ToggleVisibilityAction,
   CliquableAction,
   ComponentFamily,
   ResponsiveProp,
@@ -174,7 +196,8 @@ export type {
   InputStyles,
   AllStyles,
   ComponentProps,
-  sectionStyle
+  sectionStyle,
+  VariableProperty,
 }
 
 export {

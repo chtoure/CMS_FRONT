@@ -1,45 +1,54 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import * as Icons from 'lucide-vue-next';
-import type { StaticStyles } from '../../type/component';
-import { buildStyles, buildInlineStyles } from '../../lib/styleProcessor';
+import { computed, inject } from 'vue';
+import type { StaticStyles, AnyComponentInstance } from '../../type/component';
+import { buildIconStyles, buildIconInlineStyles } from '../../lib/style/iconProcessor';
+import { useVariableResolver } from '../../hook/variable';
 
 interface Props {
   styles?: StaticStyles;
   data?: {
-    icon?: keyof typeof Icons;
-    size?: number;
-    color?: string;
-    strokeWidth?: number;
+    icon?: any;
+    size?: any;
+    color?: any;
   };
+  element?: AnyComponentInstance;
+  children?: AnyComponentInstance[];
 }
 
 const props = defineProps<Props>();
 
+const builderState = inject<{
+  currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
+}>('builderState', { currentBreakpoint: { value: 'default' } } as any);
+
+const { resolveValue } = useVariableResolver();
+
 const computedClasses = computed(() => {
-  return buildStyles('static', props.styles as Record<string, unknown>);
+  return buildIconStyles(props.styles as Record<string, unknown>, resolveValue);
 });
 
 const computedInlineStyles = computed(() => {
-  return buildInlineStyles('static', props.styles as Record<string, unknown>);
+  const bp = builderState.currentBreakpoint.value;
+  return buildIconInlineStyles(props.styles as Record<string, unknown>, bp, resolveValue);
 });
 
-const IconComponent = computed(() => {
-  const iconName = props.data?.icon;
-  if (iconName && Icons[iconName]) {
-    return Icons[iconName];
-  }
-  return Icons.HelpCircle; // Fallback icon
-});
+const icon = computed(() => (resolveValue(props.data?.icon) as string) || 'ph-cube');
+const size = computed(() => (resolveValue(props.data?.size) as number) || 24);
+const color = computed(() => (resolveValue(props.data?.color) as string) || 'currentColor');
 </script>
 
 <template>
-  <div :class="computedClasses" :style="computedInlineStyles">
-    <component
-      :is="IconComponent"
-      :size="props.data?.size || 24"
-      :color="props.data?.color || 'currentColor'"
-      :stroke-width="props.data?.strokeWidth || 2"
+  <div 
+    class="flex items-center justify-center transition-all"
+    :class="computedClasses"
+    :style="computedInlineStyles"
+  >
+     <i 
+      :class="icon" 
+      :style="{ 
+        fontSize: size + 'px',
+        color: color
+      }"
     />
   </div>
 </template>

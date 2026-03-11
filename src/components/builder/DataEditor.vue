@@ -30,7 +30,9 @@ const props = defineProps<{
 
 const builderState = inject<{
   pageTree: { value: AnyComponentInstance[] };
+  libraryTree: { value: AnyComponentInstance[] };
   selectedId: { value: string | null };
+  builderMode: { value: 'page' | 'library' };
   selectComponent: (id: string | null) => void;
   cmsCache: { value: Record<string, any> };
 }>('builderState');
@@ -1403,6 +1405,7 @@ const forceAriaHidden = (isOpen: boolean) => {
                 <SelectItem value="NAVIGATE_TO">Naviguer vers URL</SelectItem>
                 <SelectItem value="SHOW_ALERT">Afficher Alerte</SelectItem>
                 <SelectItem value="OPEN_MODAL">Ouvrir Modal</SelectItem>
+                <SelectItem value="TOGGLE_VISIBILITY">Toggle Visibilité</SelectItem>
               </SelectContent>
             </Select>
          </div>
@@ -1410,7 +1413,7 @@ const forceAriaHidden = (isOpen: boolean) => {
             <Label class="text-[11px] text-gray-400">URL de destination</Label>
             <Input :model-value="((element.data.cliquable as Extract<CliquableAction, { action: 'NAVIGATE_TO' }>).action_params?.url)" @update:model-value="(val) => updateData('cliquable', { ...(element.data.cliquable as object), action_params: { url: val } })" class="h-8 text-xs bg-black/20 border-border/50" />
          </div>
-         <div v-if="(element.data.cliquable as CliquableAction).action === 'SHOW_ALERT'" class="space-y-1.5">
+          <div v-if="(element.data.cliquable as CliquableAction).action === 'SHOW_ALERT'" class="space-y-1.5">
             <Label class="text-[11px] text-gray-400">Message d'alerte</Label>
             <Input :model-value="((element.data.cliquable as Extract<CliquableAction, { action: 'SHOW_ALERT' }>).action_params?.message)" @update:model-value="(val) => updateData('cliquable', { ...(element.data.cliquable as object), action_params: { message: val } })" class="h-8 text-xs bg-black/20 border-border/50" />
          </div>

@@ -10,49 +10,87 @@ import type { AnyComponentInstance } from '../../type/component';
 import type { AnySectionInstance } from '../../type/section';
 import StyleEditor from '../../components/builder/StyleEditor.vue';
 import DataEditor from '../../components/builder/DataEditor.vue';
-import { MousePointer2 } from 'lucide-vue-next';
+import { MousePointer2, Webhook } from 'lucide-vue-next';
 
 // Injection de l'état global
 const builderState = inject<{
   pageTree: { value: (AnyComponentInstance | AnySectionInstance)[] };
+  libraryTree: { value: AnyComponentInstance[] };
   selectedId: { value: string | null };
+  builderMode: { value: 'page' | 'library' };
   deleteComponent: (id: string) => void;
 }>('builderState');
 
+import { useBlockTemplate } from '../../hook/bloc-template';
+import { Save } from 'lucide-vue-next';
+import CompositionModal from '../../components/composition/CompositionModal.vue';
+import VariableListView from '../variable/VariableListView.vue';
+const { saveAsCustom } = useBlockTemplate();
+
+const handleSaveAsCustom = async () => {
+    if (!selectedElement.value || !('tag' in selectedElement.value)) return;
+    try {
+        await saveAsCustom(selectedElement.value as AnyComponentInstance);
+        alert('Composant enregistré dans "Mes Composants" !');
+    } catch (error) {
+        console.error('Failed to save as custom:', error);
+    }
+};
+
 // Calcul de l'élément sélectionné
 const selectedElement = computed(() => {
-  if (!builderState?.selectedId.value || !builderState?.pageTree.value) return null;
-  return findComponentById(builderState.pageTree.value as any, builderState.selectedId.value);
+  if (!builderState?.selectedId.value) return null;
+  
+  const tree = builderState.builderMode.value === 'page' 
+    ? builderState.pageTree.value 
+    : builderState.libraryTree?.value;
+
+  if (!tree) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return findComponentById(tree as any, builderState.selectedId.value);
 });
 
-// const handleDelete = () => {
-//   if (!selectedElement.value) return;
-  
-//   // if (confirm(`Êtes-vous sûr de vouloir supprimer "${selectedElement.value.name}" ?`)) {
-//     builderState?.deleteComponent(selectedElement.value.id);
-//   // }
-// };
 </script>
 
 <template>
   <div :class="cn(['w-full', 'p-2', 'text-builder-bar-text', 'font-bold', 'h-full', 'flex', 'flex-col', 'bg-builder-bar-background'])">
     <div class="relative h-full w-full overflow-y-auto flex flex-col">
       
-      <div v-if="selectedElement" class="relative p-4 flex-1 overflow-y-auto">
-        <div class="mb-6 flex items-start justify-between">
-          <div>
-            <h3 class="text-lg font-bold text-builder-bar-text">
-              {{ 'name' in selectedElement ? selectedElement.name : 'Section' }}
-            </h3>
+      <div v-if="selectedElement" class="relative p-2 flex-1 overflow-y-auto">
+        <div class=" flex flex-col gap-2 items-start justify-between pb-3">
+          <div class="flex flex-row gap-4 items-center w-full">
             <p v-if="'tag' in selectedElement" class="text-xs text-gray-500 font-mono">{{ selectedElement.tag }}</p>
             <p v-else class="text-xs text-gray-500 font-mono">Layout Section</p>
+            <CompositionModal title="Variables">
+              <template #trigger>
+                <button class="hover:text-primary">
+                  <Webhook class="w-3.5 h-3.5" />
+                </button>
+              </template>
+              <template #content>
+                <VariableListView />
+              </template>
+            </CompositionModal>
           </div>
+          
+          <!-- Save as Custom Button -->
+          <button 
+            v-if="'tag' in selectedElement && builderState?.builderMode.value === 'page'"
+            @click="handleSaveAsCustom"
+            class="flex items-center gap-2 px-3 py-1.5 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-600/20 rounded transition-all text-[10px] uppercase font-bold"
+            title="Enregistrer comme composant réutilisable"
+          >
+            <Save class="w-3.5 h-3.5" />
+            Designer
+          </button>
         </div>
 
-        <Tabs default-value="style" class="w-full">
+        <hr class="border-border">
+
+        <Tabs default-value="style" class="w-full p-2">
           <TabsList class="w-full justify-between grid grid-cols-2 mb-4">
-            <TabsTrigger value="style" class="text-xs h-8 data-[state=active]:bg-primary data-[state=active]:text-white">Style</TabsTrigger>
-            <TabsTrigger value="rules" class="text-xs h-8 data-[state=active]:bg-primary data-[state=active]:text-white">Paramétrages</TabsTrigger>
+            <TabsTrigger value="style" class="text-xs h-8 data-[state=active]:bg-primary data-[state=active]:text-white !rounded">Style</TabsTrigger>
+            <TabsTrigger value="rules" class="text-xs h-8 data-[state=active]:bg-primary data-[state=active]:text-white !rounded">Paramétrages</TabsTrigger>
           </TabsList>
 
           <TabsContent value="style" class="mt-0 border-none p-0 outline-none">
