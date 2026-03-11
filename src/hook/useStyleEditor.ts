@@ -4,7 +4,7 @@ import type { AnyComponentInstance, VariableProperty } from '../type/component';
 import type { AnySectionInstance } from '../type/section';
 import { useVariableResolver } from './variable';
 
-export function useStyleEditor(element: AnyComponentInstance | AnySectionInstance) {
+export function useStyleEditor(initialElement: AnyComponentInstance | AnySectionInstance) {
   const builderState = inject<{
     pageTree: { value: (AnyComponentInstance | AnySectionInstance)[] };
     libraryTree: { value: AnyComponentInstance[] };
@@ -16,11 +16,35 @@ export function useStyleEditor(element: AnyComponentInstance | AnySectionInstanc
   
   const { resolveValue } = useVariableResolver();
 
+  // Helper pour trouver l'élément le plus frais dans l'arbre
+  const getLatestElement = (): AnyComponentInstance | AnySectionInstance => {
+    if (!builderState) return initialElement;
+    
+    const tree = builderState.builderMode.value === 'page' 
+      ? builderState.pageTree.value 
+      : builderState.libraryTree.value;
+
+    const findInTree = (items: (AnyComponentInstance | AnySectionInstance)[]): AnyComponentInstance | AnySectionInstance | null => {
+      for (const item of items) {
+        if (item.id === initialElement.id) return item;
+        if (item.children) {
+          const found = findInTree(item.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    return findInTree(tree) || initialElement;
+  };
+
   const updateComponentStyle = (newStyles: any) => {
     if (!builderState) return;
+    const targetId = initialElement.id;
+
     const updateTree = (items: (AnyComponentInstance | AnySectionInstance)[]): (AnyComponentInstance | AnySectionInstance)[] => {
       return items.map((item: any): any => {
-        if (item.id === element.id) {
+        if (item.id === targetId) {
           return { ...item, styles: newStyles };
         }
         if (item.children) {
@@ -40,23 +64,18 @@ export function useStyleEditor(element: AnyComponentInstance | AnySectionInstanc
   const updateStyles = (updates: Record<string, any>) => {
     if (!builderState) return;
 
-    console.log("updatesssssssssss", updates);
-    
-
-    const newStyles = { ...element.styles };
+    // IMPORTANT: On récupère la version la plus fraîche de l'élément avant de merger
+    const currentElement = getLatestElement();
+    const newStyles = { ...(currentElement.styles || {}) };
     const bp = builderState.currentBreakpoint.value;
 
     Object.entries(updates).forEach(([key, value]) => {
       let finalValue;
 
-      console.log("keyyyyyyyyy", key);
-      console.log("valueeeeeee", value);
-      
-
       if (typeof value === 'object' && value !== null && 'type' in value && 'value' in value) {
         finalValue = value;
       } else {
-        const currentProp = (element.styles as any)[key] as VariableProperty<any> | undefined;
+        const currentProp = (newStyles as any)[key] as VariableProperty<any> | undefined;
         if (currentProp?.type === 'variable') {
             console.warn(`Cannot apply responsive edit to a property linked to a variable.`);
             return;
@@ -93,15 +112,11 @@ export function useStyleEditor(element: AnyComponentInstance | AnySectionInstanc
   const getRawValue = (prop: unknown): string | number | undefined => {
     if (!prop) return undefined;
 
-    console.log("proppppppppppp", prop);
-    
-
     let valueToProcess = prop;
 
     if (typeof prop === 'object' && prop !== null && 'type' in prop && 'value' in prop) {
         const varProp = prop as VariableProperty<any>;
         if (varProp.type === 'variable') {
-            // Return the name for the key, but we might want the resolved value for display
             return varProp.value;
         }
         valueToProcess = varProp.value;
@@ -116,8 +131,6 @@ export function useStyleEditor(element: AnyComponentInstance | AnySectionInstanc
       return res.default;
     }
 
-    console.log("valueToProcess", valueToProcess);
-    
     return (typeof valueToProcess === 'string' || typeof valueToProcess === 'number') ? valueToProcess : undefined;
   };
 
@@ -129,7 +142,6 @@ export function useStyleEditor(element: AnyComponentInstance | AnySectionInstanc
     const raw = getResolvedValue(prop);
     if (!raw || typeof raw !== 'string') return 'FFFFFF';
     
-    // Si c'est déjà un hex
     const cleanRaw = raw.startsWith('#') ? raw.slice(1) : raw;
     if (/^[0-9A-Fa-f]{6,8}$/.test(cleanRaw)) return cleanRaw;
 
@@ -154,6 +166,7 @@ export function useStyleEditor(element: AnyComponentInstance | AnySectionInstanc
     getResolvedValue,
     getHexValue,
     updateStyle,
-    updateStyles
+    updateStyles,
+    getLatestElement // Optionnel, mais utile pour le debug
   }
 }

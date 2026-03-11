@@ -23,7 +23,7 @@ const props = defineProps<{
   whitelist?: string[];
 }>();
 
-const { getRawValue, getHexValue, updateStyle } = useStyleEditor(props.element);
+const { getRawValue, getHexValue, updateStyle, updateStyles } = useStyleEditor(props.element);
 
 const activePicker = ref<'bg' | 'border' | null>(null);
 
@@ -106,7 +106,7 @@ const borderStyleOptions = [
             label="Padding"
             type="number"
             :model-value="getRawValue(styles.padding)"
-            @update:model-value="(val) => updateStyle('padding', val)"
+            @update:model-value="(val) => updateStyle('padding', parseInt(val.toString()) || 0)"
             :icon="Layers"
           >
             <template #action>
@@ -124,7 +124,7 @@ const borderStyleOptions = [
             v-if="showField('marginTop')"
             label="Margin T"
             :model-value="getRawValue(styles.marginTop)"
-            @update:model-value="(val) => updateStyle('marginTop', val)"
+            @update:model-value="(val) => updateStyle('marginTop', parseInt(val.toString()) || 0)"
             type="number"
             class="flex-1"
           >
@@ -141,7 +141,7 @@ const borderStyleOptions = [
             v-if="showField('marginBottom')"
             label="Margin B"
             :model-value="getRawValue(styles.marginBottom)"
-            @update:model-value="(val) => updateStyle('marginBottom', val)"
+            @update:model-value="(val) => updateStyle('marginBottom', parseInt(val.toString()) || 0)"
             type="number"
             class="flex-1"
           >
@@ -158,36 +158,16 @@ const borderStyleOptions = [
     </PropertyGroup>
 
     <!-- Appearance Section -->
-    <PropertyGroup v-if="showField('rounded') || showField('shadow') || showField('opacity')" title="Apparance" :open="true">
+    <PropertyGroup v-if="showField('shadow') || showField('opacity')" title="Appearance" :open="true" :icon="Droplets">
       <div class="space-y-4">
-        <!-- Opacity & Radius -->
-        <PropertyRow>
-          <div v-if="showField('opacity')" class="space-y-1 flex-1">
-             <PropertyInput 
-              label="Opacity"
-              :model-value="Math.round((Number(getRawValue(styles.opacity)) || 1) * 100)"
-              @update:model-value="(val) => updateStyle('opacity', parseFloat(val.toString()) / 100)"
-              :icon="Droplets"
-            />
-          </div>
-          <div v-if="showField('rounded')" class="space-y-1 flex-1">
-             <PropertyInput 
-              label="Radius"
-              :model-value="getRawValue(styles.rounded)"
-              @update:model-value="(val) => updateStyle('rounded', val)"
-              :icon="CornerUpLeft"
-            />
-          </div>
-        </PropertyRow>
-
-        <!-- Radius Details (Optional) -->
-        <div v-if="showField('rounded') && (getRawValue(styles.rounded) !== 'none')" class="flex justify-end">
-           <ButtonGroup 
-              :model-value="getRawValue(styles.rounded) as string"
-              @update:model-value="(val) => updateStyle('rounded', val)"
-              :options="roundedOptions"
-              size="sm"
-            />
+        <div v-if="showField('opacity')" class="space-y-1.5">
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Opacity</label>
+          <PropertyInput 
+            label=""
+            :model-value="Math.round((Number(getRawValue(styles.opacity)) || 1) * 100)"
+            @update:model-value="(val) => updateStyle('opacity', parseFloat(val.toString()) / 100)"
+            :icon="Droplets"
+          />
         </div>
 
         <div v-if="showField('shadow')" class="space-y-1.5">
@@ -201,6 +181,107 @@ const borderStyleOptions = [
         </div>
       </div>
     </PropertyGroup>
+
+    <!-- Detailed Radius Section (Optional, only if showField('rounded') is true) -->
+    <PropertyGroup v-if="showField('rounded')" title="Corners & Radius" :open="false" :icon="CornerUpLeft">
+      <div class="space-y-4">
+        <div class="space-y-1.5">
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">All Corners</label>
+          <div class="space-y-2">
+            <PropertyInput 
+              label=""
+              type="number"
+              :model-value="getRawValue(styles.rounded)"
+              @update:model-value="(val) => updateStyle('rounded', parseInt(val.toString()) || 0)"
+              class="flex-1"
+            >
+              <template #action>
+                <VariableInputControl
+                  :model-value="styles.rounded"
+                  @update:model-value="(val) => updateStyle('rounded', val)"
+                  variable-type="NUMBER"
+                />
+              </template>
+            </PropertyInput>
+            <ButtonGroup 
+              :model-value="getRawValue(styles.rounded) as string"
+              @update:model-value="(val) => updateStyle('rounded', val)"
+              :options="roundedOptions"
+              size="sm"
+            />
+          </div>
+        </div>
+
+        <div class="space-y-1.5 pt-2 border-t border-builder-bar-border/30">
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Individual Corners</label>
+          <PropertyRow>
+            <PropertyInput 
+              label="TL"
+              type="number"
+              :model-value="getRawValue(styles.roundedTopLeft)"
+              @update:model-value="(val) => updateStyle('roundedTopLeft', parseInt(val.toString()) || 0)"
+              class="flex-1"
+            >
+              <template #action>
+                <VariableInputControl
+                  :model-value="styles.roundedTopLeft"
+                  @update:model-value="(val) => updateStyle('roundedTopLeft', val)"
+                  variable-type="NUMBER"
+                />
+              </template>
+            </PropertyInput>
+            <PropertyInput 
+              label="TR"
+              type="number"
+              :model-value="getRawValue(styles.roundedTopRight)"
+              @update:model-value="(val) => updateStyle('roundedTopRight', parseInt(val.toString()) || 0)"
+              class="flex-1"
+            >
+              <template #action>
+                <VariableInputControl
+                  :model-value="styles.roundedTopRight"
+                  @update:model-value="(val) => updateStyle('roundedTopRight', val)"
+                  variable-type="NUMBER"
+                />
+              </template>
+            </PropertyInput>
+          </PropertyRow>
+          <PropertyRow>
+            <PropertyInput 
+              label="BL"
+              type="number"
+              :model-value="getRawValue(styles.roundedBottomLeft)"
+              @update:model-value="(val) => updateStyle('roundedBottomLeft', parseInt(val.toString()) || 0)"
+              class="flex-1"
+            >
+              <template #action>
+                <VariableInputControl
+                  :model-value="styles.roundedBottomLeft"
+                  @update:model-value="(val) => updateStyle('roundedBottomLeft', val)"
+                  variable-type="NUMBER"
+                />
+              </template>
+            </PropertyInput>
+            <PropertyInput 
+              label="BR"
+              type="number"
+              :model-value="getRawValue(styles.roundedBottomRight)"
+              @update:model-value="(val) => updateStyle('roundedBottomRight', parseInt(val.toString()) || 0)"
+              class="flex-1"
+            >
+              <template #action>
+                <VariableInputControl
+                  :model-value="styles.roundedBottomRight"
+                  @update:model-value="(val) => updateStyle('roundedBottomRight', val)"
+                  variable-type="NUMBER"
+                />
+              </template>
+            </PropertyInput>
+          </PropertyRow>
+        </div>
+      </div>
+    </PropertyGroup>
+
 
     <!-- Fill Section -->
     <PropertyGroup v-if="showField('bg')" title="Fill" :open="true" :icon="Square">
@@ -239,8 +320,8 @@ const borderStyleOptions = [
         <PropertyRow>
           <PropertyInput 
             label="Weight"
-            :model-value="getRawValue(styles.borderWidth)"
-            @update:model-value="(val) => updateStyle('borderWidth', parseInt(val.toString()))"
+            :model-value="getRawValue(styles.borderWidth) || 0"
+            @update:model-value="(val) => updateStyle('borderWidth', parseInt(val.toString()) || 0)"
             type="number"
             class="flex-1"
           />
@@ -258,14 +339,26 @@ const borderStyleOptions = [
         <div v-if="showField('borderColor')" class="space-y-2">
           <VariableInputControl
             :model-value="styles.borderColor"
-            @update:model-value="(val) => updateStyle('borderColor', val)"
+            @update:model-value="(val) => {
+              const updates: Record<string, any> = { borderColor: val };
+              if (val && !getRawValue(styles.borderWidth)) {
+                updates.borderWidth = 1;
+              }
+              updateStyles(updates);
+            }"
             variable-type="COLOR"
           >
             <CompositionColorPicker 
               :is-open="activePicker === 'border'"
               :initial-color="'#' + getHexValue(styles.borderColor)"
               @close="activePicker = null"
-              @color-change="(hex) => updateStyle('borderColor', { type: 'static', value: hex })"
+              @color-change="(hex) => {
+                const updates: Record<string, any> = { borderColor: { type: 'static', value: hex } };
+                if (!getRawValue(styles.borderWidth)) {
+                  updates.borderWidth = 1;
+                }
+                updateStyles(updates);
+              }"
             >
               <template #trigger>
                 <button 

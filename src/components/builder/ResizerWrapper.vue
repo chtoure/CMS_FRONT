@@ -94,7 +94,7 @@ const startResize = (e: MouseEvent, direction: string) => {
       'rescaling': isResizing
     }"
   >
-    <div class="w-full h-full overflow-hidden">
+    <div class="w-full h-full">
       <slot />
     </div>
     

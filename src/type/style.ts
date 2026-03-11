@@ -77,7 +77,21 @@ interface SliderStyles extends ContainerStyles {
 }
 
 interface AccordionStyles extends BaseStyles {
-  // Styles spécifiques à l'Accordéon
+  // Question (header)
+  questionFontSize?: VariableProperty<ResponsiveProp<string>>;
+  questionFontWeight?: VariableProperty<ResponsiveProp<string>>;
+  questionColor?: VariableProperty<ResponsiveProp<string>>;
+  questionBg?: VariableProperty<ResponsiveProp<string>>;
+  questionPadding?: VariableProperty<ResponsiveProp<number | string>>;
+  // Réponse (body)
+  answerFontSize?: VariableProperty<ResponsiveProp<string>>;
+  answerFontWeight?: VariableProperty<ResponsiveProp<string>>;
+  answerColor?: VariableProperty<ResponsiveProp<string>>;
+  answerBg?: VariableProperty<ResponsiveProp<string>>;
+  answerPadding?: VariableProperty<ResponsiveProp<number | string>>;
+  // Séparateur
+  dividerColor?: VariableProperty<ResponsiveProp<string>>;
+  dividerWidth?: VariableProperty<ResponsiveProp<number>>;
 }
 
 // Famille : Link

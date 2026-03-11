@@ -12,8 +12,6 @@ import ButtonGroup from '../ui/ButtonGroup.vue';
 import CompositionColorPicker from '../../composition/CompositionColorPicker.vue';
 import VariableInputControl from '../../../type/VariableInputControl.vue';
 import { 
-  Play, 
-  Settings2, 
   ChevronRight, 
   MoreHorizontal,
   Circle,
@@ -31,13 +29,6 @@ const activePicker = ref<'arrowColor' | 'arrowBg' | 'pagColor' | 'pagActiveColor
 
 const styles = computed(() => props.element.styles as any);
 
-const easeOptions = [
-  { label: 'Ease', value: 'ease-in-out' },
-  { label: 'Linear', value: 'linear' },
-  { label: 'In', value: 'ease-in' },
-  { label: 'Out', value: 'ease-out' },
-];
-
 const shapeOptions = [
   { value: 'circle', icon: Circle, tooltip: 'Circle' },
   { value: 'line', icon: Minus, tooltip: 'Line' },
@@ -48,39 +39,23 @@ const shapeOptions = [
 <template>
   <div class="space-y-4">
     <BaseStyleEditor :element="element" />
-    <LayoutStyleEditor :element="element" />
 
-    <!-- Configuration Section -->
-    <PropertyGroup title="Slider Config" :open="true" :icon="Settings2">
-      <div class="space-y-4">
+    <!-- Paramètres de Layout Spécifiques -->
+    <PropertyGroup title="Layout" :open="true" :icon="ChevronRight">
+      <div class="space-y-3">
         <PropertyInput 
-          label="Items per view" 
+          label="Nombre par page" 
           type="number" 
           :model-value="getRawValue(styles.slidesPerView)" 
           @update:model-value="(val) => updateStyle('slidesPerView', parseInt(val.toString()) || 1)"
           placeholder="1"
         />
-
-        <div class="grid grid-cols-2 gap-3">
-          <PropertyInput 
-            label="Duration" 
-            type="number" 
-             :model-value="getRawValue(styles.transitionDuration)" 
-            @update:model-value="(val) => updateStyle('transitionDuration', parseInt(val.toString()))"
-            placeholder="500"
-            :icon="Play"
-          />
-          <div class="flex items-end">
-            <ButtonGroup 
-              :model-value="getRawValue(styles.transitionEase) as string" 
-              @update:model-value="(val) => updateStyle('transitionEase', val)"
-              :options="easeOptions"
-              size="sm"
-            />
-          </div>
-        </div>
       </div>
     </PropertyGroup>
+
+    <LayoutStyleEditor :element="element" />
+
+    <!-- Configuration Section moved to DataEditor -->
 
     <!-- Navigation Arrows -->
     <PropertyGroup title="Arrows" :open="false" :icon="ChevronRight">
