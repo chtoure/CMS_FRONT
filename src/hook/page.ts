@@ -1,6 +1,6 @@
 import { unref, type Ref } from "vue";
-import type { Page, PageFilter, PageRenderResponse } from "../type/page";
-import { useQuery } from "@tanstack/vue-query";
+import type { Page, PageFilter, PageRenderResponse, RegisterPage, UpdatePage } from "../type/page";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import api, { handleResponse } from "../api/fetchConfig";
 import type { Pagination } from "../type/pagination";
 
@@ -60,10 +60,44 @@ const UseRenderPage = (slug: string | Ref<string>) => {
   });
 };
 
+const useAddPage = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (pageData: RegisterPage) => {
+      const response = await api("/page", {
+        method: "POST",
+        body: JSON.stringify(pageData),
+      });
+      return handleResponse<Page>(response);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pages"] });
+    },
+  });
+};
+
+const useUpdatePage = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, pageData }: { id: number; pageData: UpdatePage }) => {
+      const response = await api(`/pages/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(pageData),
+      });
+      return handleResponse<Page>(response);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["pages"] });
+      queryClient.invalidateQueries({ queryKey: ["page", variables.id] });
+    },
+  });
+};
 
 
 export {
   useGetPages,
   useGetPage,
   UseRenderPage,
+  useAddPage,
+  useUpdatePage,
 };

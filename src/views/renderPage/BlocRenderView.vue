@@ -1,9 +1,11 @@
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { COMPONENT_MAP } from '../../registry/component_registry';
 import { FAMILY_CAPABILITIES, type ComponentFamily } from '../../type/component';
 import type { HydratedBlock } from '../../type/page'; // Import de l'interface créée
+import { buildBlocLayoutStyles, buildBlocLayoutInlineStyles } from '../../lib/style/blocProcessor';
+import { useVariableResolver } from '../../hook/variable';
 
 // On définit le nom pour la récursivité
 defineOptions({
@@ -20,26 +22,59 @@ const props = defineProps<Props>();
 // On récupère le composant correspondant au tag (ex: TextBuilder)
 const componentToRender = COMPONENT_MAP[props.element.tag];
 
-import { buildLayoutStyles, buildLayoutInlineStyles } from '../../lib/styleProcessor';
+
+const builderState = inject<{ 
+  currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' },
+  isVisible: (id: string | number, backendId?: number | null) => boolean
+}>('builderState', { 
+  currentBreakpoint: { value: 'default' },
+  isVisible: () => true 
+} as any);
+
+const { resolveValue } = useVariableResolver();
 
 /**
  * Calcul des classes et styles de layout pour correspondre au builder
  */
 const layoutClasses = computed(() => {
-  return buildLayoutStyles(props.element.styles as Record<string, unknown>);
+  return buildBlocLayoutStyles(props.element.styles as Record<string, unknown>, resolveValue);
 });
 
 const layoutInlineStyles = computed(() => {
-  return buildLayoutInlineStyles(props.element.styles as Record<string, unknown>);
+  return buildBlocLayoutInlineStyles(props.element.styles as Record<string, unknown>, builderState.currentBreakpoint.value, resolveValue);
 });
 
 /**
  * Fusion des données du bloc et des données injectées par le parent (CMS)
  */
-const finalData = computed(() => ({
-  ...props.element.data,
-  ...props.parentData
-}));
+/**
+ * Fusion des données du bloc et des données injectées par le parent (CMS)
+ * On applique le mapping dynamique si un _inherited_item est présent
+ */
+const finalData = computed(() => {
+  const data = { ...props.element.data, ...props.parentData };
+
+  // Si on a un item hérité d'une boucle CMS, on mappe ses champs sur les paramètres
+  if (props.parentData?._inherited_item) {
+    const item = props.parentData._inherited_item;
+    const params = props.element.params || [];
+    
+    params.forEach((p: any) => {
+      // Si la source est 'parent' et qu'on a une clé, on extrait la valeur de l'item
+      if (p.type?.source === 'parent' && p.type?.parentKey) {
+        // Le lien vers un élément d'une liste CMS passe par '_inherited_query'
+        if (p.type.parentParamName === '_inherited_query') {
+          const val = item[p.type.parentKey];
+          if (val !== undefined) {
+             data[p.name] = val;
+          }
+        }
+      }
+    });
+  }
+
+  return data;
+});
 
 /**
  * Sécurisation de la capacité à avoir des enfants
@@ -53,11 +88,20 @@ const canHaveChildren = computed(() => {
  * Fonctions Helper identiques au SectionBuilder pour garantir la parité
  */
 function formatSize(value: unknown, defaultValue: string | undefined = undefined) {
-  if (value === undefined || value === null || value === '') return defaultValue;
-  let finalValue = value;
-  if (typeof value === 'object' && value !== null && 'default' in (value as Record<string, unknown>)) {
-    finalValue = (value as Record<string, any>).default;
+  const resolved = resolveValue(value);
+  if (resolved === undefined || resolved === null || resolved === '') return defaultValue;
+  
+  let finalValue = resolved;
+  const bp = builderState.currentBreakpoint.value;
+  
+  if (typeof resolved === 'object' && resolved !== null && 'default' in (resolved as Record<string, unknown>)) {
+    const resObj = resolved as Record<string, any>;
+    if (bp === 'lg' && resObj.lg !== undefined) finalValue = resObj.lg;
+    else if ((bp === 'lg' || bp === 'md') && resObj.md !== undefined) finalValue = resObj.md;
+    else if (bp !== 'default' && resObj.sm !== undefined) finalValue = resObj.sm;
+    else finalValue = resObj.default;
   }
+  
   if (finalValue === 'full') return '100%';
   if (typeof finalValue === 'number') return `${finalValue}px`;
   if (typeof finalValue === 'string' && !isNaN(Number(finalValue)) && finalValue.trim() !== '') return `${finalValue}px`;
@@ -87,8 +131,9 @@ const sortedChildren = computed(() => {
 <template>
   <!-- 1. CAS DES SECTIONS RACINES -->
   <section
+    v-show="builderState.isVisible(element.id, (element as any).blocTemplateId)"
     v-if="!componentToRender && element.children"
-    class="relative w-full min-h-[100px] transition-all"
+    class="relative w-full transition-all"
     :class="{
       'flex': formatSize(element.styles?.display) === 'flex',
       'grid': formatSize(element.styles?.display) === 'grid',
@@ -126,8 +171,9 @@ const sortedChildren = computed(() => {
         <!-- Cas 1 : Itération activée pour cet enfant lié à une liste -->
         <template v-if="element.data?.isIterated && (child.data as any)?.linkedQueryParamName">
           <div
-            v-for="(item, itemIndex) in (finalData[(child.data as any).linkedQueryParamName] || [])"
+            v-for="(item, itemIndex) in (element.data.items || [])"
             :key="`${child.id}-${itemIndex}`"
+            v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
             class="relative transition-all outline-none"
             :style="{
               width: formatSize(child.styles?.width, '100%'),
@@ -144,6 +190,7 @@ const sortedChildren = computed(() => {
         <!-- Cas 2 : Affichage standard -->
         <div
           v-else
+          v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
           class="relative transition-all outline-none"
           :style="{
             width: formatSize(child.styles?.width, '100%'),
@@ -161,6 +208,7 @@ const sortedChildren = computed(() => {
 
   <!-- 2. CAS DES COMPOSANTS STANDARDS -->
   <component
+    v-show="builderState.isVisible(element.id, (element as any).blocTemplateId)"
     v-else-if="componentToRender"
     :is="componentToRender"
     :styles="element.styles"
@@ -177,8 +225,9 @@ const sortedChildren = computed(() => {
           <!-- Cas 1 : Itération -->
           <template v-if="element.data?.isIterated && (child.data as any)?.linkedQueryParamName">
             <div
-              v-for="(item, itemIndex) in (finalData[(child.data as any).linkedQueryParamName] || [])"
+              v-for="(item, itemIndex) in (element.data.items || [])"
               :key="`${child.id}-${itemIndex}`"
+              v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
               class="relative transition-all outline-none"
               :style="{
                 width: formatSize(child.styles?.width, '100%'),
@@ -195,6 +244,7 @@ const sortedChildren = computed(() => {
           <!-- Cas 2 : Standard -->
           <div
             v-else
+            v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
             class="relative transition-all outline-none"
             :style="{
               width: formatSize(child.styles?.width, '100%'),

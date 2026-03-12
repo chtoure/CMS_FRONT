@@ -4,8 +4,7 @@ import { ref, inject, computed, watch } from 'vue';
 import { useQueryClient } from "@tanstack/vue-query";
 import type { AnyComponentInstance, CliquableAction } from '../../type/component';
 import { ValueSource, type IComponentParams, type IContenusField, type IImageField, type IPropsSchemaField, type IParentField, type IStaticField } from '../../type/params';
-import Label from '../../components/ui/label/Label.vue';
-import Input from '../../components/ui/input/Input.vue';
+// Les composants Label et Input sont remplacés par PropertyInput ou des balises standard
 import Select from '../../components/ui/select/Select.vue';
 import SelectTrigger from '../../components/ui/select/SelectTrigger.vue';
 import SelectValue from '../../components/ui/select/SelectValue.vue';
@@ -23,6 +22,12 @@ import type { ContentType } from '../../type/content-type';
 import CompositionMediaPicker from '../composition/CompositionMediaPicker.vue';
 import { useGetMediaList } from '../../hook/media';
 import { FieldType, TypesMedia } from '../../type/field';
+// BaseSwitch est remplacé par Checkbox pour la cohérence
+import PropertyGroup from './ui/PropertyGroup.vue';
+import PropertyRow from './ui/PropertyRow.vue';
+import PropertyInput from './ui/PropertyInput.vue';
+import ButtonGroup from './ui/ButtonGroup.vue';
+
 
 const props = defineProps<{
   element: AnyComponentInstance;
@@ -30,10 +35,7 @@ const props = defineProps<{
 
 const builderState = inject<{
   pageTree: { value: AnyComponentInstance[] };
-  libraryTree: { value: AnyComponentInstance[] };
-  libraryTree: { value: AnyComponentInstance[] };
   selectedId: { value: string | null };
-  builderMode: { value: 'page' | 'library' };
   builderMode: { value: 'page' | 'library' };
   selectComponent: (id: string | null) => void;
   cmsCache: { value: Record<string, any> };
@@ -45,6 +47,13 @@ const {
   refetch: refetchContentTypes
 } = useGetContentTypes();
 
+
+const easeOptions = [
+  { label: 'Ease', value: 'ease-in-out' },
+  { label: 'Linear', value: 'linear' },
+  { label: 'In', value: 'ease-in' },
+  { label: 'Out', value: 'ease-out' },
+];
 
 
 // const {
@@ -288,6 +297,7 @@ watch(() => [props.element.id, JSON.stringify(props.element.data), mediaQuery.da
 
 // Surveillance du cache global pour réagir aux updates externes d'entrées CMS
 import { onUnmounted } from 'vue';
+import type { AnySectionInstance } from '../../type/section';
 const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
   if (event.type === 'updated' && event.query.queryKey[0] === 'content-entry') {
     const id = event.query.queryKey[1] as number;
@@ -823,19 +833,48 @@ const forceAriaHidden = (isOpen: boolean) => {
 };
 
 
+const getDataValue = (val: any): any => {
+  if (val && typeof val === 'object' && 'value' in val) {
+    return val.value;
+  }
+  return val;
+};
+
+// Extraire tous les composants avec leurs noms et IDs (backend en priorité)
+const allComponents = computed(() => {
+  const tree = builderState?.pageTree.value || [];
+  const list: { label: string; value: string }[] = [];
+
+  const traverse = (nodes: (AnyComponentInstance | AnySectionInstance)[]) => {
+    nodes.forEach(node => {
+      if ('tag' in node) {
+        const id = (node as AnyComponentInstance).blocTemplateId?.toString() || node.id;
+        list.push({
+          label: `${node.name} (${id})`,
+          value: id
+        });
+      }
+      if (node.children) traverse(node.children as (AnyComponentInstance | AnySectionInstance)[]);
+    });
+  };
+
+  traverse(tree);
+  return list;
+});
+
 </script>
 
 <template>
   <div class="space-y-6 pb-20 p-1">
     <!-- Section: Itération Automatique -->
-    <div v-if="paramDynamic && hasLinkedChildren" class="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-lg p-3 mb-6">
+    <div v-if="paramDynamic && hasLinkedChildren" class="flex items-center justify-between bg-primary/10 border border-primary/20 rounded-lg p-3 mb-6 shadow-sm">
       <div class="flex items-center gap-2">
         <div class="p-1.5 bg-primary/20 rounded-md">
           <Icons.Repeat class="h-4 w-4 text-primary" />
         </div>
         <div>
-          <p class="text-xs font-bold text-white uppercase tracking-wider">Mode Itération</p>
-          <p class="text-[10px] text-primary/70">Répéter ce bloc pour chaque item de la liste</p>
+          <p class="text-[10px] font-mono font-bold text-primary uppercase tracking-tighter">Mode Itération</p>
+          <p class="text-[10px] text-primary/70 font-medium">Répéter ce bloc pour chaque item de la liste</p>
         </div>
       </div>
       <Button
@@ -850,74 +889,78 @@ const forceAriaHidden = (isOpen: boolean) => {
     </div>
 
     <!-- Section: Gestion des Paramètres -->
-    <div v-if="canAddParams" class="space-y-4">
-      <div v-if="paramDynamic" class="flex items-center justify-between border-b border-white/10 pb-2">
-        <h4 class="text-xs text-primary font-black">Ajouter un paramètre</h4>
-        <Button
-          variant="ghost"
-          size="icon"
-          class="h-6 w-6 hover:bg-primary/20 hover:text-primary"
+    <div v-if="canAddParams" class="space-y-2">
+      <div v-if="paramDynamic" class="mb-2">
+        <button
           @click="showAddForm = !showAddForm"
+          class="w-full flex items-center justify-between px-3 py-2 rounded bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all transition-colors group"
         >
-          <Plus class="h-4 w-4" />
-        </Button>
+          <div class="flex items-center gap-2">
+            <Plus class="w-3.5 h-3.5" />
+            <span class="text-[10px] font-mono font-bold uppercase tracking-tighter">Ajouter un paramètre</span>
+          </div>
+          <ChevronDown
+            class="w-3 h-3 transition-transform duration-200"
+            :class="{ 'rotate-180': showAddForm }"
+          />
+        </button>
       </div>
 
       <!-- Formulaire d'ajout de paramètre -->
       <transition
-        enter-active-class="transition duration-200 ease-out"
-        enter-from-class="transform scale-95 opacity-0"
-        enter-to-class="transform scale-100 opacity-100"
-        leave-active-class="transition duration-150 ease-in"
-        leave-from-class="transform scale-100 opacity-100"
-        leave-to-class="transform scale-95 opacity-0"
+        enter-active-class="transition-all duration-300 ease-out"
+        enter-from-class="max-h-0 opacity-0 overflow-hidden"
+        enter-to-class="max-h-[1000px] opacity-100"
+        leave-active-class="transition-all duration-200 ease-in"
+        leave-from-class="max-h-[1000px] opacity-100"
+        leave-to-class="max-h-0 opacity-0 overflow-hidden"
       >
-        <div v-if="showAddForm" class="bg-black/20 border border-border/50 rounded-md p-3 space-y-3">
-          <div class="space-y-1.5">
-            <Label class="text-[11px] text-gray-400">Label du paramètre</Label>
-            <Input
+        <div v-if="showAddForm" class="bg-builder-bar-background/50 border border-builder-bar-border rounded-md p-3 space-y-4 mb-4 shadow-inner">
+          <div class="space-y-3">
+            <PropertyInput
+              label="Label"
               v-model="newParam.label"
-              placeholder="Ex: Titre, Couleur, etc."
-              class="h-8 text-xs bg-black/40 border-border/30"
+              placeholder="Ex: Titre, Couleur..."
             />
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div class="space-y-1.5">
-              <Label class="text-[11px] text-gray-400">Type de source</Label>
-              <Select v-model="(newParam.type as any).source" :modal="false">
-                 <SelectTrigger class="h-8 text-xs bg-black/40 border-border/30">
-                    <SelectValue placeholder="Source" />
-                 </SelectTrigger>
-                 <SelectContent>
-                    <SelectItem v-for="opt in filteredSourceOptions" :key="opt.value" :value="opt.value">
-                      <div class="flex items-center gap-2">
-                        <component :is="opt.icon" class="h-3 w-3" />
-                        <span>{{ opt.label }}</span>
-                      </div>
-                    </SelectItem>
-                 </SelectContent>
-              </Select>
-            </div>
-            <div class="flex items-end pb-1.5 px-1">
-                <div class="flex items-center space-x-2">
-                  <Checkbox id="new-required" :checked="newParam.required" @update:checked="(val: any) => newParam.required = !!val" />
-                  <label for="new-required" class="text-[10px] text-gray-400 cursor-pointer">Requis</label>
-                </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div class="space-y-1.5 flex flex-col">
+                <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Source</label>
+                <Select v-model="(newParam.type as any).source" :modal="false">
+                   <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
+                      <SelectValue placeholder="Source" />
+                   </SelectTrigger>
+                   <SelectContent>
+                      <SelectItem v-for="opt in filteredSourceOptions" :key="opt.value" :value="opt.value">
+                        <div class="flex items-center gap-2">
+                          <component :is="opt.icon" class="h-3 w-3" />
+                          <span class="text-[10px]">{{ opt.label }}</span>
+                        </div>
+                      </SelectItem>
+                   </SelectContent>
+                </Select>
+              </div>
+
+              <div class="flex items-end pb-0.5 justify-center bg-builder-input-bg border border-builder-bar-border rounded h-7 mt-auto">
+                  <div class="flex items-center space-x-2">
+                    <Checkbox id="new-required" :checked="newParam.required" @update:checked="(val: any) => newParam.required = !!val" />
+                    <label for="new-required" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Requis</label>
+                  </div>
+              </div>
             </div>
           </div>
           <!-- Configuration dynamique selon la Source -->
           <div v-if="(newParam.type as any).source === 'static'" class="space-y-1.5">
-            <Label class="text-[11px] text-gray-400">Valeur par défaut</Label>
-            <Input
+            <PropertyInput
+              label="Valeur"
               v-model="(newParam.type as any).value"
               placeholder="Valeur initiale..."
-              class="h-8 text-xs bg-black/40 border-border/30"
             />
           </div>
 
           <div v-if="(newParam.type as any).source === 'image'" class="space-y-1.5">
-            <Label class="text-[11px] text-gray-400">Choisir une image</Label>
-            <div class="flex flex-row items-end gap-6">
+            <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Choisir une image</label>
+            <div class="flex flex-row items-end gap-6 bg-builder-input-bg border border-builder-bar-border rounded p-2">
               <CompositionMediaPicker
                 :model-value="(newParam.type as any).id"
                 :allowed-types="['image']"
@@ -926,30 +969,30 @@ const forceAriaHidden = (isOpen: boolean) => {
             </div>
           </div>
 
-          <div v-if="(newParam.type as any).source === 'contenus'" class="space-y-3">
-            <div class="grid grid-cols-2 gap-3">
-              <div class="space-y-1.5">
-                <Label class="text-[11px] text-gray-400">Type de contenu</Label>
+          <div v-if="(newParam.type as any).source === 'contenus'" class="space-y-4">
+            <div class="grid grid-cols-2 gap-2">
+              <div class="space-y-1 flex flex-col">
+                <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Contenu</label>
                 <Select :model-value="(newParam.type as any).contentTypeId" :modal="false" @update:model-value="(val) => handleSelectChange(val)">
-                  <SelectTrigger class="h-8 text-xs bg-black/40 border-border/30">
+                  <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
                     <SelectValue placeholder="Choisir..." />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem v-for="opt in contentTypeOptions?.results" :key="opt.id" :value="opt.id">
-                      {{ opt.name }}
+                      <span class="text-[10px]">{{ opt.name }}</span>
                     </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div class="space-y-1.5">
-                <Label class="text-[11px] text-gray-400">Mode d'affichage</Label>
+              <div class="space-y-1 flex flex-col">
+                <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Mode</label>
                 <Select :model-value="(newParam.type as any).config.mode" :modal="false" @update:model-value="(val) => (newParam.type as any).config.mode = val">
-                  <SelectTrigger class="h-8 text-xs bg-black/40 border-border/30">
+                  <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
                     <SelectValue placeholder="Mode" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem v-for="mode in modeOptions" :key="mode.value" :value="mode.value">
-                      {{ mode.label }}
+                      <span class="text-[10px]">{{ mode.label }}</span>
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -957,20 +1000,20 @@ const forceAriaHidden = (isOpen: boolean) => {
             </div>
 
             <!-- Mode: Single -->
-            <div v-if="(newParam.type as any).config.mode === 'single'" class="space-y-1.5">
-              <Label class="text-[11px] text-gray-400">Choisir une entrée</Label>
+            <div v-if="(newParam.type as any).config.mode === 'single'" class="space-y-1 flex flex-col">
+              <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Entrée</label>
               <Select
                 :model-value="(newParam.type as any).config.entryId"
                 :modal="false"
                 @update:model-value="(val) => (newParam.type as any).config.entryId = val"
                 :disabled="!isContentTypeSelected"
               >
-                <SelectTrigger class="h-8 text-xs bg-black/40 border-border/30">
+                <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
                   <SelectValue placeholder="Choisir..." />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem v-for="entry in newContentEntries?.results" :key="entry.id" :value="entry.id">
-                    {{ entry.id }} - {{ (entry.data_json as any).title || 'Sans titre' }}
+                    <span class="text-[10px]">{{ entry.id }} - {{ (entry.data_json as any).title || 'Sans titre' }}</span>
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -978,159 +1021,112 @@ const forceAriaHidden = (isOpen: boolean) => {
 
             <!-- Mode: Query -->
             <div v-if="(newParam.type as any).config.mode === 'query'" class="space-y-3">
-              <div class="space-y-1.5">
-                <Label class="text-[11px] text-gray-400">Limite</Label>
-                <Input
-                  v-model.number="(newParam.type as any).config.limit"
-                  type="number"
-                  placeholder="Illimité"
-                  class="h-8 text-xs bg-black/40 border-border/30"
+              <PropertyInput
+                label="Limite"
+                v-model.number="(newParam.type as any).config.limit"
+                type="number"
+                placeholder="Illimité"
+              />
+              <div class="grid grid-cols-2 gap-2">
+                <PropertyInput
+                  label="Tri"
+                  v-model="(newParam.type as any).config.sortBy"
+                  placeholder="Champ"
                 />
-              </div>
-              <div class="grid grid-cols-2 gap-3">
-                <div class="space-y-1.5">
-                  <Label class="text-[11px] text-gray-400">Trier par</Label>
-                  <Input
-                    v-model="(newParam.type as any).config.sortBy"
-                    placeholder="Champ (ex: title)"
-                    class="h-8 text-xs bg-black/40 border-border/30"
-                  />
-                </div>
-                <div class="space-y-1.5">
-                  <Label class="text-[11px] text-gray-400">Ordre</Label>
+                <div class="space-y-1 flex flex-col">
+                  <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Ordre</label>
                   <Select
                     v-model="(newParam.type as any).config.order"
                     :modal="false"
                   >
-                    <SelectTrigger class="h-8 text-xs bg-black/40 border-border/30">
+                    <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
                       <SelectValue placeholder="Ordre" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem v-for="opt in orderOptions" :key="opt.value" :value="opt.value">
-                        {{ opt.label }}
+                        <span class="text-[10px]">{{ opt.label }}</span>
                       </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
             </div>
-            <div class="flex gap-2 pt-1">
-              <Button size="sm" class="flex-1 h-7 text-[10px]" @click="addParameter">Ajouter</Button>
-              <Button size="sm" variant="ghost" class="flex-1 h-7 text-[10px]" @click="showAddForm = false">Annuler</Button>
+            <div class="flex gap-2 pt-2 border-t border-builder-bar-border/30">
+              <Button size="sm" class="flex-1 h-7 text-[10px] bg-primary text-black hover:bg-primary/90 font-bold" @click="addParameter">Ajouter</Button>
+              <Button size="sm" variant="ghost" class="flex-1 h-7 text-[10px] hover:bg-white/5" @click="showAddForm = false">Annuler</Button>
             </div>
           </div>
         </div>
       </transition>
 
       <!-- Liste des paramètres (Accordéon) -->
-      <div v-if="element.params && element.params.length > 0" class="space-y-2">
-        <div v-for="field in element.params" :key="field.name" class="border border-border/30 rounded-md overflow-hidden bg-black/5">
-          <!-- Header Accordéon -->
-          <div
-            @click="toggleParam(field.name)"
-            class="flex items-center justify-between p-2 cursor-pointer hover:bg-white/5 transition-colors"
-            :class="{ 'bg-primary/10 border-b border-border/30': expandedParam === field.name }"
+      <div v-if="element.params && element.params.length > 0" class="space-y-1">
+        <div v-for="field in element.params" :key="field.name">
+          <PropertyGroup
+            :title="field.label"
+            :open="expandedParam === field.name"
+            @update:open="(val) => { if (val) toggleParam(field.name); else expandedParam = null; }"
           >
-            <div class="flex items-center gap-2">
-              <Type v-if="field.type.source === 'static'" class="h-3.5 w-3.5 text-gray-500" />
-              <ImageIcon v-else-if="field.type.source === 'image'" class="h-3.5 w-3.5 text-gray-500" />
-              <Database v-else class="h-3.5 w-3.5 text-gray-500" />
-              <span class="text-[11px] font-medium text-gray-300">{{ field.label }}</span>
-            </div>
-            <div class="flex items-center gap-1">
-              <span v-if="field.required" class="text-[9px] px-1 bg-primary/20 text-primary rounded">Requis</span>
-              <Button
-                v-if="paramDynamic"
-                variant="ghost"
-                size="icon"
-                class="h-6 w-6 text-red-500 hover:bg-red-500/10 hover:text-red-400"
-                @click.stop="removeParameter(field.name)"
-              >
-                <Trash2 class="h-3 w-3" />
-              </Button>
-              <ChevronDown
-                class="h-3.5 w-3.5 text-gray-500 transition-transform duration-200"
-                :class="{ 'rotate-180': expandedParam === field.name }"
-              />
-            </div>
-          </div>
+            <template #icon>
+              <Type v-if="field.type.source === 'static'" class="h-3.5 w-3.5" />
+              <ImageIcon v-else-if="field.type.source === 'image'" class="h-3.5 w-3.5" />
+              <Database v-else class="h-3.5 w-3.5" />
+            </template>
 
-          <!-- Content Accordéon -->
-          <transition
-            enter-active-class="transition-all duration-300 ease-in-out"
-            leave-active-class="transition-all duration-200 ease-in-out"
-            enter-from-class="max-h-0 opacity-0"
-            enter-to-class="max-h-[500px] opacity-100"
-            leave-from-class="max-h-[500px] opacity-100"
-            leave-to-class="max-h-0 opacity-0"
-          >
-            <div v-if="editingParam && expandedParam === field.name" class="p-3 space-y-4 bg-black/40">
+            <div v-if="editingParam && expandedParam === field.name" class="p-2 space-y-4 bg-builder-bar-background/30 rounded border border-builder-bar-border/50">
               <!-- Édition du Label -->
-              <div class="space-y-1.5">
-                <div class="space-y-2">
-                  <div class="space-y-1">
-                    <Label class="text-[11px] text-gray-400">Label d'affichage</Label>
-                    <Input
-                      v-model="editingParam.label"
-                      class="h-8 text-xs bg-black/20 border-border/50"
-                    />
-                  </div>
-                </div>
-              </div>
+              <PropertyInput
+                label="Label"
+                v-model="editingParam.label"
+              />
 
               <!-- Édition de la Configuration (Schema Type) -->
-              <div class="space-y-1 border-t border-white/5 pt-2">
+              <div class="space-y-3 pt-2 border-t border-builder-bar-border/30">
                 <!-- Static Configuration -->
                 <div v-if="editingParam.type.source === 'static'" class="space-y-1.5">
-                  <Label class="text-[11px] text-gray-400">Valeur par défaut</Label>
-                  <Input
+                  <PropertyInput
+                    label="Valeur"
                     v-model="(editingParam.type as any).value"
-                    class="h-8 text-xs bg-black/20 border-border/50"
                   />
                 </div>
 
                 <!-- Image Configuration -->
-                <div v-if="editingParam.type.source === 'image'" class="space-y-1.5">
-                  <Label class="text-[11px] text-gray-400">Choisir une image</Label>
-                  <div class="flex flex-row items-end gap-6">
+                <div v-if="editingParam.type.source === 'image'" class="space-y-2">
+                  <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Image</label>
+                  <div class="flex flex-row items-end gap-6 bg-builder-input-bg border border-builder-bar-border rounded p-2">
                     <CompositionMediaPicker
                       :model-value="(editingParam.type as any).id"
                       :allowed-types="['image']"
                       @update:model-value="changeMediaEditor($event)"
                     />
                   </div>
-                  <!-- <Input
-                    type="number"
-                    v-model.number="(editingParam.type as any).imageId"
-                    class="h-8 text-xs bg-black/20 border-border/50"
-                  /> -->
                 </div>
 
                 <!-- Contenus Configuration -->
                 <div v-if="editingParam.type.source === 'contenus'" class="space-y-3">
-                  <div class="grid grid-cols-2 gap-3">
-                    <div class="space-y-1.5">
-                      <Label class="text-[11px] text-gray-400">Type de contenu</Label>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="space-y-1 flex flex-col">
+                      <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Contenu</label>
                       <Select :model-value="(editingParam.type as any).contentTypeId" :modal="false" @update:model-value="handleEditingTypeChange">
-                        <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+                        <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
                           <SelectValue placeholder="Choisir..." />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem v-for="opt in contentTypeOptions?.results" :key="opt.id" :value="opt.id">
-                            {{ opt.name }}
+                            <span class="text-[10px]">{{ opt.name }}</span>
                           </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <div class="space-y-1.5">
-                      <Label class="text-[11px] text-gray-400">Mode d'affichage</Label>
-                      <Select :model-value="(editingParam.type as any).config.mode" :modal="false" @update:model-value="(val) => (editingParam?.type as any).config.mode = val">
-                        <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+                    <div class="space-y-1 flex flex-col">
+                      <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Mode</label>
+                      <Select :model-value="(editingParam.type as any).config.mode" :modal="false" @update:model-value="(val) => (editingParam!.type as any).config.mode = val">
+                        <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
                           <SelectValue placeholder="Mode" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem v-for="mode in modeOptions" :key="mode.value" :value="mode.value">
-                            {{ mode.label }}
+                            <span class="text-[10px]">{{ mode.label }}</span>
                           </SelectItem>
                         </SelectContent>
                       </Select>
@@ -1138,8 +1134,8 @@ const forceAriaHidden = (isOpen: boolean) => {
                   </div>
 
                   <!-- Mode: Single -->
-                  <div v-if="(editingParam.type as any).config.mode === 'single'" class="space-y-1.5">
-                    <Label class="text-[11px] text-gray-400">Choisir une entrée</Label>
+                  <div v-if="(editingParam.type as any).config.mode === 'single'" class="space-y-1 flex flex-col">
+                    <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Entrée</label>
                     <Select
                       :model-value="(editingParam.type as any).config.entryId"
                       :modal="false"
@@ -1148,12 +1144,12 @@ const forceAriaHidden = (isOpen: boolean) => {
                       }"
                       :disabled="!isEditingContentTypeSelected"
                     >
-                      <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+                      <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
                         <SelectValue placeholder="Choisir..." />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem v-for="entry in editingContentEntries?.results" :key="entry.id" :value="entry.id">
-                          {{ entry.id }} - {{ (entry.data_json as any).title || 'Sans titre' }}
+                          <span class="text-[10px]">{{ entry.id }} - {{ (entry.data_json as any).title || 'Sans titre' }}</span>
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -1161,36 +1157,30 @@ const forceAriaHidden = (isOpen: boolean) => {
 
                   <!-- Mode: Query -->
                   <div v-if="(editingParam.type as any).config.mode === 'query'" class="space-y-3">
-                    <div class="space-y-1.5">
-                      <Label class="text-[11px] text-gray-400">Limite</Label>
-                      <Input
-                        v-model.number="(editingParam.type as any).config.limit"
-                        type="number"
-                        placeholder="Illimité"
-                        class="h-8 text-xs bg-black/20 border-border/50"
+                    <PropertyInput
+                      label="Limite"
+                      v-model.number="(editingParam.type as any).config.limit"
+                      type="number"
+                      placeholder="Illimité"
+                    />
+                    <div class="grid grid-cols-2 gap-2">
+                      <PropertyInput
+                        label="Tri"
+                        v-model="(editingParam.type as any).config.sortBy"
+                        placeholder="Champ"
                       />
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                      <div class="space-y-1.5">
-                        <Label class="text-[11px] text-gray-400">Trier par</Label>
-                        <Input
-                          v-model="(editingParam.type as any).config.sortBy"
-                          placeholder="Champ (ex: title)"
-                          class="h-8 text-xs bg-black/20 border-border/50"
-                        />
-                      </div>
-                      <div class="space-y-1.5">
-                        <Label class="text-[11px] text-gray-400">Ordre</Label>
+                      <div class="space-y-1 flex flex-col">
+                        <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Ordre</label>
                         <Select
                           v-model="(editingParam.type as any).config.order"
                           :modal="false"
                         >
-                          <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+                          <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
                             <SelectValue placeholder="Ordre" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem v-for="opt in orderOptions" :key="opt.value" :value="opt.value">
-                              {{ opt.label }}
+                              <span class="text-[10px]">{{ opt.label }}</span>
                             </SelectItem>
                           </SelectContent>
                         </Select>
@@ -1201,383 +1191,405 @@ const forceAriaHidden = (isOpen: boolean) => {
               </div>
 
               <!-- Footer de l'accordéon -->
-              <div class="flex gap-2 pt-2 border-t border-white/5">
+              <div class="flex gap-2 pt-3 border-t border-builder-bar-border/30">
                 <Button
                   size="sm"
                   variant="ghost"
-                  class="flex-1 h-7 text-[10px] order-2"
+                  class="flex-1 h-7 text-[10px] order-2 hover:bg-white/5"
                   @click="cancelParameterEdit"
                 >
                   Annuler
                 </Button>
                 <Button
                   size="sm"
-                  class="flex-1 h-7 text-[10px]"
+                  class="flex-1 h-7 text-[10px] bg-primary text-black hover:bg-primary/90 font-bold"
                   @click="saveParameterEdit"
                 >
                   Modifier
                 </Button>
+                <Button
+                  v-if="paramDynamic"
+                  variant="ghost"
+                  size="icon"
+                  class="h-7 w-7 text-red-500 hover:bg-red-500/10 hover:text-red-400 shrink-0"
+                  @click.stop="removeParameter(field.name)"
+                >
+                  <Trash2 class="h-3.5 w-3.5" />
+                </Button>
               </div>
             </div>
-          </transition>
+          </PropertyGroup>
         </div>
       </div>
-      <div v-else>
-        <p>Paramètre non trouvé</p>
+      <div v-else class="p-4 text-center border border-dashed border-builder-bar-border rounded text-builder-bar-text/40">
+        <p class="text-[10px] font-mono uppercase tracking-widest">Aucun paramètre</p>
       </div>
     </div>
 
     <!-- Section: Liaison Parent-Enfant (Uniquement pour les conteneurs avec enfants) -->
-    <div v-if="element.family === 'container' && element.children && element.children.length > 0" class="space-y-4 pt-4 border-t border-white/10">
-      <div class="flex items-center gap-2 border-b border-white/10 pb-2">
-        <LinkIcon class="h-4 w-4 text-primary" />
-        <h4 class="text-xs text-primary font-black uppercase tracking-wider">Liaison Enfants</h4>
-      </div>
+    <div v-if="element.family === 'container' && element.children && element.children.length > 0" class="pt-4 border-t border-builder-bar-border/30">
+      <PropertyGroup title="Liaison Enfants" :icon="LinkIcon" :open="true">
+        <div class="space-y-4">
+          <div v-for="child in element.children" :key="child.id" class="p-3 bg-builder-bar-background/30 rounded border border-builder-bar-border/50 space-y-3 mb-2">
+            <div class="flex items-center justify-between border-b border-builder-bar-border/30 pb-2">
+              <div class="flex items-center gap-2">
+                <component :is="getIcon(child.icon)" class="h-3.5 w-3.5 text-primary/70" />
+                <span class="text-[10px] font-mono font-bold text-builder-bar-text/80 uppercase tracking-tighter">{{ child.name }}</span>
+              </div>
+              <div v-if="child.family === 'container'" class="flex items-center gap-2">
+                 <Select
+                    :model-value="(child.data as any).linkedQueryParamName"
+                    :modal="false"
+                    @update:model-value="(val) => updateChildLinkedQuery(child.id, val as string)"
+                    @update:open="forceAriaHidden"
+                 >
+                    <SelectTrigger class="h-6 text-[9px] bg-builder-input-bg border-builder-bar-border w-28">
+                      <SelectValue placeholder="Lier liste..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem :value="null">
+                        <span class="text-[9px]">Aucune</span>
+                      </SelectItem>
+                      <SelectItem
+                        v-for="p in element.params.filter(p => p.type.source === ValueSource.CONTENUS && (p.type as IContenusField).config.mode === 'query')"
+                        :key="p.name"
+                        :value="p.name"
+                      >
+                        <span class="text-[9px]">{{ p.label }}</span>
+                      </SelectItem>
+                    </SelectContent>
+                 </Select>
+              </div>
+            </div>
 
-      <div v-for="child in element.children" :key="child.id" class="space-y-3 p-2 bg-white/5 rounded-md border border-white/5">
-        <div class="flex items-center gap-2 border-b border-white/5 pb-1 mb-2">
-          <component :is="getIcon(child.icon)" class="h-3 w-3 text-gray-400" />
-          <span class="text-[10px] font-bold text-gray-300">{{ child.name }}</span>
-          <div v-if="child.family === 'container'" class="ml-auto flex items-center gap-2">
-             <Select
-                :model-value="(child.data as any).linkedQueryParamName"
-                :modal="false"
-                @update:model-value="(val) => updateChildLinkedQuery(child.id, val as string)"
-                @update:open="forceAriaHidden"
-             >
-                <SelectTrigger class="h-6 text-[9px] bg-black/40 border-border/30 w-24">
-                  <SelectValue placeholder="Lier liste..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem :value="null">Aucune</SelectItem>
-                  <SelectItem
-                    v-for="p in element.params.filter(p => p.type.source === ValueSource.CONTENUS && (p.type as IContenusField).config.mode === 'query')"
-                    :key="p.name"
-                    :value="p.name"
+            <div v-for="p in child.params" :key="p.name" class="space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">{{ p.label }}</label>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  class="h-6 text-[9px] px-2 font-bold transition-all"
+                  :class="p.type.source === 'parent' ? 'bg-primary/20 text-primary hover:bg-primary/30' : 'hover:bg-white/5 opacity-50'"
+                  @click="(e: MouseEvent) => {
+                    updateChildParamSource(child.id, p.name, p.type.source === 'parent' ? ValueSource.STATIC : ValueSource.PARENT);
+                    (e.currentTarget as HTMLElement)?.blur();
+                  }"
+                >
+                  {{ p.type.source === 'parent' ? 'LIÉ' : 'LIER' }}
+                </Button>
+              </div>
+
+              <div v-if="p.type.source === 'parent'" :key="`link-${child.id}-${p.name}`" class="pl-2 border-l border-primary/30 space-y-3 pt-1">
+                <div class="space-y-1 flex flex-col">
+                  <label class="text-[8px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Paramètre Parent</label>
+                  <Select
+                      :model-value="(p.type as IParentField).parentParamName"
+                      :modal="false"
+                      @update:model-value="(val) => updateChildParamSource(child.id, p.name, ValueSource.PARENT, val as string)"
+                      @update:open="forceAriaHidden"
+                   >
+                      <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
+                        <SelectValue placeholder="Choisir..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem v-for="pp in getCompatibleParentParams(p)" :key="pp.name" :value="pp.name">
+                          <span class="text-[10px]">{{ pp.label }}</span>
+                        </SelectItem>
+                      </SelectContent>
+                  </Select>
+                </div>
+
+                <!-- Si le paramètre parent est choisi ET de type CONTENUS, on demande le champ source (parentKey) -->
+                <div v-if="(p.type as IParentField).parentParamName && ((p.type as IParentField).parentParamName === '_inherited_query' || element.params.find(pp => pp.name === (p.type as IParentField).parentParamName)?.type.source === ValueSource.CONTENUS)" class="space-y-1 flex flex-col">
+                  <label class="text-[8px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Champ Source (CMS)</label>
+                   <Select
+                    :model-value="(p.type as IParentField).parentKey"
+                    :modal="false"
+                    @update:model-value="(val) => updateChildParamSource(child.id, p.name, ValueSource.PARENT, (p.type as IParentField).parentParamName, val as string)"
+                    @update:open="forceAriaHidden"
                   >
-                    {{ p.label }}
-                  </SelectItem>
-                </SelectContent>
-             </Select>
-          </div>
-        </div>
-
-        <div v-for="p in child.params" :key="p.name" class="space-y-2">
-          <div class="flex items-center justify-between">
-            <Label class="text-[10px] text-gray-400">{{ p.label }}</Label>
-            <div class="flex gap-1">
-               <Button
-                size="sm"
-                variant="ghost"
-                class="h-6 text-[9px] px-2 focus:ring-0"
-                :class="{ 'bg-primary/20 text-primary': p.type.source === 'parent' }"
-                @click="(e: MouseEvent) => {
-                  updateChildParamSource(child.id, p.name, p.type.source === 'parent' ? ValueSource.STATIC : ValueSource.PARENT);
-                  (e.currentTarget as HTMLElement)?.blur();
-                }"
-              >
-                {{ p.type.source === 'parent' ? 'Lié' : 'Lier' }}
-              </Button>
+                    <SelectTrigger
+                      class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border"
+                      :class="{ 'border-red-500/50': !(p.type as IParentField).parentKey }"
+                    >
+                      <SelectValue placeholder="Choisir le champ..." />
+                    </SelectTrigger>
+                    <SelectContent :modal="false">
+                      <SelectItem v-for="cf in getCompatibleCMSFields((p.type as IParentField).parentParamName, p, child.id)" :key="cf.value" :value="cf.value">
+                        <span class="text-[10px]">{{ cf.label }}</span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p v-if="!(p.type as IParentField).parentKey" class="text-[8px] text-red-400 italic font-medium">Sélectionnez un champ pour activer la liaison</p>
+                </div>
+              </div>
             </div>
           </div>
-
-            <div v-if="p.type.source === 'parent'" :key="`link-${child.id}-${p.name}`" class="pl-2 border-l-2 border-primary/30 space-y-2">
-             <div class="space-y-1">
-               <Label class="text-[9px] text-gray-500">Paramètre Parent</Label>
-               <Select
-                   :model-value="(p.type as IParentField).parentParamName"
-                   :modal="false"
-                   @update:model-value="(val) => updateChildParamSource(child.id, p.name, ValueSource.PARENT, val as string)"
-                   @update:open="forceAriaHidden"
-                >
-                  <SelectTrigger class="h-7 text-[10px] bg-black/40 border-border/30" @click.stop>
-                    <SelectValue placeholder="Choisir..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem v-for="pp in getCompatibleParentParams(p)" :key="pp.name" :value="pp.name">
-                      {{ pp.label }}
-                    </SelectItem>
-                  </SelectContent>
-               </Select>
-             </div>
-
-             <!-- Si le paramètre parent est choisi ET de type CONTENUS, on demande le champ source (parentKey) -->
-             <div v-if="(p.type as IParentField).parentParamName && ((p.type as IParentField).parentParamName === '_inherited_query' || element.params.find(pp => pp.name === (p.type as IParentField).parentParamName)?.type.source === ValueSource.CONTENUS)" class="space-y-1">
-                <Label class="text-[9px] text-gray-500">Champ Source (CMS)</Label>
-                 <Select
-                  :model-value="(p.type as IParentField).parentKey"
-                  :modal="false"
-                  @update:model-value="(val) => updateChildParamSource(child.id, p.name, ValueSource.PARENT, (p.type as IParentField).parentParamName, val as string)"
-                  @update:open="forceAriaHidden"
-                >
-                  <SelectTrigger
-                    class="h-7 text-[10px] bg-black/40 border-border/30 focus:ring-0"
-                    :class="{ 'border-red-500/50': !(p.type as IParentField).parentKey }"
-                    @click.stop
-                  >
-                    <SelectValue placeholder="Choisir le champ..." />
-                  </SelectTrigger>
-                  <SelectContent :modal="false">
-                    <SelectItem v-for="cf in getCompatibleCMSFields((p.type as IParentField).parentParamName, p, child.id)" :key="cf.value" :value="cf.value">
-                      {{ cf.label }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <p v-if="!(p.type as IParentField).parentKey" class="text-[8px] text-red-400 italic">Sélectionnez un champ pour activer la liaison</p>
-             </div>
-          </div>
         </div>
-      </div>
+      </PropertyGroup>
     </div>
 
     <!-- Section: Paramètres Spécifiques (ImageBuilder etc.) -->
-    <div v-if="element.tag === 'ImageBuilder'" class="space-y-3 pt-4 border-t border-white/10">
-      <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Paramètres Système Image</h4>
-      <div class="grid grid-cols-2 gap-3">
-        <div class="space-y-1.5">
-          <Label class="text-[11px] text-gray-400">Largeur</Label>
-          <Input :model-value="getDataValue(element.data.width)" @update:model-value="(val) => updateData('width', val)" class="h-8 text-xs bg-black/20 border-border/50" placeholder="ex: 100% ou 300" />
+    <div v-if="element.tag === 'ImageBuilder'" class="pt-4 border-t border-builder-bar-border/30">
+      <PropertyGroup title="Système Image" :icon="Icons.Image" :open="true">
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-2">
+            <PropertyInput
+              label="Largeur"
+              :model-value="(element.data.width as string | number)"
+              @update:model-value="(val) => updateData('width', val)"
+              placeholder="ex: 100% ou 300"
+            />
+            <PropertyInput
+              label="Hauteur"
+              :model-value="(element.data.height as string | number)"
+              @update:model-value="(val) => updateData('height', val)"
+              placeholder="ex: auto ou 300"
+            />
+          </div>
+          <div class="space-y-1 flex flex-col">
+            <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Ajustement</label>
+            <Select :model-value="(element.data.objectFit as string)" :modal="false" @update:model-value="(val) => val && updateData('objectFit', val as string)">
+              <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
+                <SelectValue placeholder="Fit" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="opt in objectFitOptions" :key="opt.value" :value="opt.value">
+                   <span class="text-[10px]">{{ opt.label }}</span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div class="space-y-1.5">
-          <Label class="text-[11px] text-gray-400">Hauteur</Label>
-          <Input :model-value="getDataValue(element.data.height)" @update:model-value="(val) => updateData('height', val)" class="h-8 text-xs bg-black/20 border-border/50" placeholder="ex: auto ou 300" />
-        </div>
-      </div>
-      <div class="space-y-1.5">
-        <Label class="text-[11px] text-gray-400">Ajustement (Object Fit)</Label>
-        <Select :model-value="(element.data.objectFit as string)" :modal="false" @update:model-value="(val) => val && updateData('objectFit', val as string)">
-          <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
-            <SelectValue placeholder="Fit" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem v-for="opt in objectFitOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      </PropertyGroup>
     </div>
 
     <!-- Section: Icône Builder -->
-    <div v-if="element.tag === 'IconBuilder'" class="space-y-3 pt-4 border-t border-white/10">
-      <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Paramètres Système Icône</h4>
-      <div class="grid grid-cols-2 gap-3">
-        <div class="space-y-1.5">
-          <Label class="text-[11px] text-gray-400">Taille (px)</Label>
-          <Input type="number" :model-value="getDataValue(element.data.size) || ''" @update:model-value="(val) => updateData('size', parseInt(val.toString()) || 0)" class="h-8 text-xs bg-black/20 border-border/50" />
+    <div v-if="element.tag === 'IconBuilder'" class="pt-4 border-t border-builder-bar-border/30">
+      <PropertyGroup title="Système Icône" :icon="Icons.Type" :open="true">
+        <div class="grid grid-cols-2 gap-2">
+          <PropertyInput
+            type="number"
+            label="Taille (px)"
+            :model-value="(element.data.size as number)"
+            @update:model-value="(val) => updateData('size', parseInt(val.toString()))"
+          />
+          <PropertyInput
+            type="number"
+            label="Épaisseur"
+            :model-value="(element.data.strokeWidth as number)"
+            @update:model-value="(val) => updateData('strokeWidth', parseInt(val.toString()))"
+          />
         </div>
-        <div class="space-y-1.5">
-          <Label class="text-[11px] text-gray-400">Épaisseur trait</Label>
-          <Input type="number" :model-value="getDataValue(element.data.strokeWidth) || ''" @update:model-value="(val) => updateData('strokeWidth', parseInt(val.toString()) || 0)" class="h-8 text-xs bg-black/20 border-border/50" />
-        </div>
-      </div>
+      </PropertyGroup>
     </div>
 
     <!-- Section: Formulaire (Saisie) -->
-    <div v-if="element.family === 'input'" class="space-y-3 pt-4 border-t border-white/10">
-      <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Paramètres Système Champ</h4>
-      <div class="grid grid-cols-2 gap-3">
-        <div class="space-y-1.5">
-          <Label class="text-[11px] text-gray-400">Type de saisie</Label>
-          <Select :model-value="(element.data.type as string)" :modal="false" @update:model-value="(val) => val && updateData('type', val as string)">
-            <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem v-for="opt in inputTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</SelectItem>
-            </SelectContent>
-          </Select>
+    <div v-if="element.family === 'input'" class="pt-4 border-t border-builder-bar-border/30">
+      <PropertyGroup title="Système Champ" :icon="Icons.MousePointer2" :open="true">
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div class="space-y-1 flex flex-col">
+              <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Type de saisie</label>
+              <Select :model-value="(element.data.type as string)" :modal="false" @update:model-value="(val) => val && updateData('type', val as string)">
+                <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="opt in inputTypeOptions" :key="opt.value" :value="opt.value">
+                    <span class="text-[10px]">{{ opt.label }}</span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div class="flex items-center space-x-2 pt-4">
+              <Checkbox id="required-sys" :checked="(element.data.required as boolean)" @update:checked="(val: boolean | 'indeterminate') => updateData('required', !!val)" />
+              <label for="required-sys" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Requis</label>
+            </div>
+          </div>
         </div>
-        <div class="flex items-center space-x-2 pt-5">
-          <Checkbox id="required-sys" :checked="(element.data.required as boolean)" @update:checked="(val: boolean | 'indeterminate') => updateData('required', !!val)" />
-          <label for="required-sys" class="text-[11px] text-gray-300 cursor-pointer">Requis</label>
-        </div>
-      </div>
+      </PropertyGroup>
     </div>
 
     <!-- Section: Actions (Boutons etc.) -->
-    <div v-if="element.family === 'interactive'" class="space-y-3 pt-4 border-t border-white/10">
-       <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Actions & Liens</h4>
-       <div v-if="element.data.cliquable && typeof element.data.cliquable === 'object'" class="space-y-4">
-         <div class="space-y-1.5">
-            <Label class="text-[11px] text-gray-400">Action au clic</Label>
-            <Select :model-value="((element.data.cliquable as CliquableAction).action)" :modal="false" @update:model-value="(val) => val && updateData('cliquable', { ...(element.data.cliquable as object), action: val as CliquableAction['action'] })">
-              <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+    <div v-if="element.family === 'interactive'" class="pt-4 border-t border-builder-bar-border/30">
+      <PropertyGroup title="Actions & Liens" :icon="Icons.MousePointer2" :open="true">
+        <div v-if="element.data.cliquable && typeof element.data.cliquable === 'object'" class="space-y-4">
+          <div class="space-y-1 flex flex-col">
+            <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Action au clic</label>
+            <Select :model-value="((element.data.cliquable as CliquableAction).action)" @update:model-value="(val) => val && updateData('cliquable', { ...(element.data.cliquable as object), action: val as CliquableAction['action'] })">
+              <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
                 <SelectValue placeholder="Action" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="NAVIGATE_TO">Naviguer vers URL</SelectItem>
-                <SelectItem value="SHOW_ALERT">Afficher Alerte</SelectItem>
-                <SelectItem value="OPEN_MODAL">Ouvrir Modal</SelectItem>
-                <SelectItem value="TOGGLE_VISIBILITY">Toggle Visibilité</SelectItem>
-                <SelectItem value="TOGGLE_VISIBILITY">Toggle Visibilité</SelectItem>
+                <SelectItem value="NAVIGATE_TO">
+                  <span class="text-[10px]">Naviguer vers URL</span>
+                </SelectItem>
+                <SelectItem value="SHOW_ALERT">
+                  <span class="text-[10px]">Afficher Alerte</span>
+                </SelectItem>
+                <SelectItem value="TOGGLE_VISIBILITY">
+                  <span class="text-[10px]">Toggle Visibilité</span>
+                </SelectItem>
               </SelectContent>
             </Select>
-         </div>
-         <div v-if="(element.data.cliquable as CliquableAction).action === 'NAVIGATE_TO'" class="space-y-1.5">
-            <Label class="text-[11px] text-gray-400">URL de destination</Label>
-            <Input :model-value="((element.data.cliquable as Extract<CliquableAction, { action: 'NAVIGATE_TO' }>).action_params?.url)" @update:model-value="(val) => updateData('cliquable', { ...(element.data.cliquable as object), action_params: { url: val } })" class="h-8 text-xs bg-black/20 border-border/50" />
-         </div>
-          <div v-if="(element.data.cliquable as CliquableAction).action === 'SHOW_ALERT'" class="space-y-1.5">
-          <div v-if="(element.data.cliquable as CliquableAction).action === 'SHOW_ALERT'" class="space-y-1.5">
-            <Label class="text-[11px] text-gray-400">Message d'alerte</Label>
-            <Input :model-value="((element.data.cliquable as Extract<CliquableAction, { action: 'SHOW_ALERT' }>).action_params?.message)" @update:model-value="(val) => updateData('cliquable', { ...(element.data.cliquable as object), action_params: { message: val } })" class="h-8 text-xs bg-black/20 border-border/50" />
-         </div>
-         <div v-if="(element.data.cliquable as CliquableAction).action === 'TOGGLE_VISIBILITY'" class="space-y-1.5">
-            <Label class="text-[11px] text-gray-400">Cible (Composant à basculer)</Label>
+          </div>
+
+          <div v-if="(element.data.cliquable as CliquableAction).action === 'NAVIGATE_TO'" class="space-y-1">
+            <PropertyInput
+              label="URL"
+              :model-value="((element.data.cliquable as Extract<CliquableAction, { action: 'NAVIGATE_TO' }>).action_params?.url)"
+              @update:model-value="(val) => updateData('cliquable', { ...(element.data.cliquable as object), action_params: { url: val } })"
+              placeholder="https://..."
+            />
+          </div>
+
+          <div v-if="(element.data.cliquable as CliquableAction).action === 'SHOW_ALERT'" class="space-y-1">
+            <PropertyInput
+              label="Message"
+              :model-value="((element.data.cliquable as Extract<CliquableAction, { action: 'SHOW_ALERT' }>).action_params?.message)"
+              @update:model-value="(val) => updateData('cliquable', { ...(element.data.cliquable as object), action_params: { message: val } })"
+              placeholder="Message d'alerte..."
+            />
+          </div>
+
+          <div v-if="(element.data.cliquable as CliquableAction).action === 'TOGGLE_VISIBILITY'" class="space-y-1 flex flex-col">
+            <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Composant cible</label>
             <Select
               :model-value="((element.data.cliquable as Extract<CliquableAction, { action: 'TOGGLE_VISIBILITY' }>).action_params?.targetId)"
               @update:model-value="(val) => val && updateData('cliquable', { ...(element.data.cliquable as object), action_params: { targetId: val } })"
             >
-              <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
+              <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
                 <SelectValue placeholder="Choisir un composant..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem v-for="comp in allComponents" :key="comp.value" :value="comp.value">
-                  {{ comp.label }}
-                </SelectItem>
                 <SelectItem v-if="allComponents.length === 0" disabled value="none">
-                  Aucun composant trouvé
+                  <span class="text-[10px]">Aucun trouvé</span>
                 </SelectItem>
               </SelectContent>
             </Select>
-            <p class="text-[9px] text-gray-500 italic">Sélectionnez le composant qui doit apparaître ou disparaître au clic.</p>
-         </div>
-       </div>
+          </div>
+        </div>
+      </PropertyGroup>
     </div>
 
     <!-- Section: Slider -->
-    <div v-if="element.tag === 'SliderBuilder'" class="space-y-4">
-      <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Paramètres Slider</h4>
-
-      <div class="grid grid-cols-1 gap-4">
-        <div class="space-y-1.5">
-          <Label class="text-[11px] text-gray-400">Duration (ms)</Label>
-          <Input
-            type="number"
-            :model-value="getDataValue(element.data.transitionDuration)"
-            @update:model-value="(val) => updateData('transitionDuration', parseInt(val.toString()) || 500)"
-            placeholder="500"
-            class="h-8 text-xs bg-black/20 border-border/50"
-          />
+    <div v-if="element.tag === 'SliderBuilder'" class="pt-4 border-t border-builder-bar-border/30">
+      <PropertyGroup title="Système Slider" :icon="Icons.Layout" :open="true">
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-2">
+            <PropertyInput
+              type="number"
+              label="Vitesse (ms)"
+              :model-value="getDataValue(element.data.speed)"
+              @update:model-value="(val) => updateData('speed', parseInt(val.toString()))"
+            />
+            <div class="space-y-1 flex flex-col">
+              <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Lissage</label>
+              <Select :model-value="getDataValue(element.data.transitionEase) || 'ease-in-out'" @update:model-value="(val) => val && updateData('transitionEase', val as string)">
+                <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
+                  <SelectValue placeholder="Ease" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="opt in easeOptions" :key="opt.value" :value="opt.value">
+                    <span class="text-[10px]">{{ opt.label }}</span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+             <div class="flex items-center space-x-2">
+                <Checkbox id="slider-autoplay" :checked="!!getDataValue(element.data.autoPlay)" @update:checked="(val) => updateData('autoPlay', !!val)" />
+                <label for="slider-autoplay" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Autoplay</label>
+             </div>
+             <div class="flex items-center space-x-2">
+                <Checkbox id="slider-loop" :checked="!!getDataValue(element.data.loop)" @update:checked="(val) => updateData('loop', !!val)" />
+                <label for="slider-loop" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Boucle</label>
+             </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+             <div class="flex items-center space-x-2">
+                <Checkbox id="slider-pagination" :checked="getDataValue(element.data.showPagination) !== false" @update:checked="(val) => updateData('showPagination', !!val)" />
+                <label for="slider-pagination" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Pagination</label>
+             </div>
+             <div class="flex items-center space-x-2">
+                <Checkbox id="slider-arrows" :checked="getDataValue(element.data.showArrows) !== false" @update:checked="(val) => updateData('showArrows', !!val)" />
+                <label for="slider-arrows" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Flèches</label>
+             </div>
+          </div>
         </div>
-      </div>
-
-      <div class="space-y-1.5 pt-1">
-        <Label class="text-[11px] text-gray-400">Animation Ease</Label>
-        <Select :model-value="getDataValue(element.data.transitionEase) || 'ease-in-out'" @update:model-value="(val) => val && updateData('transitionEase', val as string)">
-          <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
-            <SelectValue placeholder="Ease" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem v-for="opt in easeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div class="grid grid-cols-2 gap-4 pt-2 border-t border-white/10">
-        <div class="flex items-center justify-between col-span-1">
-          <Label for="autoPlay" class="text-[11px] text-gray-300">Auto-play</Label>
-          <BaseSwitch id="autoPlay" :model-value="!!getDataValue(element.data.autoPlay)" @update:model-value="(val) => updateData('autoPlay', val)" />
-        </div>
-        <div class="flex items-center justify-between col-span-1">
-          <Label for="loop" class="text-[11px] text-gray-300">Boucle</Label>
-          <BaseSwitch id="loop" :model-value="!!getDataValue(element.data.loop)" @update:model-value="(val) => updateData('loop', val)" />
-        </div>
-      </div>
-
-      <div class="space-y-1.5">
-        <Label class="text-[11px] text-gray-400">Vitesse (ms)</Label>
-        <Input
-          type="number"
-          :model-value="getDataValue(element.data.speed)"
-          @update:model-value="(val: string | number) => updateData('speed', parseInt(val.toString()))"
-          class="h-8 text-xs bg-black/20 border-border/50"
-        />
-      </div>
-
-      <div class="grid grid-cols-2 gap-4 pt-1">
-        <div class="flex items-center justify-between col-span-1">
-          <Label for="showPagination" class="text-[11px] text-gray-300">Pagination</Label>
-          <BaseSwitch id="showPagination" :model-value="getDataValue(element.data.showPagination) !== false" @update:model-value="(val) => updateData('showPagination', val)" />
-        </div>
-        <div class="flex items-center justify-between col-span-1">
-          <Label for="showArrows" class="text-[11px] text-gray-300">Flèches</Label>
-          <BaseSwitch id="showArrows" :model-value="getDataValue(element.data.showArrows) !== false" @update:model-value="(val) => updateData('showArrows', val)" />
-        </div>
-      </div>
+      </PropertyGroup>
     </div>
-
 
     <!-- Section: Accordion / FAQ -->
-    <div v-if="element.tag === 'AccordionBuilder'" class="space-y-4">
-      <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Paramètres Accordéon</h4>
-
-      <div class="space-y-1.5">
-        <Label class="text-[11px] text-gray-400">Question / Titre</Label>
-        <Input
-          :model-value="(element.data.title as string)"
-          @update:model-value="(val: string | number) => updateData('title', val.toString())"
-          class="h-8 text-xs bg-black/20 border-border/50"
-        />
-      </div>
-
-      <div class="space-y-1.5">
-        <Label class="text-[11px] text-gray-400">Réponse / Contenu</Label>
-        <textarea
-          :value="getDataValue(element.data.content) || ''"
-          @input="(e: Event) => updateData('content', (e.target as HTMLTextAreaElement).value)"
-          rows="4"
-          class="w-full text-xs px-2 py-1.5 bg-black/20 border border-border/50 rounded text-white/80 placeholder-white/30 resize-none focus:outline-none focus:border-primary/50 leading-relaxed"
-          placeholder="Entrez la réponse ici..."
-        />
-      </div>
-
-      <div class="grid grid-cols-2 gap-4">
-      <div class="flex items-center justify-between pt-1">
-        <Label for="isOpen" class="text-[11px] text-gray-300">Ouvert par défaut</Label>
-        <BaseSwitch id="isOpen" :model-value="!!getDataValue(element.data.isOpen)" @update:model-value="(val) => updateData('isOpen', val)" />
-      </div>
-        <div class="space-y-1.5">
-          <Label class="text-[11px] text-gray-400">Vitesse Anim (ms)</Label>
-          <Input
-            type="number"
-            :model-value="getDataValue(element.data.transitionSpeed)"
-            class="h-8 text-xs bg-black/20 border-border/50"
+    <div v-if="element.tag === 'AccordionBuilder'" class="pt-4 border-t border-builder-bar-border/30">
+      <PropertyGroup title="Système Accordéon" :icon="Icons.List" :open="true">
+        <div class="space-y-4">
+          <PropertyInput
+            label="Titre / Question"
+            :model-value="(element.data.title as string)"
+            @update:model-value="(val) => updateData('title', val.toString())"
           />
+          <div class="space-y-1 flex flex-col">
+            <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Contenu / Réponse</label>
+            <textarea
+              :value="getDataValue(element.data.content) || ''"
+              @input="(e: Event) => updateData('content', (e.target as HTMLTextAreaElement).value)"
+              rows="4"
+              class="w-full text-[10px] px-2 py-1.5 bg-builder-input-bg border border-builder-bar-border rounded text-builder-bar-text/80 placeholder-builder-bar-text/30 resize-none focus:outline-none focus:border-primary/50 leading-relaxed font-medium"
+              placeholder="Entrez le contenu ici..."
+            />
+          </div>
+          <div class="grid grid-cols-2 gap-2 items-end">
+            <PropertyInput
+              type="number"
+              label="Transition (ms)"
+              :model-value="getDataValue(element.data.transitionSpeed)"
+              @update:model-value="(val) => updateData('transitionSpeed', parseInt(val.toString()))"
+            />
+            <div class="flex items-center space-x-2 pb-1.5">
+              <Checkbox id="accordion-open" :checked="!!getDataValue(element.data.isOpen)" @update:checked="(val) => updateData('isOpen', !!val)" />
+              <label for="accordion-open" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Ouvert</label>
+            </div>
+          </div>
         </div>
-      </div>
+      </PropertyGroup>
     </div>
 
-
     <!-- Section: Lien -->
-    <div v-if="element.tag === 'LinkBuilder'" class="space-y-4">
-      <h4 class="text-[10px] uppercase tracking-wider text-primary font-black border-b border-white/10 pb-1">Paramètres Lien</h4>
-      <div class="space-y-1.5">
-        <Label class="text-[11px] text-gray-400">Texte du lien</Label>
-        <Input
-          :model-value="getDataValue(element.data.text)"
-          class="h-8 text-xs bg-black/20 border-border/50"
-        />
-      </div>
-      <div class="space-y-1.5">
-        <Label class="text-[11px] text-gray-400">URL de destination</Label>
-        <Input
-          :model-value="getDataValue(element.data.url)"
-          class="h-8 text-xs bg-black/20 border-border/50"
-          placeholder="https://..."
-        />
-      </div>
-      <div class="space-y-1.5">
-        <Label class="text-[11px] text-gray-400">Cible (Target)</Label>
-        <Select :model-value="getDataValue(element.data.target)" @update:model-value="(val) => val && updateData('target', val as string)">
-          <SelectTrigger class="h-8 text-xs bg-black/20 border-border/50">
-            <SelectValue placeholder="Cible" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="_self">Même fenêtre (_self)</SelectItem>
-            <SelectItem value="_blank">Nouvelle fenêtre (_blank)</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+    <div v-if="element.tag === 'LinkBuilder'" class="pt-4 border-t border-builder-bar-border/30">
+      <PropertyGroup title="Système Lien" :icon="Icons.ExternalLink" :open="true">
+        <div class="space-y-4">
+          <PropertyInput
+            label="Texte"
+            :model-value="getDataValue(element.data.text)"
+            @update:model-value="(val) => updateData('text', val)"
+          />
+          <PropertyInput
+            label="URL"
+            :model-value="getDataValue(element.data.url)"
+            @update:model-value="(val) => updateData('url', val)"
+            placeholder="https://..."
+          />
+          <div class="space-y-1 flex flex-col">
+            <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Cible</label>
+            <Select :model-value="getDataValue(element.data.target)" @update:model-value="(val) => val && updateData('target', val as string)">
+              <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
+                <SelectValue placeholder="Choisir..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_self">
+                  <span class="text-[10px]">Même fenêtre</span>
+                </SelectItem>
+                <SelectItem value="_blank">
+                  <span class="text-[10px]">Nouvelle fenêtre</span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </PropertyGroup>
     </div>
 
   </div>

@@ -1,6 +1,6 @@
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
-import { computed, inject } from 'vue';
+import { computed, inject, onMounted, ref, watch } from 'vue';
 import { FAMILY_CAPABILITIES, type AnyComponentInstance } from '../../type/component';
 import { VueDraggable } from 'vue-draggable-plus';
 import { COMPONENT_MAP } from '../../registry/component_registry';
@@ -8,6 +8,10 @@ import { buildBlocLayoutStyles, buildBlocLayoutInlineStyles } from '../../lib/st
 import { formatSize } from '../../lib/style/core';
 import { useVariableResolver } from '../../hook/variable';
 import ResizerWrapper from './ResizerWrapper.vue';
+import api, { handleResponse } from '../../api/fetchConfig';
+import { useGetMediaList } from '../../hook/media';
+import { useGetContentTypes } from '../../hook/content-type';
+import { FieldType } from '../../type/field';
 
 defineOptions({
   name: 'BlocRender'
@@ -32,6 +36,7 @@ const builderState = inject<{
   isDragging: { value: boolean }
   toggleStates: { value: Record<string, boolean> }
   isVisible: (id: string, backendId?: number | null) => boolean
+  cmsCache: { value: Record<string, any> }
 }>('builderState');
 
 const { resolveValue } = useVariableResolver();
@@ -62,22 +67,150 @@ const isVisible = computed(() => {
 
 // Handlers
 const handleSelect = (e?: MouseEvent) => {
+  if (props.isClone) return;
   if (e) e.stopPropagation();
   builderState?.selectComponent(props.element.id);
 };
 
+// Ce computed va servir de "pont" sécurisé pour le v-model
+// Utilisation d'une ref locale pour garantir une référence stable à VueDraggable
+const localChildren = ref<AnyComponentInstance[]>([...(props.element.children || [])]);
+
+// Synchronisation descendante : si la prop change (ex: undo/redo), on met à jour le local
+watch(() => props.element.children, (newVal) => {
+  if (JSON.stringify(newVal) !== JSON.stringify(localChildren.value)) {
+    localChildren.value = [...(newVal || [])];
+  }
+}, { deep: true });
+
+const childrenModel = computed({
+  get: () => localChildren.value,
+  set: (newValue) => {
+    localChildren.value = newValue;
+    // On notifie le parent
+    emit('update:element', {
+      ...props.element,
+      children: newValue
+    });
+  }
+});
+
 const handleChildrenChange = (newChildren: AnyComponentInstance[]) => {
-  emit('update:element', {
-    ...props.element,
-    children: newChildren
-  });
+  childrenModel.value = newChildren;
 };
 
 const handleChildUpdate = (index: number, newChild: AnyComponentInstance) => {
-  if (!props.element.children) return;
-  const newChildren = [...props.element.children];
+  if (!childrenModel.value) return;
+  const newChildren = [...childrenModel.value];
   newChildren[index] = newChild;
   handleChildrenChange(newChildren);
+};
+
+// On charge la liste des médias et des types de contenu pour la résolution des URLs
+const mediaList = useGetMediaList({});
+const contentTypes = useGetContentTypes();
+
+// Si le composant est en mode Itération et que le cache est vide,
+// on récupère les données CMS dès le montage pour ne pas dépendre de DataEditor.
+// On résout aussi les IDs médias en URLs pour que les images s'affichent correctement.
+onMounted(async () => {
+  if (!props.element.data?.isIterated || !props.element.children || props.isClone) return;
+
+  for (const child of props.element.children) {
+    const paramName = (child.data as any)?.linkedQueryParamName;
+    if (!paramName) continue;
+
+    // Déjà dans le cache ? Pas la peine de refetcher.
+    if (builderState?.cmsCache.value[paramName]) continue;
+
+    // Trouver le paramètre correspondant sur le parent pour avoir le contentTypeId
+    const param = (props.element.params as any[])?.find((p: any) => p.name === paramName);
+    if (!param || param.type?.source !== 'contenus' || param.type?.config?.mode !== 'query') continue;
+
+    const contentTypeId = param.type.contentTypeId;
+    const config = param.type.config || {};
+
+    try {
+      const qp = new URLSearchParams();
+      if (config.limit) qp.append('limit', config.limit.toString());
+      if (config.sortBy) qp.append('sortBy', config.sortBy);
+      if (config.order) qp.append('order', config.order);
+
+      const resp = await api(`/content-entries/id/${contentTypeId}?${qp.toString()}`);
+      const data = await handleResponse<any>(resp);
+      const results = Array.isArray(data) ? data : data?.results;
+
+      if (results && Array.isArray(results) && builderState) {
+        // Récupérer le schéma du content type pour identifier les champs médias
+        const ct = contentTypes.data.value?.results?.find((c: any) => c.id === contentTypeId);
+        const medias = mediaList.data.value?.results || [];
+
+        const resolvedResults = results.map((entry: any) => {
+          const resolvedData = { ...(entry.data_json ?? entry) };
+
+          // Résoudre les IDs médias en URLs
+          if (ct?.fields_schema) {
+            ct.fields_schema.forEach((f: any) => {
+              const isMedia = f.type === FieldType.MEDIA || f.type === 'media';
+              const value = resolvedData[f.name];
+              if (isMedia && value) {
+                const url = medias.find((m: any) => m.id === value)?.file_path;
+                if (url) resolvedData[f.name] = url;
+              }
+            });
+          }
+
+          return resolvedData;
+        });
+
+        builderState.cmsCache.value[paramName] = resolvedResults;
+      }
+    } catch (err) {
+      console.error(`BlocRender: échec du fetch CMS pour ${paramName}`, err);
+    }
+  }
+});
+
+// Retourne les items de la liste pour un enfant lié à une query
+const getIteratedItems = (child: AnyComponentInstance) => {
+  const paramName = (child.data as any)?.linkedQueryParamName;
+  if (!paramName || !builderState?.cmsCache.value) return [];
+  const list = builderState.cmsCache.value[paramName];
+  return Array.isArray(list) ? list : [];
+};
+
+// Propage récursivement les valeurs de l'item CMS dans les données des sous-composants.
+const applyItemToChildren = (children: AnyComponentInstance[], item: any): AnyComponentInstance[] => {
+  if (!children || !item) return children || [];
+
+  return children.map((child: AnyComponentInstance) => {
+    const newData = { ...child.data };
+    let changed = false;
+
+    const childParams = (child.params || []) as any[];
+    childParams.forEach((p: any) => {
+      if (p.type?.source === 'parent' && p.type?.parentKey) {
+        const parentParamName = p.type.parentParamName;
+        // Le lien vers un objet hérité d'une liste passe par '_inherited_query'
+        if (parentParamName === '_inherited_query') {
+          const rawValue = item[p.type.parentKey];
+          if (rawValue !== undefined) {
+            newData[p.name] = rawValue;
+            changed = true;
+          }
+        }
+      }
+    });
+
+    const updatedChild = changed ? { ...child, data: newData } : child;
+
+    // Récursion : si l'enfant a lui-même des enfants, on propage aussi
+    if (updatedChild.children && updatedChild.children.length > 0) {
+      return { ...updatedChild, children: applyItemToChildren(updatedChild.children, item) };
+    }
+
+    return updatedChild;
+  });
 };
 
 
@@ -94,9 +227,9 @@ const handleChildUpdate = (index: number, newChild: AnyComponentInstance) => {
     class="relative group/renderer transition-all duration-200"
     :class="{
       'ring-2 ring-blue-500 ring-inset z-10': isSelected,
-      'hover:ring-1 hover:ring-gray-300': !isSelected && !isDraggingOver,
-      'drop-zone-potential': isDraggingOver && canHaveChildren,
-      'opacity-20 grayscale-[0.8] border-2 border-dashed border-red-500/50': !isVisible,
+      'hover:ring-1 hover:ring-gray-300': !isSelected && !isDraggingOver && !isClone,
+      'drop-zone-potential': isDraggingOver && canHaveChildren && !isClone,
+      'opacity-20 grayscale-[0.8] border-2 border-dashed border-red-500/50': !isVisible && !isClone,
     }"
     v-show="isVisible || isSelected"
     @click="handleSelect"
@@ -105,10 +238,10 @@ const handleChildUpdate = (index: number, newChild: AnyComponentInstance) => {
     <!-- Overlay interactif pour composants sans enfants (Sélection) -->
     <!-- On le désactive pour les types interactifs (boutons) pour qu'ils reçoivent le clic direct -->
     <div
-      v-if="!canHaveChildren && !isSelected && element.family !== 'interactive'"
+      v-if="!canHaveChildren && !isSelected && element.family !== 'interactive' && !isClone"
       class="absolute inset-0 z-[5] cursor-pointer shadow-none"
       @click.stop="handleSelect"
-    />
+    ></div>
 
     <!-- Label du composant sélectionné -->
     <div
@@ -120,7 +253,7 @@ const handleChildUpdate = (index: number, newChild: AnyComponentInstance) => {
 
     <!-- Badge Caché -->
     <div
-      v-if="!isVisible"
+      v-if="!isVisible && !isClone"
       class="absolute top-0 right-0 bg-red-600 text-white text-[8px] px-1.5 py-0.5 rounded-bl-sm z-[60] font-black uppercase pointer-events-none shadow-sm"
     >
       Caché
@@ -129,46 +262,116 @@ const handleChildUpdate = (index: number, newChild: AnyComponentInstance) => {
     <!-- Zone de drop pour conteneurs -->
     <template v-if="canHaveChildren">
       <div class="relative w-full h-full">
-        <VueDraggable
-          :model-value="element.children || []"
-          :group="{ name: 'blocks', put: true, pull: true }"
-          :animation="100"
-          :delay="0"
-          ghost-class="ghost-item"
-          class="w-full h-full transition-all duration-300"
-          :class="[
-            layoutClasses,
-            {
-              'drop-zone-active': isDraggingOver,
-              'min-h-[80px] p-4': !element.children || element.children.length === 0,
-              'p-2': element.children && element.children.length > 0 && isDraggingOver
-            }
-          ]"
-          :style="layoutInlineStyles"
-          @update:model-value="handleChildrenChange"
-        >
+        <!-- Mode Clone : pas de drag & drop, rendu simple des enfants -->
+        <template v-if="isClone">
           <div
-            v-for="(child, index) in (element.children || [])"
-            :key="child.id"
-            class="relative transition-all"
-            :style="{
-              width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
-              height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue)
-            }"
-            @click.stop="builderState?.selectComponent(child.id)"
+            class="min-h-[50px] w-full h-full pb-10"
+            :class="layoutClasses"
+            :style="layoutInlineStyles"
           >
-            <ResizerWrapper
-              :element="child"
-              :active="builderState?.selectedId.value === child.id"
-              @update:element="(newChild) => handleChildUpdate(index, newChild)"
+            <div
+              v-for="child in childrenModel"
+              :key="child.id"
+              class="relative"
+              :style="{
+                width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
+                height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue)
+              }"
             >
-              <BlocRender
-                :element="child"
-                @update:element="(newChild) => handleChildUpdate(index, newChild)"
-              />
-            </ResizerWrapper>
+              <BlocRender :element="child" :is-clone="true" />
+            </div>
           </div>
-        </VueDraggable>
+        </template>
+
+        <!-- Mode Normal : drag & drop actif, logique d'itération -->
+        <template v-else>
+          <VueDraggable
+            :model-value="childrenModel"
+            :group="{ name: 'blocks', put: true, pull: true }"
+            :animation="100"
+            :delay="0"
+            ghost-class="ghost-item"
+            class="w-full h-full transition-all duration-300 min-h-[80px] pb-10"
+            :class="[
+              layoutClasses,
+              {
+                'drop-zone-active': isDraggingOver,
+                'p-4': !childrenModel || childrenModel.length === 0,
+                'p-2': childrenModel && childrenModel.length > 0 && isDraggingOver
+              }
+            ]"
+            :style="layoutInlineStyles"
+            @update:model-value="handleChildrenChange"
+          >
+            <div
+              v-for="(child, index) in childrenModel"
+              :key="child.id"
+              class="relative transition-all"
+              :style="{
+                width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
+                height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue)
+              }"
+              @click.stop="builderState?.selectComponent(child.id)"
+            >
+              <!-- Mode Itération : On répète la Carte Enfant pour chaque objet de la liste -->
+              <template v-if="element.data?.isIterated && (child.data as any)?.linkedQueryParamName">
+
+                <!-- Premier item (index 0) : Éditable + Sélectionnable -->
+                <ResizerWrapper
+                  :element="child"
+                  :active="builderState?.selectedId.value === child.id"
+                  @update:element="(newChild: AnyComponentInstance) => {
+                    const { _inherited_item, ...cleanData } = newChild.data as any;
+                    handleChildUpdate(index, { ...newChild, data: cleanData });
+                  }"
+                >
+                  <BlocRender
+                    :element="{
+                      ...child,
+                      data: { ...child.data, _inherited_item: getIteratedItems(child)[0] }
+                    }"
+                    @update:element="(newChild: AnyComponentInstance) => {
+                      const { _inherited_item, ...cleanData } = newChild.data as any;
+                      handleChildUpdate(index, { ...newChild, data: cleanData });
+                    }"
+                  />
+                </ResizerWrapper>
+
+                <!-- Clones (index 1..N) : Lecture seule, rendu récursif complet -->
+                <div
+                  v-for="(item, cloneIndex) in getIteratedItems(child).slice(1)"
+                  :key="`clone-${child.id}-${cloneIndex}`"
+                  class="pointer-events-none"
+                  :style="{
+                    width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
+                    height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue)
+                  }"
+                >
+                  <BlocRender
+                    :element="{
+                      ...child,
+                      data: { ...child.data, _inherited_item: item },
+                      children: applyItemToChildren(child.children || [], item)
+                    }"
+                    :is-clone="true"
+                  />
+                </div>
+              </template>
+
+              <ResizerWrapper
+                v-else
+                :element="child"
+                :active="builderState?.selectedId.value === child.id"
+                @update:element="(newChild) => handleChildUpdate(index, newChild)"
+              >
+                <BlocRender
+                  :element="child"
+                  @update:element="(newChild) => handleChildUpdate(index, newChild)"
+                />
+              </ResizerWrapper>
+            </div>
+          </VueDraggable>
+        </template>
       </div>
     </template>
   </component>

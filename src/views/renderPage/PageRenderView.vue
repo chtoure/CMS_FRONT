@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
-import { computed, watchEffect } from 'vue';
+import { computed, watchEffect, ref, onMounted, onUnmounted, provide } from 'vue';
 import { UseRenderPage } from '../../hook/page';
 import CompositionError from '../../components/composition/CompositionError.vue';
 import CompositionLoading from '../../components/composition/CompositionLoading.vue';
@@ -36,6 +36,54 @@ watchEffect(() => {
     document.title = slug.value === "" ? "Accueil" : formattedSlug;
   }
   console.log("data page Render : ",page.value);
+});
+
+// Gestion responsive
+const currentBreakpoint = ref<'default' | 'sm' | 'md' | 'lg'>('default');
+
+const updateBreakpoint = () => {
+  const width = window.innerWidth;
+  if (width >= 1024) {
+    currentBreakpoint.value = 'lg';
+  } else if (width >= 768) {
+    currentBreakpoint.value = 'md';
+  } else if (width >= 640) {
+    currentBreakpoint.value = 'sm';
+  } else {
+    currentBreakpoint.value = 'default';
+  }
+};
+
+const toggleStates = ref<Record<string, boolean>>({});
+
+const toggleVisibility = (id: string | number) => {
+  const key = id.toString();
+  const wasVisible = toggleStates.value[key] !== false;
+  toggleStates.value = {
+    ...toggleStates.value,
+    [key]: !wasVisible
+  };
+};
+
+const isVisible = (id: string | number, backendId?: number | null) => {
+  const isLocalHidden = toggleStates.value[id.toString()] === false;
+  const isBackendHidden = backendId != null && toggleStates.value[backendId.toString()] === false;
+  return !isLocalHidden && !isBackendHidden;
+};
+
+onMounted(() => {
+  updateBreakpoint();
+  window.addEventListener('resize', updateBreakpoint);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateBreakpoint);
+});
+
+provide('builderState', {
+  currentBreakpoint,
+  toggleVisibility,
+  isVisible
 });
 
 </script>

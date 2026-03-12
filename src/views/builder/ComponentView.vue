@@ -68,6 +68,7 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
     componentDefinitionId: element.id, // Stocker l'ID du type de composant pour le backend
     styles: { ...element.defaultProps.styles } as T,
     data: { ...element.defaultProps.data },
+    params: element.defaultProps.params ? [...element.defaultProps.params] : [],
     children: element.defaultProps.children
       ? element.defaultProps.children.map(deepCloneInstance)
       : [] as AnyComponentInstance[]
@@ -98,6 +99,7 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
     blocTemplateId: undefined, // Nouvelle instance sur la page
     styles: initialStyles, // On clone les dimensions pour le préchargement visuel
     data: {}, // On ne clone pas les data
+    params: block.props?.params ? [...block.props.params] : [],
     children: [] // TODO: Récupérer les enfants si c'est un bloc complexe stocké
   };
   return instance;

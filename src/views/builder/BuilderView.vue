@@ -25,6 +25,7 @@ const builderMode = ref<'page' | 'library'>('page');
 const currentBreakpoint = ref<'default' | 'sm' | 'md' | 'lg'>('default');
 const isDragging = ref(false);
 const toggleStates = ref<Record<string, boolean>>({});
+const cmsCache = ref<Record<string, any>>({});
 
 const toggleVisibility = (id: string | number) => {
   const key = id.toString();
@@ -317,7 +318,8 @@ provide('builderState', {
   setIsDragging,
   toggleStates,
   toggleVisibility,
-  isVisible
+  isVisible,
+  cmsCache
 });
 </script>
 

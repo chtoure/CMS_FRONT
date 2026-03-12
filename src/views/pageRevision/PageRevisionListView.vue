@@ -105,16 +105,46 @@
             // 1. Trouver la version publiée actuelle
             const currentPublished = allRevisions.find(r => r.status === 'PUBLISHED');
 
-            // Fonction récursive pour supprimer les anciens IDs sur tout l'arbre
+            // 1.5 Dictionnaire pour mapper les anciens IDs aux nouveaux
+            const idMap = new Map<string, string>();
+
+            // Fonction récursive pour générer des nouveaux UUIDs sur tout l'arbre
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const cleanComponentIds = (components: any[]): any[] => {
                 if (!components || !Array.isArray(components)) return [];
-                return components.map(c => ({
-                    ...c,
-                    id: undefined,
-                    blocTemplateId: undefined,
-                    children: cleanComponentIds(c.children)
-                }));
+                return components.map(c => {
+                    const newId = crypto.randomUUID();
+                    // On map l'ancien blocTemplateId ou id vers le nouveau UUID généré
+                    if (c.blocTemplateId) {
+                        idMap.set(c.blocTemplateId.toString(), newId);
+                    } else if (c.id) {
+                        idMap.set(c.id.toString(), newId);
+                    }
+                    
+                    return {
+                        ...c,
+                        id: newId, // Assigne explicitement la nouvelle ID générée
+                        blocTemplateId: undefined,
+                        children: cleanComponentIds(c.children)
+                    };
+                });
+            };
+
+            // Fonction pour mettre à jour les targetIds des actions (ex: TOGGLE_VISIBILITY)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const updateTargetIds = (components: any[]) => {
+                if (!components || !Array.isArray(components)) return;
+                components.forEach(c => {
+                    if (c.data?.cliquable?.action === 'TOGGLE_VISIBILITY' && c.data.cliquable.action_params?.targetId) {
+                        const oldTargetId = c.data.cliquable.action_params.targetId;
+                        if (idMap.has(oldTargetId)) {
+                            c.data.cliquable.action_params.targetId = idMap.get(oldTargetId);
+                        }
+                    }
+                    if (c.children) {
+                       updateTargetIds(c.children);
+                    }
+                });
             };
 
             // 2. Préparer l'arbre complet de la révision cible (celle qu'on veut publier)
@@ -122,12 +152,23 @@
             // Copie profonde pour s'assurer qu'absolument aucune référence n'est partagée
             const targetTree = JSON.parse(JSON.stringify(targetTreeRaw || []));
 
-            const treeToClone = targetTree.map((section: any) => ({
-                ...section,
-                id: undefined, // forcer la création d'un nouvel UUID côté frontend
-                sectionId: undefined, // forcer Create au lieu de Update dans useSyncAll
-                children: cleanComponentIds(section.children)
-            }));
+            const treeToClone = targetTree.map((section: any) => {
+                const newSectionId = crypto.randomUUID();
+                if (section.sectionId) {
+                    idMap.set(section.sectionId.toString(), newSectionId);
+                } else if (section.id) {
+                   idMap.set(section.id.toString(), newSectionId);
+                }
+                return {
+                    ...section,
+                    id: newSectionId, // forcer la création d'un nouvel UUID côté frontend
+                    sectionId: undefined, // forcer Create au lieu de Update dans useSyncAll
+                    children: cleanComponentIds(section.children)
+                };
+            });
+
+            // Met à jour toutes les clauses 'targetIds' obsolètes pour la nouvelle révision
+            treeToClone.forEach((section: any) => updateTargetIds(section.children));
 
             // 3. Passer la révision cible en PUBLISHED
             await pageRevisionStatusUpdate.mutateAsync({
