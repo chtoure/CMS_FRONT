@@ -107,7 +107,7 @@ const borderStyleOptions = [
           <PropertyInput 
             label="Espacement"
             type="number"
-            :model-value="getRawValue(styles.padding)"
+            :model-value="parseInt(getRawValue(styles.padding) as string) || 0"
             @update:model-value="(val) => updateStyle('padding', parseInt(val.toString()) || 0)"
             :icon="Layers"
           >
@@ -126,7 +126,7 @@ const borderStyleOptions = [
             v-if="showField('marginTop')"
             label="Marge H"
             :icon="PanelTopDashed"
-            :model-value="getRawValue(styles.marginTop)"
+            :model-value="parseInt(getRawValue(styles.marginTop) as string) || 0"
             @update:model-value="(val) => updateStyle('marginTop', parseInt(val.toString()) || 0)"
             type="number"
             class="flex-1"
@@ -144,7 +144,7 @@ const borderStyleOptions = [
             v-if="showField('marginBottom')"
             label="Marge B"
             :icon="PanelBottomDashed"
-            :model-value="getRawValue(styles.marginBottom)"
+            :model-value="parseInt(getRawValue(styles.marginBottom) as string) || 0"
             @update:model-value="(val) => updateStyle('marginBottom', parseInt(val.toString()) || 0)"
             type="number"
             class="flex-1"
@@ -195,7 +195,7 @@ const borderStyleOptions = [
             <PropertyInput 
               label=""
               type="number"
-              :model-value="getRawValue(styles.rounded)"
+              :model-value="parseInt(getRawValue(styles.rounded) as string) || 0"
               @update:model-value="(val) => updateStyle('rounded', parseInt(val.toString()) || 0)"
               class="flex-1"
             >
@@ -222,7 +222,7 @@ const borderStyleOptions = [
             <PropertyInput 
               label="HG"
               type="number"
-              :model-value="getRawValue(styles.roundedTopLeft)"
+              :model-value="parseInt(getRawValue(styles.roundedTopLeft) as string) || 0"
               @update:model-value="(val) => updateStyle('roundedTopLeft', parseInt(val.toString()) || 0)"
               class="flex-1"
             >
@@ -237,7 +237,7 @@ const borderStyleOptions = [
             <PropertyInput 
               label="HD"
               type="number"
-              :model-value="getRawValue(styles.roundedTopRight)"
+              :model-value="parseInt(getRawValue(styles.roundedTopRight) as string) || 0"
               @update:model-value="(val) => updateStyle('roundedTopRight', parseInt(val.toString()) || 0)"
               class="flex-1"
             >
@@ -254,7 +254,7 @@ const borderStyleOptions = [
             <PropertyInput 
               label="BG"
               type="number"
-              :model-value="getRawValue(styles.roundedBottomLeft)"
+              :model-value="parseInt(getRawValue(styles.roundedBottomLeft) as string) || 0"
               @update:model-value="(val) => updateStyle('roundedBottomLeft', parseInt(val.toString()) || 0)"
               class="flex-1"
             >
@@ -269,7 +269,7 @@ const borderStyleOptions = [
             <PropertyInput 
               label="BD"
               type="number"
-              :model-value="getRawValue(styles.roundedBottomRight)"
+              :model-value="parseInt(getRawValue(styles.roundedBottomRight) as string) || 0"
               @update:model-value="(val) => updateStyle('roundedBottomRight', parseInt(val.toString()) || 0)"
               class="flex-1"
             >
@@ -355,7 +355,7 @@ const borderStyleOptions = [
         <PropertyRow>
           <PropertyInput 
             label="Poids"
-            :model-value="getRawValue(styles.borderWidth) || 0"
+            :model-value="parseInt(getRawValue(styles.borderWidth) as string) || 0"
             @update:model-value="(val) => updateStyle('borderWidth', parseInt(val.toString()) || 0)"
             type="number"
             class="flex-1"
