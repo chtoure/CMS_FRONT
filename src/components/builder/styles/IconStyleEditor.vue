@@ -12,7 +12,7 @@ defineProps<{
     <!-- Base Appearance for Icons -->
     <BaseStyleEditor 
       :element="element" 
-      :whitelist="['bg', 'opacity', 'marginTop', 'marginBottom', 'padding', 'rounded']" 
+      :whitelist="['bg', 'opacity', 'marginTop', 'marginBottom', 'padding', 'rounded', 'color']" 
     />
   </div>
 </template>

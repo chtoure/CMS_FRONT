@@ -87,13 +87,13 @@ const selectedElement = computed(() => {
 
         <hr class="border-border">
 
-        <Tabs default-value="style" class="w-full p-2">
+        <Tabs default-value="style" class="w-full pt-2">
           <TabsList class="w-full justify-between grid grid-cols-2 mb-4">
             <TabsTrigger value="style" class="text-xs h-8 data-[state=active]:bg-primary data-[state=active]:text-white !rounded">Style</TabsTrigger>
             <TabsTrigger value="rules" class="text-xs h-8 data-[state=active]:bg-primary data-[state=active]:text-white !rounded">Paramétrages</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="style" class="mt-0 border-none p-0 outline-none">
+          <TabsContent value="style" class="mt-0 border-none !p-0 outline-none">
             <StyleEditor :element="selectedElement as any" />
           </TabsContent>
 

@@ -72,7 +72,7 @@ const layoutWhitelist = [
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div class="space-y-1.5">
     <PropertyGroup title="Type" :open="true" :icon="Type">
       <div class="space-y-4">
         <!-- Font Family & Weight -->
@@ -101,7 +101,7 @@ const layoutWhitelist = [
         </div>
 
         <!-- Font Size & Line Height & Align -->
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-2 gap-2">
           <PropertyInput 
             label="Size" 
             type="number" 
@@ -118,7 +118,7 @@ const layoutWhitelist = [
             </template>
           </PropertyInput>
           
-          <div class="flex items-end justify-end">
+          <div class="flex-1 items-end justify-end">
             <IconButtonGroup 
               :model-value="(getRawValue(styles.textAlign) as string | number)" 
               @update:model-value="(val) => updateStyle('textAlign', val as string)"
@@ -129,7 +129,7 @@ const layoutWhitelist = [
 
         <!-- Color & Appearance -->
         <div class="space-y-2">
-          <span class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter">Color & Style</span>
+          <span class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter">Couleur & Style</span>
           <div class="flex gap-2">
             <div class="flex-1">
               <VariableInputControl

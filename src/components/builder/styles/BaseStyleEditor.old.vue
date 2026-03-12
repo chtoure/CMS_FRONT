@@ -53,7 +53,7 @@ const shadowOptions = [
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-2">
     <!-- Mise en page de base -->
     <div v-if="showField('padding') || showField('marginTop') || showField('marginBottom')" class="space-y-3">
       <h4 class="text-[10px] tracking-wider text-primary font-black border-b border-white/10 pb-1">Mise en page</h4>
@@ -92,7 +92,7 @@ const shadowOptions = [
     <div v-if="showField('bg') || showField('rounded') || showField('shadow') || showField('opacity')" class="space-y-3">
       <h4 class="text-[10px] tracking-wider text-primary font-black border-b border-white/10 pb-1">Apparence</h4>
       
-      <div v-if="showField('bg')" class="space-y-2">
+      <div v-if="showField('bg')" class="space-y-1">
         <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Couleur de fond</Label>
         <CompositionColorPicker 
           :is-open="activePicker === 'bg'"
@@ -109,7 +109,7 @@ const shadowOptions = [
         </CompositionColorPicker>
       </div>
 
-      <div v-if="showField('rounded')" class="space-y-1.5">
+      <div v-if="showField('rounded')" class="space-y-1">
         <div class="flex items-center justify-between">
           <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Arrondis</Label>
           <button @click="showIndividualCorners = !showIndividualCorners" class="text-[10px] text-primary hover:text-white transition-colors">

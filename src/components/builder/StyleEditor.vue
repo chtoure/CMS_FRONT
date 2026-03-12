@@ -44,7 +44,7 @@ const currentEditor = computed(() => {
 </script>
 
 <template>
-  <div class="pb-20 p-1">
+  <div class="pb-20">
     <!-- Dispatcher d'éditeurs -->
     
     <!-- Section -->

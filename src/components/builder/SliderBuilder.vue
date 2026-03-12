@@ -158,8 +158,11 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
 
 <template>
   <div 
-    class="relative overflow-hidden group/slider w-full" 
-    :class="computedClasses" 
+    class="relative group/slider w-full" 
+    :class="[
+      computedClasses,
+      builderState.isDragging?.value ? 'overflow-visible' : 'overflow-hidden'
+    ]" 
     :style="computedInlineStyles"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
@@ -179,15 +182,15 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
       </slot>
     </div>
     
-    <button v-show="slidesCount > slidesPerView" @click.stop="prevSlide" :style="arrowStyles" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover/slider:opacity-100 z-10 flex items-center justify-center">
+    <button v-show="slidesCount > slidesPerView && !builderState.isDragging?.value" @click.stop="prevSlide" :style="arrowStyles" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover/slider:opacity-100 z-10 flex items-center justify-center">
       <ChevronLeft class="w-6 h-6" :style="{ color: paginationStyles.color }" />
     </button>
-    <button v-show="slidesCount > slidesPerView" @click.stop="nextSlide" :style="arrowStyles" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover/slider:opacity-100 z-10 flex items-center justify-center">
+    <button v-show="slidesCount > slidesPerView && !builderState.isDragging?.value" @click.stop="nextSlide" :style="arrowStyles" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover/slider:opacity-100 z-10 flex items-center justify-center">
       <ChevronRight class="w-6 h-6" :style="{ color: paginationStyles.color }" />
     </button>
 
     <!-- Pagination -->
-    <div v-show="slidesCount > slidesPerView && sliderConfig.showPagination" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+    <div v-show="slidesCount > slidesPerView && sliderConfig.showPagination && !builderState.isDragging?.value" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
       <button 
         v-for="(_, index) in (maxSlideIndex + 1)" 
         :key="index"

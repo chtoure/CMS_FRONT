@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { applyTypographyInline } from "./common";
 import { resolveValue, resolveValueForBreakpoint } from "./core";
 import { VISUAL_MAPPER } from "./shared";
 
@@ -29,6 +30,10 @@ export function buildIconInlineStyles(
     const val = getValue(styles.bg);
     if (typeof val === 'string') inline.backgroundColor = val.startsWith('#') ? val : `#${val}`;
   }
-
+  if (styles.color) {
+    const val = getValue(styles.color);
+    if (typeof val === 'string') inline.color = val.startsWith('#') ? val : `#${val}`;
+  }
+  applyTypographyInline(inline, styles, getValue);
   return inline;
 }

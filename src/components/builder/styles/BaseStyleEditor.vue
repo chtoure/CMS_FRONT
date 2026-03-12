@@ -15,7 +15,9 @@ import {
   CornerUpLeft,
   Droplets,
   Square,
-  Minus
+  PanelTopDashed,
+  PanelBottomDashed,
+  Spline
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -25,7 +27,7 @@ const props = defineProps<{
 
 const { getRawValue, getHexValue, updateStyle, updateStyles } = useStyleEditor(props.element);
 
-const activePicker = ref<'bg' | 'border' | null>(null);
+const activePicker = ref<'bg' | 'border' | 'color' | null>(null);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const styles = computed(() => props.element.styles as any);
@@ -59,10 +61,10 @@ const borderStyleOptions = [
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div class="space-y-1.5">
     <!-- Position / Dimensions Section -->
     <PropertyGroup v-if="showField('width') || showField('height') || showField('padding')" title="Position" :open="true" :icon="Layers">
-      <div class="space-y-4">
+      <div class="space-y-2">
         <PropertyRow v-if="showField('width') || showField('height')">
           <PropertyInput 
             v-if="showField('width')"
@@ -101,9 +103,9 @@ const borderStyleOptions = [
           </PropertyInput>
         </PropertyRow>
 
-        <div v-if="showField('padding')" class="space-y-1.5">
+        <div v-if="showField('padding')" class="space-y-1">
           <PropertyInput 
-            label="Padding"
+            label="Espacement"
             type="number"
             :model-value="getRawValue(styles.padding)"
             @update:model-value="(val) => updateStyle('padding', parseInt(val.toString()) || 0)"
@@ -122,7 +124,8 @@ const borderStyleOptions = [
         <PropertyRow v-if="showField('marginTop') || showField('marginBottom')">
           <PropertyInput 
             v-if="showField('marginTop')"
-            label="Margin T"
+            label="Marge H"
+            :icon="PanelTopDashed"
             :model-value="getRawValue(styles.marginTop)"
             @update:model-value="(val) => updateStyle('marginTop', parseInt(val.toString()) || 0)"
             type="number"
@@ -139,7 +142,8 @@ const borderStyleOptions = [
 
           <PropertyInput 
             v-if="showField('marginBottom')"
-            label="Margin B"
+            label="Marge B"
+            :icon="PanelBottomDashed"
             :model-value="getRawValue(styles.marginBottom)"
             @update:model-value="(val) => updateStyle('marginBottom', parseInt(val.toString()) || 0)"
             type="number"
@@ -158,10 +162,10 @@ const borderStyleOptions = [
     </PropertyGroup>
 
     <!-- Appearance Section -->
-    <PropertyGroup v-if="showField('shadow') || showField('opacity')" title="Appearance" :open="true" :icon="Droplets">
-      <div class="space-y-4">
+    <PropertyGroup v-if="showField('shadow') || showField('opacity')" title="Apparence" :open="true" :icon="Droplets">
+      <div class="space-y-2">
         <div v-if="showField('opacity')" class="space-y-1.5">
-          <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Opacity</label>
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text uppercase tracking-tighter ml-1">Opacité</label>
           <PropertyInput 
             label=""
             :model-value="Math.round((Number(getRawValue(styles.opacity)) || 1) * 100)"
@@ -171,7 +175,7 @@ const borderStyleOptions = [
         </div>
 
         <div v-if="showField('shadow')" class="space-y-1.5">
-          <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Shadow</label>
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text uppercase tracking-tighter ml-1">Ombre</label>
           <ButtonGroup 
             :model-value="getRawValue(styles.shadow) as string" 
             @update:model-value="(val) => updateStyle('shadow', val)"
@@ -183,11 +187,11 @@ const borderStyleOptions = [
     </PropertyGroup>
 
     <!-- Detailed Radius Section (Optional, only if showField('rounded') is true) -->
-    <PropertyGroup v-if="showField('rounded')" title="Corners & Radius" :open="false" :icon="CornerUpLeft">
-      <div class="space-y-4">
-        <div class="space-y-1.5">
-          <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">All Corners</label>
-          <div class="space-y-2">
+    <PropertyGroup v-if="showField('rounded')" title="Coins & Arrondis" :open="false" :icon="CornerUpLeft">
+      <div class="space-y-2">
+        <div class="space-y-1">
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text uppercase tracking-tighter ml-1">Coins</label>
+          <div class="space-y-1">
             <PropertyInput 
               label=""
               type="number"
@@ -212,11 +216,11 @@ const borderStyleOptions = [
           </div>
         </div>
 
-        <div class="space-y-1.5 pt-2 border-t border-builder-bar-border/30">
-          <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Individual Corners</label>
+        <div class="space-y-1.5 pt-2 border-t border-builder-bar-border">
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text uppercase tracking-tighter ml-1">Coin Individuel</label>
           <PropertyRow>
             <PropertyInput 
-              label="TL"
+              label="HG"
               type="number"
               :model-value="getRawValue(styles.roundedTopLeft)"
               @update:model-value="(val) => updateStyle('roundedTopLeft', parseInt(val.toString()) || 0)"
@@ -231,7 +235,7 @@ const borderStyleOptions = [
               </template>
             </PropertyInput>
             <PropertyInput 
-              label="TR"
+              label="HD"
               type="number"
               :model-value="getRawValue(styles.roundedTopRight)"
               @update:model-value="(val) => updateStyle('roundedTopRight', parseInt(val.toString()) || 0)"
@@ -248,7 +252,7 @@ const borderStyleOptions = [
           </PropertyRow>
           <PropertyRow>
             <PropertyInput 
-              label="BL"
+              label="BG"
               type="number"
               :model-value="getRawValue(styles.roundedBottomLeft)"
               @update:model-value="(val) => updateStyle('roundedBottomLeft', parseInt(val.toString()) || 0)"
@@ -263,7 +267,7 @@ const borderStyleOptions = [
               </template>
             </PropertyInput>
             <PropertyInput 
-              label="BR"
+              label="BD"
               type="number"
               :model-value="getRawValue(styles.roundedBottomRight)"
               @update:model-value="(val) => updateStyle('roundedBottomRight', parseInt(val.toString()) || 0)"
@@ -282,10 +286,41 @@ const borderStyleOptions = [
       </div>
     </PropertyGroup>
 
+    <!-- Content Color Section -->
+    <PropertyGroup v-if="showField('color')" title="Couleur de l'icône/texte" :open="true" :icon="Droplets">
+      <div class="space-y-1">
+        <VariableInputControl
+          :model-value="styles.color"
+          @update:model-value="(val) => updateStyle('color', val)"
+          variable-type="COLOR"
+        >
+          <CompositionColorPicker 
+            :is-open="activePicker === 'color'"
+            :initial-color="'#' + getHexValue(styles.color)"
+            @close="activePicker = null"
+            @color-change="(hex) => updateStyle('color', { type: 'static', value: hex })"
+          >
+            <template #trigger>
+              <button 
+                @click="activePicker = 'color'" 
+                class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80 transition-colors"
+              >
+                <div 
+                  class="w-4 h-4 rounded-sm border border-builder-bar-border shrink-0" 
+                  :style="{ backgroundColor: '#' + getHexValue(styles.color) }"
+                />
+                <span class="text-builder-bar-text font-mono text-[10px] flex-1 text-left truncate">{{ getRawValue(styles.color) || 'Par défaut' }}</span>
+              </button>
+            </template>
+          </CompositionColorPicker>
+        </VariableInputControl>
+      </div>
+    </PropertyGroup>
+
 
     <!-- Fill Section -->
-    <PropertyGroup v-if="showField('bg')" title="Fill" :open="true" :icon="Square">
-      <div class="space-y-2">
+    <PropertyGroup v-if="showField('bg')" title="Couleur de fond" :open="true" :icon="Square">
+      <div class="space-y-1">
         <VariableInputControl
           :model-value="styles.bg"
           @update:model-value="(val) => updateStyle('bg', val)"
@@ -306,7 +341,7 @@ const borderStyleOptions = [
                   class="w-4 h-4 rounded-sm border border-builder-bar-border shrink-0" 
                   :style="{ backgroundColor: '#' + getHexValue(styles.bg) }"
                 />
-                <span class="text-builder-bar-text/60 font-mono text-[10px] flex-1 text-left truncate">{{ getRawValue(styles.bg) || 'Transparent' }}</span>
+                <span class="text-builder-bar-text font-mono text-[10px] flex-1 text-left truncate">{{ getRawValue(styles.bg) || 'Transparent' }}</span>
               </button>
             </template>
           </CompositionColorPicker>
@@ -315,11 +350,11 @@ const borderStyleOptions = [
     </PropertyGroup>
 
     <!-- Stroke Section -->
-    <PropertyGroup v-if="showField('borderWidth')" title="Stroke" :open="false" :icon="Minus">
-      <div class="space-y-3">
+    <PropertyGroup v-if="showField('borderWidth')" title="Contour" :open="false" :icon="Spline">
+      <div class="space-y-1">
         <PropertyRow>
           <PropertyInput 
-            label="Weight"
+            label="Poids"
             :model-value="getRawValue(styles.borderWidth) || 0"
             @update:model-value="(val) => updateStyle('borderWidth', parseInt(val.toString()) || 0)"
             type="number"
@@ -369,7 +404,7 @@ const borderStyleOptions = [
                     class="w-4 h-4 rounded-sm border border-builder-bar-border shrink-0" 
                     :style="{ backgroundColor: '#' + getHexValue(styles.borderColor) }"
                   />
-                  <span class="text-builder-bar-text/60 font-mono text-[10px] flex-1 text-left truncate">{{ getRawValue(styles.borderColor) || 'Transparent' }}</span>
+                  <span class="text-builder-bar-text font-mono text-[10px] flex-1 text-left truncate">{{ getRawValue(styles.borderColor) || 'Transparent' }}</span>
                 </button>
               </template>
             </CompositionColorPicker>

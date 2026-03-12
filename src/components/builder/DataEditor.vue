@@ -201,6 +201,10 @@ const inputTypeOptions = [
           <Input type="number" :model-value="getDataValue(element.data.strokeWidth) || ''" @update:model-value="(val) => updateData('strokeWidth', parseInt(val.toString()) || 0)" class="h-8 text-xs bg-black/20 border-border/50" />
         </div>
       </div>
+      <div class="space-y-1.5">
+        <Label class="text-[11px] text-gray-400">Couleur (Hex, Nom ou currentColor)</Label>
+        <Input :model-value="getDataValue(element.data.color) || ''" @update:model-value="(val) => updateData('color', val)" class="h-8 text-xs bg-black/20 border-border/50" placeholder="ex: #fef08a, red, currentColor" />
+      </div>
     </div>
 
     <!-- Section: Formulaire (Saisie) -->
