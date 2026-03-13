@@ -38,9 +38,9 @@ function select(val: string | number | boolean) {
       @click="select(opt.value)"
       :title="opt.tooltip"
       :class="[
-        'w-7 h-7 flex items-center justify-center rounded border transition-all',
+        'w-7 h-7 flex items-center justify-center rounded border border-builder-bar-border transition-all',
         isActive(opt.value)
-          ? 'bg-primary/20 border-primary/50 text-white'
+          ? 'bg-primary text-white'
           : 'bg-builder-input-bg border-builder-bar-border text-builder-bar-text/60 hover:border-builder-bar-border/80 hover:text-builder-bar-text'
       ]"
     >

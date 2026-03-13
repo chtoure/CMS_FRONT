@@ -3,13 +3,14 @@ import { computed, inject } from 'vue';
 import type { StaticStyles, AnyComponentInstance } from '../../type/component';
 import { buildIconStyles, buildIconInlineStyles } from '../../lib/style/iconProcessor';
 import { useVariableResolver } from '../../hook/variable';
+import * as LucideIcons from 'lucide-vue-next';
 
 interface Props {
   styles?: StaticStyles;
   data?: {
-    icon?: any;
-    size?: any;
-    color?: any;
+    icon?: unknown;
+    size?: unknown;
+    color?: unknown;
   };
   element?: AnyComponentInstance;
   children?: AnyComponentInstance[];
@@ -19,7 +20,7 @@ const props = defineProps<Props>();
 
 const builderState = inject<{
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
-}>('builderState', { currentBreakpoint: { value: 'default' } } as any);
+}>('builderState', { currentBreakpoint: { value: 'default' as const } } as { currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' } });
 
 const { resolveValue } = useVariableResolver();
 
@@ -32,9 +33,21 @@ const computedInlineStyles = computed(() => {
   return buildIconInlineStyles(props.styles as Record<string, unknown>, bp, resolveValue);
 });
 
-const icon = computed(() => (resolveValue(props.data?.icon) as string) || 'ph-cube');
+const iconName = computed(() => {
+  const name = resolveValue(props.data?.icon) as string;
+  return name && name in LucideIcons ? name : 'Star';
+});
+
+const LucideIcon = computed(() => {
+  return (LucideIcons as Record<string, unknown>)[iconName.value] || (LucideIcons as Record<string, unknown>)['Star'];
+});
+
 const size = computed(() => (resolveValue(props.data?.size) as number) || 24);
-const color = computed(() => (resolveValue(props.data?.color) as string) || 'currentColor');
+const color = computed(() => {
+  const styleColor = resolveValue((props.styles as Record<string, unknown>)?.color) as string;
+  const dataColor = resolveValue(props.data?.color) as string;
+  return styleColor ? (styleColor.startsWith('#') || styleColor.startsWith('rgb') || styleColor.startsWith('hsl') || ['currentColor', 'transparent', 'inherit'].includes(styleColor) ? styleColor : `#${styleColor}`) : (dataColor || 'currentColor');
+});
 </script>
 
 <template>
@@ -43,12 +56,10 @@ const color = computed(() => (resolveValue(props.data?.color) as string) || 'cur
     :class="computedClasses"
     :style="computedInlineStyles"
   >
-     <i 
-      :class="icon" 
-      :style="{ 
-        fontSize: size + 'px',
-        color: color
-      }"
+     <component 
+      :is="LucideIcon" 
+      :size="size"
+      :color="color"
     />
   </div>
 </template>

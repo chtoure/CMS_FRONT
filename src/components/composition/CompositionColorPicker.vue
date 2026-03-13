@@ -13,48 +13,69 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits(['close', 'colorChange'])
 
-// --- Logique de conversion (Inchangée) ---
+// --- Logique de conversion ---
 function hexToHsv(hex: string) {
-  hex = hex.replace("#", "")
-  const r = parseInt(hex.slice(0, 2), 16) / 255
-  const g = parseInt(hex.slice(2, 4), 16) / 255
-  const b = parseInt(hex.slice(4, 6), 16) / 255
-  const max = Math.max(r, g, b), min = Math.min(r, g, b)
-  const delta = max - min
-  let h = 0
-  if (delta !== 0) {
-    if (max === r) h = ((g - b) / delta + (g < b ? 6 : 0)) / 6
-    else if (max === g) h = ((b - r) / delta + 2) / 6
-    else h = ((r - g) / delta + 4) / 6
+  hex = hex.replace("#", "");
+  
+  // Handle shorthand hex
+  if (hex.length === 3 || hex.length === 4) {
+    hex = hex.split('').map(char => char + char).join('');
   }
-  return { h: h * 360, s: (max === 0 ? 0 : delta / max) * 100, v: max * 100 }
+  
+  let r = 0, g = 0, b = 0, a = 1;
+  if (hex.length >= 6) {
+    r = parseInt(hex.slice(0, 2), 16) / 255;
+    g = parseInt(hex.slice(2, 4), 16) / 255;
+    b = parseInt(hex.slice(4, 6), 16) / 255;
+  }
+  if (hex.length === 8) {
+    a = parseInt(hex.slice(6, 8), 16) / 255;
+  }
+  
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const delta = max - min;
+  let h = 0;
+  if (delta !== 0) {
+    if (max === r) h = ((g - b) / delta + (g < b ? 6 : 0)) / 6;
+    else if (max === g) h = ((b - r) / delta + 2) / 6;
+    else h = ((r - g) / delta + 4) / 6;
+  }
+  return { h: h * 360, s: (max === 0 ? 0 : delta / max) * 100, v: max * 100, a };
 }
 
-function hsvToHex(h: number, s: number, v: number): string {
-  const c = (v / 100) * (s / 100)
-  const x = c * (1 - Math.abs(((h / 60) % 2) - 1))
-  const m = v / 100 - c
-  let r = 0, g = 0, b = 0
-  if (h < 60) [r, g, b] = [c, x, 0]
-  else if (h < 120) [r, g, b] = [x, c, 0]
-  else if (h < 180) [r, g, b] = [0, c, x]
-  else if (h < 240) [r, g, b] = [0, x, c]
-  else if (h < 300) [r, g, b] = [x, 0, c]
-  else [r, g, b] = [c, 0, x]
+function hsvToHex(h: number, s: number, v: number, a: number = 1): string {
+  const c = (v / 100) * (s / 100);
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = v / 100 - c;
+  let r = 0, g = 0, b = 0;
+  if (h < 60) [r, g, b] = [c, x, 0];
+  else if (h < 120) [r, g, b] = [x, c, 0];
+  else if (h < 180) [r, g, b] = [0, c, x];
+  else if (h < 240) [r, g, b] = [0, x, c];
+  else if (h < 300) [r, g, b] = [x, 0, c];
+  else [r, g, b] = [c, 0, x];
+  
   const toHex = (val: number) => {
-    const hex = Math.round((val + m) * 255).toString(16)
-    return hex.padStart(2, '0').toUpperCase()
+    const hex = Math.round((val + m) * 255).toString(16);
+    return hex.padStart(2, '0').toUpperCase();
+  };
+  
+  let hex = toHex(r) + toHex(g) + toHex(b);
+  if (a < 1) {
+    const alphaHex = Math.round(a * 255).toString(16).padStart(2, '0').toUpperCase();
+    hex += alphaHex;
   }
-  return toHex(r) + toHex(g) + toHex(b)
+  return hex;
 }
 
 // --- État ---
 const activeTab = ref<'custom' | 'libraries'>('custom')
 const hexInput = ref(props.initialColor.replace("#", ""))
-const hsv = ref(hexToHsv(props.initialColor))
+const hsv = ref(hexToHsv(props.initialColor || '#000000'))
 const recentColors = ref<string[]>([])
 
 watch(() => [props.initialColor, props.isOpen], () => {
+  if (!props.initialColor) return;
   hexInput.value = props.initialColor.replace("#", "")
   hsv.value = hexToHsv(props.initialColor)
 }, { immediate: true })
@@ -63,7 +84,7 @@ watch(() => [props.initialColor, props.isOpen], () => {
 const handleHexInput = (value: string) => {
   const cleanHex = value.replace("#", "").toUpperCase()
   hexInput.value = cleanHex
-  if (cleanHex.length === 6 && /^[0-9A-F]{6}$/.test(cleanHex)) {
+  if ((cleanHex.length === 6 || cleanHex.length === 8) && /^[0-9A-F]{6,8}$/.test(cleanHex)) {
     hsv.value = hexToHsv(cleanHex)
     emit('colorChange', cleanHex)
   }
@@ -75,7 +96,7 @@ const handleSaturationChange = (e: MouseEvent) => {
   const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100))
   hsv.value.s = x
   hsv.value.v = 100 - y
-  const newHex = hsvToHex(hsv.value.h, hsv.value.s, hsv.value.v)
+  const newHex = hsvToHex(hsv.value.h, hsv.value.s, hsv.value.v, hsv.value.a)
   hexInput.value = newHex
   emit('colorChange', newHex)
 }
@@ -83,7 +104,15 @@ const handleSaturationChange = (e: MouseEvent) => {
 const handleHueChange = (e: Event) => {
   const val = parseFloat((e.target as HTMLInputElement).value)
   hsv.value.h = val
-  const newHex = hsvToHex(val, hsv.value.s, hsv.value.v)
+  const newHex = hsvToHex(val, hsv.value.s, hsv.value.v, hsv.value.a)
+  hexInput.value = newHex
+  emit('colorChange', newHex)
+}
+
+const handleAlphaChange = (e: Event) => {
+  const val = parseFloat((e.target as HTMLInputElement).value)
+  hsv.value.a = val
+  const newHex = hsvToHex(hsv.value.h, hsv.value.s, hsv.value.v, val)
   hexInput.value = newHex
   emit('colorChange', newHex)
 }
@@ -133,14 +162,29 @@ const handleHueChange = (e: Event) => {
           />
         </div>
 
-        <div class="space-y-2">
-          <input
-            type="range"
-            min="0" max="360" step="0.1"
-            :value="hsv.h"
-            @input="handleHueChange"
-            class="hue-slider w-full h-2 rounded-full appearance-none cursor-pointer"
-          />
+        <div class="space-y-3">
+          <!-- Hue Slider -->
+          <div class="space-y-2">
+            <input
+              type="range"
+              min="0" max="360" step="0.1"
+              :value="hsv.h"
+              @input="handleHueChange"
+              class="hue-slider w-full h-2 rounded-full appearance-none cursor-pointer"
+            />
+          </div>
+
+          <!-- Alpha Slider -->
+          <div class="relative w-full h-2 rounded-full checkerboard bg-white ring-1 ring-border/50">
+            <input
+              type="range"
+              min="0" max="1" step="0.01"
+              :value="hsv.a"
+              @input="handleAlphaChange"
+              class="alpha-slider w-full h-full rounded-full appearance-none cursor-pointer absolute inset-0 z-10"
+              :style="{ background: `linear-gradient(to right, transparent, #${hsvToHex(hsv.h, hsv.s, hsv.v, 1)})` }"
+            />
+          </div>
         </div>
 
         <div class="flex items-center gap-2">
@@ -190,6 +234,27 @@ const handleHueChange = (e: Event) => {
   border: 1px solid #666;
 }
 .hue-slider::-moz-range-thumb {
+  width: 10px; height: 10px;
+  background: white; border-radius: 50%;
+  border: 1px solid #666;
+}
+
+.checkerboard {
+  background-image: linear-gradient(45deg, #ccc 25%, transparent 25%),
+    linear-gradient(-45deg, #ccc 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #ccc 75%),
+    linear-gradient(-45deg, transparent 75%, #ccc 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+}
+
+.alpha-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px; height: 10px;
+  background: white; border-radius: 50%;
+  border: 1px solid #666;
+}
+.alpha-slider::-moz-range-thumb {
   width: 10px; height: 10px;
   background: white; border-radius: 50%;
   border: 1px solid #666;

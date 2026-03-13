@@ -35,14 +35,14 @@ function select(j: string, a: string) {
       :key="`${j}-${a}`"
       @click="select(j, a)"
       :class="[
-        'w-full h-full rounded-[1px] transition-all duration-200 flex justify-center items-center',
-        isActive(j, a)
-          ? 'bg-primary shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)] text-white'
-          : 'bg-builder-bar-text/10 hover:bg-builder-bar-text/20 border border-builder-bar-border/20'
+        'w-full h-full  transition-all duration-200 flex justify-center items-center',
+        isActive(j, a) 
+          ? 'shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)] text-primary' 
+          : ':bg-builder-bar-text'
       ]"
       :title="`Justify: ${j}, Align: ${a}`"
     >
-      <component :is="icon" class="w-3 h-3" stroke-width="1" />
+      <component :is="icon" class="w-3 h-3" stroke-width="2" />
     </button>
   </div>
 </template>

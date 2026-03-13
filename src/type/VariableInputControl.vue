@@ -81,8 +81,8 @@ function detachVariable() {
           class="w-5 h-5 flex items-center justify-center transition-all rounded-sm z-20"
           :class="[
             isVariableMode 
-              ? 'bg-primary text-white shadow-sm' 
-              : 'bg-builder-bar-border text-builder-bar-text hover:text-primary',
+              ? ' text-white shadow-sm' 
+              : ' text-builder-bar-text hover:text-primary',
             $slots.default ? 'absolute right-1 top-1/2 -translate-y-1/2' : ''
           ]"
           :title="isVariableMode ? `Linked to ${variableName}` : 'Link to variable'"
@@ -97,13 +97,13 @@ function detachVariable() {
           {{ isVariableMode ? 'Linked Variable' : 'Connect Variable' }}
         </DropdownMenuLabel>
         
-        <div v-if="isVariableMode" class="px-2 py-2 mb-1 bg-primary/10 border border-primary/20 rounded-sm">
+        <div v-if="isVariableMode" class="px-2 py-2 mb-1 bg-primary border border-primary/20 rounded-sm">
           <div class="flex items-center justify-between gap-3">
              <div class="flex items-center gap-2 overflow-hidden">
                <Webhook :size="12" class="text-primary shrink-0" />
                <span class="text-xs font-medium truncate text-primary">{{ variableName }}</span>
              </div>
-             <button @click="detachVariable" class="text-builder-bar-text/40 hover:text-red-400 transition-colors">
+             <button @click="detachVariable" class="text-builder-bar-text hover:text-red-400 transition-colors">
                <Link2Off :size="12" />
              </button>
           </div>
