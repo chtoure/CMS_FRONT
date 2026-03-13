@@ -10,8 +10,8 @@ import PropertyRow from '../ui/PropertyRow.vue';
 import PropertyInput from '../ui/PropertyInput.vue';
 import ButtonGroup from '../ui/ButtonGroup.vue';
 import VariableInputControl from '../../../type/VariableInputControl.vue';
-import { 
-  Layers, 
+import {
+  Layers,
   CornerUpLeft,
   Droplets,
   Square,
@@ -66,7 +66,7 @@ const borderStyleOptions = [
     <PropertyGroup v-if="showField('width') || showField('height') || showField('padding')" title="Position" :open="true" :icon="Layers">
       <div class="space-y-2">
         <PropertyRow v-if="showField('width') || showField('height')">
-          <PropertyInput 
+          <PropertyInput
             v-if="showField('width')"
             type="text"
             label="W"
@@ -84,7 +84,7 @@ const borderStyleOptions = [
             </template>
           </PropertyInput>
 
-          <PropertyInput 
+          <PropertyInput
             v-if="showField('height')"
             label="H"
             type="text"
@@ -122,7 +122,7 @@ const borderStyleOptions = [
         </div>
 
         <PropertyRow v-if="showField('marginTop') || showField('marginBottom')">
-          <PropertyInput 
+          <PropertyInput
             v-if="showField('marginTop')"
             label="Marge H"
             :icon="PanelTopDashed"
@@ -140,7 +140,7 @@ const borderStyleOptions = [
             </template>
           </PropertyInput>
 
-          <PropertyInput 
+          <PropertyInput
             v-if="showField('marginBottom')"
             label="Marge B"
             :icon="PanelBottomDashed"
@@ -207,7 +207,7 @@ const borderStyleOptions = [
                 />
               </template>
             </PropertyInput>
-            <ButtonGroup 
+            <ButtonGroup
               :model-value="getRawValue(styles.rounded) as string"
               @update:model-value="(val) => updateStyle('rounded', val)"
               :options="roundedOptions"
@@ -326,19 +326,19 @@ const borderStyleOptions = [
           @update:model-value="(val) => updateStyle('bg', val)"
           variable-type="COLOR"
         >
-          <CompositionColorPicker 
+          <CompositionColorPicker
             :is-open="activePicker === 'bg'"
             :initial-color="'#' + getHexValue(styles.bg)"
             @close="activePicker = null"
             @color-change="(hex) => updateStyle('bg', { type: 'static', value: hex })"
           >
             <template #trigger>
-              <button 
-                @click="activePicker = 'bg'" 
+              <button
+                @click="activePicker = 'bg'"
                 class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80 transition-colors"
               >
-                <div 
-                  class="w-4 h-4 rounded-sm border border-builder-bar-border shrink-0" 
+                <div
+                  class="w-4 h-4 rounded-sm border border-builder-bar-border shrink-0"
                   :style="{ backgroundColor: '#' + getHexValue(styles.bg) }"
                 />
                 <span class="text-builder-bar-text font-mono text-[10px] flex-1 text-left truncate">{{ getRawValue(styles.bg) || 'Transparent' }}</span>
@@ -361,8 +361,8 @@ const borderStyleOptions = [
             class="flex-1"
           />
           <div class="flex items-end flex-1">
-            <select 
-              :value="getRawValue(styles.borderStyle)" 
+            <select
+              :value="getRawValue(styles.borderStyle)"
               @input="(e: any) => updateStyle('borderStyle', e.target.value)"
               class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary"
             >
@@ -383,7 +383,7 @@ const borderStyleOptions = [
             }"
             variable-type="COLOR"
           >
-            <CompositionColorPicker 
+            <CompositionColorPicker
               :is-open="activePicker === 'border'"
               :initial-color="'#' + getHexValue(styles.borderColor)"
               @close="activePicker = null"
@@ -396,12 +396,12 @@ const borderStyleOptions = [
               }"
             >
               <template #trigger>
-                <button 
-                  @click="activePicker = 'border'" 
+                <button
+                  @click="activePicker = 'border'"
                   class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80 transition-colors"
                 >
-                  <div 
-                    class="w-4 h-4 rounded-sm border border-builder-bar-border shrink-0" 
+                  <div
+                    class="w-4 h-4 rounded-sm border border-builder-bar-border shrink-0"
                     :style="{ backgroundColor: '#' + getHexValue(styles.borderColor) }"
                   />
                   <span class="text-builder-bar-text font-mono text-[10px] flex-1 text-left truncate">{{ getRawValue(styles.borderColor) || 'Transparent' }}</span>

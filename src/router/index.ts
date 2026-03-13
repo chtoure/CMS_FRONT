@@ -29,6 +29,7 @@ import BuilderView from '../views/builder/BuilderView.vue'
 import BuilderLayout from '../layout/BuilderLayout.vue'
 import PageListView from '../views/page/PageListView.vue'
 import PageRevisionListView from '../views/pageRevision/PageRevisionListView.vue'
+import PageRenderView from '../views/renderPage/PageRenderView.vue'
 
 
 const router = createRouter({
@@ -213,6 +214,18 @@ const router = createRouter({
                   component: BuilderView,
                 }
               ]
+            }
+        ]
+    },
+
+    {
+        path: '/:slug?',
+        component: BuilderLayout,
+        children: [
+            {
+                path: '',
+                name: 'site.render',
+                component: PageRenderView,
             }
         ]
     },

@@ -13,15 +13,15 @@ export function useStyleEditor(initialElement: AnyComponentInstance | AnySection
     selectComponent: (id: string | null) => void;
     currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' };
   }>('builderState');
-  
+
   const { resolveValue } = useVariableResolver();
 
   // Helper pour trouver l'élément le plus frais dans l'arbre
   const getLatestElement = (): AnyComponentInstance | AnySectionInstance => {
     if (!builderState) return initialElement;
-    
-    const tree = builderState.builderMode.value === 'page' 
-      ? builderState.pageTree.value 
+
+    const tree = builderState.builderMode.value === 'page'
+      ? builderState.pageTree.value
       : builderState.libraryTree.value;
 
     const findInTree = (items: (AnyComponentInstance | AnySectionInstance)[]): AnyComponentInstance | AnySectionInstance | null => {
@@ -53,7 +53,7 @@ export function useStyleEditor(initialElement: AnyComponentInstance | AnySection
         return item;
       });
     };
-    
+
     if (builderState.builderMode.value === 'page') {
       builderState.pageTree.value = updateTree(builderState.pageTree.value);
     } else {
@@ -141,13 +141,13 @@ export function useStyleEditor(initialElement: AnyComponentInstance | AnySection
   const getHexValue = (prop: unknown): string => {
     const raw = getResolvedValue(prop);
     if (!raw || typeof raw !== 'string') return 'FFFFFF';
-    
+
     const cleanRaw = raw.startsWith('#') ? raw.slice(1) : raw;
     if (/^[0-9A-Fa-f]{6,8}$/.test(cleanRaw)) return cleanRaw;
 
     const jitMatch = cleanRaw.match(/\[#([0-9A-Fa-f]{6})\]/);
     if (jitMatch && jitMatch[1]) return jitMatch[1];
-    
+
     const tailwindMap: Record<string, string> = {
       'bg-white': 'FFFFFF', 'text-white': 'FFFFFF',
       'bg-black': '000000', 'text-black': '000000',
@@ -156,8 +156,8 @@ export function useStyleEditor(initialElement: AnyComponentInstance | AnySection
     };
 
     if (tailwindMap[cleanRaw]) return tailwindMap[cleanRaw];
-    
-    return 'CCCCCC'; 
+
+    return 'CCCCCC';
   };
 
   return {

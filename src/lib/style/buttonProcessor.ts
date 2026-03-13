@@ -10,7 +10,7 @@ const BUTTON_STYLE_MAPPER = {
 export function buildButtonStyles(styles?: Record<string, unknown>, resolver?: (v: unknown) => unknown): string {
   if (!styles) return '';
   const classes: string[] = [];
-  
+
   (Object.keys(BUTTON_STYLE_MAPPER) as Array<keyof typeof BUTTON_STYLE_MAPPER>).forEach(key => {
     const value = styles[key];
     const mapper = (BUTTON_STYLE_MAPPER as Record<string, (v: unknown) => string>)[key];

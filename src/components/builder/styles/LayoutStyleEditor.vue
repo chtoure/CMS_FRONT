@@ -8,11 +8,11 @@ import PropertyGroup from '../ui/PropertyGroup.vue';
 import PropertyInput from '../ui/PropertyInput.vue';
 import ButtonGroup from '../ui/ButtonGroup.vue';
 import AlignmentMatrix from '../ui/AlignmentMatrix.vue';
-import { 
-  Layout, 
-  ArrowRight, 
-  ArrowDown, 
-  Maximize2, 
+import {
+  Layout,
+  ArrowRight,
+  ArrowDown,
+  Maximize2,
   GripHorizontal,
   Box,
   EyeOff
@@ -73,13 +73,13 @@ const showGrid = computed(() => getRawValue(styles.value.display) === 'grid');
     <PropertyGroup v-if="showFlex" title="Disposition Auto" :open="true" :icon="Layout">
       <div class="space-y-4">
         <!-- Direction & Wrap -->
-        
+
 
         <!-- Alignment Matrix & Gap -->
         <div class="grid grid-cols-2 gap-1 items-start">
           <div class="space-y-1">
             <!-- <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter block ml-0.5">Alignment</label> -->
-            <AlignmentMatrix 
+            <AlignmentMatrix
               :justify="(getRawValue(styles.justify) as string)"
               :align="(getRawValue(styles.align) as string)"
               @update:justify="(val) => updateStyle('justify', val)"
@@ -89,8 +89,8 @@ const showGrid = computed(() => getRawValue(styles.value.display) === 'grid');
           
           <div class="space-y-2">
             <div class="flex items-center justify-between">
-              <ButtonGroup 
-                :model-value="(getRawValue(styles.direction) as string)" 
+              <ButtonGroup
+                :model-value="(getRawValue(styles.direction) as string)"
                 @update:model-value="(val) => updateStyle('direction', val)"
                 :options="directionOptions"
                 size="sm"

@@ -1,4 +1,5 @@
 import * as Icons from 'lucide-vue-next';
+import type { IComponentParams } from './params';
 import type { sectionStyle } from './section';
 
 // Actions (Discriminated Unions)
@@ -14,7 +15,7 @@ type ComponentFamily = 'static' | 'interactive' | 'container' | 'input' | 'compl
 const FAMILY_CAPABILITIES: Record<ComponentFamily, { canHaveChildren: boolean }> = {
   static: { canHaveChildren: false },
   interactive: { canHaveChildren: false },
-  container: { canHaveChildren: true }, 
+  container: { canHaveChildren: true },
   input: { canHaveChildren: false },
   complex: { canHaveChildren: true },
 };
@@ -29,10 +30,10 @@ const ACTIONS_BY_FAMILY: Record<ComponentFamily, CliquableAction['action'][]> = 
 
 // Support Responsif
 type ResponsiveProp<T = string> = T | {
-  default: T;    
-  sm?: T;        
-  md?: T;        
-  lg?: T;        
+  default: T;
+  sm?: T;
+  md?: T;
+  lg?: T;
 };
 
 type VariableProperty<T> = {
@@ -40,31 +41,32 @@ type VariableProperty<T> = {
   value: T;
 } | {
   type: 'variable';
-  value: string; 
+  value: string;
 };
 
-import type { 
-  BaseStyles, 
-  ContainerStyles, 
-  StaticStyles, 
-  InteractiveStyles, 
-  InputStyles, 
-  AllStyles 
+import type {
+  BaseStyles,
+  ContainerStyles,
+  StaticStyles,
+  InteractiveStyles,
+  InputStyles,
+  AllStyles
 } from './style';
 
 
 
-type JsonValue = 
-  | string 
-  | number 
-  | boolean 
-  | null 
-  | { [key: string]: JsonValue } 
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: JsonValue }
   | JsonValue[];
 
 
 interface ComponentProps<T = BaseStyles> {
   styles?: T;
+  params?: IComponentParams[];
   data?: Record<string, unknown>;
   children?: AnyComponentInstance[];
 }
@@ -83,12 +85,13 @@ interface Component <T = BaseStyles> {
   name: string;
   tag: string;
   icon: keyof typeof Icons;
+
   family: ComponentFamily;
   supportedActions: CliquableAction['action'][];
   defaultProps:  ComponentProps<T>;
 }
 
-type AnyComponent = 
+type AnyComponent =
   | Component<ContainerStyles>
   | Component<StaticStyles>
   | Component<InteractiveStyles>
@@ -102,8 +105,9 @@ interface AnyComponentInstance extends Omit<Component<AllStyles>, 'defaultProps'
   componentDefinitionId?: number; // ID du type de composant (table components)
   modelId?: number; // ID du BlocTemplate servant de modèle (si is_custom == false mais basé sur un modèle)
   styles: AllStyles;
+  params: IComponentParams[];
   data: Record<string, unknown>;
-  children: AnyComponentInstance[]; 
+  children: AnyComponentInstance[];
 }
 
 

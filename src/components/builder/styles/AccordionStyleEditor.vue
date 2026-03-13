@@ -79,8 +79,8 @@ const containerWhitelist = [
             </div>
           </div>
           <div class="flex justify-end">
-             <IconButtonGroup 
-                :model-value="(getRawValue(styles.questionTextAlign) as string | number)" 
+             <IconButtonGroup
+                :model-value="(getRawValue(styles.questionTextAlign) as string | number)"
                 @update:model-value="(val) => updateStyle('questionTextAlign', val as string)"
                 :options="textAlignOptions"
               />

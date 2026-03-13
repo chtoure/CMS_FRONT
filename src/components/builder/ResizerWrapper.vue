@@ -21,37 +21,37 @@ const isResizing = ref(false);
 const startResize = (e: MouseEvent, direction: string) => {
   e.preventDefault();
   e.stopPropagation();
-  
+
   if (!resizableRef.value || !builderState) return;
-  
+
   isResizing.value = true;
   const bp = builderState.currentBreakpoint.value;
   const startX = e.clientX;
   const startY = e.clientY;
-  
+
   const rect = resizableRef.value.getBoundingClientRect();
   const startWidth = rect.width;
   const startHeight = rect.height;
-  
+
   const onMouseMove = (moveEvent: MouseEvent) => {
     const deltaX = moveEvent.clientX - startX;
     const deltaY = moveEvent.clientY - startY;
-    
+
     let newWidth = startWidth;
     let newHeight = startHeight;
-    
+
     if (direction.includes('e')) newWidth = startWidth + deltaX;
     if (direction.includes('w')) newWidth = startWidth - deltaX;
     if (direction.includes('s')) newHeight = startHeight + deltaY;
     if (direction.includes('n')) newHeight = startHeight - deltaY;
-    
+
     // Minimum dimensions
     newWidth = Math.max(20, newWidth);
     newHeight = Math.max(20, newHeight);
-    
+
     // Update styles responsively
     const newStyles = { ...props.element.styles } as any;
-    
+
     const updateResponsiveStyle = (key: string, value: number) => {
       const currentVal = newStyles[key];
       if (typeof currentVal === 'object' && currentVal !== null && 'default' in currentVal) {
@@ -69,16 +69,16 @@ const startResize = (e: MouseEvent, direction: string) => {
     if (direction.includes('s') || direction.includes('n')) {
       updateResponsiveStyle('height', Math.round(newHeight));
     }
-    
+
     emit('update:element', { ...props.element, styles: newStyles });
   };
-  
+
   const onMouseUp = () => {
     isResizing.value = false;
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('mouseup', onMouseUp);
   };
-  
+
   document.addEventListener('mousemove', onMouseMove);
   document.addEventListener('mouseup', onMouseUp);
 };
@@ -86,10 +86,10 @@ const startResize = (e: MouseEvent, direction: string) => {
 </script>
 
 <template>
-  <div 
+  <div
     ref="resizableRef"
-    class="relative w-full h-full group/resizer" 
-    :class="{ 
+    class="relative w-full h-full group/resizer"
+    :class="{
       'ring-2 ring-inset ring-blue-500': active,
       'rescaling': isResizing
     }"
@@ -97,56 +97,56 @@ const startResize = (e: MouseEvent, direction: string) => {
     <div class="w-full h-full">
       <slot />
     </div>
-    
+
     <!-- Resize Handles - Visible quand actif -->
     <template v-if="active">
-      <div 
+      <div
         class="absolute inset-0 z-40 transition-all pointer-events-none"
-        :class="{ 
+        :class="{
           'opacity-0': builderState?.isDragging?.value
         }"
       >
       <!-- Coins (8px) -->
-      <div 
-        class="resize-handle resize-handle-nw cursor-nw-resize pointer-events-auto" 
-        @mousedown.stop="startResize($event, 'nw')" 
+      <div
+        class="resize-handle resize-handle-nw cursor-nw-resize pointer-events-auto"
+        @mousedown.stop="startResize($event, 'nw')"
         title="Redimensionner (haut-gauche)"
       />
-      <div 
-        class="resize-handle resize-handle-ne cursor-ne-resize pointer-events-auto" 
-        @mousedown.stop="startResize($event, 'ne')" 
+      <div
+        class="resize-handle resize-handle-ne cursor-ne-resize pointer-events-auto"
+        @mousedown.stop="startResize($event, 'ne')"
         title="Redimensionner (haut-droit)"
       />
-      <div 
-        class="resize-handle resize-handle-sw cursor-sw-resize pointer-events-auto" 
-        @mousedown.stop="startResize($event, 'sw')" 
+      <div
+        class="resize-handle resize-handle-sw cursor-sw-resize pointer-events-auto"
+        @mousedown.stop="startResize($event, 'sw')"
         title="Redimensionner (bas-gauche)"
       />
-      <div 
-        class="resize-handle resize-handle-se cursor-se-resize pointer-events-auto" 
-        @mousedown.stop="startResize($event, 'se')" 
+      <div
+        class="resize-handle resize-handle-se cursor-se-resize pointer-events-auto"
+        @mousedown.stop="startResize($event, 'se')"
         title="Redimensionner (bas-droit)"
       />
-      
+
       <!-- Côtés (6px height/width) -->
-      <div 
-        class="resize-handle-side resize-handle-n cursor-n-resize pointer-events-auto" 
-        @mousedown.stop="startResize($event, 'n')" 
+      <div
+        class="resize-handle-side resize-handle-n cursor-n-resize pointer-events-auto"
+        @mousedown.stop="startResize($event, 'n')"
         title="Redimensionner haut"
       />
-      <div 
-        class="resize-handle-side resize-handle-s cursor-s-resize pointer-events-auto" 
-        @mousedown.stop="startResize($event, 's')" 
+      <div
+        class="resize-handle-side resize-handle-s cursor-s-resize pointer-events-auto"
+        @mousedown.stop="startResize($event, 's')"
         title="Redimensionner bas"
       />
-      <div 
-        class="resize-handle-side resize-handle-w cursor-w-resize pointer-events-auto" 
-        @mousedown.stop="startResize($event, 'w')" 
+      <div
+        class="resize-handle-side resize-handle-w cursor-w-resize pointer-events-auto"
+        @mousedown.stop="startResize($event, 'w')"
         title="Redimensionner gauche"
       />
-      <div 
-        class="resize-handle-side resize-handle-e cursor-e-resize pointer-events-auto" 
-        @mousedown.stop="startResize($event, 'e')" 
+      <div
+        class="resize-handle-side resize-handle-e cursor-e-resize pointer-events-auto"
+        @mousedown.stop="startResize($event, 'e')"
         title="Redimensionner droit"
       />
       </div>
