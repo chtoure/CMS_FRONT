@@ -38,7 +38,7 @@ const currentEditor = computed(() => {
   if (tag === 'CardBuilder') return 'card';
   if (tag === 'InputBuilder') return 'input';
   if (family === 'static') return 'text';
-  
+
   return 'base';
 });
 </script>
@@ -46,7 +46,7 @@ const currentEditor = computed(() => {
 <template>
   <div class="pb-20 p-1">
     <!-- Dispatcher d'éditeurs -->
-    
+
     <!-- Section -->
     <template v-if="currentEditor === 'section'">
       <SectionStyleEditor :key="element.id" :element="(element as any)" />

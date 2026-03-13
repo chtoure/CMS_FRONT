@@ -33,14 +33,14 @@ const getIcon = (name: string): VueComponent => {
       return (maybeIcon as unknown) as VueComponent;
     }
   }
-  
+
   return (Icons.HelpCircle as unknown) as VueComponent;
 };
 
 
 const deepCloneInstance = (node: AnyComponentInstance): AnyComponentInstance => {
   let definitionId = node.componentDefinitionId;
-  
+
   // Si l'ID de définition est manquant (cas des default children), on tente de le trouver par tag
   if (!definitionId && allComponents.value) {
     const componentDef = allComponents.value.find((c: Component<AllStyles>) => c.tag === node.tag);
@@ -68,7 +68,8 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
     componentDefinitionId: element.id, // Stocker l'ID du type de composant pour le backend
     styles: { ...element.defaultProps.styles } as T,
     data: { ...element.defaultProps.data },
-    children: element.defaultProps.children 
+    params: element.defaultProps.params ? [...element.defaultProps.params] : [],
+    children: element.defaultProps.children
       ? element.defaultProps.children.map(deepCloneInstance)
       : [] as AnyComponentInstance[]
   };
@@ -80,7 +81,7 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
 const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
   // On transforme le BlocTemplate stocké en instance active pour le builder
   // L'instance disposera d'un modelId pointant vers le BlocTemplate custom
-  
+
   // Extraire les dimensions si elles existent pour un pré-rendu fluide
   const initialStyles: BaseStyles = {};
   if (block.props?.styles?.width) initialStyles.width = block.props.styles.width;
@@ -98,6 +99,7 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
     blocTemplateId: undefined, // Nouvelle instance sur la page
     styles: initialStyles, // On clone les dimensions pour le préchargement visuel
     data: {}, // On ne clone pas les data
+    params: block.props?.params ? [...block.props.params] : [],
     children: [] // TODO: Récupérer les enfants si c'est un bloc complexe stocké
   };
   return instance;
@@ -115,7 +117,7 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
       </div>
 
       <hr class="border-border">
-      
+
       <div class="relative flex-1 overflow-y-auto p-2">
         <Tabs default-value="atomic" class="w-full">
           <TabsList class="w-full justify-between grid grid-cols-2 mb-4">
@@ -134,19 +136,19 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
                 :animation="150"
                 :group="{ name: 'blocks', pull: 'clone', put: false }"
                 :sort="false"
-                :clone="onClone" 
+                :clone="onClone"
                 @start="builderState?.setIsDragging(true)"
                 @end="builderState?.setIsDragging(false)"
                 class="grid grid-cols-2 gap-2"
               >
-                <div 
-                  v-for="comp in allComponents" 
+                <div
+                  v-for="comp in allComponents"
                   :key="comp.tag"
                   class="flex flex-col items-center justify-center p-3 border border-builder-bar-border rounded cursor-grab hover:-translate-y-1"
                 >
-                  <component 
-                    :is="getIcon(comp.icon)" 
-                    class="h-6 w-6 mb-2 text-builder-bar-text" 
+                  <component
+                    :is="getIcon(comp.icon)"
+                    class="h-6 w-6 mb-2 text-builder-bar-text"
                     stroke-width="1"
                   />
                   <span class="text-[10px] text-center font-medium leading-tight">
@@ -154,7 +156,7 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
                   </span>
                 </div>
               </VueDraggable>
-              
+
             </div>
           </TabsContent>
 
@@ -172,19 +174,19 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
                 :animation="150"
                 :group="{ name: 'blocks', pull: 'clone', put: false }"
                 :sort="false"
-                :clone="onCloneCustom" 
+                :clone="onCloneCustom"
                 @start="builderState?.setIsDragging(true)"
                 @end="builderState?.setIsDragging(false)"
                 class="grid grid-cols-2 gap-2 col-span-2"
               >
-                <div 
-                  v-for="block in customComponents" 
+                <div
+                  v-for="block in customComponents"
                   :key="block.id"
                   class="flex flex-col items-center justify-center p-3 border border-builder-bar-border rounded cursor-grab hover:-translate-y-1"
                 >
-                  <component 
-                    :is="getIcon(block.component?.icon || 'Package')" 
-                    class="h-6 w-6 mb-2 text-blue-400" 
+                  <component
+                    :is="getIcon(block.component?.icon || 'Package')"
+                    class="h-6 w-6 mb-2 text-blue-400"
                     stroke-width="1"
                   />
                   <span class="text-[10px] text-center font-medium leading-tight text-text">

@@ -6,7 +6,7 @@ interface BaseStyles {
   marginTop?: VariableProperty<ResponsiveProp<number | string>>;
   marginBottom?: VariableProperty<ResponsiveProp<number | string>>;
   padding?: VariableProperty<ResponsiveProp<number | string>>;
-  
+
   // Propriétés d'apparence
   bg?: VariableProperty<ResponsiveProp<string>>;
   rounded?: VariableProperty<ResponsiveProp<string | number>>;
@@ -100,13 +100,13 @@ interface LinkStyles extends StaticStyles {
 }
 
 // Union de tous les styles possibles
-type AllStyles = 
-  | ContainerStyles 
-  | StaticStyles 
-  | InteractiveStyles 
-  | InputStyles 
-  | SliderStyles 
-  | AccordionStyles 
+type AllStyles =
+  | ContainerStyles
+  | StaticStyles
+  | InteractiveStyles
+  | InputStyles
+  | SliderStyles
+  | AccordionStyles
   | LinkStyles
   | BaseStyles;
 

@@ -8,11 +8,11 @@ import PropertyGroup from '../ui/PropertyGroup.vue';
 import PropertyInput from '../ui/PropertyInput.vue';
 import ButtonGroup from '../ui/ButtonGroup.vue';
 import AlignmentMatrix from '../ui/AlignmentMatrix.vue';
-import { 
-  Layout, 
-  ArrowRight, 
-  ArrowDown, 
-  Maximize2, 
+import {
+  Layout,
+  ArrowRight,
+  ArrowDown,
+  Maximize2,
   GripHorizontal,
   Box,
   EyeOff
@@ -50,18 +50,18 @@ const showGrid = computed(() => getRawValue(styles.value.display) === 'grid');
       <div class="space-y-3">
         <div class="space-y-1.5">
           <label class="text-[10px] font-mono font-bold text-builder-bar-text/50 uppercase tracking-tighter">Display</label>
-          <ButtonGroup 
-            :model-value="(getRawValue(styles.display) as string)" 
+          <ButtonGroup
+            :model-value="(getRawValue(styles.display) as string)"
             @update:model-value="(val) => updateStyle('display', val)"
             :options="displayOptions"
           />
         </div>
 
         <div v-if="showGrid" class="space-y-1.5">
-          <PropertyInput 
-            label="Columns" 
-            type="number" 
-            :model-value="getRawValue(styles.columns)" 
+          <PropertyInput
+            label="Columns"
+            type="number"
+            :model-value="getRawValue(styles.columns)"
             @update:model-value="(val) => updateStyle('columns', parseInt(val.toString()))"
             :icon="GripHorizontal"
           />
@@ -73,24 +73,24 @@ const showGrid = computed(() => getRawValue(styles.value.display) === 'grid');
     <PropertyGroup v-if="showFlex" title="Auto Layout" :open="true" :icon="Layout">
       <div class="space-y-4">
         <!-- Direction & Wrap -->
-        
+
 
         <!-- Alignment Matrix & Gap -->
         <div class="grid grid-cols-2 gap-1 items-start">
           <div class="space-y-1.5">
             <!-- <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter block ml-0.5">Alignment</label> -->
-            <AlignmentMatrix 
+            <AlignmentMatrix
               :justify="(getRawValue(styles.justify) as string)"
               :align="(getRawValue(styles.align) as string)"
               @update:justify="(val) => updateStyle('justify', val)"
               @update:align="(val) => updateStyle('align', val)"
             />
           </div>
-          
+
           <div class="space-y-2.5">
             <div class="flex items-center justify-between">
-              <ButtonGroup 
-                :model-value="(getRawValue(styles.direction) as string)" 
+              <ButtonGroup
+                :model-value="(getRawValue(styles.direction) as string)"
                 @update:model-value="(val) => updateStyle('direction', val)"
                 :options="directionOptions"
                 size="sm"
@@ -102,9 +102,9 @@ const showGrid = computed(() => getRawValue(styles.value.display) === 'grid');
 
             <div class="space-y-1.5">
               <!-- <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter block ml-0.5">Spacing (Gap)</label> -->
-              <PropertyInput 
-                label="" 
-                :model-value="getRawValue(styles.gap)" 
+              <PropertyInput
+                label=""
+                :model-value="getRawValue(styles.gap)"
                 @update:model-value="(val) => updateStyle('gap', val)"
                 :icon="Maximize2"
                 placeholder="0"
@@ -115,7 +115,7 @@ const showGrid = computed(() => getRawValue(styles.value.display) === 'grid');
 
         <!-- Secondary Alignment (Space Between) -->
         <div class="space-y-1.5">
-          <button 
+          <button
             @click="updateStyle('justify', getRawValue(styles.justify) === 'between' ? 'start' : 'between')"
             :class="[
               'w-full h-7 px-2 flex items-center justify-center rounded text-[10px] font-bold border transition-all',

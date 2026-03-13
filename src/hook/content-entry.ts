@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import api, { handleResponse } from "../api/fetchConfig";
-import type { RegisterContentEntry, UpdateContentEntry, IContentEntry, ContentEntryFilter, EntryStatus } from "../type/content-entry";
+import type { RegisterContentEntry, UpdateContentEntry, IContentEntry, ContentEntryFilter, EntryStatus, contenusQueryFilters } from "../type/content-entry";
 import type { Pagination } from "../type/pagination";
 import { computed, unref, type Ref } from "vue";
 
@@ -18,6 +18,19 @@ const buildQueryParams = (filter?: Ref<ContentEntryFilter> | ContentEntryFilter)
   if (params?.user_id) query.append("user_id", params.user_id.toString());
   if (params?.startDate) query.append("startDate", params.startDate);
   if (params?.endDate) query.append("endDate", params.endDate);
+  return query.toString();
+};
+
+
+
+const buildContenusQueryParams = (filter?: Ref<contenusQueryFilters> | contenusQueryFilters) => {
+  const params = unref(filter);
+  const query = new URLSearchParams();
+  if (params?.mode) query.append("mode", params.mode);
+  if (params?.limit) query.append("limit", params.limit.toString());
+  if (params?.sortBy) query.append("sortBy", params.sortBy);
+  if (params?.order) query.append("order", params.order);
+  if (params?.taxonomyFilters) query.append("taxonomyFilters", JSON.stringify(params.taxonomyFilters));
   return query.toString();
 };
 
@@ -164,6 +177,23 @@ const useDeleteContentEntry = () => {
   });
 };
 
+
+const useGetContEntryBycontentTypeIdControle = (contentTypeId: number | Ref<number>, filter?: Ref<ContentEntryFilter> | ContentEntryFilter) => {
+  return useQuery({
+    queryKey: ["content-entries-by-contentTypeId", contentTypeId, filter],
+    queryFn: async () => {
+      const targetContentTypeId = unref(contentTypeId);
+      if (!targetContentTypeId) throw new Error("Content type ID is missing ");
+
+      const queryString = buildContenusQueryParams(filter);
+      return handleResponse<Pagination<IContentEntry>>(
+        await api(`/content-entries/id/${targetContentTypeId}?${queryString}`)
+      );
+    },
+    enabled: () => !!unref(contentTypeId)
+  });
+};
+
 export {
   useGetContentEntriesBySlug,
   useGetContentEntry,
@@ -172,5 +202,6 @@ export {
   useSwitchStatus,
   useToggleArchive,
   useGetArchivedContentEntries,
-  useDeleteContentEntry
+  useDeleteContentEntry,
+  useGetContEntryBycontentTypeIdControle
 };

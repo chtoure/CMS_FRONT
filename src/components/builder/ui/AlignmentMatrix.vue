@@ -36,8 +36,8 @@ function select(j: string, a: string) {
       @click="select(j, a)"
       :class="[
         'w-full h-full rounded-[1px] transition-all duration-200 flex justify-center items-center',
-        isActive(j, a) 
-          ? 'bg-primary shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)] text-white' 
+        isActive(j, a)
+          ? 'bg-primary shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)] text-white'
           : 'bg-builder-bar-text/10 hover:bg-builder-bar-text/20 border border-builder-bar-border/20'
       ]"
       :title="`Justify: ${j}, Align: ${a}`"

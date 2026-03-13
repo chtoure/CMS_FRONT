@@ -1,3 +1,4 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
 import { computed, inject, ref, onMounted, onUnmounted, watch } from 'vue';
 import type { ContainerStyles, AnyComponentInstance } from '../../type/component';
@@ -20,7 +21,7 @@ const builderState = inject<{
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' };
   isDragging: { value: boolean };
   selectedId: { value: string | null };
-}>('builderState', { 
+}>('builderState', {
   currentBreakpoint: { value: 'default' },
   isDragging: { value: false },
   selectedId: { value: null }
@@ -37,7 +38,7 @@ const computedClasses = computed(() => {
 const computedInlineStyles = computed(() => {
   const bp = builderState.currentBreakpoint.value;
   const styles = props.styles as Record<string, unknown> || {};
-  
+
   const inline = {
     ...buildBlocLayoutInlineStyles(styles, bp, resolveValue)
   };
@@ -52,7 +53,7 @@ const sliderConfig = computed(() => {
   const bp = builderState.currentBreakpoint.value;
   // Les paramètres fonctionnels sont dans 'data', les paramètres de style dans 'styles'
   const config = buildSliderConfig(props.styles as Record<string, unknown>, bp, resolveValue);
-  
+
   return {
     ...config,
     slidesPerView: resolveValue((props.styles as any)?.slidesPerView) ?? resolveValue(props.data?.slidesPerView) ?? config.slidesPerView,
@@ -88,7 +89,7 @@ const maxSlideIndex = computed(() => {
   return Math.max(0, slidesCount.value - slidesPerView.value);
 });
 
-const nextSlide = () => { 
+const nextSlide = () => {
   if (slidesCount.value <= slidesPerView.value) return;
   if (currentSlide.value >= maxSlideIndex.value) {
     if (sliderConfig.value.loop) currentSlide.value = 0;
@@ -97,7 +98,7 @@ const nextSlide = () => {
   }
 };
 
-const prevSlide = () => { 
+const prevSlide = () => {
   if (slidesCount.value <= slidesPerView.value) return;
   if (currentSlide.value <= 0) {
     if (sliderConfig.value.loop) currentSlide.value = maxSlideIndex.value;
@@ -111,7 +112,7 @@ const isAnySelected = computed(() => {
   const selectedId = builderState.selectedId.value;
   if (!selectedId) return false;
   if (selectedId === props.element?.id) return true;
-  
+
   const checkChildren = (nodes: AnyComponentInstance[]): boolean => {
     for (const node of nodes) {
       if (node.id === selectedId) return true;
@@ -119,7 +120,7 @@ const isAnySelected = computed(() => {
     }
     return false;
   };
-  
+
   return checkChildren(props.children || []);
 });
 
@@ -157,16 +158,16 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
 </script>
 
 <template>
-  <div 
-    class="relative overflow-hidden group/slider w-full" 
-    :class="computedClasses" 
+  <div
+    class="relative overflow-hidden group/slider w-full"
+    :class="computedClasses"
     :style="computedInlineStyles"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
   >
-    <div 
+    <div
       class="slider-track transition-transform ease-in-out h-full w-full"
-      :style="{ 
+      :style="{
         transform: builderState.isDragging?.value ? 'none' : 'translateX(-' + (currentSlide * (100 / slidesPerView)) + '%)',
         transitionDuration: builderState.isDragging?.value ? '0ms' : sliderConfig.transitionDuration + 'ms',
         transitionTimingFunction: sliderConfig.transitionEase
@@ -178,7 +179,7 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
         </div>
       </slot>
     </div>
-    
+
     <button v-show="slidesCount > slidesPerView" @click.stop="prevSlide" :style="arrowStyles" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover/slider:opacity-100 z-10 flex items-center justify-center">
       <ChevronLeft class="w-6 h-6" :style="{ color: paginationStyles.color }" />
     </button>
@@ -188,8 +189,8 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
 
     <!-- Pagination -->
     <div v-show="slidesCount > slidesPerView && sliderConfig.showPagination" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-      <button 
-        v-for="(_, index) in (maxSlideIndex + 1)" 
+      <button
+        v-for="(_, index) in (maxSlideIndex + 1)"
         :key="index"
         @click.stop="goToSlide(index)"
         class="transition-all duration-300"
@@ -198,7 +199,7 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
           paginationStyles.shape === 'line' ? 'w-6 h-1 rounded-sm' : '',
           paginationStyles.shape === 'square' ? 'w-2 h-2 rounded-sm' : ''
         ]"
-        :style="{ 
+        :style="{
           backgroundColor: currentSlide === index ? paginationStyles.activeColor : paginationStyles.color,
           opacity: currentSlide === index ? 1 : 0.5
         }"

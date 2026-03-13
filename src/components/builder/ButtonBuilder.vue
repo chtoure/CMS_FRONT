@@ -24,12 +24,16 @@ const builderState = inject<{
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }>('builderState', { currentBreakpoint: { value: 'default' } } as any);
 
+// Détecte si on est dans le contexte du builder (pour bloquer la navigation réelle)
+const isBuilder = inject<boolean>('isBuilder', false);
+
 const { resolveValue } = useVariableResolver();
 
 const computedClasses = computed(() => {
   const classes = [buildButtonStyles(props.styles as Record<string, unknown>, resolveValue)];
-  
+
   // Alignement Flex
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const align = resolveValue((props.styles as Record<string, any>)?.textAlign) || 'center';
   const flexAlignMap: Record<string, string> = {
     'left': 'justify-start text-left',
@@ -51,15 +55,20 @@ const content = computed(() => (resolveValue(props.data?.content) as string) || 
 
 const handleClick = () => {
   const cliquable = resolveValue(props.data?.cliquable) as CliquableAction;
-  if (cliquable) {
-    if (cliquable.action === 'TOGGLE_VISIBILITY') {
-      const targetId = (cliquable.action_params as { targetId?: string }).targetId;
-      if (targetId && builderState.toggleVisibility) {
-        builderState.toggleVisibility(targetId);
-      }
-    } else {
-      executeAction(cliquable);
+  if (!cliquable || !cliquable.action) return;
+
+  if (cliquable.action === 'TOGGLE_VISIBILITY') {
+    const targetId = cliquable.action_params?.targetId;
+    if (targetId && builderState.toggleVisibility) {
+      builderState.toggleVisibility(targetId);
     }
+  } else {
+    // Dans le builder, on bloque NAVIGATE_TO pour ne pas quitter l'éditeur
+    if (isBuilder && cliquable.action === 'NAVIGATE_TO') {
+      console.log("[BUILDER] Navigation bloquée pour :", cliquable.action_params?.url);
+      return;
+    }
+    executeAction(cliquable);
   }
 };
 </script>

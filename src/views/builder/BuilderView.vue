@@ -25,26 +25,27 @@ const builderMode = ref<'page' | 'library'>('page');
 const currentBreakpoint = ref<'default' | 'sm' | 'md' | 'lg'>('default');
 const isDragging = ref(false);
 const toggleStates = ref<Record<string, boolean>>({});
+const cmsCache = ref<Record<string, any>>({});
 
 const toggleVisibility = (id: string | number) => {
   const key = id.toString();
   const wasVisible = toggleStates.value[key] !== false;
-  
+
   // On crée un nouvel objet pour forcer la réactivité de Vue
   toggleStates.value = {
     ...toggleStates.value,
     [key]: !wasVisible
   };
-  
+
   console.log(`[TOGGLE ACTION] Target: ${key} | Was Visible: ${wasVisible} | Now Visible: ${!wasVisible}`);
 };
 
 const isVisible = (id: string, backendId?: number | null) => {
   const isLocalHidden = toggleStates.value[id] === false;
   const isBackendHidden = backendId != null && toggleStates.value[backendId.toString()] === false;
-  
+
   const finalVisible = !isLocalHidden && !isBackendHidden;
-  
+
   // Logique de log silencieux sauf si changement ou debug
   return finalVisible;
 };
@@ -61,7 +62,7 @@ const deleteComponent = async (id: string) => {
   let blocTemplateIdToDelete: number | null = null;
   let sectionIdToDelete: number | null = null;
   let isSection = false;
-  
+
   if (builderMode.value === 'page') {
     // Supprimer une section ou un bloc dans une section (Mode Page)
     const sectionIndex = pageTree.value.findIndex(s => s.id === id);
@@ -90,7 +91,7 @@ const deleteComponent = async (id: string) => {
           return true;
         });
       };
-      
+
       pageTree.value = removeFromSections(pageTree.value);
     }
   } else {
@@ -139,11 +140,11 @@ const handleKeyDown = (e: KeyboardEvent) => {
     // Vérifier si l'utilisateur n'est pas en train d'écrire
     const activeElement = document.activeElement;
     const isInput = activeElement && (
-      activeElement.tagName === 'INPUT' || 
-      activeElement.tagName === 'TEXTAREA' || 
+      activeElement.tagName === 'INPUT' ||
+      activeElement.tagName === 'TEXTAREA' ||
       activeElement.getAttribute('contenteditable') === 'true'
     );
-    
+
     if (!isInput && selectedId.value) {
       deleteComponent(selectedId.value);
     }
@@ -167,7 +168,7 @@ const { autoSave, autoSaveLibrary, isSaving, fetchAll, deleteBlockTemplate, useD
 // --- Gestion de l'historique et de la Sauvegarde ---
 const history = ref<string[]>([JSON.stringify(pageTree.value)]);
 const historyIndex = ref(0);
-const isInternalChange = ref(false); 
+const isInternalChange = ref(false);
 
 /**
  * Merge uniquement les blocTemplateId depuis l'arbre synced vers l'arbre courant.
@@ -202,15 +203,15 @@ const mergeBlocTemplateIds = (
 const loadInitialData = async () => {
   if (!pageRevisionId.value) return;
   isInternalChange.value = true;
-  
+
   // Charger la page par défaut
   const initialTree = await fetchAll(pageRevisionId.value);
   pageTree.value = initialTree;
-  
+
   // Charger les composants de la bibliothèque
   const customs = await fetchCustomTree();
   libraryTree.value = customs as any;
-  
+
   history.value = [JSON.stringify(initialTree)];
   historyIndex.value = 0;
 };
@@ -266,7 +267,7 @@ watch(libraryTree, async (newVal) => {
 // Réinitialiser l'historique lors du changement de mode
 watch(builderMode, async (newMode) => {
   isInternalChange.value = true;
-  
+
   if (newMode === 'library' && libraryTree.value.length === 0) {
     const customs = await fetchCustomTree();
     libraryTree.value = customs as any;
@@ -301,6 +302,7 @@ const redo = () => {
 const canUndo = computed(() => historyIndex.value > 0);
 const canRedo = computed(() => historyIndex.value < history.value.length - 1);
 
+provide('isBuilder', true);
 provide('builderState', {
   pageTree,
   libraryTree,
@@ -317,32 +319,33 @@ provide('builderState', {
   setIsDragging,
   toggleStates,
   toggleVisibility,
-  isVisible
+  isVisible,
+  cmsCache
 });
 </script>
 
 <template>
   <div class="relative h-screen w-screen overflow-hidden bg-builder-background">
 
-    <main 
+    <main
       class="absolute inset-y-0 z-0 transition-all duration-300 ease-in-out flex"
-      :style="{ 
-        left: showComponentView ? '16rem' : '0', 
-        right: showPropertiesView ? '16rem' : '0' 
+      :style="{
+        left: showComponentView ? '16rem' : '0',
+        right: showPropertiesView ? '16rem' : '0'
       }"
     >
       <!-- Barre d'outils (Mode & Breakpoint) -->
       <div class="absolute top-0.5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 scale-90 transition-all duration-300">
 
         <div class="p-1 scale-90 bg-builder-bar-background backdrop-blur-sm border border-border px-2 py-1 rounded shadow-lg flex items-center gap-2 text-[9px] tracking-wider font-bold">
-          <button 
+          <button
             @click="builderMode = 'page'"
             class="px-4 py-1 rounded text-[10px] font-bold"
             :class="builderMode === 'page' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'"
           >
             Page
           </button>
-          <button 
+          <button
             @click="builderMode = 'library'"
             class="px-4 py-1 rounded text-[10px] font-bold"
             :class="builderMode === 'library' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'"
@@ -356,21 +359,21 @@ provide('builderState', {
 
         <div class="scale-90 bg-builder-bar-background backdrop-blur-sm border border-border px-3 p-2 rounded shadow-lg flex items-center gap-2 text-[9px] tracking-wider font-bold">
 
-          <button 
+          <button
             @click="currentBreakpoint = 'default'"
             :class="currentBreakpoint === 'default' ? 'text-primary' : 'text-gray-500 hover:opacity-70'"
             title="Mobile (par défaut)"
           >
             <Smartphone class="h-4 w-4" />
           </button>
-          <button 
+          <button
             @click="currentBreakpoint = 'sm'"
             :class="currentBreakpoint === 'sm' ? 'text-primary' : 'text-gray-500 hover:opacity-70'"
             title="Tablette (SM)"
           >
             <Tablet class="h-4 w-4" />
           </button>
-          <button 
+          <button
             @click="currentBreakpoint = 'md'"
             :class="currentBreakpoint === 'md' ? 'text-primary' : 'text-gray-500 hover:opacity-70'"
             title="Tablette large (MD)"
@@ -380,7 +383,7 @@ provide('builderState', {
               <div class="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 bg-gray-500 rounded-full border border-builder-bar-background"></div>
             </div>
           </button>
-          <button 
+          <button
             @click="currentBreakpoint = 'lg'"
             :class="currentBreakpoint === 'lg' ? 'text-primary' : 'text-gray-500 hover:opacity-70'"
             title="Desktop (LG)"
@@ -438,23 +441,23 @@ provide('builderState', {
 
       <!-- Groupe Undo/Redo -->
       <div class="flex items-center gap-1 bg-builder-bar-background rounded shadow-lg p-1 border border-border">
-        
+
         <!-- Indicateur de sauvegarde -->
         <div class="flex items-center px-2 text-xs text-gray-400 border-r border-gray-700 mr-1" title="Statut de sauvegarde">
              <RefreshCw v-if="isSaving" class="h-3 w-3 animate-spin text-blue-400" />
              <Cloud v-else class="h-3 w-3 text-green-400" />
         </div>
 
-        <Button 
-          @click="undo" 
+        <Button
+          @click="undo"
           :disabled="!canUndo"
           class="p-1.5 text-white hover:bg-gray-700 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           title="Annuler (Ctrl+Z)"
         >
           <Undo class="h-4 w-4" />
         </Button>
-        <Button 
-          @click="redo" 
+        <Button
+          @click="redo"
           :disabled="!canRedo"
           class="p-1.5 text-white hover:bg-gray-700 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           title="Rétablir (Ctrl+Y)"

@@ -32,7 +32,8 @@ export function useBlockTemplate() {
       modelId: component.modelId,
       props: {
         styles: component.styles,
-        data: component.data
+        data: component.data,
+        params: component.params
       }
     };
 
@@ -40,7 +41,7 @@ export function useBlockTemplate() {
       method: 'POST',
       body: JSON.stringify(payload)
     });
-    
+
     return handleResponse<BlocTemplate>(response);
   };
 
@@ -57,7 +58,8 @@ export function useBlockTemplate() {
       is_custom: is_custom,
       props: {
         styles: component.styles,
-        data: component.data
+        data: component.data,
+        params: component.params
       }
     };
 
@@ -83,6 +85,13 @@ export function useBlockTemplate() {
             if (!currentSectionId) {
                 const newSection = await useCreateSection(section as AnySectionInstance, pageRevisionId);
                 currentSectionId = newSection.id;
+
+                // CONTOURNEMENT BACKEND: Le POST ignore les styles/bloc_json. On force un Update juste après.
+                try {
+                    await useUpdateSection(currentSectionId, section);
+                } catch (e) {
+                    console.error("Failed to force update after create section", e);
+                }
             } else {
                 await useUpdateSection(currentSectionId, section);
             }
@@ -122,8 +131,8 @@ export function useBlockTemplate() {
     const syncedNodes: AnyComponentInstance[] = [];
 
     for (let i = 0; i < nodes.length; i++) {
-      const node = { ...nodes[i] } as AnyComponentInstance; 
-      
+      const node = { ...nodes[i] } as AnyComponentInstance;
+
       try {
         let currentBlocTemplateId = node.blocTemplateId;
 
@@ -131,6 +140,13 @@ export function useBlockTemplate() {
           console.debug('useSyncTree ATTEMPT CREATE', node.name, 'tag=', node.tag, 'parentId=', parentId);
           const newBlock = await useCreateBlockTemplate(node, parentId, i, sectionId, is_custom);
           currentBlocTemplateId = newBlock.id;
+
+          // CONTOURNEMENT BACKEND: Le POST ignore les props (styles, data, params). On force un Update juste après la création.
+          try {
+              await useUpdateBlockTemplate({ ...node, blocTemplateId: currentBlocTemplateId } as AnyComponentInstance, parentId, i, sectionId);
+          } catch (e) {
+              console.error("Failed to force update after create block", e);
+          }
         } else {
           await useUpdateBlockTemplate(node, parentId, i, sectionId, is_custom);
         }
@@ -240,10 +256,10 @@ export function useBlockTemplate() {
     try {
       const response = await api(`/components`, { method: 'GET' });
       const componentsResult = await handleResponse<{ results: any[] }>(response);
-      
+
       const componentResults = componentsResult.results || [];
-      
-      
+
+
       const componentMap = new Map(componentResults.map(c => [c.id, c]));
       const nodeMap = new Map<number | string, AnyComponentInstance>();
       const rootNodes: AnyComponentInstance[] = [];
@@ -263,6 +279,7 @@ export function useBlockTemplate() {
           supportedActions: def.supportedActions,
           styles: t.props?.styles || {},
           data: t.props?.data || {},
+          params: t.props?.params || def.defaultProps?.params || [],
           children: []
         };
         nodeMap.set(t.id, node);
@@ -307,7 +324,7 @@ export function useBlockTemplate() {
       const response = await api(`/bloc-template-tree/${sectionId}`, { method: 'GET' });
       const data = await handleResponse<BlocTemplate[] | { results: BlocTemplate[] }>(response);
       let templates: BlocTemplate[] = Array.isArray(data) ? data : (data.results || []);
-      
+
       const flattenTemplates = (list: BlocTemplate[], parentId: number | null = null): BlocTemplate[] => {
         const output: BlocTemplate[] = [];
         for (const t of list) {
@@ -402,6 +419,7 @@ export function useBlockTemplate() {
     saveAsCustom,
     deleteBlockTemplate,
     useDeleteSection,
+    useSyncAll,
     isSaving
   };
 }
