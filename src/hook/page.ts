@@ -3,6 +3,7 @@ import type { Page, PageFilter, PageRenderResponse, RegisterPage, UpdatePage } f
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import api, { handleResponse } from "../api/fetchConfig";
 import type { Pagination } from "../type/pagination";
+import type { NavItem } from "../type/nav-item";
 
 
 const buildQueryParams = (filter?: Ref<PageFilter> | PageFilter) => {
@@ -93,6 +94,20 @@ const useUpdatePage = () => {
   });
 };
 
+const useGetNavItems = () => {
+  return useQuery({
+    queryKey: ["nav-items"],
+    queryFn: async () => {
+      const response = await api("/api/nav-item");
+      const data = await handleResponse<NavItem[]>(response);
+      return data.map(item => ({
+        label: item.label,
+        value: item.value
+      }));
+    }
+  });
+};
+
 
 export {
   useGetPages,
@@ -100,4 +115,5 @@ export {
   UseRenderPage,
   useAddPage,
   useUpdatePage,
+  useGetNavItems,
 };

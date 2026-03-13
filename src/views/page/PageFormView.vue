@@ -47,7 +47,7 @@ const generateSlug = (text: string) => {
 
 watch(name, (newName) => {
   if (!isSlugManuallyEdited.value && !props.isEditing) {
-    slug.value = generateSlug(newName);
+    slug.value ="/" + generateSlug(newName);
   }
 });
 

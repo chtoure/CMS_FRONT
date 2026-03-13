@@ -302,6 +302,7 @@ const redo = () => {
 const canUndo = computed(() => historyIndex.value > 0);
 const canRedo = computed(() => historyIndex.value < history.value.length - 1);
 
+provide('isBuilder', true);
 provide('builderState', {
   pageTree,
   libraryTree,

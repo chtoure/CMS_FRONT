@@ -11,7 +11,7 @@ import SelectValue from '../../components/ui/select/SelectValue.vue';
 import SelectContent from '../../components/ui/select/SelectContent.vue';
 import SelectItem from '../../components/ui/select/SelectItem.vue';
 import * as Icons from 'lucide-vue-next';
-import { Plus, Trash2, ChevronDown, Type, Image as ImageIcon, Database, Link as LinkIcon } from 'lucide-vue-next';
+import { Plus, Trash2, ChevronDown, Type, Image as ImageIcon, Database, Link as LinkIcon, Check, ChevronsUpDown } from 'lucide-vue-next';
 
 const queryClient = useQueryClient();
 import { Button } from '../../components/ui/button';
@@ -24,9 +24,20 @@ import { useGetMediaList } from '../../hook/media';
 import { FieldType, TypesMedia } from '../../type/field';
 // BaseSwitch est remplacé par Checkbox pour la cohérence
 import PropertyGroup from './ui/PropertyGroup.vue';
-import PropertyRow from './ui/PropertyRow.vue';
 import PropertyInput from './ui/PropertyInput.vue';
-import ButtonGroup from './ui/ButtonGroup.vue';
+import Popover from '../../components/ui/popover/Popover.vue';
+import PopoverTrigger from '../../components/ui/popover/PopoverTrigger.vue';
+import PopoverContent from '../../components/ui/popover/PopoverContent.vue';
+import Command from '../../components/ui/command/Command.vue';
+import CommandInput from '../../components/ui/command/CommandInput.vue';
+import CommandEmpty from '../../components/ui/command/CommandEmpty.vue';
+import CommandList from '../../components/ui/command/CommandList.vue';
+import CommandGroup from '../../components/ui/command/CommandGroup.vue';
+import CommandItem from '../../components/ui/command/CommandItem.vue';
+import CommandSeparator from '../../components/ui/command/CommandSeparator.vue';
+import { useGetNavItems } from '../../hook/page';
+import { useElementSize } from '@vueuse/core';
+import { cn } from '../../lib/utils';
 
 
 const props = defineProps<{
@@ -150,6 +161,37 @@ const generateUniqueName = (label: string): string => {
 
 const mediaQuery = useGetMediaList({});
 const editingParam = ref<IComponentParams | null>(null);
+
+// --- Sélection d'URL ---
+const { data: navItems } = useGetNavItems();
+const urlSearchOpen = ref(false);
+const urlSearchRef = ref(null);
+const { width: urlSearchWidth } = useElementSize(urlSearchRef);
+const navItemsResults = computed(() => navItems.value || []);
+
+// --- Composants cibles pour TOGGLE_VISIBILITY ---
+// On utilise blocTemplateId (ID backend stable) comme valeur, pour que la sélection persiste après rechargement.
+const allComponents = computed(() => {
+  const list: { stableId: string; name: string; tag: string }[] = [];
+  const traverse = (elements: AnyComponentInstance[]) => {
+    for (const el of elements) {
+      // Ne pas s'inclure soi-même
+      if (el.id !== props.element.id) {
+        // blocTemplateId est l'ID backend persistant. S'il n'existe pas encore (composant non sauvegardé),
+        // on se rabat sur l'UUID local mais la sélection ne persistera pas dans ce cas.
+        const stableId = el.blocTemplateId ? el.blocTemplateId.toString() : el.id;
+        list.push({ stableId, name: el.name, tag: el.tag });
+      }
+      if (el.children) {
+        traverse(el.children);
+      }
+    }
+  };
+  if (builderState?.pageTree.value) {
+    traverse(builderState.pageTree.value);
+  }
+  return list;
+});
 
 // Cache global pour les entrées CMS du bloc (ID -> data_json OU ParamName -> Liste d'objets)
 const blockCMSData = computed({
@@ -297,7 +339,7 @@ watch(() => [props.element.id, JSON.stringify(props.element.data), mediaQuery.da
 
 // Surveillance du cache global pour réagir aux updates externes d'entrées CMS
 import { onUnmounted } from 'vue';
-import type { AnySectionInstance } from '../../type/section';
+// import type { AnySectionInstance } from '../../type/section';
 const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
   if (event.type === 'updated' && event.query.queryKey[0] === 'content-entry') {
     const id = event.query.queryKey[1] as number;
@@ -467,6 +509,37 @@ const updateData = (key: string, value: string | number | boolean | object) => {
 
   // Cas spécial : si on change un paramètre qui est une Query, on propage aussi (si besoin)
   // Mais ici on propage via props.element.data
+};
+
+/**
+ * Met à jour data[key] ET le param STATIC correspondant si il existe.
+ * Nécessaire parce que le backend (hydrateParams) écrase data avec params.type.value
+ * lors du rendu. Garder les deux en sync garantit la persistance des modifications.
+ */
+const updateDataAndParam = (key: string, value: string) => {
+  if (!builderState) return;
+
+  const updateNode = (nodes: AnyComponentInstance[]): AnyComponentInstance[] => {
+    return nodes.map((node: AnyComponentInstance): AnyComponentInstance => {
+      if (node.id === props.element.id) {
+        const newData = { ...node.data, [key]: value };
+        // Synchronise aussi le param STATIC correspondant (type.source === 'static')
+        const newParams = (node.params || []).map(p => {
+          if (p.name === key && (p.type as any).source === 'static') {
+            return { ...p, type: { ...(p.type as any), value } };
+          }
+          return p;
+        });
+        return { ...node, data: newData, params: newParams };
+      }
+      if (node.children) {
+        return { ...node, children: updateNode(node.children) };
+      }
+      return node;
+    });
+  };
+
+  builderState.pageTree.value = updateNode(builderState.pageTree.value);
 };
 
 // Fonction pour mettre à jour la liaison Query d'un container enfant
@@ -839,28 +912,6 @@ const getDataValue = (val: any): any => {
   }
   return val;
 };
-
-// Extraire tous les composants avec leurs noms et IDs (backend en priorité)
-const allComponents = computed(() => {
-  const tree = builderState?.pageTree.value || [];
-  const list: { label: string; value: string }[] = [];
-
-  const traverse = (nodes: (AnyComponentInstance | AnySectionInstance)[]) => {
-    nodes.forEach(node => {
-      if ('tag' in node) {
-        const id = (node as AnyComponentInstance).blocTemplateId?.toString() || node.id;
-        list.push({
-          label: `${node.name} (${id})`,
-          value: id
-        });
-      }
-      if (node.children) traverse(node.children as (AnyComponentInstance | AnySectionInstance)[]);
-    });
-  };
-
-  traverse(tree);
-  return list;
-});
 
 </script>
 
@@ -1436,12 +1487,68 @@ const allComponents = computed(() => {
           </div>
 
           <div v-if="(element.data.cliquable as CliquableAction).action === 'NAVIGATE_TO'" class="space-y-1">
-            <PropertyInput
-              label="URL"
-              :model-value="((element.data.cliquable as Extract<CliquableAction, { action: 'NAVIGATE_TO' }>).action_params?.url)"
-              @update:model-value="(val) => updateData('cliquable', { ...(element.data.cliquable as object), action_params: { url: val } })"
-              placeholder="https://..."
-            />
+            <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">URL de destination</label>
+            <div class="relative">
+              <Popover v-model:open="urlSearchOpen">
+                <PopoverTrigger as-child>
+                  <Button
+                    ref="urlSearchRef"
+                    variant="outline"
+                    role="combobox"
+                    class="input-custom justify-between w-full font-normal h-8 text-[10px] bg-builder-input-bg border-builder-bar-border"
+                  >
+                    <span class="truncate">
+                      {{ (element.data.cliquable as any).action_params?.url || "Saisir ou choisir une page..." }}
+                    </span>
+                    <ChevronsUpDown class="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent :style="{ width: `${urlSearchWidth}px` }" class="p-0 border-builder-bar-border bg-builder-bar-background shadow-2xl">
+                  <Command class="bg-builder-bar-background">
+                    <CommandInput placeholder="Rechercher une page..." class="h-8 text-[10px] text-builder-bar-text" />
+                    <CommandEmpty class="py-2 text-[10px] text-center text-builder-bar-text/40">Aucune page trouvée.</CommandEmpty>
+                    <CommandList class="custom-scrollbar max-h-[200px] overflow-y-auto">
+                      <CommandGroup heading="Pages existantes" class="text-[9px] text-primary uppercase font-bold px-2 py-1">
+                        <CommandItem
+                          v-for="item in navItemsResults"
+                          :key="item.value"
+                          :value="item.label"
+                          class="text-[10px] text-builder-bar-text hover:bg-primary hover:text-white cursor-pointer px-2 py-1.5 flex items-center gap-2"
+                          @select="() => {
+                            updateData('cliquable', { ...(element.data.cliquable as object), action_params: { url: item.value } });
+                            urlSearchOpen = false;
+                          }"
+                        >
+                          <Check
+                            :class="cn(
+                              'h-3 w-3',
+                              (element.data.cliquable as any).action_params?.url === item.value ? 'opacity-100' : 'opacity-0'
+                            )"
+                          />
+                          {{ item.label }}
+                          <span class="text-[8px] opacity-40 italic ml-auto">{{ item.value }}</span>
+                        </CommandItem>
+                      </CommandGroup>
+
+                      <CommandSeparator class="bg-builder-bar-border/30" />
+
+                      <CommandGroup heading="Saisie personnalisée" class="text-[9px] text-primary uppercase font-bold px-2 py-1">
+                         <div class="p-2">
+                           <input
+                             type="text"
+                             :value="(element.data.cliquable as any).action_params?.url"
+                             @input="(e) => updateData('cliquable', { ...(element.data.cliquable as object), action_params: { url: (e.target as HTMLInputElement).value } })"
+                             @keydown.enter="urlSearchOpen = false"
+                             placeholder="Ex: https://google.com"
+                             class="w-full bg-builder-bar-background border border-builder-bar-border rounded px-2 py-1 text-[10px] focus:outline-none focus:border-primary"
+                           />
+                         </div>
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
           <div v-if="(element.data.cliquable as CliquableAction).action === 'SHOW_ALERT'" class="space-y-1">
@@ -1465,6 +1572,16 @@ const allComponents = computed(() => {
               <SelectContent>
                 <SelectItem v-if="allComponents.length === 0" disabled value="none">
                   <span class="text-[10px]">Aucun trouvé</span>
+                </SelectItem>
+                <SelectItem
+                  v-for="comp in allComponents"
+                  :key="comp.stableId"
+                  :value="comp.stableId"
+                >
+                  <div class="flex flex-col gap-0.5">
+                    <span class="text-[10px] font-medium">{{ comp.name || comp.tag }}</span>
+                    <!-- <span class="text-[8px] text-builder-bar-text/50 font-mono">id: {{ comp.stableId }}</span> -->
+                  </div>
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -1500,21 +1617,21 @@ const allComponents = computed(() => {
           </div>
           <div class="grid grid-cols-2 gap-2">
              <div class="flex items-center space-x-2">
-                <Checkbox id="slider-autoplay" :checked="!!getDataValue(element.data.autoPlay)" @update:checked="(val) => updateData('autoPlay', !!val)" />
+                <Checkbox id="slider-autoplay" :checked="!!getDataValue(element.data.autoPlay)" @update:checked="(val: any) => updateData('autoPlay', !!val)" />
                 <label for="slider-autoplay" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Autoplay</label>
              </div>
              <div class="flex items-center space-x-2">
-                <Checkbox id="slider-loop" :checked="!!getDataValue(element.data.loop)" @update:checked="(val) => updateData('loop', !!val)" />
+                <Checkbox id="slider-loop" :checked="!!getDataValue(element.data.loop)" @update:checked="(val: any) => updateData('loop', !!val)" />
                 <label for="slider-loop" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Boucle</label>
              </div>
           </div>
           <div class="grid grid-cols-2 gap-2">
              <div class="flex items-center space-x-2">
-                <Checkbox id="slider-pagination" :checked="getDataValue(element.data.showPagination) !== false" @update:checked="(val) => updateData('showPagination', !!val)" />
+                <Checkbox id="slider-pagination" :checked="getDataValue(element.data.showPagination) !== false" @update:checked="(val: any) => updateData('showPagination', !!val)" />
                 <label for="slider-pagination" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Pagination</label>
              </div>
              <div class="flex items-center space-x-2">
-                <Checkbox id="slider-arrows" :checked="getDataValue(element.data.showArrows) !== false" @update:checked="(val) => updateData('showArrows', !!val)" />
+                <Checkbox id="slider-arrows" :checked="getDataValue(element.data.showArrows) !== false" @update:checked="(val: any) => updateData('showArrows', !!val)" />
                 <label for="slider-arrows" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Flèches</label>
              </div>
           </div>
@@ -1549,7 +1666,7 @@ const allComponents = computed(() => {
               @update:model-value="(val) => updateData('transitionSpeed', parseInt(val.toString()))"
             />
             <div class="flex items-center space-x-2 pb-1.5">
-              <Checkbox id="accordion-open" :checked="!!getDataValue(element.data.isOpen)" @update:checked="(val) => updateData('isOpen', !!val)" />
+              <Checkbox id="accordion-open" :checked="!!getDataValue(element.data.isOpen)" @update:checked="(val: any) => updateData('isOpen', !!val)" />
               <label for="accordion-open" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Ouvert</label>
             </div>
           </div>
@@ -1564,14 +1681,72 @@ const allComponents = computed(() => {
           <PropertyInput
             label="Texte"
             :model-value="getDataValue(element.data.text)"
-            @update:model-value="(val) => updateData('text', val)"
+            @update:model-value="(val) => updateDataAndParam('text', String(val))"
           />
-          <PropertyInput
-            label="URL"
-            :model-value="getDataValue(element.data.url)"
-            @update:model-value="(val) => updateData('url', val)"
-            placeholder="https://..."
-          />
+          <div class="space-y-1">
+            <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">URL de destination</label>
+            <div class="relative">
+              <Popover v-model:open="urlSearchOpen">
+                <PopoverTrigger as-child>
+                  <Button
+                    ref="urlSearchRef"
+                    variant="outline"
+                    role="combobox"
+                    class="input-custom justify-between w-full font-normal h-8 text-[10px] bg-builder-input-bg border-builder-bar-border"
+                  >
+                    <span class="truncate">
+                      {{ (element.data.url as string) || "Saisir ou choisir une page..." }}
+                    </span>
+                    <ChevronsUpDown class="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent :style="{ width: `${urlSearchWidth}px` }" class="p-0 border-builder-bar-border bg-builder-bar-background shadow-2xl">
+                  <Command class="bg-builder-bar-background">
+                    <CommandInput placeholder="Rechercher une page..." class="h-8 text-[10px] text-builder-bar-text" />
+                    <CommandEmpty class="py-2 text-[10px] text-center text-builder-bar-text/40">Aucune page trouvée.</CommandEmpty>
+                    <CommandList class="custom-scrollbar max-h-[200px] overflow-y-auto">
+                      <CommandGroup heading="Pages existantes" class="text-[9px] text-primary uppercase font-bold px-2 py-1">
+                        <CommandItem
+                          v-for="item in navItemsResults"
+                          :key="item.value"
+                          :value="item.label"
+                          class="text-[10px] text-builder-bar-text hover:bg-primary hover:text-white cursor-pointer px-2 py-1.5 flex items-center gap-2"
+                          @select="() => {
+                            updateDataAndParam('url', item.value);
+                            urlSearchOpen = false;
+                          }"
+                        >
+                          <Check
+                            :class="cn(
+                              'h-3 w-3',
+                              element.data.url === item.value ? 'opacity-100' : 'opacity-0'
+                            )"
+                          />
+                          {{ item.label }}
+                          <span class="text-[8px] opacity-40 italic ml-auto">{{ item.value }}</span>
+                        </CommandItem>
+                      </CommandGroup>
+
+                      <CommandSeparator class="bg-builder-bar-border/30" />
+
+                      <CommandGroup heading="Saisie personnalisée" class="text-[9px] text-primary uppercase font-bold px-2 py-1">
+                         <div class="p-2">
+                           <input
+                             type="text"
+                             :value="(element.data.url as string)"
+                             @input="(e) => updateDataAndParam('url', (e.target as HTMLInputElement).value)"
+                             @keydown.enter="urlSearchOpen = false"
+                             placeholder="Ex: https://google.com"
+                             class="w-full bg-builder-bar-background border border-builder-bar-border rounded px-2 py-1 text-[10px] focus:outline-none focus:border-primary"
+                           />
+                         </div>
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
           <div class="space-y-1 flex flex-col">
             <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Cible</label>
             <Select :model-value="getDataValue(element.data.target)" @update:model-value="(val) => val && updateData('target', val as string)">
