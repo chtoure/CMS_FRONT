@@ -1278,7 +1278,7 @@ const getDataValue = (val: any): any => {
     </div>
 
     <!-- Section: Liaison Parent-Enfant (Uniquement pour les conteneurs avec enfants) -->
-    <div v-if="element.family === 'container' && element.children && element.children.length > 0" class="pt-4 border-t border-builder-bar-border/30">
+    <div v-if="(element.family === 'container' || element.tag === 'AccordionBuilder') && element.children && element.children.length > 0" class="pt-4 border-t border-builder-bar-border/30">
       <PropertyGroup title="Liaison Enfants" :icon="LinkIcon" :open="true">
         <div class="space-y-4">
           <div v-for="child in element.children" :key="child.id" class="p-3 bg-builder-bar-background/30 rounded border border-builder-bar-border/50 space-y-3 mb-2">
@@ -1287,7 +1287,7 @@ const getDataValue = (val: any): any => {
                 <component :is="getIcon(child.icon)" class="h-3.5 w-3.5 text-primary/70" />
                 <span class="text-[10px] font-mono font-bold text-builder-bar-text/80 uppercase tracking-tighter">{{ child.name }}</span>
               </div>
-              <div v-if="child.family === 'container'" class="flex items-center gap-2">
+              <div v-if="child.family === 'container' || child.tag === 'AccordionBuilder'" class="flex items-center gap-2">
                  <Select
                     :model-value="(child.data as any).linkedQueryParamName"
                     :modal="false"
