@@ -10,12 +10,13 @@ export function useBlockTemplate() {
   const isSaving = ref(false);
   const lastSavedState = ref<string>('');
   const saveTimeout = ref<number | null>(null);
+  let pendingSaveResolve: ((value: any) => void) | null = null;
   const { useCreateSection, useUpdateSection, useGetSections, useDeleteSection } = useSection();
 
   /**
    * Crée un nouveau BlockTemplate via l'API
    */
-  const useCreateBlockTemplate = async (component: AnyComponentInstance, parentId: number | null, order: number, sectionId: number, is_custom = false): Promise<BlocTemplate> => {
+  const useCreateBlockTemplate = async (component: AnyComponentInstance, parentId: number | null, order: number, sectionId: number | undefined, is_custom = false): Promise<BlocTemplate> => {
 
     if (!component.componentDefinitionId) {
       throw new Error(`Component definition ID missing for component ${component.name}`);
@@ -48,7 +49,7 @@ export function useBlockTemplate() {
   /**
    * Met à jour un BlockTemplate existant
    */
-  const useUpdateBlockTemplate = async (component: AnyComponentInstance, parentId: number | null, order: number, sectionId: number, is_custom = false) => {
+  const useUpdateBlockTemplate = async (component: AnyComponentInstance, parentId: number | null, order: number, sectionId: number | undefined, is_custom = false) => {
     if (!component.blocTemplateId) return;
 
     const payload: UpdateBlocTemplate = {
@@ -127,7 +128,7 @@ export function useBlockTemplate() {
   /**
    * Fonction récursive pour synchroniser l'arbre des composants
    */
-  const useSyncTree = async (nodes: AnyComponentInstance[], parentId: number | null, sectionId: number, is_custom = false): Promise<AnyComponentInstance[]> => {
+  const useSyncTree = async (nodes: AnyComponentInstance[], parentId: number | null, sectionId: number | undefined, is_custom = false): Promise<AnyComponentInstance[]> => {
     const syncedNodes: AnyComponentInstance[] = [];
 
     for (let i = 0; i < nodes.length; i++) {
@@ -137,7 +138,6 @@ export function useBlockTemplate() {
         let currentBlocTemplateId = node.blocTemplateId;
 
         if (!currentBlocTemplateId) {
-          console.debug('useSyncTree ATTEMPT CREATE', node.name, 'tag=', node.tag, 'parentId=', parentId);
           const newBlock = await useCreateBlockTemplate(node, parentId, i, sectionId, is_custom);
           currentBlocTemplateId = newBlock.id;
 
@@ -178,11 +178,14 @@ export function useBlockTemplate() {
     const currentState = JSON.stringify(sections);
     if (currentState === lastSavedState.value) return Promise.resolve();
 
-    if (saveTimeout.value) {
+    if (saveTimeout.value && pendingSaveResolve) {
       clearTimeout(saveTimeout.value);
+      pendingSaveResolve(); // On résout l'ancienne promesse pour libérer le watcher
+      pendingSaveResolve = null;
     }
 
     return new Promise((resolve) => {
+      pendingSaveResolve = resolve;
       saveTimeout.value = window.setTimeout(async () => {
         isSaving.value = true;
         try {
@@ -196,6 +199,9 @@ export function useBlockTemplate() {
         } finally {
           isSaving.value = false;
           saveTimeout.value = null;
+          if (pendingSaveResolve === resolve) {
+            pendingSaveResolve = null;
+          }
         }
       }, 1000);
     });
@@ -208,15 +214,18 @@ export function useBlockTemplate() {
     const currentState = JSON.stringify(nodes);
     if (currentState === lastSavedState.value) return Promise.resolve();
 
-    if (saveTimeout.value) {
+    if (saveTimeout.value && pendingSaveResolve) {
       clearTimeout(saveTimeout.value);
+      pendingSaveResolve(); // On résout l'ancienne promesse pour libérer le watcher
+      pendingSaveResolve = null;
     }
 
     return new Promise((resolve) => {
+      pendingSaveResolve = resolve;
       saveTimeout.value = window.setTimeout(async () => {
         isSaving.value = true;
         try {
-          const syncedTree = await useSyncTree(nodes, null, 0, true);
+          const syncedTree = await useSyncTree(nodes, null, undefined, true);
           lastSavedState.value = JSON.stringify(syncedTree);
           console.log('Library auto-save success');
           resolve(syncedTree);
@@ -226,6 +235,9 @@ export function useBlockTemplate() {
         } finally {
           isSaving.value = false;
           saveTimeout.value = null;
+          if (pendingSaveResolve === resolve) {
+            pendingSaveResolve = null;
+          }
         }
       }, 1000);
     });
@@ -247,6 +259,18 @@ export function useBlockTemplate() {
     } finally {
       isSaving.value = false;
     }
+  };
+
+  const flattenTemplates = (list: BlocTemplate[], parentId: number | null = null): BlocTemplate[] => {
+    const output: BlocTemplate[] = [];
+    for (const t of list) {
+      const { children, ...rest } = t as any;
+      output.push({ ...rest, parentId } as BlocTemplate);
+      if (children && Array.isArray(children) && children.length) {
+        output.push(...flattenTemplates(children, t.id));
+      }
+    }
+    return output;
   };
 
   /**
@@ -325,18 +349,6 @@ export function useBlockTemplate() {
       const data = await handleResponse<BlocTemplate[] | { results: BlocTemplate[] }>(response);
       let templates: BlocTemplate[] = Array.isArray(data) ? data : (data.results || []);
 
-      const flattenTemplates = (list: BlocTemplate[], parentId: number | null = null): BlocTemplate[] => {
-        const output: BlocTemplate[] = [];
-        for (const t of list) {
-          const { children, ...rest } = t as any;
-          output.push({ ...rest, parentId } as BlocTemplate);
-          if (children && Array.isArray(children) && children.length) {
-            output.push(...flattenTemplates(children, t.id));
-          }
-        }
-        return output;
-      };
-
       templates = flattenTemplates(templates);
       return await buildTreeFromTemplates(templates);
     } catch (error) {
@@ -347,7 +359,8 @@ export function useBlockTemplate() {
 
   const fetchCustomTree = async (): Promise<AnyComponentInstance[]> => {
     try {
-      const templates = await fetchCustomBlocks();
+      let templates = await fetchCustomBlocks();
+      templates = flattenTemplates(templates);
       return buildTreeFromTemplates(templates);
     } catch (error) {
       console.error('Failed to fetch custom tree:', error);
@@ -402,7 +415,7 @@ export function useBlockTemplate() {
   };
 
   const saveAsCustom = async (component: AnyComponentInstance): Promise<AnyComponentInstance> => {
-    const results = await useSyncTree([component], null, 0, true);
+    const results = await useSyncTree([component], null, component.sectionId, true);
     if (results.length > 0) {
       return results[0]!;
     }

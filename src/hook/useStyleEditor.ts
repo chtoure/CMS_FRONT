@@ -16,57 +16,17 @@ export function useStyleEditor(initialElement: AnyComponentInstance | AnySection
 
   const { resolveValue } = useVariableResolver();
 
-  // Helper pour trouver l'élément le plus frais dans l'arbre
-  const getLatestElement = (): AnyComponentInstance | AnySectionInstance => {
-    if (!builderState) return initialElement;
-
-    const tree = builderState.builderMode.value === 'page'
-      ? builderState.pageTree.value
-      : builderState.libraryTree.value;
-
-    const findInTree = (items: (AnyComponentInstance | AnySectionInstance)[]): AnyComponentInstance | AnySectionInstance | null => {
-      for (const item of items) {
-        if (item.id === initialElement.id) return item;
-        if (item.children) {
-          const found = findInTree(item.children);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    return findInTree(tree) || initialElement;
-  };
-
-  const updateComponentStyle = (newStyles: any) => {
-    if (!builderState) return;
-    const targetId = initialElement.id;
-
-    const updateTree = (items: (AnyComponentInstance | AnySectionInstance)[]): (AnyComponentInstance | AnySectionInstance)[] => {
-      return items.map((item: any): any => {
-        if (item.id === targetId) {
-          return { ...item, styles: newStyles };
-        }
-        if (item.children) {
-          return { ...item, children: updateTree(item.children) };
-        }
-        return item;
-      });
-    };
-
-    if (builderState.builderMode.value === 'page') {
-      builderState.pageTree.value = updateTree(builderState.pageTree.value);
-    } else {
-      builderState.libraryTree.value = updateTree(builderState.libraryTree.value) as AnyComponentInstance[];
-    }
-  };
+  // Plus besoin de `getLatestElement` ni de `updateTree` coûteux en O(N) !
+  // Dans Vue 3, `initialElement` est un Proxy réactif provenant de l'arbre principal.
+  // Toute mutation directe sur cet objet est traquée par Vue et met à jour l'UI instantanément.
 
   const updateStyles = (updates: Record<string, any>) => {
     if (!builderState) return;
 
-    // IMPORTANT: On récupère la version la plus fraîche de l'élément avant de merger
-    const currentElement = getLatestElement();
-    const newStyles = { ...(currentElement.styles || {}) };
+    if (!initialElement.styles) {
+      initialElement.styles = {};
+    }
+
     const bp = builderState.currentBreakpoint.value;
 
     Object.entries(updates).forEach(([key, value]) => {
@@ -75,7 +35,7 @@ export function useStyleEditor(initialElement: AnyComponentInstance | AnySection
       if (typeof value === 'object' && value !== null && 'type' in value && 'value' in value) {
         finalValue = value;
       } else {
-        const currentProp = (newStyles as any)[key] as VariableProperty<any> | undefined;
+        const currentProp = (initialElement.styles as any)[key] as VariableProperty<any> | undefined;
         if (currentProp?.type === 'variable') {
             console.warn(`Cannot apply responsive edit to a property linked to a variable.`);
             return;
@@ -99,10 +59,8 @@ export function useStyleEditor(initialElement: AnyComponentInstance | AnySection
           finalValue = { type: 'static', value: newResponsiveValue };
         }
       }
-      (newStyles as any)[key] = finalValue;
+      (initialElement.styles as any)[key] = finalValue;
     });
-
-    updateComponentStyle(newStyles);
   };
 
   const updateStyle = (key: string, value: any) => {
@@ -166,7 +124,6 @@ export function useStyleEditor(initialElement: AnyComponentInstance | AnySection
     getResolvedValue,
     getHexValue,
     updateStyle,
-    updateStyles,
-    getLatestElement // Optionnel, mais utile pour le debug
+    updateStyles
   }
 }

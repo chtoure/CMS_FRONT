@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject } from 'vue';
+import { computed, inject, ref, nextTick } from 'vue';
 import { RouterLink } from 'vue-router';
 import type { LinkStyles } from '../../type/style';
 import type { AnyComponentInstance } from '../../type/component';
@@ -19,11 +19,15 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const emit = defineEmits<{
+  'update:element': [value: AnyComponentInstance]
+}>();
 
 const builderState = inject<{
-  currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
+  currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' };
+  selectedId: { value: string | null };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-}>('builderState', { currentBreakpoint: { value: 'default' } } as any);
+}>('builderState', { currentBreakpoint: { value: 'default' }, selectedId: { value: null } } as any);
 
 // Détecte si on est dans le contexte du builder (pour bloquer la navigation)
 const isBuilder = inject<boolean>('isBuilder', false);
@@ -64,19 +68,72 @@ const wrapperInlineStyles = computed(() => {
 const linkText = computed(() => (resolveValue(props.data?.text) as string) || 'Lien');
 const linkUrl = computed(() => (resolveValue(props.data?.url) as string) || '#');
 const linkTarget = computed(() => (resolveValue(props.data?.target) as string) || '_self');
+
+// --- Édition inline ---
+const isEditing = ref(false);
+const editorRef = ref<HTMLElement | null>(null);
+const isSelected = computed(() => isBuilder && builderState.selectedId?.value === props.element?.id);
+
+const startEditing = (e: MouseEvent) => {
+  if (!isSelected.value) return;
+  e.stopPropagation();
+  e.preventDefault();
+  isEditing.value = true;
+  nextTick(() => {
+    if (editorRef.value) {
+      editorRef.value.focus();
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(editorRef.value);
+      range.collapse(false);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+  });
+};
+
+const commitEdit = () => {
+  if (!isEditing.value || !props.element) return;
+  isEditing.value = false;
+  const newText = editorRef.value?.innerText?.trim() ?? '';
+  if (newText !== linkText.value) {
+    emit('update:element', {
+      ...props.element,
+      data: { ...props.element.data, text: newText }
+    });
+  }
+};
+
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape') {
+    isEditing.value = false;
+    if (editorRef.value) editorRef.value.innerText = linkText.value;
+    return;
+  }
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    commitEdit();
+  }
+  e.stopPropagation();
+};
 </script>
 
 <template>
   <div :style="wrapperInlineStyles">
-    <!-- En mode builder : <a> classique avec navigation bloquée pour ne pas quitter l'éditeur -->
+    <!-- En mode builder : <a> classique avec navigation bloquée + édition inline -->
     <a
       v-if="isBuilder"
+      ref="editorRef"
       :href="linkUrl"
       :target="linkTarget"
-      :class="computedClasses"
+      :class="[computedClasses, isSelected ? 'cursor-text outline-none' : '']"
       :style="computedInlineStyles"
       class="inline-block hover:underline transition-all"
+      :contenteditable="isEditing ? 'true' : 'false'"
       @click.prevent
+      @dblclick="startEditing"
+      @blur="commitEdit"
+      @keydown="handleKeyDown"
     >
       {{ linkText }}
     </a>
