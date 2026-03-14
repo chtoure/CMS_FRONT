@@ -8,7 +8,11 @@ import { X, Menu, Undo, Redo, RefreshCw, Cloud, Monitor, Tablet, Smartphone } fr
 import Button from '../../components/ui/button/Button.vue';
 import type { AnyComponentInstance } from '../../type/component';
 
+import { useRouter } from 'vue-router';
+import { useQueryClient } from '@tanstack/vue-query';
+
 const router = useRouter();
+const queryClient = useQueryClient();
 
 const pageRevisionId = computed(() => {
     return (router.currentRoute.value.params.id as unknown) as number
@@ -261,6 +265,8 @@ watch(libraryTree, async (newVal) => {
   if (syncedTree) {
     isInternalChange.value = true;
     mergeBlocTemplateIds(libraryTree.value, syncedTree);
+    // Invalider le cache pour que le Panel Latéral (Sidebar) ait la dernière version du Modèle
+    queryClient.invalidateQueries({ queryKey: ['builder-bloc-templates-custom'] });
   }
 }, { deep: true });
 
@@ -268,9 +274,15 @@ watch(libraryTree, async (newVal) => {
 watch(builderMode, async (newMode) => {
   isInternalChange.value = true;
 
-  if (newMode === 'library' && libraryTree.value.length === 0) {
+  if (newMode === 'library') {
     const customs = await fetchCustomTree();
     libraryTree.value = customs as any;
+  } else if (newMode === 'page') {
+    // Recharger la page depuis le Backend pour hériter des modifications (styles) faites sur les modèles dans la Bibliothèque
+    if (pageRevisionId.value) {
+      const initialTree = await fetchAll(pageRevisionId.value);
+      pageTree.value = initialTree;
+    }
   }
 
   const targetTree = newMode === 'page' ? pageTree.value : libraryTree.value;

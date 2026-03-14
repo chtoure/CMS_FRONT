@@ -31,7 +31,6 @@ const handleSaveAsCustom = async () => {
     if (!selectedElement.value || !('tag' in selectedElement.value)) return;
     try {
         await saveAsCustom(selectedElement.value as AnyComponentInstance);
-        alert('Composant enregistré dans "Mes Composants" !');
     } catch (error) {
         console.error('Failed to save as custom:', error);
     }

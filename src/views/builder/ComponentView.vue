@@ -79,28 +79,28 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
 };
 
 const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
-  // On transforme le BlocTemplate stocké en instance active pour le builder
-  // L'instance disposera d'un modelId pointant vers le BlocTemplate custom
-
   // Extraire les dimensions si elles existent pour un pré-rendu fluide
   const initialStyles: BaseStyles = {};
   if (block.props?.styles?.width) initialStyles.width = block.props.styles.width;
   if (block.props?.styles?.height) initialStyles.height = block.props.styles.height;
 
+  // Le backend peut renvoyer les enfants dans 'children' ou 'customBlocTemplates'
+  const backendChildren = (block as BlocTemplate & { children?: BlocTemplate[] }).children || block.customBlocTemplates || [];
+
   const instance: AnyComponentInstance = {
     id: crypto.randomUUID(),
-    name: block.name,
+    name: block.name || block.component?.name || 'Composant',
     tag: block.component?.tag || 'div',
     icon: block.component?.icon || 'Package',
     family: block.component?.family || 'container',
     supportedActions: block.component?.supportedActions || [],
     componentDefinitionId: block.componentId,
-    modelId: block.id, // Liaison avec le modèle
+    modelId: block.modelId || block.id, // Liaison avec le modèle
     blocTemplateId: undefined, // Nouvelle instance sur la page
-    styles: initialStyles, // On clone les dimensions pour le préchargement visuel
-    data: {}, // On ne clone pas les data
+    styles: { ...(block.props?.styles || initialStyles) },
+    data: { ...(block.props?.data || {}) },
     params: block.props?.params ? [...block.props.params] : [],
-    children: [] // TODO: Récupérer les enfants si c'est un bloc complexe stocké
+    children: Array.isArray(backendChildren) ? backendChildren.map(onCloneCustom) : []
   };
   return instance;
 };
