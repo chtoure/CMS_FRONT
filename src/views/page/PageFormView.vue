@@ -145,7 +145,7 @@ const handleCancel = () => {
 
           <div class="space-y-2">
             <label class="flex items-center gap-2 text-sm font-medium text-text">
-              <Layout class="size-4" /> Slug (URL)
+              <Layout class="size-4" /> URL
             </label>
             <input
               v-model="slug"
@@ -156,7 +156,7 @@ const handleCancel = () => {
               :class="{ 'border border-destructive': errors.slug }"
             />
             <p class="text-[10px] text-muted-foreground opacity-70 italic">
-              L'URL sera : https://votre-site.com/{{ slug || '...' }}
+              L'URL sera : https://votre-site.com{{ slug || '...' }}
             </p>
             <p v-if="errors.slug" class="text-xs text-destructive mt-1">{{ errors.slug }}</p>
           </div>

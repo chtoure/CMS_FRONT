@@ -123,6 +123,15 @@ const getStatusColor = (status: string) => {
   }
 }
 
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case 'PUBLISHED': return 'Publié'
+    case 'DRAFT': return 'Brouillon'
+    case 'ARCHIVED': return 'Archivé'
+    default: return status
+  }
+}
+
 
 const handleRowClick = (row: ContentEntryStub) => {
   console.log('Row clicked:', row)
@@ -208,7 +217,7 @@ const navigateToPreview = (entryId: number) => {
               variant="outline"
               :class="cn('px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', getStatusColor(row.status as string))"
             >
-              {{ (row.status as string) }}
+              {{ getStatusLabel(row.status as string) }}
             </Badge>
           </template>
 

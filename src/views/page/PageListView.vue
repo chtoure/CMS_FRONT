@@ -50,7 +50,7 @@
     const columns = [
         { key: 'id', label: 'ID' , class: 'w-6' },
         { key: 'name', label: 'Nom' },
-        { key: 'slug', label: 'Slug' },
+        { key: 'slug', label: 'Url' },
         { key: 'nb_revisions', label: 'Nb. Versions' },
         { key: 'user', label: 'Utilisateur'},
         { key: 'actions', label: 'Actions', class: 'w-10' },

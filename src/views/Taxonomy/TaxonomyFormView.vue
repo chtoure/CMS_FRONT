@@ -190,7 +190,7 @@ const handleCancel = () => {
               </div>
 
               <div class="space-y-2">
-                <Label for="slug" class="text-sm font-medium text-text px-1">Slug</Label>
+                <Label for="slug" class="text-sm font-medium text-text px-1">Identifiant</Label>
                 <Input
                   id="slug"
                   v-model="form.slug"

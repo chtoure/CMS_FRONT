@@ -69,6 +69,15 @@
         }
     }
 
+    const getStatusLabel = (status: string) => {
+        switch (status) {
+            case 'PUBLISHED': return 'Publiée'
+            case 'DRAFT': return 'Brouillon'
+            case 'ARCHIVED': return 'Archivée'
+            default: return status
+        }
+    }
+
     const mediaResults = computed(() => pageRevisionQuery.data.value?.results || []);
     const totalItems = computed(() => pageRevisionQuery.data.value?.count || 0);
 
@@ -120,7 +129,7 @@
                     } else if (c.id) {
                         idMap.set(c.id.toString(), newId);
                     }
-                    
+
                     return {
                         ...c,
                         id: newId, // Assigne explicitement la nouvelle ID générée
@@ -298,7 +307,7 @@
         </template>
         <template #cell-status="{ row }">
             <span :class="['px-3 py-1 rounded-full text-xs font-bold border', getStatusColor(row.status)]">
-                {{ row.status }}
+                {{ getStatusLabel(row.status) }}
             </span>
         </template>
         <template #cell-version="{ row }">
