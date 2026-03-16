@@ -175,4 +175,30 @@ export function applyVisualInline(
       inline.boxShadow = SHADOW_MAP[val as string] || val as string;
     }
   }
+
+  // --- Background Media (Image) ---
+  if (styles.bgImage !== undefined) {
+    const val = getValue(styles.bgImage);
+    if (typeof val === 'string') {
+        inline.backgroundImage = `url('${val}')`;
+    } else if (val && typeof val === 'object' && 'url' in val) {
+        // Handle MediaProperty
+        inline.backgroundImage = `url('${(val as any).url}')`;
+    }
+  }
+  
+  if (styles.bgSize !== undefined) {
+    const val = getValue(styles.bgSize);
+    if (val) inline.backgroundSize = val as string;
+  }
+  
+  if (styles.bgPosition !== undefined) {
+    const val = getValue(styles.bgPosition);
+    if (val) inline.backgroundPosition = val as string;
+  }
+  
+  if (styles.bgRepeat !== undefined) {
+    const val = getValue(styles.bgRepeat);
+    if (val) inline.backgroundRepeat = val as string;
+  }
 }

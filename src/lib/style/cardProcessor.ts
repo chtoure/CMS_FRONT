@@ -51,5 +51,32 @@ export function buildCardInlineStyles(
     }
   });
 
+  // --- Background Media (Image / Video) ---
+  const bgImageVal = getValue(styles.bgImage);
+  if (bgImageVal) {
+    let imageUrl: string | null = null;
+    if (typeof bgImageVal === 'string') {
+      imageUrl = bgImageVal;
+    } else if (typeof bgImageVal === 'object' && bgImageVal !== null && 'url' in (bgImageVal as any)) {
+      imageUrl = (bgImageVal as any).url;
+    }
+    if (imageUrl) {
+      inline.backgroundImage = `url('${imageUrl}')`;
+    }
+  }
+
+  if (styles.bgSize) {
+    const val = getValue(styles.bgSize);
+    if (val) inline.backgroundSize = val as string;
+  }
+  if (styles.bgPosition) {
+    const val = getValue(styles.bgPosition);
+    if (val) inline.backgroundPosition = val as string;
+  }
+  if (styles.bgRepeat) {
+    const val = getValue(styles.bgRepeat);
+    if (val) inline.backgroundRepeat = val as string;
+  }
+
   return inline;
 }

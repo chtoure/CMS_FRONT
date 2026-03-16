@@ -24,7 +24,7 @@ const props = withDefaults(defineProps<{
   multiple: false
 })
 
-const emit = defineEmits(['update:modelValue', 'change'])
+const emit = defineEmits(['update:modelValue', 'change', 'media-selected'])
 
 const open = ref(false)
 const activeTab = ref('library')
@@ -101,6 +101,7 @@ const confirmSelection = () => {
   if (hasSelection) {
     emit('update:modelValue', selectedMediaIds.value)
     emit('change', selectedMediaIds.value)
+    emit('media-selected', selectedMedia.value)
     open.value = false
   }
 }

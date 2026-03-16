@@ -44,6 +44,12 @@ type VariableProperty<T> = {
   value: string;
 };
 
+type MediaProperty = {
+  type: 'media';
+  mediaId: number;    // ID de l'entité Media en base
+  url?: string;       // Résolu par le backend lors du GET, jamais stocké
+};
+
 import type {
   BaseStyles,
   ContainerStyles,
@@ -134,6 +140,7 @@ export type {
   ComponentProps,
   sectionStyle,
   VariableProperty,
+  MediaProperty
 }
 
 export {

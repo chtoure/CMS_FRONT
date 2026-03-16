@@ -37,3 +37,23 @@ export function updateComponentInTree(
     return node;
   });
 }
+
+/**
+ * Supprime récursivement un composant ou une section de l'arbre de manière immuable.
+ */
+export function removeFromTree(
+  tree: (AnyComponentInstance | AnySectionInstance)[],
+  id: string
+): (AnyComponentInstance | AnySectionInstance)[] {
+  return tree
+    .filter((node) => node.id !== id)
+    .map((node) => {
+      if (node.children?.length) {
+        return {
+          ...node,
+          children: removeFromTree(node.children as (AnyComponentInstance | AnySectionInstance)[], id),
+        } as any;
+      }
+      return node;
+    });
+}

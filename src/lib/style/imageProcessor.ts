@@ -25,13 +25,29 @@ export function buildImageInlineStyles(
   const inline: Record<string, string> = {};
   const getValue = (val: unknown) => resolveValueForBreakpoint(val, breakpoint, resolver);
 
-  // Borders, radius, opacity...
+  // Global radius
   if (styles.rounded !== undefined) {
     const val = getValue(styles.rounded);
     if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
       inline.borderRadius = `${val}px`;
     }
   }
+
+  // Individual corner radii
+  const corners: Record<string, string> = {
+    roundedTopLeft: 'borderTopLeftRadius',
+    roundedTopRight: 'borderTopRightRadius',
+    roundedBottomLeft: 'borderBottomLeftRadius',
+    roundedBottomRight: 'borderBottomRightRadius',
+  };
+  Object.entries(corners).forEach(([prop, styleKey]) => {
+    if (styles[prop] !== undefined) {
+      const val = getValue(styles[prop]);
+      if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+        inline[styleKey] = `${val}px`;
+      }
+    }
+  });
 
   return inline;
 }

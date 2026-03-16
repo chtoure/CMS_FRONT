@@ -1,5 +1,5 @@
 import type { BlocTemplate } from "./bloc-template";
-import type { AnyComponentInstance, ResponsiveProp } from "./component";
+import type { AnyComponentInstance, ResponsiveProp, MediaProperty } from "./component";
 
 
 export interface sectionStyle {
@@ -15,7 +15,13 @@ export interface sectionStyle {
   borderWidth?: ResponsiveProp<number | string>;
   borderColor?: ResponsiveProp<string>;
   borderStyle?: ResponsiveProp<'solid' | 'dashed' | 'dotted' | 'double' | 'hidden'>;
-
+  
+  // Arrière-plan média
+  bgImage?: MediaProperty | { url: string }; 
+  bgVideo?: MediaProperty | { url: string };
+  bgSize?: ResponsiveProp<'cover' | 'contain' | 'auto'>;
+  bgPosition?: ResponsiveProp<string>;
+  bgRepeat?: ResponsiveProp<'repeat' | 'no-repeat' | 'repeat-x' | 'repeat-y'>;
 }
 
 

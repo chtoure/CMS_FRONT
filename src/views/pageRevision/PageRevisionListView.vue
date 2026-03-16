@@ -74,7 +74,8 @@
 
     const pageRevisionRegister = useRegisterPageRevision();
     const pageRevisionStatusUpdate = useUpdatePageRevisionStatus();
-    const { fetchAll, useSyncAll, useDeleteSection, deleteBlockTemplate } = useBlockTemplate();
+    const { fetchAll, useSyncAll, useDeleteSection, useDeleteBlockTemplate } = useBlockTemplate();
+    const deleteBlockTemplateMut = useDeleteBlockTemplate();
 
     const isPublishing = ref<number | null>(null);
 
@@ -197,7 +198,7 @@
                             await deleteBlocksRecursively(node.children);
                         }
                         if (node.blocTemplateId) {
-                            await deleteBlockTemplate(node.blocTemplateId);
+                            await deleteBlockTemplateMut.mutateAsync(node.blocTemplateId);
                         }
                     }
                 };
