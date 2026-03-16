@@ -85,7 +85,6 @@ interface Component <T = BaseStyles> {
   name: string;
   tag: string;
   icon: keyof typeof Icons;
-
   family: ComponentFamily;
   supportedActions: CliquableAction['action'][];
   defaultProps:  ComponentProps<T>;
@@ -104,6 +103,7 @@ interface AnyComponentInstance extends Omit<Component<AllStyles>, 'defaultProps'
   blocTemplateId?: number; // ID backend (BlockTemplate)
   componentDefinitionId?: number; // ID du type de composant (table components)
   modelId?: number; // ID du BlocTemplate servant de modèle (si is_custom == false mais basé sur un modèle)
+  sectionId?: number; // ID de la section (si is_custom == false mais basé sur un modèle)
   styles: AllStyles;
   params: IComponentParams[];
   data: Record<string, unknown>;

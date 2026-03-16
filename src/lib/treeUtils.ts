@@ -1,4 +1,6 @@
-import type { AnyComponentInstance, AnySectionInstance } from '../type/component';
+import type { AnyComponentInstance } from '../type/component';
+
+import type { AnySectionInstance } from '../type/section';
 
 /**
  * Trouve récursivement un composant ou une section par son ID dans l'arbre.
