@@ -17,8 +17,10 @@ import {
   Square,
   PanelTopDashed,
   PanelBottomDashed,
-  Spline
+  Spline,
+  Image as ImageIcon
 } from 'lucide-vue-next';
+import CompositionMediaPicker from '../../composition/CompositionMediaPicker.vue';
 
 const props = defineProps<{
   element: AnyComponentInstance | AnySectionInstance;
@@ -56,6 +58,27 @@ const borderStyleOptions = [
   { value: 'solid', label: 'Solid' },
   { value: 'dashed', label: 'Dashed' },
   { value: 'dotted', label: 'Dotted' },
+];
+
+const bgSizeOptions = [
+  { value: 'cover', label: 'Cover' },
+  { value: 'contain', label: 'Contain' },
+  { value: 'auto', label: 'Auto' },
+];
+
+const bgPositionOptions = [
+  { value: 'center', label: 'Center' },
+  { value: 'top', label: 'Top' },
+  { value: 'bottom', label: 'Bottom' },
+  { value: 'left', label: 'Left' },
+  { value: 'right', label: 'Right' },
+];
+
+const bgRepeatOptions = [
+  { value: 'no-repeat', label: 'No Repeat' },
+  { value: 'repeat', label: 'Repeat XY' },
+  { value: 'repeat-x', label: 'Repeat X' },
+  { value: 'repeat-y', label: 'Repeat Y' },
 ];
 
 </script>
@@ -346,6 +369,93 @@ const borderStyleOptions = [
             </template>
           </CompositionColorPicker>
         </VariableInputControl>
+      </div>
+    </PropertyGroup>
+
+    <!-- Background Media Section -->
+    <PropertyGroup v-if="showField('bgImage') || showField('bgVideo')" title="Arrière-plan Média" :open="false" :icon="ImageIcon">
+      <div class="space-y-3">
+        <!-- Media Preview + Picker -->
+        <div class="space-y-1">
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text uppercase tracking-tighter ml-1">Média (Image/Vidéo)</label>
+          
+          <!-- Preview of current media (works on refresh because we read directly from stored URL) -->
+          <div v-if="styles.bgImage || styles.bgVideo" class="relative w-full h-20 rounded overflow-hidden border border-builder-bar-border bg-builder-input-bg">
+            <img
+              v-if="styles.bgImage && (styles.bgImage as any)?.value?.url"
+              :src="(styles.bgImage as any).value.url"
+              class="w-full h-full object-cover"
+            />
+            <div v-else-if="styles.bgVideo && (styles.bgVideo as any)?.value?.url" class="flex items-center justify-center w-full h-full gap-2">
+              <ImageIcon class="w-5 h-5 text-builder-bar-text/50" />
+              <span class="text-[10px] text-builder-bar-text/70 truncate max-w-[160px]">{{ (styles.bgVideo as any)?.value?.url?.split('/').pop() }}</span>
+            </div>
+            <button
+              @click="updateStyle('bgImage', undefined); updateStyle('bgVideo', undefined)"
+              class="absolute top-1 right-1 bg-red-600/80 hover:bg-red-600 text-white rounded px-1.5 py-0.5 text-[10px] font-bold"
+            >
+              Retirer
+            </button>
+          </div>
+
+          <!-- Picker Button -->
+          <div class="flex items-center gap-2">
+            <CompositionMediaPicker
+              :model-value="undefined"
+              :allowed-types="['image', 'video']"
+              @media-selected="(media) => {
+                if (media) {
+                   const mediaProp = {
+                      type: 'media',
+                      id: media.id,
+                      url: media.file_path,
+                      mediaType: media.type
+                   };
+                   updateStyle(media.type === 'video' ? 'bgVideo' : 'bgImage', mediaProp);
+                   if (media.type === 'video') updateStyle('bgImage', undefined);
+                   else updateStyle('bgVideo', undefined);
+                }
+              }"
+              :trigger-text="(styles.bgImage || styles.bgVideo) ? 'Changer le média...' : 'Choisir un média...'"
+            />
+          </div>
+        </div>
+
+        <!-- Position & Size Options -->
+        <div v-if="(styles.bgImage || styles.bgVideo) && showField('bgSize')" class="space-y-2 pt-2 border-t border-builder-bar-border">
+          <PropertyRow>
+            <div class="flex-1 space-y-1">
+              <label class="text-[9px] text-builder-bar-text/70 uppercase">Taille</label>
+              <select
+                :value="getRawValue(styles.bgSize) || 'cover'"
+                @input="(e: any) => updateStyle('bgSize', e.target.value)"
+                class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary"
+              >
+                <option v-for="opt in bgSizeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+            </div>
+            <div class="flex-1 space-y-1">
+              <label class="text-[9px] text-builder-bar-text/70 uppercase">Position</label>
+              <select
+                :value="getRawValue(styles.bgPosition) || 'center'"
+                @input="(e: any) => updateStyle('bgPosition', e.target.value)"
+                class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary"
+              >
+                <option v-for="opt in bgPositionOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+            </div>
+          </PropertyRow>
+          <div class="space-y-1">
+            <label class="text-[9px] text-builder-bar-text/70 uppercase">Répétition</label>
+            <select
+              :value="getRawValue(styles.bgRepeat) || 'no-repeat'"
+              @input="(e: any) => updateStyle('bgRepeat', e.target.value)"
+              class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary"
+            >
+              <option v-for="opt in bgRepeatOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+        </div>
       </div>
     </PropertyGroup>
 

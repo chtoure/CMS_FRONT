@@ -1,4 +1,4 @@
-import type { ResponsiveProp, VariableProperty } from "./component";
+import type { MediaProperty, ResponsiveProp, VariableProperty } from "./component";
 
 
 interface BaseStyles {
@@ -6,7 +6,7 @@ interface BaseStyles {
   marginTop?: VariableProperty<ResponsiveProp<number | string>>;
   marginBottom?: VariableProperty<ResponsiveProp<number | string>>;
   padding?: VariableProperty<ResponsiveProp<number | string>>;
-
+  
   // Propriétés d'apparence
   bg?: VariableProperty<ResponsiveProp<string>>;
   rounded?: VariableProperty<ResponsiveProp<string | number>>;
@@ -19,6 +19,13 @@ interface BaseStyles {
   display?: VariableProperty<ResponsiveProp<'hidden' | 'block' | 'flex' | 'grid'>>;
   width?: VariableProperty<ResponsiveProp<string | number>>;
   height?: VariableProperty<ResponsiveProp<string | number>>;
+
+  // Arrière-plan média (image ou vidéo depuis la médiathèque)
+  bgImage?: MediaProperty | VariableProperty<string>;
+  bgVideo?: MediaProperty;
+  bgSize?: VariableProperty<ResponsiveProp<'cover' | 'contain' | 'auto'>>;
+  bgPosition?: VariableProperty<ResponsiveProp<string>>;
+  bgRepeat?: VariableProperty<ResponsiveProp<'repeat' | 'no-repeat' | 'repeat-x' | 'repeat-y'>>;
 }
 
 // Famille : Container
