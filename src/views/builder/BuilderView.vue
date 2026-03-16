@@ -7,9 +7,11 @@ import PropritiesView from './PropritiesView.vue';
 import { X, Menu, Undo, Redo, RefreshCw, Cloud, Monitor, Tablet, Smartphone } from 'lucide-vue-next';
 import Button from '../../components/ui/button/Button.vue';
 import type { AnyComponentInstance } from '../../type/component';
-
-import { useRouter } from 'vue-router';
 import { useQueryClient } from '@tanstack/vue-query';
+import { useBlockTemplate } from '../../hook/bloc-template';
+import type { AnySectionInstance } from '../../type/section';
+import { useRouter } from 'vue-router';
+import { findComponentById, removeFromTree } from '../../lib/treeUtils';
 
 const router = useRouter();
 const queryClient = useQueryClient();
@@ -67,52 +69,24 @@ const deleteComponent = async (id: string) => {
   let sectionIdToDelete: number | null = null;
   let isSection = false;
 
-  if (builderMode.value === 'page') {
-    // Supprimer une section ou un bloc dans une section (Mode Page)
-    const sectionIndex = pageTree.value.findIndex(s => s.id === id);
-    if (sectionIndex !== -1) {
-      const section = pageTree.value[sectionIndex]!;
-      if (section.sectionId) sectionIdToDelete = section.sectionId;
-      pageTree.value.splice(sectionIndex, 1);
+  // Trouver le nœud pour identifier les IDs backend
+  const tree = [...pageTree.value, ...libraryTree.value];
+  const node = findComponentById(tree as any[], id);
+
+  if (node) {
+    if ('sectionId' in node && node.sectionId && node.family === 'section') {
+      sectionIdToDelete = node.sectionId;
       isSection = true;
-    } else {
-      const removeFromSections = (sections: AnySectionInstance[]): AnySectionInstance[] => {
-        return sections.map(section => ({
-          ...section,
-          children: removeFromTree(section.children)
-        }));
-      };
-
-      const removeFromTree = (nodes: AnyComponentInstance[]): AnyComponentInstance[] => {
-        return nodes.filter(node => {
-          if (node.id === id) {
-            if (node.blocTemplateId) blocTemplateIdToDelete = node.blocTemplateId;
-            return false;
-          }
-          if (node.children && node.children.length > 0) {
-            node.children = removeFromTree(node.children);
-          }
-          return true;
-        });
-      };
-
-      pageTree.value = removeFromSections(pageTree.value);
+    } else if ('blocTemplateId' in node && node.blocTemplateId) {
+      blocTemplateIdToDelete = node.blocTemplateId;
     }
+  }
+
+  // Suppression locale
+  if (builderMode.value === 'page') {
+    pageTree.value = removeFromTree(pageTree.value, id) as AnySectionInstance[];
   } else {
-    // Supprimer un bloc dans la bibliothèque (Mode Bibliothèque)
-    const removeFromTree = (nodes: AnyComponentInstance[]): AnyComponentInstance[] => {
-      return nodes.filter(node => {
-        if (node.id === id) {
-          if (node.blocTemplateId) blocTemplateIdToDelete = node.blocTemplateId;
-          return false;
-        }
-        if (node.children && node.children.length > 0) {
-          node.children = removeFromTree(node.children);
-        }
-        return true;
-      });
-    };
-    libraryTree.value = removeFromTree(libraryTree.value);
+    libraryTree.value = removeFromTree(libraryTree.value, id) as AnyComponentInstance[];
   }
 
   // Désélectionner après suppression
@@ -124,7 +98,7 @@ const deleteComponent = async (id: string) => {
     if (isSection && sectionIdToDelete) {
       await useDeleteSection(sectionIdToDelete);
     } else if (blocTemplateIdToDelete) {
-      await deleteBlockTemplate(blocTemplateIdToDelete);
+      await deleteBlockTemplateMut.mutateAsync(blocTemplateIdToDelete);
     }
   } catch (error) {
     console.error('Failed to delete from backend', error);
@@ -163,11 +137,11 @@ onUnmounted(() => {
   document.removeEventListener('keydown', handleKeyDown);
 });
 
-// --- Auto-Save Integration ---
-import { useBlockTemplate } from '../../hook/bloc-template';
-import type { AnySectionInstance } from '../../type/section';
-import { useRouter } from 'vue-router';
-const { autoSave, autoSaveLibrary, isSaving, fetchAll, deleteBlockTemplate, useDeleteSection, fetchCustomTree } = useBlockTemplate();
+
+const { useAutoSave, useAutoSaveLibrary, isSaving, fetchAll, useDeleteBlockTemplate, useDeleteSection, fetchCustomTree } = useBlockTemplate();
+const autoSaveMut = useAutoSave();
+const autoSaveLibraryMut = useAutoSaveLibrary();
+const deleteBlockTemplateMut = useDeleteBlockTemplate();
 
 // --- Gestion de l'historique et de la Sauvegarde ---
 const history = ref<string[]>([JSON.stringify(pageTree.value)]);
@@ -238,7 +212,7 @@ watch(pageTree, async (newVal) => {
   history.value = [...history.value.slice(0, historyIndex.value + 1), newState];
   historyIndex.value++;
 
-  const syncedTree = await autoSave(newVal, pageRevisionId.value);
+  const syncedTree = await autoSaveMut.mutateAsync({ sections: newVal, pageRevisionId: pageRevisionId.value });
   // On ne remplace PAS pageTree par syncedTree car le timing asynchrone ferait perdre
   // des modifications qui ont eu lieu PENDANT la sauvegarde.
   // On merge uniquement les blocTemplateId manquants (nouveaux noeuds qui viennent d'être créés).
@@ -261,7 +235,7 @@ watch(libraryTree, async (newVal) => {
   history.value = [...history.value.slice(0, historyIndex.value + 1), newState];
   historyIndex.value++;
 
-  const syncedTree = await autoSaveLibrary(newVal);
+  const syncedTree = await autoSaveLibraryMut.mutateAsync(newVal);
   if (syncedTree) {
     isInternalChange.value = true;
     mergeBlocTemplateIds(libraryTree.value, syncedTree);

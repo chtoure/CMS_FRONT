@@ -65,6 +65,16 @@ const sectionStyles = computed(() => {
   return buildSectionInlineStyles(props.section.styles as Record<string, unknown>, bp, resolveValue);
 });
 
+// Helper pour extraire l'URL depuis bgVideo (la valeur est encapsulée en { type:'static', value: {...} })
+const bgVideoUrl = computed((): string | null => {
+  const raw = (props.section.styles as any)?.bgVideo;
+  if (!raw) return null;
+  const inner = (raw && typeof raw === 'object' && 'value' in raw) ? raw.value : raw;
+  if (inner && typeof inner === 'object' && 'url' in inner) return inner.url as string;
+  if (typeof inner === 'string') return inner;
+  return null;
+});
+
 const draggableClasses = computed(() => ({
   'min-h-[120px]': props.section.children.length === 0,
   'drop-zone-active': isDraggingOver.value
@@ -79,6 +89,17 @@ const draggableClasses = computed(() => ({
     :style="sectionStyles"
     @click="handleSelect"
   >
+    <!-- Background Video -->
+    <video
+      v-if="bgVideoUrl"
+      :src="bgVideoUrl"
+      autoplay
+      loop
+      muted
+      playsinline
+      class="absolute inset-0 w-full h-full object-cover -z-10 pointer-events-none"
+    ></video>
+
     <!-- Label de section sélectionnée -->
     <div 
       v-if="active"

@@ -32,7 +32,7 @@ const computedInlineStyles = computed(() => {
 </script>
 
 <template>
-  <div :class="['relative transition-all duration-200 overflow-auto custom-scrollbar w-full', computedClasses]" :style="computedInlineStyles">
+  <div :class="['relative transition-all duration-200 overflow-auto custom-scrollbar w-full h-full', computedClasses]" :style="computedInlineStyles">
     <slot />
   </div>
 </template>

@@ -60,6 +60,17 @@ const layoutInlineStyles = computed(() => {
   return buildBlocLayoutInlineStyles(props.element.styles as Record<string, unknown>, bp, resolveValue);
 });
 
+// Helper pour extraire l'URL depuis la propriété bgVideo (qui est enveloppée en { type:'static', value: {...} })
+const bgVideoUrl = computed((): string | null => {
+  const raw = (props.element.styles as any)?.bgVideo;
+  if (!raw) return null;
+  // Décompresse { type: 'static', value: { url: ..., ... } }
+  const inner = (raw && typeof raw === 'object' && 'value' in raw) ? raw.value : raw;
+  if (inner && typeof inner === 'object' && 'url' in inner) return inner.url as string;
+  if (typeof inner === 'string') return inner;
+  return null;
+});
+
 const isDraggingOver = computed(() => builderState?.isDragging?.value ?? false);
 const isVisible = computed(() => {
   return builderState?.isVisible(props.element.id, props.element.blocTemplateId) ?? true;
@@ -224,7 +235,7 @@ const applyItemToChildren = (children: AnyComponentInstance[], item: any): AnyCo
     :data="element.data"
     :element="element"
     :children="element.children"
-    class="relative group/renderer transition-all duration-200"
+    class="relative isolate h-full group/renderer transition-all duration-200"
     :class="{
       'ring-2 ring-blue-500 ring-inset z-10': isSelected,
       'hover:ring-1 hover:ring-gray-300': !isSelected && !isDraggingOver && !isClone,
@@ -235,6 +246,17 @@ const applyItemToChildren = (children: AnyComponentInstance[], item: any): AnyCo
     @click="handleSelect"
     @update:element="(newVal: AnyComponentInstance) => emit('update:element', newVal)"
   >
+    <!-- Background Video -->
+    <video
+      v-if="bgVideoUrl"
+      :src="bgVideoUrl"
+      autoplay
+      loop
+      muted
+      playsinline
+      class="absolute inset-0 w-full h-full object-cover -z-10 pointer-events-none"
+    ></video>
+
     <!-- Overlay interactif pour composants sans enfants (Sélection) -->
     <!-- On le désactive pour les types interactifs (boutons) pour qu'ils reçoivent le clic direct -->
     <div

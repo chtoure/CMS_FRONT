@@ -5,8 +5,13 @@ import type { BlocTemplate, RegisterBlocTemplate, UpdateBlocTemplate } from '../
 import api, { handleResponse } from '../api/fetchConfig';
 import { useSection } from './section';
 import type { AnySectionInstance } from '../type/section';
+import { useQueryClient, useQuery, useMutation } from '@tanstack/vue-query';
+import type { Ref } from 'vue';
+import { unref } from 'vue';
 
 export function useBlockTemplate() {
+  const queryClient = useQueryClient();
+
   const isSaving = ref(false);
   const lastSavedState = ref<string>('');
   const saveTimeout = ref<number | null>(null);
@@ -68,6 +73,8 @@ export function useBlockTemplate() {
       method: 'PUT',
       body: JSON.stringify(payload)
     });
+
+    if (is_custom) queryClient.invalidateQueries({ queryKey: ['builder-bloc-templates-custom', 'library-bloc-templates'] });
 
     return handleResponse<BlocTemplate>(response);
   };
@@ -172,93 +179,119 @@ export function useBlockTemplate() {
   };
 
   /**
-   * Sauvegarde ou met à jour l'arbre complet (Mode Page)
+   * Hook de mutation pour l'auto-sauvegarde (Mode Page)
    */
-  const autoSave = (sections: AnySectionInstance[], pageRevisionId: number): Promise<AnySectionInstance[] | void> => {
-    const currentState = JSON.stringify(sections);
-    if (currentState === lastSavedState.value) return Promise.resolve();
+  const useAutoSave = () => {
+    return useMutation({
+      mutationFn: async ({ sections, pageRevisionId }: { sections: AnySectionInstance[], pageRevisionId: number }) => {
+        const currentState = JSON.stringify(sections);
+        if (currentState === lastSavedState.value) return Promise.resolve(undefined);
 
-    if (saveTimeout.value && pendingSaveResolve) {
-      clearTimeout(saveTimeout.value);
-      pendingSaveResolve(); // On résout l'ancienne promesse pour libérer le watcher
-      pendingSaveResolve = null;
-    }
+        if (saveTimeout.value && pendingSaveResolve) {
+          clearTimeout(saveTimeout.value);
+          pendingSaveResolve(undefined); // On résout l'ancienne promesse pour libérer le watcher
+          pendingSaveResolve = null;
+        }
 
-    return new Promise((resolve) => {
-      pendingSaveResolve = resolve;
-      saveTimeout.value = window.setTimeout(async () => {
+        return new Promise<AnySectionInstance[] | void>((resolve, reject) => {
+          pendingSaveResolve = resolve;
+          saveTimeout.value = window.setTimeout(async () => {
+            isSaving.value = true;
+            try {
+              const syncedTree = await useSyncAll(sections, pageRevisionId);
+              lastSavedState.value = JSON.stringify(syncedTree);
+              console.log('Auto-save success');
+              resolve(syncedTree);
+            } catch (error) {
+              console.error('Auto-save failed', error);
+              reject(error);
+            } finally {
+              isSaving.value = false;
+              saveTimeout.value = null;
+              if (pendingSaveResolve === resolve) {
+                pendingSaveResolve = null;
+              }
+            }
+          }, 1000);
+        });
+      },
+      onSuccess: (data, variables) => {
+        if (data) {
+          queryClient.invalidateQueries({ queryKey: ['page-tree', variables.pageRevisionId] });
+        }
+      }
+    });
+  };
+
+  /**
+   * Hook de mutation pour l'auto-sauvegarde (Mode Bibliothèque)
+   */
+  const useAutoSaveLibrary = () => {
+    return useMutation({
+      mutationFn: async (nodes: AnyComponentInstance[]) => {
+        const currentState = JSON.stringify(nodes);
+        if (currentState === lastSavedState.value) return Promise.resolve(undefined);
+
+        if (saveTimeout.value && pendingSaveResolve) {
+          clearTimeout(saveTimeout.value);
+          pendingSaveResolve(undefined); // On résout l'ancienne promesse pour libérer le watcher
+          pendingSaveResolve = null;
+        }
+
+        return new Promise<AnyComponentInstance[] | void>((resolve, reject) => {
+          pendingSaveResolve = resolve;
+          saveTimeout.value = window.setTimeout(async () => {
+            isSaving.value = true;
+            try {
+              const syncedTree = await useSyncTree(nodes, null, undefined, true);
+              lastSavedState.value = JSON.stringify(syncedTree);
+              console.log('Library auto-save success');
+              resolve(syncedTree);
+            } catch (error) {
+              console.error('Library auto-save failed', error);
+              reject(error);
+            } finally {
+              isSaving.value = false;
+              saveTimeout.value = null;
+              if (pendingSaveResolve === resolve) {
+                pendingSaveResolve = null;
+              }
+            }
+          }, 1000);
+        });
+      },
+      onSuccess: (data) => {
+        if (data) {
+          queryClient.invalidateQueries({ queryKey: ['library-tree'] });
+          queryClient.invalidateQueries({ queryKey: ['custom-blocks'] });
+        }
+      }
+    });
+  };
+
+  /**
+   * Hook de mutation pour la sauvegarde immédiate
+   */
+  const useForceSave = () => {
+    return useMutation({
+      mutationFn: async ({ sections, pageRevisionId }: { sections: AnySectionInstance[], pageRevisionId: number }) => {
+        if (saveTimeout.value) clearTimeout(saveTimeout.value);
         isSaving.value = true;
         try {
           const syncedTree = await useSyncAll(sections, pageRevisionId);
           lastSavedState.value = JSON.stringify(syncedTree);
-          console.log('Auto-save success');
-          resolve(syncedTree);
+          return syncedTree;
         } catch (error) {
-          console.error('Auto-save failed', error);
-          resolve();
+          console.error('Force save failed', error);
+          throw error;
         } finally {
           isSaving.value = false;
-          saveTimeout.value = null;
-          if (pendingSaveResolve === resolve) {
-            pendingSaveResolve = null;
-          }
         }
-      }, 1000);
+      },
+      onSuccess: (data, variables) => {
+        queryClient.invalidateQueries({ queryKey: ['page-tree', variables.pageRevisionId] });
+      }
     });
-  };
-
-  /**
-   * Sauvegarde l'arbre de la bibliothèque (Mode Bibliothèque)
-   */
-  const autoSaveLibrary = (nodes: AnyComponentInstance[]): Promise<AnyComponentInstance[] | void> => {
-    const currentState = JSON.stringify(nodes);
-    if (currentState === lastSavedState.value) return Promise.resolve();
-
-    if (saveTimeout.value && pendingSaveResolve) {
-      clearTimeout(saveTimeout.value);
-      pendingSaveResolve(); // On résout l'ancienne promesse pour libérer le watcher
-      pendingSaveResolve = null;
-    }
-
-    return new Promise((resolve) => {
-      pendingSaveResolve = resolve;
-      saveTimeout.value = window.setTimeout(async () => {
-        isSaving.value = true;
-        try {
-          const syncedTree = await useSyncTree(nodes, null, undefined, true);
-          lastSavedState.value = JSON.stringify(syncedTree);
-          console.log('Library auto-save success');
-          resolve(syncedTree);
-        } catch (error) {
-          console.error('Library auto-save failed', error);
-          resolve();
-        } finally {
-          isSaving.value = false;
-          saveTimeout.value = null;
-          if (pendingSaveResolve === resolve) {
-            pendingSaveResolve = null;
-          }
-        }
-      }, 1000);
-    });
-  };
-
-  /**
-   * Force une sauvegarde immédiate
-   */
-  const forceSave = async (sections: AnySectionInstance[], pageRevisionId: number): Promise<AnySectionInstance[]> => {
-    if (saveTimeout.value) clearTimeout(saveTimeout.value);
-    isSaving.value = true;
-    try {
-      const syncedTree = await useSyncAll(sections, pageRevisionId);
-      lastSavedState.value = JSON.stringify(syncedTree);
-      return syncedTree;
-    } catch (error) {
-      console.error('Force save failed', error);
-      throw error;
-    } finally {
-      isSaving.value = false;
-    }
   };
 
   const flattenTemplates = (list: BlocTemplate[], parentId: number | null = null): BlocTemplate[] => {
@@ -391,18 +424,6 @@ export function useBlockTemplate() {
     }
   };
 
-  const deleteBlockTemplate = async (blocTemplateId: number) => {
-    try {
-      const response = await api(`/bloc-template/${blocTemplateId}`, {
-        method: 'DELETE'
-      });
-      return await handleResponse(response);
-    } catch (error) {
-      console.error(`Failed to delete block ${blocTemplateId}:`, error);
-      throw error;
-    }
-  };
-
   const fetchCustomBlocks = async (): Promise<BlocTemplate[]> => {
     try {
       const response = await api('/bloc-templates-components-custom', { method: 'GET' });
@@ -414,23 +435,85 @@ export function useBlockTemplate() {
     }
   };
 
-  const saveAsCustom = async (component: AnyComponentInstance): Promise<AnyComponentInstance> => {
-    const results = await useSyncTree([component], null, component.sectionId, true);
-    if (results.length > 0) {
-      return results[0]!;
-    }
-    throw new Error("Failed to save component and its children as custom");
+  const useGetCustomBlocks = () => {
+    return useQuery({
+      queryKey: ['custom-blocks'],
+      queryFn: async () => {
+        return await fetchCustomBlocks();
+      },
+      staleTime: 1000 * 60,
+    });
+  };
+
+  const useGetPageTree = (pageRevisionId: number | Ref<number>) => {
+    return useQuery({
+      queryKey: ['page-tree', unref(pageRevisionId)],
+      queryFn: async () => {
+        const revId = unref(pageRevisionId);
+        if (!revId) return [];
+        return await fetchAll(revId);
+      },
+      staleTime: 1000 * 60,
+      enabled: !!unref(pageRevisionId)
+    });
+  };
+
+  const useGetLibraryTree = () => {
+    return useQuery({
+      queryKey: ['library-tree'],
+      queryFn: async () => {
+        return await fetchCustomTree();
+      },
+      staleTime: 1000 * 60,
+    });
+  };
+
+  const useDeleteBlockTemplate = () => {
+    return useMutation({
+      mutationFn: async (blocTemplateId: number) => {
+        const response = await api(`/bloc-template/${blocTemplateId}`, {
+          method: 'DELETE'
+        });
+        return await handleResponse(response);
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['custom-blocks'] });
+        queryClient.invalidateQueries({ queryKey: ['library-tree'] });
+      },
+      onError: (error, blocTemplateId) => {
+        console.error(`Failed to delete block ${blocTemplateId}:`, error);
+      }
+    });
+  };
+
+  const useSaveAsCustom = () => {
+    return useMutation({
+      mutationFn: async (component: AnyComponentInstance): Promise<AnyComponentInstance> => {
+        const results = await useSyncTree([component], null, component.sectionId, true);
+        if (results.length > 0) {
+          return results[0]!;
+        }
+        throw new Error("Failed to save component and its children as custom");
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['custom-blocks'] });
+        queryClient.invalidateQueries({ queryKey: ['library-tree'] });
+      }
+    });
   };
 
   return {
-    autoSave,
-    autoSaveLibrary,
-    forceSave,
+    useAutoSave,
+    useAutoSaveLibrary,
+    useForceSave,
     fetchAll,
     fetchCustomBlocks,
     fetchCustomTree,
-    saveAsCustom,
-    deleteBlockTemplate,
+    useGetPageTree,
+    useGetLibraryTree,
+    useGetCustomBlocks,
+    useSaveAsCustom,
+    useDeleteBlockTemplate,
     useDeleteSection,
     useSyncAll,
     isSaving

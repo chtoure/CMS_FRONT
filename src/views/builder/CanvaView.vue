@@ -153,7 +153,7 @@ watch(() => pageTree.value, (newVal) => {
         </span>
         <template v-if="selectedElement">
           <span class="text-gray-700">/</span>
-          <span class="text-primary">{{ 'name' in selectedElement ? selectedElement.tag : 'Section' }}</span>
+          <span class="text-primary">{{ 'name' in selectedElement ? selectedElement.name : 'Section' }}</span>
         </template>
 
       </div>
@@ -232,14 +232,14 @@ watch(() => pageTree.value, (newVal) => {
                    :key="element.id"
                    class="relative transition-all outline-none mb-6 bg-white/5 p-1 rounded-sm border border-white/5 group/lib-item max-w-full"
                    :style="{
-                     width: formatSize(element.styles?.width, '100%'), 
+                     width: formatSize(element.styles?.width), 
                      height: formatSize(element.styles?.height) 
                    }"
                  >
                     <!-- Label du composant custom -->
-                    <div class="absolute top-2 left-4 bg-primary text-white text-[10px] px-2 py-0.5 rounded shadow-lg opacity-80 group-hover/lib-item:opacity-100 transition-opacity">
+                    <!-- <div class="absolute top-2 left-4 bg-primary text-white text-[10px] px-2 py-0.5 rounded shadow-lg opacity-80 group-hover/lib-item:opacity-100 transition-opacity">
                       MODÈLE : {{ element.name }}
-                    </div>
+                    </div> -->
 
                     <ResizerWrapper
                       :element="element"

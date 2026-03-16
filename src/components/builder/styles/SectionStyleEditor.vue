@@ -13,7 +13,7 @@ defineProps<{
     <!-- Base Appearance for Sections -->
     <BaseStyleEditor 
       :element="element" 
-      :whitelist="['padding', 'bg', 'opacity', 'borderWidth', 'borderColor', 'borderStyle']" 
+      :whitelist="['padding', 'bg', 'bgImage', 'bgVideo', 'bgSize', 'bgPosition', 'bgRepeat', 'opacity', 'borderWidth', 'borderColor', 'borderStyle']" 
     />
     
     <!-- Layout Logic for Sections -->

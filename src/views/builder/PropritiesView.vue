@@ -5,7 +5,7 @@ import TabsContent from '../../components/ui/tabs/TabsContent.vue';
 import TabsList from '../../components/ui/tabs/TabsList.vue';
 import TabsTrigger from '../../components/ui/tabs/TabsTrigger.vue';
 import { cn } from '../../lib/utils';
-import { findComponentById } from '../../lib/treeUtils';
+import { findComponentById, removeFromTree } from '../../lib/treeUtils';
 import type { AnyComponentInstance } from '../../type/component';
 import type { AnySectionInstance } from '../../type/section';
 import StyleEditor from '../../components/builder/StyleEditor.vue';
@@ -25,12 +25,21 @@ import { useBlockTemplate } from '../../hook/bloc-template';
 import { Save } from 'lucide-vue-next';
 import CompositionModal from '../../components/composition/CompositionModal.vue';
 import VariableListView from '../variable/VariableListView.vue';
-const { saveAsCustom } = useBlockTemplate();
+
+const { useSaveAsCustom } = useBlockTemplate();
+const saveAsCustomMut = useSaveAsCustom();
 
 const handleSaveAsCustom = async () => {
     if (!selectedElement.value || !('tag' in selectedElement.value)) return;
     try {
-        await saveAsCustom(selectedElement.value as AnyComponentInstance);
+        const idToRemove = selectedElement.value.id;
+        await saveAsCustomMut.mutateAsync(selectedElement.value as AnyComponentInstance);
+        
+        // Suppression locale pour éviter d'avoir à rafraîchir
+        if (builderState) {
+            builderState.pageTree.value = removeFromTree(builderState.pageTree.value, idToRemove) as AnySectionInstance[];
+            builderState.selectedId.value = null;
+        }
     } catch (error) {
         console.error('Failed to save as custom:', error);
     }
