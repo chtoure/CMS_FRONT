@@ -314,10 +314,10 @@
             <p>{{ row.version }}</p>
         </template>
         <template #cell-sections="{ row }">
-            <p>{{ row.sections.length }}</p>
+            <p>{{ row.sections?.length || 0 }}</p>
         </template>
         <template #cell-user="{ row }">
-            <p>{{ row.user.full_name }}</p>
+            <p>{{ row.user?.full_name || '-' }}</p>
         </template>
         <template #cell-actions="{ row }">
           <DropdownMenu>
