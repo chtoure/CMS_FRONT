@@ -1,3 +1,4 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
     import { computed, ref, watch } from 'vue'
     import CompositionTable from '@/components/composition/CompositionTable.vue'
@@ -16,6 +17,7 @@
     import { useRouter } from 'vue-router'
     import { useGetPageRevisions, useRegisterPageRevision, useUpdatePageRevisionStatus } from '../../hook/page-revision'
     import { useBlockTemplate } from '../../hook/bloc-template'
+    import { useGetPage } from '../../hook/page'
 
     const router = useRouter();
     useHead({
@@ -42,6 +44,7 @@
     }));
 
     const pageRevisionQuery = useGetPageRevisions(pageId, filterParams);
+    const pageQuery = useGetPage(pageId);
 
     watch([currentPage, limit], () => {
         pageRevisionQuery.refetch();
@@ -330,10 +333,14 @@
             <DropdownMenuContent>
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuLabel>
-                <button class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
+              <DropdownMenuLabel v-if="row.status === 'PUBLISHED'">
+                <a
+                  target="_blank"
+                  :href="pageQuery.data.value?.slug.startsWith('/') ? pageQuery.data.value.slug : '/' + (pageQuery.data.value?.slug || '')"
+                  class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110"
+                >
                   <Eye class="w-4 h-4" /> Visualiser
-                </button>
+                </a>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuLabel v-if="row.status !== 'PUBLISHED'">

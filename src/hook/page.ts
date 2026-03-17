@@ -37,7 +37,7 @@ const useGetPage = (id: number | Ref<number>) => {
     queryFn: async () => {
       const targetId = unref(id);
       return handleResponse<Page>(
-        await api(`/pages/${targetId}`)
+        await api(`/page/${targetId}`)
       );
     },
     enabled: !!unref(id)

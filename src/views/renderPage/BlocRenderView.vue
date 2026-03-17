@@ -161,7 +161,7 @@ function isLeafLinkedToQuery(child: HydratedBlock): boolean {
  * en appliquant le mapping param-par-param.
  */
 function resolveLeafData(child: HydratedBlock, item: any): any {
-  const resolved: any = { ...(child.data || {}) };
+  const resolved: any = { ...child.data };
   const params = child.params || [];
 
   params.forEach((p: any) => {
