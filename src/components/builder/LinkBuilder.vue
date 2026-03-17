@@ -134,8 +134,8 @@ const handleKeyDown = (e: KeyboardEvent) => {
       @dblclick="startEditing"
       @blur="commitEdit"
       @keydown="handleKeyDown"
+      v-html="linkText"
     >
-      {{ linkText }}
     </a>
     <!-- En mode rendu/preview : RouterLink fonctionnel -->
     <RouterLink
@@ -146,7 +146,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
       :style="computedInlineStyles"
       class="inline-block hover:underline transition-all"
     >
-      {{ linkText }}
+      <span v-html="linkText"></span>
     </RouterLink>
   </div>
 </template>

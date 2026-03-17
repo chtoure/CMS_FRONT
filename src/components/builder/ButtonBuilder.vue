@@ -138,5 +138,6 @@ const handleClick = () => {
     @dblclick="startEditing"
     @blur="commitEdit"
     @keydown="handleKeyDown"
-  >{{ content }}</button>
+    v-html="content"
+  ></button>
 </template>

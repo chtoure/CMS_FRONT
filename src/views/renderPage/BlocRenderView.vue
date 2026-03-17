@@ -55,22 +55,33 @@ const finalData = computed(() => {
   const data = { ...props.element.data, ...props.parentData };
 
   // Si on a un item hérité d'une boucle CMS, on mappe ses champs sur les paramètres
-  if (props.parentData?._inherited_item) {
-    const item = props.parentData._inherited_item;
+  const item = props.parentData?._inherited_item;
+  if (item) {
     const params = props.element.params || [];
-    
     params.forEach((p: any) => {
-      // Si la source est 'parent' et qu'on a une clé, on extrait la valeur de l'item
       if (p.type?.source === 'parent' && p.type?.parentKey) {
-        // Le lien vers un élément d'une liste CMS passe par '_inherited_query'
+        // Paramètre lié via un item hérité du conteneur ancêtre
         if (p.type.parentParamName === '_inherited_query') {
           const val = item[p.type.parentKey];
-          if (val !== undefined) {
-             data[p.name] = val;
-          }
+          if (val !== undefined) data[p.name] = val;
         }
       }
     });
+  }
+
+  // Si le nœud courant a des paramètres source:parent pointant vers un param du parent
+  // (cas feuille liée directement à une query param du conteneur parent)
+  if (!item && props.parentData) {
+    const parentItems: any[] = (props.element.data as any)?.items || [];
+    if (parentItems.length === 0) {
+      // Essayer de résoudre en lisant les params du parent fournis dans parentData
+      const params = props.element.params || [];
+      params.forEach((p: any) => {
+        if (p.type?.source === 'parent' && p.type?.parentKey && props.parentData[p.type.parentParamName] !== undefined) {
+          data[p.name] = props.parentData[p.type.parentParamName];
+        }
+      });
+    }
   }
 
   return data;
@@ -126,6 +137,65 @@ const sortedChildren = computed(() => {
   return [...props.element.children].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 });
 
+/**
+ * Retourne true si un enfant FEUILLE a au moins un paramètre lié
+ * à un paramètre de type query du parent courant.
+ */
+function isLeafLinkedToQuery(child: HydratedBlock): boolean {
+  if (!props.element.data?.isIterated) return false;
+  const queryParamNames = (props.element.params || []).filter(
+    (p: any) => p.type?.source === 'contenus' && p.type?.config?.mode === 'query'
+  ).map((p: any) => p.name);
+
+  // Feuille container classique liée
+  if ((child.data as any)?.linkedQueryParamName) return true;
+
+  // Feuille avec params source:parent pointant vers un query param du parent
+  return (child.params || []).some(
+    (p: any) => p.type?.source === 'parent' && queryParamNames.includes(p.type?.parentParamName)
+  );
+}
+
+/**
+ * Résout les données d'une feuille enfant pour un item CMS donné
+ * en appliquant le mapping param-par-param.
+ */
+function resolveLeafData(child: HydratedBlock, item: any): any {
+  const resolved: any = { ...(child.data || {}) };
+  const params = child.params || [];
+
+  params.forEach((p: any) => {
+    if (p.type?.source === 'parent' && p.type?.parentKey) {
+      const val = item[p.type.parentKey];
+      if (val !== undefined) {
+        resolved[p.name] = val;
+      }
+    }
+  });
+
+  return resolved;
+}
+
+/**
+ * Retourne les items CMS pour un enfant lié à une query
+ */
+const getItemsForChild = (child: HydratedBlock): any[] => {
+  // Cas container enfant lié via linkedQueryParamName
+  const linkedParam = (child.data as any)?.linkedQueryParamName;
+  if (linkedParam) {
+    const items = (props.element.data as any)?.items;
+    return Array.isArray(items) ? items : [];
+  }
+
+  // Cas feuille avec params source:parent
+  if ((child.params || []).some((p: any) => p.type?.source === 'parent')) {
+    const items = (props.element.data as any)?.items;
+    return Array.isArray(items) ? items : [];
+  }
+
+  return [];
+};
+
 </script>
 
 <template>
@@ -169,9 +239,9 @@ const sortedChildren = computed(() => {
     >
       <template v-for="child in sortedChildren" :key="child.id">
         <!-- Cas 1 : Itération activée pour cet enfant lié à une liste -->
-        <template v-if="element.data?.isIterated && (child.data as any)?.linkedQueryParamName">
+        <template v-if="isLeafLinkedToQuery(child)">
           <div
-            v-for="(item, itemIndex) in (element.data.items || [])"
+            v-for="(item, itemIndex) in getItemsForChild(child)"
             :key="`${child.id}-${itemIndex}`"
             v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
             class="relative transition-all outline-none"
@@ -181,7 +251,7 @@ const sortedChildren = computed(() => {
             }"
           >
             <BlocRenderView
-              :element="child"
+              :element="{ ...child, data: resolveLeafData(child, item) }"
               :parent-data="{ ...finalData, _inherited_item: item }"
             />
           </div>
@@ -222,24 +292,24 @@ const sortedChildren = computed(() => {
         :style="layoutInlineStyles"
       >
         <template v-for="child in sortedChildren" :key="child.id">
-          <!-- Cas 1 : Itération -->
-          <template v-if="element.data?.isIterated && (child.data as any)?.linkedQueryParamName">
-            <div
-              v-for="(item, itemIndex) in (element.data.items || [])"
-              :key="`${child.id}-${itemIndex}`"
-              v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
-              class="relative transition-all outline-none"
-              :style="{
-                width: formatSize(child.styles?.width, '100%'),
-                height: formatSize(child.styles?.height)
-              }"
-            >
-              <BlocRenderView
-                :element="child"
-                :parent-data="{ ...finalData, _inherited_item: item }"
-              />
-            </div>
-          </template>
+            <!-- Cas 1 : Itération -->
+            <template v-if="isLeafLinkedToQuery(child)">
+              <div
+                v-for="(item, itemIndex) in getItemsForChild(child)"
+                :key="`${child.id}-${itemIndex}`"
+                v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
+                class="relative transition-all outline-none"
+                :style="{
+                  width: formatSize(child.styles?.width, '100%'),
+                  height: formatSize(child.styles?.height)
+                }"
+              >
+                <BlocRenderView
+                  :element="{ ...child, data: resolveLeafData(child, item) }"
+                  :parent-data="{ ...finalData, _inherited_item: item }"
+                />
+              </div>
+            </template>
 
           <!-- Cas 2 : Standard -->
           <div

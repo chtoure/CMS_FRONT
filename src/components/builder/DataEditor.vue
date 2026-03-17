@@ -72,7 +72,30 @@ const canAddParams = computed(() => allowedSources.value.length > 0);
 const paramDynamic = computed(() => props.element.family === 'container');
 const hasLinkedChildren = computed(() => {
   if (!props.element.children) return false;
-  return props.element.children.some(child => (child.data as any).linkedQueryParamName);
+  
+  // 1. Un container enfant est lié via linkedQueryParamName
+  const hasLinkedContainer = props.element.children.some(child => (child.data as any).linkedQueryParamName);
+  
+  // 2. Un enfant feuille a un de ses paramètres liés à un param query direct du parent
+  const queryParamNames = (props.element.params || [])
+    .filter(p => p.type.source === ValueSource.CONTENUS && (p.type as IContenusField).config.mode === 'query')
+    .map(p => p.name);
+    
+  const hasLinkedLeaf = props.element.children.some(child => {
+    if (child.family === 'container') return false; // Déjà géré par hasLinkedContainer
+    
+    return (child.params || []).some(p => {
+      // Si la feuille a un paramètre qui tire sa source du parent
+      if (p.type.source === ValueSource.PARENT) {
+        const parentField = p.type as IParentField;
+        // Et que ce paramètre parent est un paramètre de type "query" (contenu > liste)
+        return queryParamNames.includes(parentField.parentParamName);
+      }
+      return false;
+    });
+  });
+  
+  return hasLinkedContainer || hasLinkedLeaf;
 });
 
 const filteredSourceOptions = computed(() => {
@@ -230,9 +253,11 @@ const propagateValueToChildren = (children: AnyComponentInstance[], parentParamN
   const params = props.element.params || [];
   const parentParam = params.find(p => p.name === parentParamName);
   const isCMS = parentParam?.type.source === ValueSource.CONTENUS;
+  const parentIsQuery = isCMS && parentParam != null && (parentParam.type as IContenusField).config.mode === 'query';
 
   let entryData: any = null;
-  if (isCMS && newValue) {
+  if (isCMS && !parentIsQuery && newValue) {
+    // Cas single CMS : newValue est un entryId, on récupère les données dans le cache
     entryData = blockCMSData.value[newValue];
   }
 
@@ -245,14 +270,28 @@ const propagateValueToChildren = (children: AnyComponentInstance[], parentParamN
       if (p.type.source === ValueSource.PARENT && p.type.parentParamName === parentParamName) {
         const pt = p.type as IParentField;
 
-        if (isCMS || parentParamName === '_inherited_query') {
-          const sourceData = isCMS ? entryData : newValue;
-          if (pt.parentKey && sourceData) {
-            const rawValue = (sourceData as any)[pt.parentKey];
-            newChildData[p.name] = rawValue;
+        if (parentParamName === '_inherited_query') {
+          // Héritage via container enfant lié : newValue est l'_inherited_item courant
+          if (pt.parentKey && newValue) {
+            newChildData[p.name] = (newValue as any)[pt.parentKey];
             hasChanged = true;
           }
-        } else if (parentParamName !== '_inherited_query') {
+        } else if (parentIsQuery) {
+          // NOUVEAU : param query direct → aperçu avec le 1er item de la liste
+          const list = blockCMSData.value[parentParamName];
+          const firstItem = Array.isArray(list) ? list[0] : null;
+          if (pt.parentKey && firstItem) {
+            newChildData[p.name] = (firstItem as any)[pt.parentKey];
+            hasChanged = true;
+          }
+        } else if (isCMS) {
+          // Param single CMS
+          if (pt.parentKey && entryData) {
+            newChildData[p.name] = (entryData as any)[pt.parentKey];
+            hasChanged = true;
+          }
+        } else {
+          // Param statique : transmission directe
           newChildData[p.name] = newValue;
           hasChanged = true;
         }
@@ -330,6 +369,10 @@ const updateChildParamSource = (childId: string, paramName: string, source: Valu
               const elementParams = props.element.params || [];
               const parentParam = elementParams.find(pp => pp.name === currentParentName);
               const isCMS = currentParentName === '_inherited_query' || parentParam?.type.source === ValueSource.CONTENUS;
+              const parentIsQuery = isCMS
+                && currentParentName !== '_inherited_query'
+                && parentParam?.type.source === ValueSource.CONTENUS
+                && (parentParam.type as IContenusField).config.mode === 'query';
 
               const originalType = p.type.source === ValueSource.PARENT ? (p.type as IParentField).targetType : (p.type.source as any);
 
@@ -342,14 +385,25 @@ const updateChildParamSource = (childId: string, paramName: string, source: Valu
 
               if (currentParentName) {
                 if (!isCMS) {
+                  // Param statique : on copie la valeur directement
                   node.data[paramName] = props.element.data[currentParentName];
                 } else if (newType.parentKey) {
-                  const entryData = currentParentName === '_inherited_query'
-                                    ? props.element.data._inherited_item
-                                    : blockCMSData.value[props.element.data[currentParentName] as any];
+                  let entryData: any = null;
+
+                  if (currentParentName === '_inherited_query') {
+                    // Héritage via container enfant lié
+                    entryData = props.element.data._inherited_item;
+                  } else if (parentIsQuery) {
+                    // NOUVEAU : param query direct → on prend le 1er item pour l'aperçu
+                    const list = blockCMSData.value[currentParentName];
+                    entryData = Array.isArray(list) ? list[0] : null;
+                  } else {
+                    // Param single CMS
+                    entryData = blockCMSData.value[props.element.data[currentParentName] as any];
+                  }
+
                   if (entryData) {
-                    const rawValue = entryData[newType.parentKey];
-                    node.data[paramName] = rawValue;
+                    node.data[paramName] = entryData[newType.parentKey];
                   }
                 }
               }
@@ -396,7 +450,7 @@ const updateChildLinkedQuery = (childId: string, queryParamName: string | null) 
                  }
                };
 
-               if (queryParamName && Array.isArray(blockCMSData.value[queryParamName]) && blockCMSData.value[queryParamName].length > 0) {
+               if (queryParamName && blockCMSData.value[queryParamName]?.length > 0) {
                  (updated.data as any)._inherited_item = blockCMSData.value[queryParamName][0];
                }
                return updated;
@@ -501,7 +555,7 @@ const removeParameter = (name: string) => {
   builderState.pageTree.value = updateNode(builderState.pageTree.value);
 };
 
-const getCompatibleParentParams = (childParam: IComponentParams) => {
+const getCompatibleParentParams = (childParam: IComponentParams, childElement?: AnyComponentInstance) => {
   const childType = childParam.type.source === ValueSource.PARENT
                     ? (childParam.type as IParentField).targetType
                     : childParam.type.source;
@@ -509,6 +563,7 @@ const getCompatibleParentParams = (childParam: IComponentParams) => {
   const params = [...(props.element.params || [])];
   const linkedQuery = (props.element.data as any).linkedQueryParamName;
 
+  // Injection du param virtuel '_inherited_query' (comportement existant)
   if (linkedQuery) {
     params.push({
       name: '_inherited_query',
@@ -517,10 +572,17 @@ const getCompatibleParentParams = (childParam: IComponentParams) => {
     } as any);
   }
 
+  // Un composant feuille (non-container, y compris AccordionBuilder) peut hériter d'un param query
+  const isLeafChild = childElement
+    ? childElement.family !== 'container'
+    : false;
+
   return params.filter(p => {
-    if (p.type.source === ValueSource.CONTENUS && (p.type as IContenusField).config.mode === 'query') {
-      return false;
-    }
+    const isQuery = p.type.source === ValueSource.CONTENUS &&
+                    (p.type as IContenusField).config.mode === 'query';
+
+    // Les params query ne sont exposés qu'aux composants feuilles
+    if (isQuery && !isLeafChild) return false;
 
     if (childType === ValueSource.STATIC) {
       return p.type.source === ValueSource.STATIC || p.type.source === ValueSource.CONTENUS;
@@ -541,6 +603,8 @@ const getCompatibleParentParams = (childParam: IComponentParams) => {
       :element="element"
       @update-data="updateData"
     />
+
+    <AccordionParams :element="element" @update-data="updateData" />
 
     <CustomParametersEditor
       :element="element"
@@ -567,7 +631,6 @@ const getCompatibleParentParams = (childParam: IComponentParams) => {
     <InputParams :element="element" @update-data="updateData" />
     <InteractiveParams :element="element" @update-data="updateData" />
     <SliderParams :element="element" @update-data="updateData" />
-    <AccordionParams :element="element" @update-data="updateData" />
     <LinkParams :element="element" @update-data="updateData" @update-data-param="updateDataAndParam" />
   </div>
 </template>

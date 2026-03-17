@@ -26,13 +26,13 @@ const getDataValue = (val: any): any => {
       <div class="space-y-4">
         <PropertyInput
           label="Titre / Question"
-          :model-value="(element.data.title as string)"
+          :model-value="getDataValue(element.data.title ?? element.data.titre ?? element.data.label ?? element.data.question)"
           @update:model-value="(val) => updateData('title', val.toString())"
         />
         <div class="space-y-1 flex flex-col">
           <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Contenu / Réponse</label>
           <textarea
-            :value="getDataValue(element.data.content) || ''"
+            :value="getDataValue(element.data.content ?? element.data.reponse ?? element.data.response ?? element.data.description) || ''"
             @input="(e: Event) => updateData('content', (e.target as HTMLTextAreaElement).value)"
             rows="4"
             class="w-full text-[10px] px-2 py-1.5 bg-builder-input-bg border border-builder-bar-border rounded text-builder-bar-text/80 placeholder-builder-bar-text/30 resize-none focus:outline-none focus:border-primary/50 leading-relaxed font-medium"

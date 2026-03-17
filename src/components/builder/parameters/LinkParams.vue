@@ -1,3 +1,4 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import type { AnyComponentInstance } from '../../../type/component';
@@ -24,6 +25,7 @@ import { useGetNavItems } from '../../../hook/page';
 import { useElementSize } from '@vueuse/core';
 import { cn } from '../../../lib/utils';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const props = defineProps<{ element: AnyComponentInstance; }>();
 const emit = defineEmits(['update-data', 'update-data-param']);
 

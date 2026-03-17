@@ -54,8 +54,8 @@ const disabled = computed(() => !!resolveValue(props.data?.disabled));
       v-if="label"
       :for="inputId"
       class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+      v-html="label"
     >
-      {{ label }}
     </label>
     <input
       :type="type"

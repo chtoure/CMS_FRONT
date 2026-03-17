@@ -14,7 +14,13 @@ interface Props {
   styles?: AccordionStyles;
   data?: {
     title?: string;
+    titre?: string;
+    label?: string;
+    question?: string;
     content?: string;
+    reponse?: string;
+    response?: string;
+    description?: string;
     isOpen?: boolean;
     transitionSpeed?: number;
   };
@@ -58,10 +64,10 @@ const questionInlineStyles = computed(() =>
 
 // ─── Données ───────────────────────────────────────────────────────────────
 const title = computed(() =>
-  (resolveValue(props.data?.title) as string) || 'Question'
+  (resolveValue(props.data?.title || props.data?.titre || props.data?.label || props.data?.question) as string) || 'Question'
 );
 const content = computed(() =>
-  (resolveValue(props.data?.content) as string) || 'Réponse de l\'accordéon'
+  (resolveValue(props.data?.content || props.data?.reponse || props.data?.response || props.data?.description) as string) || 'Réponse de l\'accordéon'
 );
 
 const transitionDuration = computed(() => {
@@ -109,7 +115,7 @@ function onLeave(el: Element, done: () => void) {
       @click="toggle"
       type="button"
     >
-      <span class="flex-1 font-medium">{{ title }}</span>
+      <span class="flex-1 font-medium" v-html="title"></span>
       <!-- Icône chevron animé -->
       <svg
         class="shrink-0 ml-3"
@@ -136,9 +142,9 @@ function onLeave(el: Element, done: () => void) {
       <div
         v-if="isOpen"
         :style="[questionInlineStyles, !questionInlineStyles.padding ? { padding: '12px 16px' } : {}]"
-        class="whitespace-pre-wrap"
+        class="whitespace-pre-wrap flex flex-col"
+        v-html="content"
       >
-        {{ content }}
       </div>
     </Transition>
 
