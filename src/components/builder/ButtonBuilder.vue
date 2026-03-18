@@ -5,12 +5,15 @@ import { executeAction } from '../../registry/cliquable';
 import { buildButtonStyles, buildButtonInlineStyles } from '../../lib/style/buttonProcessor';
 import { useVariableResolver } from '../../hook/variable';
 import { inject } from 'vue';
+import * as LucideIcons from 'lucide-vue-next';
 
 interface Props {
   styles?: InteractiveStyles;
   data?: {
     content?: string | Record<string, unknown>;
     cliquable?: CliquableAction;
+    icon?: string;
+    iconPosition?: 'left' | 'right' | 'only';
   };
   element?: AnyComponentInstance;
   children?: AnyComponentInstance[];
@@ -56,6 +59,16 @@ const computedInlineStyles = computed(() => {
 });
 
 const content = computed(() => (resolveValue(props.data?.content) as string) || 'Nouveau Bouton');
+
+const iconName = computed(() => {
+  const name = resolveValue(props.data?.icon) as string;
+  return name && name in LucideIcons ? name : null;
+});
+const LucideIcon = computed(() =>
+  iconName.value ? (LucideIcons as Record<string, unknown>)[iconName.value] : null
+);
+const iconPosition = computed(() => (resolveValue(props.data?.iconPosition) as string) || 'left');
+const showIconOnly = computed(() => !!LucideIcon.value && iconPosition.value === 'only');
 
 // Édition inline
 const isEditing = ref(false);
@@ -127,17 +140,46 @@ const handleClick = () => {
 
 <template>
   <button
-    ref="editorRef"
     :class="[
-      'inline-flex items-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 w-full',
+      'inline-flex items-center gap-1.5 font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 w-full',
       computedClasses
     ]"
     :style="computedInlineStyles"
-    :contenteditable="isEditing ? 'true' : 'false'"
-    @click="!isEditing && handleClick($event)"
+    @click="!isEditing && handleClick()"
     @dblclick="startEditing"
-    @blur="commitEdit"
-    @keydown="handleKeyDown"
-    v-html="content"
-  ></button>
+  >
+    <!-- Icône à GAUCHE -->
+    <component
+      v-if="LucideIcon && iconPosition === 'left'"
+      :is="LucideIcon"
+      :size="16"
+      class="shrink-0"
+    />
+
+    <!-- Texte (éditable inline, caché si mode 'only') -->
+    <span
+      v-if="!showIconOnly"
+      ref="editorRef"
+      :contenteditable="isEditing ? 'true' : 'false'"
+      @blur="commitEdit"
+      @keydown="handleKeyDown"
+      v-html="content"
+    />
+
+    <!-- Icône à DROITE -->
+    <component
+      v-if="LucideIcon && iconPosition === 'right'"
+      :is="LucideIcon"
+      :size="16"
+      class="shrink-0"
+    />
+
+    <!-- Icône seule -->
+    <component
+      v-if="showIconOnly"
+      :is="LucideIcon"
+      :size="18"
+      class="shrink-0"
+    />
+  </button>
 </template>

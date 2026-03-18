@@ -16,6 +16,7 @@ import InteractiveParams from './parameters/InteractiveParams.vue';
 import SliderParams from './parameters/SliderParams.vue';
 import AccordionParams from './parameters/AccordionParams.vue';
 import LinkParams from './parameters/LinkParams.vue';
+import ButtonParams from './parameters/ButtonParams.vue';
 
 import { useGetContentTypes } from '../../hook/content-type';
 import { useGetMediaList } from '../../hook/media';
@@ -605,6 +606,8 @@ const getCompatibleParentParams = (childParam: IComponentParams, childElement?: 
     />
 
     <AccordionParams :element="element" @update-data="updateData" />
+
+    <ButtonParams :element="element" @update-data="updateData" @update-data-param="updateDataAndParam" />
 
     <CustomParametersEditor
       :element="element"

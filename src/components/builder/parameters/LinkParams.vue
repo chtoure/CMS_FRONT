@@ -4,6 +4,7 @@ import { ref, computed } from 'vue';
 import type { AnyComponentInstance } from '../../../type/component';
 import PropertyGroup from '../ui/PropertyGroup.vue';
 import PropertyInput from '../ui/PropertyInput.vue';
+import IconPicker from '../ui/IconPicker.vue';
 import Select from '../../../components/ui/select/Select.vue';
 import SelectTrigger from '../../../components/ui/select/SelectTrigger.vue';
 import SelectValue from '../../../components/ui/select/SelectValue.vue';
@@ -55,6 +56,33 @@ const navItemsResults = computed(() => navItems.value || []);
           :model-value="getDataValue(element.data.text)"
           @update:model-value="(val) => updateDataAndParam('text', String(val))"
         />
+
+        <!-- Icône -->
+        <div class="space-y-1">
+          <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Icône</label>
+          <IconPicker
+            :model-value="(getDataValue(element.data.icon) as string | null)"
+            @update:model-value="(val) => updateData('icon', val ?? '')"
+          />
+        </div>
+
+        <!-- Position de l'icône -->
+        <div v-if="getDataValue(element.data.icon)" class="space-y-1 flex flex-col">
+          <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Position de l'icône</label>
+          <Select
+            :model-value="getDataValue(element.data.iconPosition) || 'left'"
+            @update:model-value="(val) => val && updateData('iconPosition', val as string)"
+          >
+            <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
+              <SelectValue placeholder="Position..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="left"><span class="text-[10px]">Gauche</span></SelectItem>
+              <SelectItem value="right"><span class="text-[10px]">Droite</span></SelectItem>
+              <SelectItem value="only"><span class="text-[10px]">Icône seule</span></SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div class="space-y-1">
           <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">URL de destination</label>
           <div class="relative">
