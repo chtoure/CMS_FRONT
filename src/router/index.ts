@@ -30,6 +30,7 @@ import BuilderLayout from '../layout/BuilderLayout.vue'
 import PageListView from '../views/page/PageListView.vue'
 import PageRevisionListView from '../views/pageRevision/PageRevisionListView.vue'
 import PageRenderView from '../views/renderPage/PageRenderView.vue'
+import PageFormView from '../views/page/PageFormView.vue'
 
 
 const router = createRouter({
@@ -198,6 +199,16 @@ const router = createRouter({
                           path: 'page-revisions/:id',
                           name: 'admin.pages.revisions',
                           component: PageRevisionListView,
+                        },
+                        {
+                          path: 'page-add',
+                          name: 'admin.page-add',
+                          component: PageFormView,
+                        },
+                        {
+                          path: 'page-edit/:id',
+                          name: 'admin.page-edit',
+                          component: PageFormView,
                         }
                       ]
                     },

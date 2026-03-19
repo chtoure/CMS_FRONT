@@ -16,6 +16,11 @@ const emit = defineEmits(['update-data']);
 
 const updateData = (key: string, value: any) => emit('update-data', key, value);
 
+const getDataValue = (val: any): any => {
+  if (val && typeof val === 'object' && 'value' in val) return val.value;
+  return val;
+};
+
 const objectFitOptions = [
   { label: 'Cover', value: 'cover' },
   { label: 'Contain', value: 'contain' },
@@ -32,20 +37,20 @@ const objectFitOptions = [
         <div class="grid grid-cols-2 gap-2">
           <PropertyInput
             label="Largeur"
-            :model-value="(element.data.width as string | number)"
+            :model-value="getDataValue(element.data.width)"
             @update:model-value="(val) => updateData('width', val)"
             placeholder="ex: 100% ou 300"
           />
           <PropertyInput
             label="Hauteur"
-            :model-value="(element.data.height as string | number)"
+            :model-value="getDataValue(element.data.height)"
             @update:model-value="(val) => updateData('height', val)"
             placeholder="ex: auto ou 300"
           />
         </div>
         <div class="space-y-1 flex flex-col">
           <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Ajustement</label>
-          <Select :model-value="(element.data.objectFit as string)" :modal="false" @update:model-value="(val) => val && updateData('objectFit', val as string)">
+          <Select :model-value="getDataValue(element.data.objectFit)" :modal="false" @update:model-value="(val) => val && updateData('objectFit', val as string)">
             <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
               <SelectValue placeholder="Fit" />
             </SelectTrigger>

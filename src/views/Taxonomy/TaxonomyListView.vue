@@ -129,7 +129,7 @@ const handleCreate = () => {
 
                 searchable
                 v-model:search="search"
-                searchPlaceholder="Rechercher par nom ou slug..."
+                searchPlaceholder="Rechercher par nom ou identifiant..."
 
                 :isLoading="isLoadingTaxonomies || isLoadingArchiveTaxonomy"
               >

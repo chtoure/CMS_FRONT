@@ -16,6 +16,11 @@ const emit = defineEmits(['update-data']);
 
 const updateData = (key: string, value: any) => emit('update-data', key, value);
 
+const getDataValue = (val: any): any => {
+  if (val && typeof val === 'object' && 'value' in val) return val.value;
+  return val;
+};
+
 const inputTypeOptions = [
   { label: 'Texte', value: 'text' },
   { label: 'Email', value: 'email' },
@@ -33,7 +38,7 @@ const inputTypeOptions = [
         <div class="grid grid-cols-2 gap-3">
           <div class="space-y-1 flex flex-col">
             <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Type de saisie</label>
-            <Select :model-value="(element.data.type as string)" :modal="false" @update:model-value="(val) => val && updateData('type', val as string)">
+            <Select :model-value="getDataValue(element.data.type)" :modal="false" @update:model-value="(val) => val && updateData('type', val as string)">
               <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
@@ -45,7 +50,7 @@ const inputTypeOptions = [
             </Select>
           </div>
           <div class="flex items-center space-x-2 pt-4">
-            <Checkbox id="required-sys" :checked="(element.data.required as boolean)" @update:checked="(val: boolean | 'indeterminate') => updateData('required', !!val)" />
+            <Checkbox id="required-sys" :checked="!!getDataValue(element.data.required)" @update:checked="(val: boolean | 'indeterminate') => updateData('required', !!val)" />
             <label for="required-sys" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Requis</label>
           </div>
         </div>

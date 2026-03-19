@@ -46,7 +46,6 @@ const COMPONENT_SOURCE_MAPPING: Record<string, ValueSource[]> = {
   'ButtonBuilder': [ValueSource.STATIC],
   'InputBuilder': [ValueSource.STATIC],
   'ImageBuilder': [ValueSource.STATIC, ValueSource.IMAGE],
-  'IconBuilder': [ValueSource.STATIC, ValueSource.IMAGE],
   'CardBuilder': [ValueSource.STATIC, ValueSource.IMAGE, ValueSource.CONTENUS],
 };
 
@@ -73,18 +72,18 @@ const canAddParams = computed(() => allowedSources.value.length > 0);
 const paramDynamic = computed(() => props.element.family === 'container');
 const hasLinkedChildren = computed(() => {
   if (!props.element.children) return false;
-  
+
   // 1. Un container enfant est lié via linkedQueryParamName
   const hasLinkedContainer = props.element.children.some(child => (child.data as any).linkedQueryParamName);
-  
+
   // 2. Un enfant feuille a un de ses paramètres liés à un param query direct du parent
   const queryParamNames = (props.element.params || [])
     .filter(p => p.type.source === ValueSource.CONTENUS && (p.type as IContenusField).config.mode === 'query')
     .map(p => p.name);
-    
+
   const hasLinkedLeaf = props.element.children.some(child => {
     if (child.family === 'container') return false; // Déjà géré par hasLinkedContainer
-    
+
     return (child.params || []).some(p => {
       // Si la feuille a un paramètre qui tire sa source du parent
       if (p.type.source === ValueSource.PARENT) {
@@ -95,7 +94,7 @@ const hasLinkedChildren = computed(() => {
       return false;
     });
   });
-  
+
   return hasLinkedContainer || hasLinkedLeaf;
 });
 

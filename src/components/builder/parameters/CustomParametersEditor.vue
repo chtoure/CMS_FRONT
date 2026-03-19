@@ -185,7 +185,7 @@ const saveParameterEdit = () => {
 
 <template>
   <div v-if="canAddParams" class="space-y-2">
-    <div class="mb-2">
+    <div v-if="canAddParams && paramDynamic" class="mb-2">
       <button
         @click="showAddForm = !showAddForm"
         class="w-full flex items-center justify-between px-3 py-2 rounded bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all transition-colors group"
