@@ -38,7 +38,6 @@
 
         /* Focus & Accessibilité */
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-        transition-all duration-200
         z-10
       "
     />

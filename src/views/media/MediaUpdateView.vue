@@ -2,7 +2,7 @@
 import { ref, reactive, watch, nextTick } from 'vue';
 import { Scissors, RotateCw, Image as ImageIcon, FlipHorizontal, FlipVertical, RotateCcw, Check, ArrowLeft, Loader2 } from 'lucide-vue-next';
 import { useRoute } from 'vue-router';
-import { useGetMedia, useUpdateMedia } from '../../hook/media';
+import { useGetMedia, useEditMedia } from '../../hook/media';
 import router from '../../router';
 import { showToast } from '../../lib/toast';
 import { getErrorMessage } from '../../lib/errorMessage';
@@ -20,7 +20,7 @@ const ASPECT_RATIOS: Record<string, number | null> = { 'free': null, '1:1': 1, '
 const route = useRoute();
 const id = Number(route.params.id);
 const { data: mediaData } = useGetMedia(id);
-const { mutate: updateMedia, isPending: isSaving } = useUpdateMedia();
+const { mutate: updateMedia, isPending: isSaving } = useEditMedia();
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const imageElement = ref<HTMLImageElement | null>(null);

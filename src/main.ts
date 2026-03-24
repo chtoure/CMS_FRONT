@@ -9,6 +9,7 @@ import router from './router'
 import { createHead } from "@vueuse/head"
 import { VueQueryPlugin } from '@tanstack/vue-query'
 import Vue3Toastify from 'vue3-toastify'
+import { permissionDirective } from './middleware/permissionDirective'
 
 
 
@@ -26,5 +27,6 @@ app.use(Vue3Toastify, {
   position: "bottom-right",
   clearOnUrlChange: false,
 } );
+app.use(permissionDirective);
 
 app.mount('#app')

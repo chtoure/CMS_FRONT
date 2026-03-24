@@ -6,7 +6,7 @@ interface Parameter {
   title: string;
   media: Media | null;
   description?: string | null;
-
+  family_name?: string | null;
 }
 
 interface UpdateParameterPayload {
@@ -14,6 +14,7 @@ interface UpdateParameterPayload {
   title: string;
   mediaId: number;
   description?: string;
+  family_name?: string;
 }
 
 export type {

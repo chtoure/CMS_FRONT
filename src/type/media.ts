@@ -1,28 +1,26 @@
-interface Media{
-    id : number,
-    file_path :   string,
-    type :   'video' | 'image' | 'document' | 'archive',
-    alt  : string | null
-};
-
-interface MediaPayload{
-    file_path :   string,
-    type :   'video' | 'image' | 'document' | 'archive',
-    alt  : string | null
-}
-
-
-
-type Tool = 'remove-bg' | 'crop' | 'refine' | 'rotate' | 'adjust' | 'filters';
-
-type AspectRatio = 'free' | '1:1' | '16:9' | '4:3' | '3:2';
-
 interface Media {
   id: number;
   file_path: string;
   type: 'video' | 'image' | 'document' | 'archive';
   alt: string | null;
+  size?: number;
+  width?: number;
+  height?: number;
+  created_at?: string;
+  duration? : number,
+  pageCount? : number,
+  createdAt : Date,
+  updatedAt : Date
 }
+
+interface MediaPayload {
+  file_path: string;
+  type: 'video' | 'image' | 'document' | 'archive';
+  alt: string | null;
+}
+
+type Tool = 'remove-bg' | 'crop' | 'refine' | 'rotate' | 'adjust' | 'filters';
+type AspectRatio = 'free' | '1:1' | '16:9' | '4:3' | '3:2';
 
 interface Transform {
   rotate: number;
@@ -67,7 +65,7 @@ type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se' | 'n' | 's' | 'e' | 'w';
 
 interface SaveMediaPayload {
   operations: {
-    geometry: {
+    geometry?: {
       rotation: number;
       flipH: boolean;
       flipV: boolean;
@@ -78,20 +76,24 @@ interface SaveMediaPayload {
         height: number;
       };
     };
-    adjustments: {
+    adjustments?: {
       blur: number;
       grayscale: boolean;
+    };
+    metadata?: {
+      alt?: string | null;
     };
   };
 }
 
+
+
 interface MediaFilter {
-  type?: ('image' | 'video' | 'document' | 'archive')[] | null
-  page?: number
-  limit?: number
+  type?: ('image' | 'video' | 'document' | 'archive')[] | null;
+  page?: number;
+  limit?: number;
+  search?: string;
 }
-
-
 
 export type {
   Media,

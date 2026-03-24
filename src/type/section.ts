@@ -16,6 +16,14 @@ export interface sectionStyle {
   borderColor?: ResponsiveProp<string>;
   borderStyle?: ResponsiveProp<'solid' | 'dashed' | 'dotted' | 'double' | 'hidden'>;
   
+  // Positionnement
+  position?: ResponsiveProp<'static' | 'relative' | 'absolute' | 'fixed' | 'sticky'>;
+  top?: ResponsiveProp<number | string>;
+  right?: ResponsiveProp<number | string>;
+  bottom?: ResponsiveProp<number | string>;
+  left?: ResponsiveProp<number | string>;
+  zIndex?: ResponsiveProp<number>;
+
   // Arrière-plan média
   bgImage?: MediaProperty | { url: string }; 
   bgVideo?: MediaProperty | { url: string };

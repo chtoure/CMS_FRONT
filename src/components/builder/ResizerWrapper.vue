@@ -1,6 +1,6 @@
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
-import { ref, inject } from 'vue';
+import { ref, inject, computed } from 'vue';
 import type { AnyComponentInstance } from '../../type/component';
 
 const props = defineProps<{
@@ -14,6 +14,19 @@ const builderState = inject<{
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
   isDragging?: { value: boolean }
 }>('builderState');
+
+import { resolveValueForBreakpoint, formatSize } from '../../lib/style/core';
+import { useVariableResolver } from '../../hook/variable';
+
+const { resolveValue } = useVariableResolver();
+
+const isPositionedOutOfFlow = computed(() => {
+  const bp = builderState?.currentBreakpoint.value || 'default';
+  const pos = (props.element.styles as any)?.position;
+  const p = resolveValueForBreakpoint<string>(pos, bp, resolveValue);
+  return p === 'fixed' || p === 'absolute';
+});
+
 
 const resizableRef = ref<HTMLElement | null>(null);
 const isResizing = ref(false);
@@ -88,12 +101,27 @@ const startResize = (e: MouseEvent, direction: string) => {
 <template>
   <div
     ref="resizableRef"
-    class="relative w-full h-full group/resizer"
-    :class="{
-      'ring-2 ring-inset ring-blue-500': active,
-      'rescaling': isResizing
-    }"
+    class="relative group/resizer overflow-hidden"
+    :class="[
+      isPositionedOutOfFlow ? '' : 'w-full h-full',
+      {
+        'ring-1 ring-inset ring-blue-500': active,
+        'rescaling': isResizing
+      }
+    ]"
+    :style="isPositionedOutOfFlow ? {
+      width: formatSize(element.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
+      height: formatSize(element.styles?.height, builderState?.currentBreakpoint.value, resolveValue)
+    } : {}"
   >
+    <!-- Label du composant sélectionné -->
+    <div
+      v-if="active"
+      class="absolute top-0 left-0 bg-blue-500 text-white text-[10px] px-2 py-0.5 font-bold uppercase z-[60] shadow-sm whitespace-nowrap pointer-events-none"
+    >
+      {{ element.name }}
+    </div>
+
     <div class="w-full h-full">
       <slot />
     </div>

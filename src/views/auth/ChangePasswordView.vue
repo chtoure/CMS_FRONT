@@ -56,7 +56,8 @@
   import CompositionLoading from "@/components/composition/CompositionLoading.vue";
   import { useChangePassword } from '../../hook/user';
   import { userStore } from '../../stores/user';
-import { useRouter } from 'vue-router';
+  import { useRouter } from 'vue-router';
+import type { Permission } from '../../type/permission';
 
 
   // Initialisation
@@ -148,8 +149,9 @@ import { useRouter } from 'vue-router';
       },
       {
         onSuccess(data) {
-          // On stocke les infos reçues du backend dans Pinia
-          store.setUserInfo({...data.user, initials:initials(data.user.full_name) });
+
+          const permissions:Permission[] = store.userPermissions || [];
+          store.setUserInfo({...data.user, initials:initials(data.user.full_name) }, permissions);
           router.push({ name: 'admin.dashboard' }); // Redirige après succès
         },
         onError(error) {

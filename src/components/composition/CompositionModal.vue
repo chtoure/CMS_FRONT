@@ -37,7 +37,7 @@
     <DialogContent
       class="fixed left-1/2 top-1/2 z-50 flex flex-col -translate-x-1/2 -translate-y-1/2
              border border-border shadow-2xl bg-background rounded-none
-             w-auto h-auto max-w-[90vw] max-h-[90vh] overflow-hidden gap-0 p-0"
+             h-auto max-w-[90vw] w-[90%] max-h-[90vh] overflow-hidden gap-0 p-0"
     >
       <DialogHeader class="p-6 pb-4 flex-shrink-0 border-b border-border">
         <DialogTitle>{{ props.title }}</DialogTitle>

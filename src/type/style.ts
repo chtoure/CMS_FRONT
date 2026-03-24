@@ -7,6 +7,14 @@ interface BaseStyles {
   marginBottom?: VariableProperty<ResponsiveProp<number | string>>;
   padding?: VariableProperty<ResponsiveProp<number | string>>;
   
+  // Positionnement
+  position?: VariableProperty<ResponsiveProp<'static' | 'relative' | 'absolute' | 'fixed' | 'sticky'>>;
+  top?: VariableProperty<ResponsiveProp<number | string>>;
+  right?: VariableProperty<ResponsiveProp<number | string>>;
+  bottom?: VariableProperty<ResponsiveProp<number | string>>;
+  left?: VariableProperty<ResponsiveProp<number | string>>;
+  zIndex?: VariableProperty<ResponsiveProp<number>>;
+  
   // Propriétés d'apparence
   bg?: VariableProperty<ResponsiveProp<string>>;
   rounded?: VariableProperty<ResponsiveProp<string | number>>;

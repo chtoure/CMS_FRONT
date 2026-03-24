@@ -5,8 +5,9 @@ import { FAMILY_CAPABILITIES, type AnyComponentInstance } from '../../type/compo
 import { VueDraggable } from 'vue-draggable-plus';
 import { COMPONENT_MAP } from '../../registry/component_registry';
 import { buildBlocLayoutStyles, buildBlocLayoutInlineStyles } from '../../lib/style/blocProcessor';
-import { formatSize } from '../../lib/style/core';
+import { formatSize, resolveValueForBreakpoint } from '../../lib/style/core';
 import { useVariableResolver } from '../../hook/variable';
+import { getWrapperPositionStyles } from '../../lib/style/common';
 import ResizerWrapper from './ResizerWrapper.vue';
 import api, { handleResponse } from '../../api/fetchConfig';
 import { useGetMediaList } from '../../hook/media';
@@ -105,6 +106,14 @@ const childrenModel = computed({
     });
   }
 });
+
+const isResizingItem = ref<boolean>(false);
+
+const isSticky = (element: any) => {
+  const bp = builderState?.currentBreakpoint.value || 'default';
+  const pos = element.styles?.position;
+  return resolveValueForBreakpoint<string>(pos, bp, resolveValue) === 'sticky';
+};
 
 const handleChildrenChange = (newChildren: AnyComponentInstance[]) => {
   childrenModel.value = newChildren;
@@ -237,7 +246,7 @@ const applyItemToChildren = (children: AnyComponentInstance[], item: any): AnyCo
     :children="element.children"
     class="relative isolate h-full group/renderer transition-all duration-200"
     :class="{
-      'ring-2 ring-blue-500 ring-inset z-10': isSelected,
+      'ring-1 ring-blue-500 ring-inset z-10': isSelected,
       'hover:ring-1 hover:ring-gray-300': !isSelected && !isDraggingOver && !isClone,
       'drop-zone-potential': isDraggingOver && canHaveChildren && !isClone,
       'opacity-20 grayscale-[0.8] border-2 border-dashed border-red-500/50': !isVisible && !isClone,
@@ -265,14 +274,6 @@ const applyItemToChildren = (children: AnyComponentInstance[], item: any): AnyCo
       @click.stop="handleSelect"
     ></div>
 
-    <!-- Label du composant sélectionné -->
-    <div
-      v-if="isSelected"
-      class="absolute -top-5 left-0 bg-blue-500 text-white text-[9px] px-2 py-0.5 rounded-t-sm font-bold uppercase z-50 shadow-md whitespace-nowrap flex items-center gap-2"
-    >
-      <span>{{ element.name }}</span>
-    </div>
-
     <!-- Badge Caché -->
     <div
       v-if="!isVisible && !isClone"
@@ -287,9 +288,9 @@ const applyItemToChildren = (children: AnyComponentInstance[], item: any): AnyCo
         <!-- Mode Clone : pas de drag & drop, rendu simple des enfants -->
         <template v-if="isClone">
           <div
-            class="min-h-[50px] w-full h-full pb-10"
-            :class="layoutClasses"
-            :style="layoutInlineStyles"
+            class="min-h-[50px] w-full h-full"
+            :class="element.tag !== 'SliderBuilder' ? [layoutClasses, 'pb-10'] : ''"
+            :style="element.tag !== 'SliderBuilder' ? layoutInlineStyles : {}"
           >
             <div
               v-for="child in childrenModel"
@@ -297,10 +298,11 @@ const applyItemToChildren = (children: AnyComponentInstance[], item: any): AnyCo
               class="relative"
               :style="{
                 width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
-                height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue)
+                height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
+                ...(isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
               }"
             >
-              <BlocRender :element="child" :is-clone="true" />
+              <BlocRender :element="child" :is-clone="true" :style="!isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {}" />
             </div>
           </div>
         </template>
@@ -313,16 +315,16 @@ const applyItemToChildren = (children: AnyComponentInstance[], item: any): AnyCo
             :animation="100"
             :delay="0"
             ghost-class="ghost-item"
-            class="w-full h-full transition-all duration-300 min-h-[80px] pb-10"
+            class="w-full h-full transition-all duration-300 min-h-[80px]"
             :class="[
-              layoutClasses,
+              element.tag !== 'SliderBuilder' ? layoutClasses : '',
               {
-                'drop-zone-active': isDraggingOver,
-                'p-4': !childrenModel || childrenModel.length === 0,
-                'p-2': childrenModel && childrenModel.length > 0 && isDraggingOver
+                'drop-zone-active': isDraggingOver && element.tag !== 'SliderBuilder',
+                'p-4': (!childrenModel || childrenModel.length === 0) && element.tag !== 'SliderBuilder',
+                'p-2': childrenModel && childrenModel.length > 0 && isDraggingOver && element.tag !== 'SliderBuilder'
               }
             ]"
-            :style="layoutInlineStyles"
+            :style="element.tag !== 'SliderBuilder' ? layoutInlineStyles : {}"
             @update:model-value="handleChildrenChange"
           >
             <div
@@ -331,7 +333,8 @@ const applyItemToChildren = (children: AnyComponentInstance[], item: any): AnyCo
               class="relative transition-all"
               :style="{
                 width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
-                height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue)
+                height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
+                ...(isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
               }"
               @click.stop="builderState?.selectComponent(child.id)"
             >
@@ -346,6 +349,8 @@ const applyItemToChildren = (children: AnyComponentInstance[], item: any): AnyCo
                     const { _inherited_item, ...cleanData } = newChild.data as any;
                     handleChildUpdate(index, { ...newChild, data: cleanData });
                   }"
+                  @resizing="isResizingItem = $event"
+                  :style="!isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {}"
                 >
                   <BlocRender
                     :element="{
@@ -385,6 +390,8 @@ const applyItemToChildren = (children: AnyComponentInstance[], item: any): AnyCo
                 :element="child"
                 :active="builderState?.selectedId.value === child.id"
                 @update:element="(newChild) => handleChildUpdate(index, newChild)"
+                @resizing="isResizingItem = $event"
+                :style="!isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {}"
               >
                 <BlocRender
                   :element="child"

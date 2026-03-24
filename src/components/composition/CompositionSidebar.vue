@@ -29,6 +29,8 @@ import {
   DropdownMenuSeparator
 } from '../ui/dropdown-menu'
 import { useGetContentTypes } from '../../hook/content-type'
+import { usePermission } from '../../hook/usePermission'
+
 
 
 const route = useRoute()
@@ -36,6 +38,8 @@ const router = useRouter()
 const { data: params} = useGetParameters()
 const storeUser = userStore();
 const { data: contentTypes} = useGetContentTypes();
+
+const { hasPermission } = usePermission();
 
 const resultContentTypes = computed(() => contentTypes.value?.results || [])
 
@@ -49,12 +53,12 @@ const handleLogout = () => {
   logout(void 0, {
 
     onSuccess() {
-      storeUser.setUserInfo(null);
+      storeUser.setUserInfo(null, []);
       router.push({ name: 'auth.login' });
     },
     onError(err) {
       console.error('Erreur de déconnexion :', err);
-      storeUser.setUserInfo(null);
+      storeUser.setUserInfo(null, []);
       router.push({ name: 'auth.login' });
     }
   });
@@ -76,6 +80,7 @@ interface NavItem {
   badge?: string
   children?: NavItem[]
   id: string
+  hasPermission?: boolean
 }
 
 const openMenus = ref<Record<string, boolean>>({})
@@ -94,55 +99,64 @@ const isParentActive = (item: NavItem) => {
 
 const navItems = computed<NavItem[]>(() =>{
 
-  const baseItems: NavItem[]= [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: 'admin.dashboard' },
-    { id: 'media', label: 'Media', icon: FolderOpen, href: 'admin.media'},
+  const baseItems: NavItem[]= [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: 'admin.dashboard', hasPermission: true },
+    { id: 'media', label: 'Media', icon: FolderOpen, href: 'admin.media', hasPermission: hasPermission('read_media') },
     {
       id: 'admin',
       label: 'Admin',
       icon: UserStar,
+      hasPermission: hasPermission('read_user') || hasPermission('read_role'),
       children: [
-        { id: 'users', label: 'Utilisateurs', icon: UserStar, href: 'admin.users' },
-        { id: 'roles', label: 'Roles', icon: ShieldUser, href: 'admin.roles-permissions' },
+        { id: 'users', label: 'Utilisateurs', icon: UserStar, href: 'admin.users.list', hasPermission: hasPermission('read_user') },
+        { id: 'roles', label: 'Roles', icon: ShieldUser, href: 'admin.roles-permissions', hasPermission: hasPermission('read_role') },
       ]
     },{
       id: 'content-types',
       label: 'Content Types',
       icon: ClipboardList,
-      href: 'admin.content-types'
+      href: 'admin.content-types',
+      hasPermission: hasPermission('read_content_type')
     },{
       id: 'taxonomies',
       label: 'Catégories',
       icon: Tags,
-      href: 'admin.taxonomies'
+      href: 'admin.taxonomies',
+      hasPermission: hasPermission('read_taxonomy')
     },{
       id: 'corbeille',
       label: 'Corbeille',
       icon: Trash2,
+      hasPermission: hasPermission('read_content_entry') || hasPermission('read_content_type') || hasPermission('read_taxonomy'),
       children: [
         {
           id: 'corbeille-contentEntry',
           label: 'Corbeille des contenus',
           icon: Trash2,
-          href: 'admin.content-entry.corbeille'
+          href: 'admin.content-entry.corbeille',
+          hasPermission: hasPermission('read_content_entry')
         },
         {
           id: 'corbeille-contentType',
           label: 'Corbeille types contenu',
           icon: ClipboardList,
-          href: 'admin.content-types.corbeille'
+          href: 'admin.content-types.corbeille',
+          hasPermission: hasPermission('read_content_type')
         },
         {
           id: 'corbeille-taxonomy',
           label: 'Corbeille Des Catégories',
           icon: Tags,
-          href: 'admin.taxonomies.corbeille'
+          href: 'admin.taxonomies.corbeille',
+          hasPermission: hasPermission('read_taxonomy')
         }
       ]
     },{
       id: 'pages',
       label : 'Pages',
       icon: PanelsTopLeft,
-      href: 'admin.pages'
+      href: 'admin.pages',
+      hasPermission: hasPermission('read_page')
     }
   ];
 
@@ -217,7 +231,7 @@ const activeItem = computed(() => {
     <nav class="flex-1 overflow-y-auto px-3 py-6 space-y-1 scrollbar-hide">
       <div v-for="item in navItems" :key="item.id" class="relative group">
         <RouterLink
-          v-if="!item.children"
+          v-if="!item.children && item.hasPermission"
           :to="{ name: item.href, params: item.params }"
           :class="cn(
             'flex items-center gap-4 px-4 py-2 rounded-xl duration-200',
@@ -257,7 +271,7 @@ const activeItem = computed(() => {
           <div v-if="isCollapsed && activeItem !== item.id" class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-sidebar-primary rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity" />
         </RouterLink>
 
-        <div v-else class="space-y-1">
+        <div v-else-if="item.children" class="space-y-1">
           <!-- Dropdown en mode réduit -->
           <DropdownMenu v-if="isCollapsed">
             <DropdownMenuTrigger as-child>
@@ -276,12 +290,14 @@ const activeItem = computed(() => {
               <DropdownMenuLabel class="text-xs font-bold text-sidebar-foreground/50 px-2 pb-1">{{ item.label }}</DropdownMenuLabel>
               <DropdownMenuSeparator class="bg-sidebar-border" />
               <DropdownMenuItem
+                
                 v-for="child in item.children"
                 :key="child.id"
                 as-child
                 class="hover:bg-sidebar-accent focus:bg-sidebar-accent rounded-lg hover:!text-primary"
               >
                 <RouterLink
+                  v-if="child.hasPermission"
                   :to="{ name: child.href }"
                   :class="cn(
                     'flex items-center gap-3 w-full px-2 py-1.5 text-sm font-semibold capitalize',
@@ -289,13 +305,13 @@ const activeItem = computed(() => {
                   )"
                 >
                   <component :is="child.icon" class="w-4 h-4" />
-                  <span>{{ child.label }}</span>
+                  <span>{{ child.label }}fff</span>
                 </RouterLink>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <template v-else>
+          <template v-else-if="item.hasPermission">
             <button
               @click="toggleMenu(item.id)"
               :class="cn(
@@ -330,20 +346,22 @@ const activeItem = computed(() => {
               leave-to-class="transform scale-95 opacity-0 -translate-y-2"
             >
               <div v-if="openMenus[item.id] && isOpen" class="ml-9 space-y-1 border-l border-sidebar-border pl-2">
-                <RouterLink
-                  v-for="child in item.children"
-                  :key="child.id"
-                  :to="{ name: child.href }"
-                  :class="cn(
-                    'flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm capitalize',
-                    activeItem === child.id
-                      ? 'bg-primary/10 text-primary font-bold'
-                      : 'text-sidebar-foreground hover:text-sidebar-primary hover:bg-sidebar-accent'
-                  )"
-                >
-                  <component :is="child.icon" class="w-4 h-4" />
-                  <span>{{ child.label }}</span>
-                </RouterLink>
+                <template v-for="child in item.children" :key="child.id">
+                  <RouterLink
+                    v-if="child.hasPermission"
+                    :to="{ name: child.href }"
+                    :class="cn(
+                      'flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm capitalize',
+                      activeItem === child.id
+                        ? 'bg-primary/10 text-primary font-bold'
+                        : 'text-sidebar-foreground hover:text-sidebar-primary hover:bg-sidebar-accent'
+                    )"
+                  >
+                    <component :is="child.icon" class="w-4 h-4" />
+                    <span>{{ child.label }}</span>
+                  </RouterLink>
+                </template>
+                
               </div>
             </transition>
           </template>
@@ -354,7 +372,7 @@ const activeItem = computed(() => {
     <div class="p-4 border-t border-sidebar-border space-y-3 backdrop-blur-sm">
       <div v-if="isOpen" class="px-4 py-3 rounded-xl bg-sidebar-accent/30 border border-sidebar-border backdrop-blur-md">
         <p class="text-xs font-bold text-sidebar-foreground truncate uppercase tracking-wider">{{ storeUser.userInfo?.full_name }}</p>
-        <p class="text-[10px] text-accent font-medium">{{ storeUser.userInfo?.role }}</p>
+        <p class="text-[10px] text-accent font-medium">{{ storeUser.userInfo?.role?.name }}</p>
       </div>
 
       <Button

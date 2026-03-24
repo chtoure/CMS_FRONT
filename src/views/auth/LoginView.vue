@@ -9,10 +9,16 @@
   import { validationSchemaLogin } from '../../validation/loginValidate';
   import { useRouter } from 'vue-router';
   import { useGetParameters } from '../../hook/parameter';
+  import { useGetPermissionsByRoleId } from '../../hook/permission';
+  import { ref } from 'vue';
 
 
+  const roleId= ref<number>(0)
 
-
+  const { 
+    data: permissions,
+    refetch: refetchPermissions
+   } = useGetPermissionsByRoleId(roleId);
 
   // Initialisation
   const { data: params} = useGetParameters()
@@ -61,18 +67,22 @@ const initials = ((full_name:string) => {
 
 
   const onSubmit = handleSubmit(async (values) => {
-
+    console.log(values);
       login({
         ...values
       },{
-        onSuccess(data) {
+        async onSuccess(data) {
           console.log(data);
-          // On stocke les infos reçues du backend dans Pinia
-          storeUser.setUserInfo({...data.user, initials:initials(data.user.full_name) });
+
+          roleId.value = data.user?.role?.id || data.user?.role_id || 0
+
+          await refetchPermissions()
+          
+          storeUser.setUserInfo({...data.user, initials:initials(data.user.full_name) }, permissions.value || []);
           if (data.user.isLoggedIn === true) {
-             router.push({ name: 'admin.dashboard' }); // Redirige sur dashboard
+             router.push({ name: 'admin.dashboard' }); 
           }
-          router.push({ name: 'auth.change-password' }); // Redirige sur changement de mot de passe
+          router.push({ name: 'auth.change-password' }); 
         },
         onError(err) {
           console.error('Erreur de connexion :', err);

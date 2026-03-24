@@ -34,7 +34,7 @@ const handlePerPageChange = (val: string | number) => {
         type="number"
         :model-value="perPage"
         @update:model-value="handlePerPageChange"
-        class="h-9 w-16 input-custom bg-background"
+        class="h-9 w-16 input-custom bg-background transition-none"
       />
     </div>
 
