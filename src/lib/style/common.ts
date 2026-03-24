@@ -108,6 +108,64 @@ export function applyLayoutInline(
 }
 
 /**
+ * Applique uniquement les styles de positionnement
+ */
+export function applyPositioningInline(
+  inline: Record<string, string>,
+  styles: Record<string, unknown>,
+  getValue: (val: unknown) => any
+) {
+  if (styles.position !== undefined) {
+    const val = getValue(styles.position);
+    if (val) inline.position = val as string;
+  }
+
+  ['top', 'right', 'bottom', 'left'].forEach((prop) => {
+    if (styles[prop] !== undefined) {
+      const val = getValue(styles[prop]);
+      if (isNumeric(val)) inline[prop] = `${val}px`;
+      else if (val) inline[prop] = val as string;
+    }
+  });
+
+  if (styles.zIndex !== undefined) {
+    const val = parseInt(getValue(styles.zIndex) as string);
+    if (!isNaN(val)) inline.zIndex = String(val);
+  }
+}
+
+/**
+ * Calcule et retourne uniquement les styles inline de positionnement
+ * destinés à être appliqués sur le wrapper d'un composant (pour que sticky/fixed
+ * fonctionnent correctement par rapport au conteneur parent).
+ */
+export function getWrapperPositionStyles(
+  styles: Record<string, unknown> | undefined,
+  breakpoint: 'default' | 'sm' | 'md' | 'lg',
+  resolver: (v: unknown) => unknown
+): Record<string, string> {
+  const inline: Record<string, string> = {};
+  if (!styles) return inline;
+  const getValue = (val: unknown) => resolveValueForBreakpoint(val, breakpoint, resolver);
+  applyPositioningInline(inline, styles, getValue);
+  
+  // Si le wrapper est absolute, sticky ou fixed, il doit avoir un z-index par défaut
+  if (inline.position && inline.position !== 'static' && !inline.zIndex) {
+    inline.zIndex = '10';
+  }
+
+  // Correction cruciale pour "sticky" dans les conteneurs Flex (Sections / Blocs).
+  // Si le composant est sticky et que son parent est en display:flex (par défaut),
+  // l'align-items:stretch va forcer sa hauteur à 100%, l'empêchant de glisser.
+  // On force align-self: flex-start pour qu'il garde sa propre hauteur.
+  if (inline.position === 'sticky') {
+    inline.alignSelf = 'flex-start';
+  }
+  
+  return inline;
+}
+
+/**
  * Applique les styles visuels standards (Fonds, Bordures, etc.)
  */
 export function applyVisualInline(

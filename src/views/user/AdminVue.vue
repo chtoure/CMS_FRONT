@@ -3,12 +3,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useArchiveUser, useGetUsers, useResendConfirmEmail } from '../../hook/user';
-import type { User, UserProfile } from '../../type/user';
+import type { User } from '../../type/user';
 import { Users, UserPlus, Pencil, MoreHorizontal, Archive, ArchiveRestore, Send, Trash2 } from 'lucide-vue-next';
 
-
-// Composants convertis
-import UserFormView from './UserFormView.vue';
 import CompositionError from '../../components/composition/CompositionError.vue';
 import Button from '@/components/ui/button/Button.vue';
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue';
@@ -19,7 +16,6 @@ import DropdownMenuContent from '../../components/ui/dropdown-menu/DropdownMenuC
 import DropdownMenuLabel from '../../components/ui/dropdown-menu/DropdownMenuLabel.vue';
 import DropdownMenuSeparator from '../../components/ui/dropdown-menu/DropdownMenuSeparator.vue';
 import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue';
-import { watch } from 'vue';
 import { useDeleteUser, useRestoreUser } from '../../hook/user';
 import { showToast } from '../../lib/toast';
 import { userStore } from '../../stores/user';
@@ -32,8 +28,6 @@ import CompositionLoading from '../../components/composition/CompositionLoading.
 
 
 
-const isEditing = ref(false);
-const selectedUser = ref<UserProfile | undefined>(undefined);
 const currentPage = ref(1);
 const itemsPerPage = ref(10);
 const filterArchiv = ref("all");
@@ -66,9 +60,9 @@ const {
 
 
 
-  watch([currentPage, itemsPerPage, filterArchiv], () => {
-    refetchUsers();
-  });
+  // watch([currentPage, itemsPerPage, filterArchiv], () => {
+  //   refetchUsers();
+  // });
 
 
 const {
@@ -172,23 +166,6 @@ const resendConfirmEmailUser = (id: number) => {
 }
 
 
-// 4. Actions
-const openAddPage = () => {
-  selectedUser.value = undefined;
-  isEditing.value = true;
-};
-
-const openEditPage = (user: UserProfile) => {
-  selectedUser.value = user;
-  isEditing.value = true;
-};
-
-const closeForm = () => {
-  isEditing.value = false;
-  selectedUser.value = undefined;
-  refetchUsers();
-};
-
 
 const columns = [
   { key: 'full_name', label: 'Nom'  },
@@ -251,9 +228,8 @@ const convertDateInTemps = (dateInput: Date | string | null | undefined) => {
           <div class="flex items-center gap-4">
 
             <Button
-              v-if="!isEditing"
               class="rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95"
-              @click="openAddPage">
+              @click="$router.push({ name: 'admin.users.create' })">
               <UserPlus class="w-6 h-6 mr-2" />
               Ajouter
             </Button>
@@ -262,19 +238,6 @@ const convertDateInTemps = (dateInput: Date | string | null | undefined) => {
       </template>
     </CompositionPageHeader>
     <main>
-
-      <section v-if="isEditing" class="animate-in fade-in slide-in-from-bottom-4 duration-300">
-
-        <UserFormView
-          :initial-data="selectedUser"
-          :is-editing="!!selectedUser"
-          @success="closeForm"
-          @cancel="closeForm"
-
-        />
-      </section>
-
-      <template v-else>
 
         <div class="card rounded-none overflow-hidden">
           <div class="p-0">
@@ -328,7 +291,7 @@ const convertDateInTemps = (dateInput: Date | string | null | undefined) => {
                           <DropdownMenuSeparator/>
                           <CompositionVerifyButton :if="!row.archive">
                             <DropdownMenuLabel >
-                            <button  @click="openEditPage(row)" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-primary">
+                            <button  @click="()=>$router.push({ name: 'admin.users.edit', params: { id: row.id } })" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110 hover:text-primary">
                               <Pencil class="w-4 h-4" /> Modifier
                             </button>
                             </DropdownMenuLabel>
@@ -373,7 +336,6 @@ const convertDateInTemps = (dateInput: Date | string | null | undefined) => {
 
           </div>
         </div>
-      </template>
     </main>
   </div>
 </template>

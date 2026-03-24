@@ -1,6 +1,6 @@
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script lang="ts" setup>
-import { ref, computed, inject, watch } from 'vue';
+import { ref, computed, inject, watch, onMounted, onUnmounted } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import { ZoomIn, ZoomOut, Maximize, MousePointer2 } from 'lucide-vue-next';
 import SectionBuilder from '../../components/builder/SectionBuilder.vue';
@@ -21,6 +21,17 @@ const builderState = inject<{
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' };
   setIsDragging: (val: boolean) => void;
 }>('builderState');
+
+const windowHeight = ref(window?.innerHeight || 850);
+const onResize = () => { windowHeight.value = window.innerHeight; };
+
+onMounted(() => {
+  window.addEventListener('resize', onResize);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', onResize);
+});
 
 
 // Fallback pour la sécurité
@@ -59,20 +70,26 @@ const CANVAS_BASE_WIDTH = computed(() => {
     md: 768,
     lg: 1280
   };
-  return widths[bp];
+  return widths[bp as keyof typeof widths];
 });
 
-const CANVAS_BASE_HEIGHT = 1000;
+const CANVAS_BASE_HEIGHT = computed(() => windowHeight.value * 0.9);
 
-const canvasStyle = computed(() => ({
+const canvasStyle = computed<import('vue').CSSProperties>(() => ({
+  // transform: scale() creates a CSS containing block for child elements.
+  // This is intentional here: it keeps position:fixed elements contained within
+  // the simulated device viewport. The scroll must happen INSIDE .device-wrapper
+  // (via the inner overflow-y-auto div) so the wrapper itself never moves.
   transform: `scale(${scale.value})`,
   transformOrigin: 'top center',
+  width: `${CANVAS_BASE_WIDTH.value}px`,
+  height: `${CANVAS_BASE_HEIGHT.value}px`,
 }));
 
-// Dimensions "physiques" occupées par le zoom pour forcer le scroll
+// Dimensions "physiques" occupées par le zoom pour forcer le scroll du grand espace externe
 const scaledAreaStyle = computed(() => ({
   width: `${CANVAS_BASE_WIDTH.value * scale.value}px`,
-  height: `${CANVAS_BASE_HEIGHT * scale.value}px`,
+  height: `${CANVAS_BASE_HEIGHT.value * scale.value}px`,
 }));
 
 // Désélectionner quand on clique dans le vide du canevas
@@ -169,13 +186,18 @@ watch(() => pageTree.value, (newVal) => {
         <div :style="scaledAreaStyle" class="relative mx-auto flex justify-center">
           
           <div 
-            class="device-wrapper absolute top-0 bg-white border border-dashed border-border origin-top transition-all duration-500 ease-in-out box-border"
-            :style="{ 
-               ...canvasStyle,
-               width: `${CANVAS_BASE_WIDTH}px`
-            }"
+            class="device-wrapper absolute top-0 bg-white border border-dashed border-border origin-top transition-all duration-500 ease-in-out box-border overflow-hidden"
+            :style="[canvasStyle, { width: `${CANVAS_BASE_WIDTH}px` }]"
             @click.stop
           >
+             <!-- Scroll Context: la hauteur est fixée à celle du viewport simulé -->
+             <!-- Cela crée un vrai contexte de scroll INTERNE au device-wrapper -->
+             <!-- Les éléments position:fixed se fixent par rapport au transform du device-wrapper -->
+             <div
+               class="relative w-full overflow-y-auto overflow-x-hidden custom-scrollbar bg-transparent"
+               :style="{ height: `${CANVAS_BASE_HEIGHT}px` }"
+             >
+
               <div 
                 v-if="pageTree.length === 0" 
                 class="absolute inset-0 flex flex-col items-center justify-center text-gray-300 pointer-events-none z-10"
@@ -194,24 +216,20 @@ watch(() => pageTree.value, (newVal) => {
                 ghost-class="ghost-preview"
                 @start="builderState?.setIsDragging(true)"
                 @end="builderState?.setIsDragging(false)"
-                class="w-full min-h-[1000px] relative flex flex-col p-0 z-0 bg-white"
+                class="w-full min-h-full relative flex flex-col p-0 z-0 bg-white"
               >
-                <div 
-                  v-for="(section, index) in pageTree" 
-                  :key="section.id"
-                  class="w-full"
-                >
+                <template v-for="(section, index) in pageTree" :key="section.id">
                   <SectionBuilder
                     :section="section"
                     :active="builderState?.selectedId.value === section.id"
                     @select="selectComponent"
-                    @update:section="(newVal: AnySectionInstance) => {
+                    @update:section="(newVal) => {
                       const newTree = [...pageTree];
                       newTree[index] = newVal;
                       pageTree = newTree;
                     }"
                   />
-                </div>
+                </template>
               </VueDraggable>
 
               <!-- Mode Bibliothèque (SANS Sections) -->
@@ -225,7 +243,7 @@ watch(() => pageTree.value, (newVal) => {
                 ghost-class="ghost-preview"
                 @start="builderState?.setIsDragging(true)"
                 @end="builderState?.setIsDragging(false)"
-                class="w-full min-h-[1000px] relative flex flex-col p-8 z-0 bg-transparent items-center"
+                class="w-full min-h-full relative flex flex-col z-0 bg-transparent items-center"
               >
                  <div 
                    v-for="(element, index) in builderState!.libraryTree.value" 
@@ -262,6 +280,7 @@ watch(() => pageTree.value, (newVal) => {
                     </ResizerWrapper>
                  </div>
               </VueDraggable>
+             </div>
           </div>
           
           <!-- Indicateur visuel du Mode Isolation (Library) -->
@@ -278,10 +297,6 @@ watch(() => pageTree.value, (newVal) => {
 </template>
 
 <style scoped>
-.device-wrapper {
-  /* Supprimé au profit du style dynamique */
-}
-
 :deep(.ghost-preview) {
   opacity: 0.25 !important;
   background: #3b82f6 !important;

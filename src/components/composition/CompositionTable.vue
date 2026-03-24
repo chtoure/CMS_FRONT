@@ -135,7 +135,7 @@ const onFilterChange = (val: string | number | boolean | null | undefined) => {
               @click="col.sortable !== false && emit('sort', col.key)"
               :class="cn(
                 'font-bold text-sidebar-foreground h-12 px-4 select-none',
-                col.sortable !== false ? 'cursor-pointer hover:bg-sidebar-accent/50 transition-colors' : '',
+                col.sortable !== false ? 'cursor-pointer hover:bg-sidebar-accent/50' : '',
                 'border-b border-sidebar-border',
                 idx < columns.length - 1 ? 'border-r border-sidebar-border' : '',
                 col.class
@@ -160,14 +160,14 @@ const onFilterChange = (val: string | number | boolean | null | undefined) => {
 
             v-for="(row, rowIndex) in data"
             :key="rowIndex"
-            class="group hover:bg-sidebar-accent/30 transition-colors cursor-pointer"
+            class="group hover:bg-sidebar-accent/30 cursor-pointer"
             @click="emit('row-click', row)"
           >
             <TableCell
               v-for="(col, colIndex) in columns"
               :key="col.key"
               :class="cn(
-                'p-4 transition-colors',
+                'p-4',
                 'border-b border-sidebar-border',
                 colIndex < columns.length - 1 ? 'border-r border-sidebar-border' : '',
                 col.class

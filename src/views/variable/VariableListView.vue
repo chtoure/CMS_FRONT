@@ -157,6 +157,9 @@ const handleUpdate = async (id: number, field: "name" | "value", newValue: strin
     }
   }
 
+  console.log('eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
+  
+
   editingCell.value = null;
 
   updateVar({ id, data: { [field]: cleanValue } }, {
@@ -252,7 +255,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
 </script>
 
 <template>
-  <div class="flex flex-row bg-background text-foreground h-[80vh] w-full overflow-hidden antialiased font-mono">
+  <div class=" flex flex-row bg-background text-foreground h-[80vh] max-w-[90vw] w-[90%] overflow-hidden antialiased font-mono">
 
     <aside v-if="sidebarOpen" class="w-72 h-full sticky top-0 flex-shrink-0 border-r border-border flex flex-col bg-background">
       <div class="p-6 space-y-6 pl-0">
@@ -265,10 +268,10 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent class="border-border p14 font-mono">
-              <DropdownMenuItem @click="prepareNewCollection('COLOR')"><Palette :size="14" class="mr-2 text-orange-500" :stroke-width="1.2"/> Color</DropdownMenuItem>
-              <DropdownMenuItem @click="prepareNewCollection('NUMBER')"><Hash :size="14" class="mr-2 text-blue-500" :stroke-width="1.2" /> Number</DropdownMenuItem>
-              <DropdownMenuItem @click="prepareNewCollection('STRING')"><Type :size="14" class="mr-2 text-green-500" :stroke-width="1.2" /> String</DropdownMenuItem>
-              <DropdownMenuItem @click="prepareNewCollection('BOOLEAN')"><ToggleLeft :size="14" class="mr-2 text-purple-500" :stroke-width="1.2" /> Boolean</DropdownMenuItem>
+              <DropdownMenuItem class="hover:!bg-primary hover:!text-white" @click="prepareNewCollection('COLOR')"><Palette :size="14" class="mr-2 text-orange-500" :stroke-width="1.2"/> Color</DropdownMenuItem>
+              <DropdownMenuItem class="hover:!bg-primary hover:!text-white" @click="prepareNewCollection('NUMBER')"><Hash :size="14" class="mr-2 text-blue-500" :stroke-width="1.2" /> Number</DropdownMenuItem>
+              <DropdownMenuItem class="hover:!bg-primary hover:!text-white" @click="prepareNewCollection('STRING')"><Type :size="14" class="mr-2 text-green-500" :stroke-width="1.2" /> String</DropdownMenuItem>
+              <DropdownMenuItem class="hover:!bg-primary hover:!text-white" @click="prepareNewCollection('BOOLEAN')"><ToggleLeft :size="14" class="mr-2 text-purple-500" :stroke-width="1.2" /> Boolean</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -287,7 +290,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
             <div
               @click="selectedCollectionId = 0"
               :class="['flex items-center justify-between px-3 py-1.5 rounded cursor-pointer transition-all font-mono',
-                selectedCollectionId === 0 ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-foreground/80']"
+                selectedCollectionId === 0 ? 'bg-primary text-white' : 'hover:bg-muted']"
             >
               <span class="p14 truncate">Tout</span>
               <span class="p11 opacity-60"></span>
@@ -297,7 +300,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
                 <div
                   @click="selectedCollectionId = collection.id"
                   :class="['flex items-center justify-between px-3 py-1.5 rounded cursor-pointer transition-all font-mono',
-                    selectedCollectionId === collection.id ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-foreground/80']"
+                    selectedCollectionId === collection.id ? 'bg-primary text-white' : 'hover:bg-muted']"
                 >
                   <span class="p14 truncate">{{ collection.name }}</span>
                   <span class="p11 opacity-60">{{ collection.variables.length }} ({{ collection.type }})</span>
@@ -328,9 +331,9 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
             <button @click="sidebarOpen = !sidebarOpen" class="text-muted-foreground hover:text-foreground p-1 hover:bg-muted rounded transition-colors">
               <Menu :size="18" :stroke-width="1.2" />
             </button>
-            <h1 v-if="!searchQuery" class="p12 font-bold tracking-tight">
+            <p v-if="!searchQuery" class="capitalize text-lg font-bold tracking-tight">
               {{ selectedCollectionId === 0 ? 'Tout' : (selectedCollection?.name || 'Sélectionner') }}
-            </h1>
+            </p>
           </div>
           <button v-if="selectedCollectionId !==0 && !searchQuery" @click="addNewVariable" class="text-muted-foreground hover:text-primary transition-colors">
             <Plus :size="20" :stroke-width="1.2" />
@@ -446,8 +449,10 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
           </tbody>
 
         </table>
-        <CompositionListEmpty v-else :icon="Database" title="Aucune variable" description="Cliquez sur le bouton + pour ajouter une variable"/>
-        <div class="flex-1 overflow-y-auto">
+        <div v-else class="h-[100%] flex justify-center">
+          <CompositionListEmpty  :icon="Database" title="Aucune variable" description="Cliquez sur le bouton + pour ajouter une variable"/>
+        </div>
+        <div  class="flex-1 overflow-y-auto ">
           <div v-if="isCollectionsLoading" class="flex justify-center p-12">
             <Loader2 class="animate-spin text-primary/60" :size="30" />
           </div>

@@ -1,14 +1,9 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import  type { AddUserData, UpdateProfileData, UserProfile } from '../../type/user';
-import {  ArrowLeft,  ShieldCheck, Mail, User, Save, ChevronsUpDown, Check } from 'lucide-vue-next';
+import  type { AddUserData, UserProfile } from '../../type/user';
+import { ShieldCheck, Mail, User, Save, ChevronsUpDown, Check } from 'lucide-vue-next';
 import { Button } from '../../components/ui/button';
-import { useAddUser } from '../../hook/user';
-import CompositionLoading from '../../components/composition/CompositionLoading.vue';
-// import CompositionError from '../../components/composition/CompositionError.vue';
-import { showToast } from "../../lib/toast"
-import { useUpdateProfile } from '../../hook/user';
 import { cn } from '../../lib/utils';
 import Popover from '../../components/ui/popover/Popover.vue';
 import PopoverTrigger from '../../components/ui/popover/PopoverTrigger.vue';
@@ -21,18 +16,23 @@ import CommandGroup from '../../components/ui/command/CommandGroup.vue';
 import CommandItem from '../../components/ui/command/CommandItem.vue';
 import { useElementSize } from '@vueuse/core';
 import { useGetRoles } from '../../hook/role';
-import { handleError } from '../../lib/error';
+import { useRouter } from 'vue-router';
+
+const router= useRouter()
 
 
 interface Props {
   initialData?: UserProfile;
   isEditing?: boolean;
+  is_loading?: boolean;
+  handleSubmit: (user?: AddUserData) => void;
 }
 
 const open = ref(false)
 
 const props = withDefaults(defineProps<Props>(), {
-  isEditing: false
+  isEditing: false,
+  is_loading: false,
 });
 
 
@@ -48,24 +48,24 @@ const { width } = useElementSize(triggerRef)
 
 
 // --- Hook pour ajouter un utilisateur ---
-const {
-  mutate: addUser,
-  isPending: isAdding,
-} = useAddUser();
+// const {
+//   mutate: addUser,
+//   isPending: isAdding,
+// } = useAddUser();
 
 
-// Hook : Upadate Profile (pour la modification)
-const {
-  mutate: updateProfile,
-  isPending:isUpdateProfiling,
-} = useUpdateProfile();
+// // Hook : Upadate Profile (pour la modification)
+// const {
+//   mutate: updateProfile,
+//   isPending:isUpdateProfiling,
+// } = useUpdateProfile();
 
 
 // Hook listes Roles sans pagination
 const {
   data: dataRoles,
   isLoading: loadingRole,
-  refetch: getAllRoles
+
 } = useGetRoles()
 
 const rolesResults = computed(() => dataRoles.value?.results || []);
@@ -87,102 +87,26 @@ const validate = () => {
 };
 
 
-// --- Soumission du formulaire addUser ---
-const handleSubmitAddUser = () => {
+const handleSubmitUser = () => {
   if (!validate()) return;
 
-  const newUser: AddUserData = {
+  const userData: AddUserData = {
     full_name: full_name.value,
     email: email.value,
     role: role.value,
   };
 
-  addUser(newUser, {
-    onSuccess: () => {
-      getAllRoles()
-      showToast('success', 'utilisateur ajouté avec succès');
-      emit('success');
-    },
-    onError: (error: Error) => {
-      handleError(error)
-    }
-  });
+  props.handleSubmit(userData);
 
-};
-
-
-// Submission du formulaire Modifier un utilisateur
-const handleSubmitEditUser = () => {
-
-    const updateData : UpdateProfileData= {
-      full_name: full_name.value,
-      email: email.value,
-      role: role.value,
-    };
-
-
-    if (!props.initialData?.id) {
-      showToast('error', "ID utilisateur manquant pour la modification.");
-      return;
-    }
-
-    updateProfile({ profileData: updateData, id: props.initialData?.id }, {
-      onSuccess: () => {
-        getAllRoles()
-        showToast('success', 'utilisateur modifié avec succès');
-        emit('success');
-      },
-      onError: (error: Error) => {
-        handleError(error)
-      }
-    });
-};
-
-
-// Soumission générale du formulaire
-const handleSubmit = () => {
-
-  if (props.isEditing) {
-    handleSubmitEditUser();
-  } else {
-    handleSubmitAddUser();
-  }
-};
-
-
-const emit = defineEmits<{
-  success: [],
-  cancel: [] // Ce signal dira au parent de fermer le formulaire
-}>();
-
-const handleCancel = () => {
-  emit('cancel'); // On émet le signal au lieu d'utiliser le router
+  router.back();
 };
 
 </script>
 
 <template>
 
-  <CompositionLoading v-if="isAdding || isUpdateProfiling || loadingRole" />
-  <!-- <CompositionError v-else-if="isAddError" :error="addError?.message"/> -->
-
-  <div v-else class="card rounded-none p-6">
-    <div class="mb-8 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <button
-          @click="handleCancel"
-          class="flex items-center gap-2 text-text hover:text-primary transition-colors"
-        >
-          <ArrowLeft class="size-4" :font-weight="1" />
-        </button>
-        <p class="huge font-bold text-text huge">
-          {{ isEditing ? 'Modifier le profil' : 'Créer un nouvel utilisateur' }}
-        </p>
-      </div>
-    </div>
-
-    <form @submit.prevent="handleSubmit" class="space-y-8">
-
+  <div  class="card rounded-none p-6 py-10">
+    <form @submit.prevent="handleSubmitUser" class="space-y-8">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 
         <div class="space-y-6">
@@ -251,8 +175,13 @@ const handleCancel = () => {
                   <CommandEmpty>Aucun rôle trouvé.</CommandEmpty>
 
                   <CommandList class="group custom-scrollbar">
-                    <CommandGroup>
-                      <CommandItem
+                    <div v-if="loadingRole">
+                      <div class="flex items-center justify-center">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                      </div>
+                    </div>
+                    <CommandGroup v-else>
+                      <CommandItem 
                         v-for="r in rolesResults"
                         :key="r.id"
                         :value="r.name"
@@ -287,13 +216,14 @@ const handleCancel = () => {
       <div class="flex flex-col-reverse sm:flex-row justify-end gap-4">
         <Button
           type="button"
-          @click="handleCancel"
+          @click="()=>{router.back()}"
           class="bg-destructive text-white h-10 "
         >
           Annuler
         </Button>
 
         <Button
+          :disabled="props.is_loading"
           type="submit"
           class="text-white h-10"
         >

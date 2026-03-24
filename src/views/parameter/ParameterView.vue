@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {Save, Loader2 } from 'lucide-vue-next'
+import {Save, Loader2, ChevronsUpDown, Check } from 'lucide-vue-next'
 import Button from '@/components/ui/button/Button.vue'
 import { computed, ref, watch } from 'vue'
 import { useForm, Field } from 'vee-validate'
@@ -11,10 +11,21 @@ import CompositionError from '@/components/composition/CompositionError.vue'
 import { parameterSchema } from '../../validation/parameterValidate'
 import { useGetMediaList } from '../../hook/media'
 import CompositionMediaPicker from '../../components/composition/CompositionMediaPicker.vue'
+import Popover from '../../components/ui/popover/Popover.vue'
+import PopoverTrigger from '../../components/ui/popover/PopoverTrigger.vue'
+import PopoverContent from '../../components/ui/popover/PopoverContent.vue'
+import Command from '../../components/ui/command/Command.vue'
+import CommandInput from '../../components/ui/command/CommandInput.vue'
+import CommandEmpty from '../../components/ui/command/CommandEmpty.vue'
+import CommandList from '../../components/ui/command/CommandList.vue'
+import CommandGroup from '../../components/ui/command/CommandGroup.vue'
+import CommandItem from '../../components/ui/command/CommandItem.vue'
+import { cn } from '../../lib/utils'
 
 
 const media = ref<number>();
 const mediaQuery = useGetMediaList({});
+const open = ref(false)
 
 const {handleSubmit, setValues, setFieldValue } = useForm({
   validationSchema: parameterSchema,
@@ -22,9 +33,24 @@ const {handleSubmit, setValues, setFieldValue } = useForm({
     entity_name: '',
     title: '',
     description: '',
-    mediaId: undefined
+    mediaId: undefined,
+    family_name: ''
   }
 })
+
+const fontFamilies = [
+  { label: "Inter (Moderne)", value: "Inter" },
+  { label: "Roboto (Standard)", value: "Roboto" },
+  { label: "Poppins (Arrondi)", value: "Poppins" },
+  { label: "Montserrat (Géométrique)", value: "Montserrat" },
+  { label: "Open Sans", value: "Open Sans" },
+  { label: "Playfair Display (Élégant)", value: "Playfair Display" },
+  { label: "Lora (Lecture)", value: "Lora" },
+  { label: "Merriweather", value: "Merriweather" },
+  { label: "JetBrains Mono (Code)", value: "JetBrains Mono" },
+  { label: "Fira Code", value: "Fira Code" },
+  { label: "Bebas Neue (Impact)", value: "Bebas Neue" },
+];
 
 const { data: params, isLoading: isLoadingParams, isError: isErrorParams, error: errorParams } = useGetParameters()
 const { mutate: updateParams, isPending: isSaving } = useUpdateParameters()
@@ -48,7 +74,8 @@ watch(params, (newParams) => {
       entity_name: newParams.entity_name,
       title: newParams.title,
       description: newParams.description ?? '',
-      mediaId: newParams.media?.id
+      mediaId: newParams.media?.id,
+      family_name: newParams.family_name ?? ''
     })
     media.value = newParams.media?.id
     previewImage.value = newParams.media?.file_path || ''
@@ -100,6 +127,12 @@ const onSave = handleSubmit(async (values) => {
                 <p v-if="errorMessage" class="text-xs text-destructive font-medium italic">{{ errorMessage }}</p>
               </div>
             </Field>
+
+            <Button @click="onSave" class="h-11  sm:w-auto text-white" :disabled="isSaving">
+              <Loader2 v-if="isSaving" class="w-4 h-4 mr-2 animate-spin" />
+              <Save v-else class="w-4 h-4 mr-2" />
+              Sauvegarder
+            </Button>
           </div>
 
           <div class="card bg-background p-8 border border-border">
@@ -130,11 +163,56 @@ const onSave = handleSubmit(async (values) => {
                 </div>
               </Field>
 
-              <Button @click="onSave" class="h-11 w-full sm:w-auto text-white" :disabled="isSaving">
-                <Loader2 v-if="isSaving" class="w-4 h-4 mr-2 animate-spin" />
-                <Save v-else class="w-4 h-4 mr-2" />
-                Sauvegarder
-              </Button>
+              <Field name="family_name" v-slot="{ value, handleChange, errorMessage }">
+                <Popover v-model:open="open" >
+                  <PopoverTrigger as-child>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      :aria-expanded="open"
+                      class="input-custom justify-between w-full h-auto min-h-10 font-normal hover:bg-background"
+                      :class="{ 'border-destructive': errorMessage }"
+                    >
+                      <div class="flex flex-wrap gap-1 text-left">
+                        <span v-if="value">{{ value }}</span>
+                        <span v-else >Sélectionner une Police de caractère</span>
+                      </div>
+                      <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+
+                  <PopoverContent class="p-0 border-border">
+                    <Command class="bg-background border !border-border">
+                      <CommandInput class="font-mono" placeholder="Rechercher une police de caractère..." />
+                      <CommandEmpty class="font-mono">Aucune police de caractère trouvée.</CommandEmpty>
+                      <CommandList class="group custom-scrollbar">
+                        <CommandGroup>
+                          <CommandItem
+                            v-for="p in fontFamilies"
+                            :key="p.value"
+                            :value="p.value"
+                            @click="handleChange(p.value)"
+                            class="cursor-pointer data-[highlighted]:bg-primary data-[highlighted]:text-white group-hover:data-[highlighted]:bg-transparent group-hover:data-[highlighted]:text-foreground hover:!bg-primary hover:!text-white"
+                            >
+                            <Check
+                              :class="cn(
+                                'mr-2 h-4 w-4',
+                                value === p.value ? 'opacity-100' : 'opacity-0'
+                              )"
+                            />
+                              <div class="flex flex-col">
+
+                                <span :style="{ fontFamily: p.value }">{{ p.label }}</span>
+                                <span class="text-[10px] opacity-50">{{ p.value }}</span>
+
+                              </div>
+                          </CommandItem>
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </Field>
             </div>
           </div>
         </div>

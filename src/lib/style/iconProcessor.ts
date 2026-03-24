@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { applyTypographyInline } from "./common";
+import { applyTypographyInline, applyPositioningInline } from "./common";
 import { resolveValue, resolveValueForBreakpoint } from "./core";
 import { VISUAL_MAPPER } from "./shared";
 
@@ -34,6 +34,11 @@ export function buildIconInlineStyles(
     const val = getValue(styles.color);
     if (typeof val === 'string') inline.color = val.startsWith('#') ? val : `#${val}`;
   }
+  if (styles.iconStrokeWidth) {
+      const val = getValue(styles.iconStrokeWidth);
+      if (val) inline.strokeWidth = val as string;
+  }
   applyTypographyInline(inline, styles, getValue);
+
   return inline;
 }

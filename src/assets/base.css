@@ -158,15 +158,16 @@ body {
 @layer components {
   .input-custom {
     @apply h-9 w-full !rounded-md !border !border-border bg-input px-3 py-1 text-[13px]
-           transition-all outline-none
+           outline-none
            focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:border-transparent
            disabled:cursor-not-allowed disabled:opacity-50
            placeholder:text-muted-foreground
+           !shadow-none
            file:border-0 file:bg-transparent file:text-[13px] file:font-medium font-mono;
   }
 
   .select-item-custom {
-    @apply cursor-pointer transition-colors;
+    @apply cursor-pointer;
   }
   .select-item-custom[data-highlighted] {
     background-color: var(--primary) !important;
@@ -276,9 +277,9 @@ body {
     color: var(--card-foreground);
     border-radius: var(--radius);
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    transition:
+    /* transition:
       box-shadow 0.15s ease,
-      transform 0.15s ease;
+      transform 0.15s ease; */
   }
 
   /* .card:hover {
@@ -342,6 +343,6 @@ body {
   }
 
   .hover-lift {
-    @apply transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg;
+    @apply hover:-translate-y-1 hover:shadow-lg;
   }
 }
