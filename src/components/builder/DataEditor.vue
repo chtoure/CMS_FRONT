@@ -17,6 +17,7 @@ import SliderParams from './parameters/SliderParams.vue';
 import AccordionParams from './parameters/AccordionParams.vue';
 import LinkParams from './parameters/LinkParams.vue';
 import ButtonParams from './parameters/ButtonParams.vue';
+import BgImageParam from './parameters/BgImageParam.vue';
 
 import { useGetContentTypes } from '../../hook/content-type';
 import { useGetMediaList } from '../../hook/media';
@@ -43,7 +44,6 @@ const mediaQuery = useGetMediaList({});
 
 const COMPONENT_SOURCE_MAPPING: Record<string, ValueSource[]> = {
   'TextBuilder': [ValueSource.STATIC],
-  'ButtonBuilder': [ValueSource.STATIC],
   'InputBuilder': [ValueSource.STATIC],
   'ImageBuilder': [ValueSource.STATIC, ValueSource.IMAGE],
   'CardBuilder': [ValueSource.STATIC, ValueSource.IMAGE, ValueSource.CONTENUS],
@@ -634,5 +634,11 @@ const getCompatibleParentParams = (childParam: IComponentParams, childElement?: 
     <InteractiveParams :element="element" @update-data="updateData" />
     <SliderParams :element="element" @update-data="updateData" />
     <LinkParams :element="element" @update-data="updateData" @update-data-param="updateDataAndParam" />
+
+    <!-- Raccourci Arrière-plan Média pour Card et Slider -->
+    <BgImageParam
+      v-if="['CardBuilder', 'SliderBuilder'].includes(element.tag)"
+      :element="element"
+    />
   </div>
 </template>

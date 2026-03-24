@@ -1,6 +1,6 @@
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
-    import { computed, ref, watch } from 'vue'
+    import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
     import CompositionTable from '@/components/composition/CompositionTable.vue'
     import Button from '@/components/ui/button/Button.vue'
     import {ArrowLeft, Eye, MoreHorizontal, Pencil, Plus, Rocket, X } from 'lucide-vue-next'
@@ -18,6 +18,7 @@
     import { useGetPageRevisions, useRegisterPageRevision, useUpdatePageRevisionStatus } from '../../hook/page-revision'
     import { useBlockTemplate } from '../../hook/bloc-template'
     import { useGetPage } from '../../hook/page'
+    import { showToast } from '../../lib/toast'
 
     const router = useRouter();
     useHead({
@@ -84,6 +85,47 @@
     const mediaResults = computed(() => pageRevisionQuery.data.value?.results || []);
     const totalItems = computed(() => pageRevisionQuery.data.value?.count || 0);
 
+    // Mémoriser la dernière version ouverte pour affichage dynamique du badge "En cours"
+    const lastActiveDraftId = ref<number | null>(null);
+
+    const onStorageCrossTab = (e: StorageEvent) => {
+        if (e.key === `lastActiveDraft_${pageId.value}`) {
+            lastActiveDraftId.value = Number(e.newValue);
+        }
+    };
+
+    onMounted(() => {
+        lastActiveDraftId.value = Number(localStorage.getItem(`lastActiveDraft_${pageId.value}`)) || null;
+        window.addEventListener('storage', onStorageCrossTab);
+    });
+
+    onUnmounted(() => {
+        window.removeEventListener('storage', onStorageCrossTab);
+    });
+
+    const setLastActive = (id: number) => {
+        lastActiveDraftId.value = id;
+        localStorage.setItem(`lastActiveDraft_${pageId.value}`, id.toString());
+    };
+
+    // Le draft actif est celui qu'on a cliqué en dernier, sinon le plus récemment modifié
+    const draftRevision = computed(() => {
+        const drafts = mediaResults.value; // On prend toutes les versions éditables pour être sûr (ou juste DRAFT)
+        if (drafts.length === 0) return null;
+
+        if (lastActiveDraftId.value) {
+            const found = drafts.find((r: any) => r.id === lastActiveDraftId.value);
+            if (found && found.status !== 'PUBLISHED') return found;
+        }
+
+        const draftOnly = drafts.filter((r: any) => r.status === 'DRAFT');
+        if (draftOnly.length === 0) return null;
+
+        return draftOnly.reduce((latest: any, current: any) => {
+            return new Date(current.updatedAt) > new Date(latest.updatedAt) ? current : latest;
+        });
+    });
+
     const pageRevisionRegister = useRegisterPageRevision();
     const pageRevisionStatusUpdate = useUpdatePageRevisionStatus();
     const { fetchAll, useSyncAll, useDeleteSection, useDeleteBlockTemplate } = useBlockTemplate();
@@ -93,16 +135,20 @@
 
     const handleCreateRevision = async () => {
         try {
+
+           // On calcule le numéro de la prochaine version de manière sécurisée
+            const nextVersion = Math.max(...mediaResults.value.map((r: any) => r.version)) + 1;
+
+            console.log('nextVersion', nextVersion);
+
             const newRevision = await pageRevisionRegister.mutateAsync({
                 pageId: pageId.value,
-                status: 'DRAFT'
+                status: 'DRAFT',
+                version: nextVersion,
             });
 
             if (newRevision && newRevision.id) {
-                router.push({
-                    name: 'admin.page-revision.update',
-                    params: { id: newRevision.id }
-                });
+                pageRevisionQuery.refetch();
             }
         } catch (error) {
             console.error('Failed to create page revision:', error);
@@ -248,6 +294,14 @@
             }
 
             console.log('Revision published and clone processed successfully');
+
+            // Déterminer la version du brouillon de travail pour l'afficher dans le toast
+            const draftVersionToShow = currentPublished
+                ? currentPublished.version
+                : (allRevisions.reduce((max, r) => Math.max(max, r.version || 0), 0) + 1);
+
+            showToast('success', `Publication réussie ! Vous trouverez le contenu de cette page dans le brouillon (Version ${draftVersionToShow}) pour vos futures modifications.`);
+
         } catch (error) {
             console.error('Failed to publish page revision:', error);
             alert("Erreur lors de la publication. Veuillez réessayer.");
@@ -306,6 +360,13 @@
         searchable
         v-model:search="search"
       >
+        <template #extra-header>
+          <div v-if="draftRevision" class="flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-md border border-primary/20">
+            <Pencil class="w-4 h-4" />
+            <span class="text-sm font-medium whitespace-nowrap">Brouillon en cours : Version {{ draftRevision.version }}</span>
+          </div>
+        </template>
+
         <template #cell-id="{ index }">
           <p>{{ index + 1 }}</p>
         </template>
@@ -334,13 +395,24 @@
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuLabel v-if="row.status === 'PUBLISHED'">
-                <a
-                  target="_blank"
-                  :href="pageQuery.data.value?.slug.startsWith('/') ? pageQuery.data.value.slug : '/' + (pageQuery.data.value?.slug || '')"
-                  class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110"
-                >
-                  <Eye class="w-4 h-4" /> Visualiser
-                </a>
+                <div class="flex flex-col gap-1">
+                  <a
+                    target="_blank"
+                    :href="pageQuery.data.value?.slug.startsWith('/') ? pageQuery.data.value.slug : '/' + (pageQuery.data.value?.slug || '')"
+                    class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110"
+                  >
+                    <Eye class="w-4 h-4" /> Visualiser
+                  </a>
+                  <a
+                    v-if="draftRevision"
+                    target="_blank"
+                    :href="`${$router.resolve({ name: 'admin.page-revision.update', params: { id: draftRevision.id } }).href}`"
+                    class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110"
+                    @click="setLastActive(draftRevision.id)"
+                  >
+                    <Pencil class="w-4 h-4" /> Modifier (Actuel)
+                  </a>
+                </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuLabel v-if="row.status !== 'PUBLISHED'">
@@ -355,7 +427,12 @@
               </DropdownMenuLabel>
               <DropdownMenuSeparator v-if="row.status !== 'PUBLISHED'" />
               <DropdownMenuLabel v-if="row.status !== 'PUBLISHED'">
-                <a target="_blank" :href="`${$router.resolve({ name: 'admin.page-revision.update', params: { id: row.id } }).href}`" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
+                <a 
+                   target="_blank" 
+                   :href="`${$router.resolve({ name: 'admin.page-revision.update', params: { id: row.id } }).href}`" 
+                   class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110"
+                   @click="setLastActive(row.id)"
+                >
                   <Pencil class="w-4 h-4" /> Modifier
                 </a>
               </DropdownMenuLabel>

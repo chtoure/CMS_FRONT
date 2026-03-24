@@ -5,6 +5,7 @@ import { COMPONENT_MAP } from '../../registry/component_registry';
 import { FAMILY_CAPABILITIES, type ComponentFamily } from '../../type/component';
 import type { HydratedBlock } from '../../type/page'; // Import de l'interface créée
 import { buildBlocLayoutStyles, buildBlocLayoutInlineStyles } from '../../lib/style/blocProcessor';
+import { buildSectionStyles, buildSectionInlineStyles } from '../../lib/style/sectionProcessor';
 import { useVariableResolver } from '../../hook/variable';
 
 // On définit le nom pour la récursivité
@@ -129,12 +130,9 @@ function formatColor(value: unknown) {
   return raw;
 }
 
-/**
- * Tri des enfants par leur propriété 'order' pour garantir la parité avec le builder
- */
-const sortedChildren = computed(() => {
-  if (!props.element.children) return [];
-  return [...props.element.children].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+// Tri par order supprimé pour parité parfaite avec CanvaView / VueDraggable qui lit le tableau natif.
+const elementChildren = computed(() => {
+  return props.element.children || [];
 });
 
 /**
@@ -203,41 +201,16 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
   <section
     v-show="builderState.isVisible(element.id, (element as any).blocTemplateId)"
     v-if="!componentToRender && element.children"
-    class="relative w-full transition-all"
-    :class="{
-      'flex': formatSize(element.styles?.display) === 'flex',
-      'grid': formatSize(element.styles?.display) === 'grid',
-      'hidden': formatSize(element.styles?.display) === 'hidden',
-    }"
-    :style="{
-      backgroundColor: formatColor(element.styles?.bg),
-      padding: formatSize(element.styles?.padding),
-      opacity: element.styles?.opacity as any,
-      gap: formatSize(element.styles?.gap),
-      flexDirection: (formatSize(element.styles?.direction) === 'vertical' ? 'column' : 'row') as any,
-      justifyContent: formatSize(element.styles?.justify) as any,
-      alignItems: formatSize(element.styles?.align) as any,
-      borderWidth: formatSize(element.styles?.borderWidth),
-      borderColor: formatColor(element.styles?.borderColor),
-      borderStyle: formatSize(element.styles?.borderStyle) as any,
-    }"
+    class="relative group/section transition-all duration-200"
+    :class="buildSectionStyles(element.styles as Record<string, unknown>, resolveValue)"
+    :style="buildSectionInlineStyles(element.styles as Record<string, unknown>, builderState.currentBreakpoint.value, resolveValue)"
   >
     <!-- On imite exactement le VueDraggable du SectionBuilder.vue -->
     <div
-      class="w-full h-full flex flex-wrap"
-      :class="{
-        'flex-row': formatSize(element.styles?.direction) !== 'vertical',
-        'flex-col': formatSize(element.styles?.direction) === 'vertical',
-        'justify-start': formatSize(element.styles?.justify) === 'start',
-        'justify-center': formatSize(element.styles?.justify) === 'center',
-        'justify-end': formatSize(element.styles?.justify) === 'end',
-        'justify-between': formatSize(element.styles?.justify) === 'between',
-        'items-start': formatSize(element.styles?.align) === 'start',
-        'items-center': formatSize(element.styles?.align) === 'center',
-        'items-end': formatSize(element.styles?.align) === 'end',
-      }"
+      class="w-full h-full p-1"
+      :class="{ 'min-h-[120px]': element.children.length === 0 }"
     >
-      <template v-for="child in sortedChildren" :key="child.id">
+      <template v-for="child in elementChildren" :key="child.id">
         <!-- Cas 1 : Itération activée pour cet enfant lié à une liste -->
         <template v-if="isLeafLinkedToQuery(child)">
           <div
@@ -291,7 +264,7 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
         :class="layoutClasses"
         :style="layoutInlineStyles"
       >
-        <template v-for="child in sortedChildren" :key="child.id">
+        <template v-for="child in elementChildren" :key="child.id">
             <!-- Cas 1 : Itération -->
             <template v-if="isLeafLinkedToQuery(child)">
               <div

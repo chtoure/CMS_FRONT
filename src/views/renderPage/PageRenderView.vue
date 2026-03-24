@@ -23,11 +23,7 @@ const {
 } = UseRenderPage(slug);
 
 //  Mise à jour du titre du document (SEO)
-// Tri des sections par order
-const sortedSections = computed(() => {
-  if (!page.value?.layout) return [];
-  return [...page.value.layout].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-});
+// Tri des sections par order supprimé pour s'aligner sur CanvaView (qui utilise l'ordre natif du tableau)
 
 watchEffect(() => {
   if (page.value?.slug) {
@@ -100,9 +96,9 @@ provide('builderState', {
       v-else-if="isLoading"
     />
 
-    <div v-else-if="page">
+    <div v-else-if="page && page.layout">
       <BlocRenderView
-        v-for="section in sortedSections"
+        v-for="section in page.layout"
         :key="section.id"
         :element="section"
       />

@@ -10,6 +10,7 @@ import type { AnyComponentInstance } from '../../type/component';
 import type { AnySectionInstance } from '../../type/section';
 import StyleEditor from '../../components/builder/StyleEditor.vue';
 import DataEditor from '../../components/builder/DataEditor.vue';
+import BgImageParam from '../../components/builder/parameters/BgImageParam.vue';
 import { MousePointer2, Webhook } from 'lucide-vue-next';
 
 // Injection de l'état global
@@ -107,8 +108,9 @@ const selectedElement = computed(() => {
 
           <TabsContent value="rules" class="mt-0 border-none p-0 outline-none">
             <DataEditor v-if="'family' in selectedElement && selectedElement.family !== 'section'" :element="selectedElement as any" />
-            <div v-else class="p-4 text-center text-xs text-gray-500 italic">
-              Pas de paramétrages de données pour les sections.
+            <!-- Sections : raccourci Arrière-plan uniquement -->
+            <div v-else class="space-y-4 p-2">
+              <BgImageParam :element="selectedElement as any" />
             </div>
           </TabsContent>
         </Tabs>
