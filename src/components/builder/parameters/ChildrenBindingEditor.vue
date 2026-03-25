@@ -19,7 +19,7 @@ const props = defineProps<{
   getCompatibleParentParams: (childParam: any, childElement?: any) => any[];
 }>();
 
-const emit = defineEmits(['update-child-linked-query', 'update-child-param-source', 'force-aria-hidden']);
+const emit = defineEmits(['update-child-linked-query', 'update-child-param-source', 'force-aria-hidden', 'update-child-bg-image-key']);
 
 const { data: contentTypeOptions } = useGetContentTypes();
 
@@ -87,10 +87,33 @@ const getCompatibleCMSFields = (parentParamName: string | undefined, childParam:
     return false;
   }).map((f: any) => ({ label: f.label || f.name, value: f.name }));
 };
+
+// Retourne les champs MEDIA/image du ContentType associé à linkedQueryParamName d'un child container
+const getMediaCMSFields = (child: AnyComponentInstance) => {
+  const linkedQueryName = (child.data as any).linkedQueryParamName;
+  if (!linkedQueryName) return [];
+
+  const parentParam = props.element.params?.find(p => p.name === linkedQueryName);
+  const contentTypeId = parentParam?.type.source === ValueSource.CONTENUS
+    ? parentParam.type.contentTypeId
+    : undefined;
+
+  if (!contentTypeId) return [];
+  const contentType = contentTypeOptions.value?.results?.find((ct: any) => ct.id === contentTypeId);
+  if (!contentType) return [];
+
+  return contentType.fields_schema
+    .filter((f: any) => f.type === FieldType.MEDIA || f.type === 'media')
+    .filter((f: any) => {
+      const allowed = f.allowedTypes || [];
+      return allowed.length === 0 || allowed.includes(TypesMedia.IMAGE) || allowed.includes('image');
+    })
+    .map((f: any) => ({ label: f.label || f.name, value: f.name }));
+};
 </script>
 
 <template>
-  <div v-if="element.family === 'container' && element.children && element.children.length > 0 && element.params?.some(p => p.type.source === ValueSource.CONTENUS)" class="pt-4 border-t border-builder-bar-border/30">
+  <div v-if="element.family === 'container' && element.children && element.children.length > 0 && (element.params?.some(p => p.type.source === ValueSource.CONTENUS) || !!(element.data as any).linkedQueryParamName)" class="pt-4 border-t border-builder-bar-border/30">
     <PropertyGroup title="Liaison Enfants" :icon="LinkIcon" :open="true">
       <div class="space-y-4">
         <div v-for="child in element.children" :key="child.id" class="p-3 bg-builder-bar-background/30 rounded border border-builder-bar-border/50 space-y-3 mb-2">
@@ -123,6 +146,29 @@ const getCompatibleCMSFields = (parentParamName: string | undefined, childParam:
                   </SelectContent>
                </Select>
             </div>
+          </div>
+
+          <!-- Liaison Arrière-plan pour containers avec CMS query lié -->
+          <div v-if="child.family === 'container' && (child.data as any).linkedQueryParamName && getMediaCMSFields(child).length > 0" class="space-y-1 flex flex-col">
+            <label class="text-[8px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Arrière-plan (champ CMS)</label>
+            <Select
+              :model-value="(child.data as any).linkedBgImageKey || null"
+              :modal="false"
+              @update:model-value="(val) => emit('update-child-bg-image-key', child.id, val as string)"
+              @update:open="(val) => emit('force-aria-hidden', val)"
+            >
+              <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
+                <SelectValue placeholder="Choisir un champ image..." />
+              </SelectTrigger>
+              <SelectContent :modal="false">
+                <SelectItem :value="null">
+                  <span class="text-[9px]">Aucun</span>
+                </SelectItem>
+                <SelectItem v-for="f in getMediaCMSFields(child)" :key="f.value" :value="f.value">
+                  <span class="text-[9px]">{{ f.label }}</span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div v-for="p in child.params" :key="p.name" class="space-y-2">

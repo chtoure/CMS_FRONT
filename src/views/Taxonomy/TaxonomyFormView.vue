@@ -135,7 +135,7 @@ const handleCancel = () => {
 <template>
   <CompositionLoading v-if="isRegistering || isUpdating || isFetching" />
 
-  <div v-else class="min-h-screen space-y-10">
+  <div v-else class="space-y-8">
     <CompositionPageHeader>
       <template #content>
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
@@ -165,7 +165,7 @@ const handleCancel = () => {
       </template>
     </CompositionPageHeader>
 
-    <div class="px-4 space-y-8">
+    <div class="">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
         <!-- Informations Générales (Style UserFormView) -->
         <div class="md:col-span-2 space-y-8 p-8 card rounded-none">

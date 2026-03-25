@@ -298,7 +298,25 @@ const propagateValueToChildren = (children: AnyComponentInstance[], parentParamN
       }
     });
 
-    const updatedChild = hasChanged ? { ...child, data: newChildData } : child;
+    let updatedChild = hasChanged ? { ...child, data: newChildData } : child;
+
+    // Propagation du bgImage pour les containers enfants liés via linkedBgImageKey
+    if (updatedChild.family === 'container') {
+      const linkedBgKey = (updatedChild.data as any).linkedBgImageKey;
+      const linkedQueryName = (updatedChild.data as any).linkedQueryParamName;
+      if (linkedBgKey && linkedQueryName === parentParamName && parentIsQuery) {
+        const list = blockCMSData.value[parentParamName];
+        const firstItem = Array.isArray(list) ? list[0] : null;
+        const rawUrl = firstItem ? firstItem[linkedBgKey] : undefined;
+        const newBgImage = rawUrl
+          ? ({ type: 'media', url: rawUrl, value: { url: rawUrl } } as any)
+          : undefined;
+        updatedChild = {
+          ...updatedChild,
+          styles: { ...updatedChild.styles, bgImage: newBgImage }
+        };
+      }
+    }
 
     if (updatedChild.children && updatedChild.children.length > 0) {
       updatedChild.children = propagateValueToChildren(updatedChild.children, parentParamName, newValue);
@@ -456,6 +474,48 @@ const updateChildLinkedQuery = (childId: string, queryParamName: string | null) 
                return updated;
             }
             return child;
+          })
+        };
+      }
+      if (node.children) return { ...node, children: updateNode(node.children) };
+      return node;
+    });
+  };
+
+  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+};
+
+const updateChildBgImageKey = (childId: string, fieldKey: string | null) => {
+  if (!builderState) return;
+
+  const updateNode = (nodes: AnyComponentInstance[]): AnyComponentInstance[] => {
+    return nodes.map((node) => {
+      if (node.id === props.element.id && node.children) {
+        return {
+          ...node,
+          children: node.children.map(child => {
+            if (child.id !== childId) return child;
+
+            const linkedQueryName = (child.data as any).linkedQueryParamName;
+            let newBgImage: any = undefined;
+
+            if (fieldKey && linkedQueryName) {
+              const list = blockCMSData.value[linkedQueryName];
+              const firstItem = Array.isArray(list) ? list[0] : null;
+              const rawUrl = firstItem ? firstItem[fieldKey] : undefined;
+              if (rawUrl) {
+                newBgImage = { type: 'media', url: rawUrl, value: { url: rawUrl } } as any;
+              }
+            }
+
+            return {
+              ...child,
+              data: { ...child.data, linkedBgImageKey: fieldKey || undefined },
+              styles: {
+                ...child.styles,
+                bgImage: fieldKey ? newBgImage : undefined
+              }
+            };
           })
         };
       }
@@ -625,6 +685,7 @@ const getCompatibleParentParams = (childParam: IComponentParams, childElement?: 
       :getCompatibleParentParams="getCompatibleParentParams"
       @update-child-linked-query="updateChildLinkedQuery"
       @update-child-param-source="updateChildParamSource"
+      @update-child-bg-image-key="updateChildBgImageKey"
       @force-aria-hidden="forceAriaHidden"
     />
 
@@ -638,6 +699,7 @@ const getCompatibleParentParams = (childParam: IComponentParams, childElement?: 
     <!-- Raccourci Arrière-plan Média pour Card et Slider -->
     <BgImageParam
       v-if="['CardBuilder', 'SliderBuilder'].includes(element.tag)"
+      :key="element.id"
       :element="element"
     />
   </div>

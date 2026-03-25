@@ -189,6 +189,22 @@ const getIteratedItems = (child: AnyComponentInstance) => {
   return Array.isArray(list) ? list : [];
 };
 
+// Applique l'image de fond depuis l'item hérité au container
+const applyBgImageToContainer = (child: AnyComponentInstance, item: any): AnyComponentInstance => {
+  const linkedBgKey = (child.data as any)?.linkedBgImageKey;
+  if (!linkedBgKey || !item) return child;
+  const rawUrl = item[linkedBgKey];
+  if (!rawUrl) return child;
+  return {
+    ...child,
+    styles: {
+      ...child.styles,
+      bgImage: { type: 'media', url: rawUrl, value: { url: rawUrl } } as any
+    }
+  };
+};
+
+
 // Pour un enfant FEUILLE avec isIterated:true, trouve les items CMS
 // en cherchant dans ses params lequel pointe vers un query param du parent
 const getLeafQueryItems = (child: AnyComponentInstance): any[] => {
@@ -387,10 +403,17 @@ const applyItemToChildren = (
                   }"
                 >
                   <BlocRender
-                    :element="{
+                    :element="applyBgImageToContainer({
                       ...child,
-                      data: { ...child.data, _inherited_item: getIteratedItems(child)[0] }
-                    }"
+                      data: { ...child.data, _inherited_item: getIteratedItems(child)[0] },
+                      children: applyItemToChildren(
+                        child.children || [],
+                        getIteratedItems(child)[0],
+                        (element.params || []).filter((p: any) =>
+                          p.type?.source === 'contenus' && p.type?.config?.mode === 'query'
+                        ).map((p: any) => p.name)
+                      )
+                    }, getIteratedItems(child)[0])"
                     @update:element="(newChild: AnyComponentInstance) => {
                       const { _inherited_item, ...cleanData } = newChild.data as any;
                       handleChildUpdate(index, { ...newChild, data: cleanData });
@@ -409,7 +432,7 @@ const applyItemToChildren = (
                   }"
                 >
                   <BlocRender
-                    :element="{
+                    :element="applyBgImageToContainer({
                       ...child,
                       data: { ...child.data, _inherited_item: item },
                       children: applyItemToChildren(
@@ -419,7 +442,7 @@ const applyItemToChildren = (
                           p.type?.source === 'contenus' && p.type?.config?.mode === 'query'
                         ).map((p: any) => p.name)
                       )
-                    }"
+                    }, item)"
                     :is-clone="true"
                   />
                 </div>

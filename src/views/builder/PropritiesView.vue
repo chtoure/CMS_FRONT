@@ -35,7 +35,7 @@ const handleSaveAsCustom = async () => {
     try {
         const idToRemove = selectedElement.value.id;
         await saveAsCustomMut.mutateAsync(selectedElement.value as AnyComponentInstance);
-        
+
         // Suppression locale pour éviter d'avoir à rafraîchir
         if (builderState) {
             builderState.pageTree.value = removeFromTree(builderState.pageTree.value, idToRemove) as AnySectionInstance[];
@@ -49,9 +49,9 @@ const handleSaveAsCustom = async () => {
 // Calcul de l'élément sélectionné
 const selectedElement = computed(() => {
   if (!builderState?.selectedId.value) return null;
-  
-  const tree = builderState.builderMode.value === 'page' 
-    ? builderState.pageTree.value 
+
+  const tree = builderState.builderMode.value === 'page'
+    ? builderState.pageTree.value
     : builderState.libraryTree?.value;
 
   if (!tree) return null;
@@ -64,7 +64,7 @@ const selectedElement = computed(() => {
 <template>
   <div :class="cn(['w-full', 'p-2', 'text-builder-bar-text', 'font-bold', 'h-full', 'flex', 'flex-col', 'bg-builder-bar-background'])">
     <div class="relative h-full w-full overflow-y-auto flex flex-col">
-      
+
       <div v-if="selectedElement" class="relative p-2 flex-1 overflow-y-auto">
         <div class=" flex flex-col gap-2 items-start justify-between pb-3">
           <div class="flex flex-row gap-4 items-center w-full">
@@ -81,9 +81,9 @@ const selectedElement = computed(() => {
               </template>
             </CompositionModal>
           </div>
-          
+
           <!-- Save as Custom Button -->
-          <button 
+          <button
             v-if="'tag' in selectedElement && builderState?.builderMode.value === 'page'"
             @click="handleSaveAsCustom"
             class="flex items-center gap-2 px-3 py-1.5 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-600/20 rounded transition-all text-[10px] uppercase font-bold"
@@ -130,11 +130,11 @@ const selectedElement = computed(() => {
 <style scoped>
 .input-custom {
   @apply h-9 w-full !rounded px-3 py-1 text-[11px] shadow-sm transition-all outline-none font-mono;
-  
+
   background-color: var(--builder-input-bg);
   border: 1px solid var(--builder-input-border);
   color: var(--builder-input-text);
-  
+
   @apply focus-visible:ring-1 focus-visible:ring-offset-1 focus-visible:border-transparent;
 
   --tw-ring-color: #3B82F6;

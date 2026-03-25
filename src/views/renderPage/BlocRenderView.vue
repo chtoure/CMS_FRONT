@@ -34,15 +34,25 @@ const builderState = inject<{
 
 const { resolveValue } = useVariableResolver();
 
+const normalizeStyles = (rawStyles: any): Record<string, unknown> => {
+  if (!rawStyles) return {};
+  if (rawStyles.styles && typeof rawStyles.styles === 'object') {
+     return rawStyles.styles as Record<string, unknown>;
+  }
+  return rawStyles as Record<string, unknown>;
+};
+
+const normalizedElementStyles = computed<Record<string, unknown>>(() => normalizeStyles(props.element.styles));
+
 /**
  * Calcul des classes et styles de layout pour correspondre au builder
  */
 const layoutClasses = computed(() => {
-  return buildBlocLayoutStyles(props.element.styles as Record<string, unknown>, resolveValue);
+  return buildBlocLayoutStyles(normalizedElementStyles.value, resolveValue);
 });
 
 const layoutInlineStyles = computed(() => {
-  return buildBlocLayoutInlineStyles(props.element.styles as Record<string, unknown>, builderState.currentBreakpoint.value, resolveValue);
+  return buildBlocLayoutInlineStyles(normalizedElementStyles.value, builderState.currentBreakpoint.value, resolveValue);
 });
 
 /**
@@ -136,6 +146,36 @@ const elementChildren = computed(() => {
 });
 
 /**
+ * Applique l'image de fond depuis l'item hérité au container
+ */
+function applyBgImageToContainer(child: HydratedBlock, item: any): HydratedBlock {
+  const linkedBgKey = (child.data as any)?.linkedBgImageKey;
+  if (!linkedBgKey || !item) return child;
+  const rawUrl = item[linkedBgKey];
+  if (!rawUrl) return child;
+  const normStyles = normalizeStyles(child.styles);
+  return {
+    ...child,
+    styles: {
+      ...normStyles,
+      bgImage: { type: 'media', url: rawUrl, value: { url: rawUrl } } as any
+    }
+  };
+}
+
+/**
+ * Extrait l'URL vidéo depuis element.styles.bgVideo
+ */
+const bgVideoUrl = computed((): string | null => {
+  const raw = (normalizedElementStyles.value as any)?.bgVideo;
+  if (!raw) return null;
+  const inner = (raw && typeof raw === 'object' && 'value' in raw) ? raw.value : raw;
+  if (inner && typeof inner === 'object' && 'url' in inner) return inner.url as string;
+  if (typeof inner === 'string') return inner;
+  return null;
+});
+
+/**
  * Retourne true si un enfant FEUILLE a au moins un paramètre lié
  * à un paramètre de type query du parent courant.
  */
@@ -201,10 +241,21 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
   <section
     v-show="builderState.isVisible(element.id, (element as any).blocTemplateId)"
     v-if="!componentToRender && element.children"
-    class="relative group/section transition-all duration-200"
-    :class="buildSectionStyles(element.styles as Record<string, unknown>, resolveValue)"
-    :style="buildSectionInlineStyles(element.styles as Record<string, unknown>, builderState.currentBreakpoint.value, resolveValue)"
+    class="relative group/section transition-all duration-200 isolate"
+    :class="buildSectionStyles(normalizedElementStyles, resolveValue)"
+    :style="buildSectionInlineStyles(normalizedElementStyles, builderState.currentBreakpoint.value, resolveValue)"
   >
+    <!-- Background Video -->
+    <video
+      v-if="bgVideoUrl"
+      :src="bgVideoUrl"
+      autoplay
+      loop
+      muted
+      playsinline
+      class="absolute inset-0 w-full h-full object-cover -z-10 pointer-events-none"
+    ></video>
+
     <!-- On imite exactement le VueDraggable du SectionBuilder.vue -->
     <div
       class="w-full h-full p-1"
@@ -219,12 +270,12 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
             v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
             class="relative transition-all outline-none"
             :style="{
-              width: formatSize(child.styles?.width, '100%'),
-              height: formatSize(child.styles?.height)
+              width: formatSize(normalizeStyles(child.styles)?.width, '100%'),
+              height: formatSize(normalizeStyles(child.styles)?.height)
             }"
           >
             <BlocRenderView
-              :element="{ ...child, data: resolveLeafData(child, item) }"
+              :element="applyBgImageToContainer({ ...child, data: resolveLeafData(child, item) }, item)"
               :parent-data="{ ...finalData, _inherited_item: item }"
             />
           </div>
@@ -236,8 +287,8 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
           v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
           class="relative transition-all outline-none"
           :style="{
-            width: formatSize(child.styles?.width, '100%'),
-            height: formatSize(child.styles?.height)
+            width: formatSize(normalizeStyles(child.styles)?.width, '100%'),
+            height: formatSize(normalizeStyles(child.styles)?.height)
           }"
         >
           <BlocRenderView
@@ -254,9 +305,21 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
     v-show="builderState.isVisible(element.id, (element as any).blocTemplateId)"
     v-else-if="componentToRender"
     :is="componentToRender"
-    :styles="element.styles"
+    :styles="normalizedElementStyles"
     :data="finalData"
+    class="relative isolate h-full transition-all duration-200"
   >
+    <!-- Background Video -->
+    <video
+      v-if="bgVideoUrl"
+      :src="bgVideoUrl"
+      autoplay
+      loop
+      muted
+      playsinline
+      class="absolute inset-0 w-full h-full object-cover -z-10 pointer-events-none"
+    ></video>
+
     <!-- Slot pour les enfants (Imitation BlocRender.vue) -->
     <template v-if="canHaveChildren && element.children">
       <div
@@ -273,12 +336,12 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
                 v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
                 class="relative transition-all outline-none"
                 :style="{
-                  width: formatSize(child.styles?.width, '100%'),
-                  height: formatSize(child.styles?.height)
+                  width: formatSize(normalizeStyles(child.styles)?.width, '100%'),
+                  height: formatSize(normalizeStyles(child.styles)?.height)
                 }"
               >
                 <BlocRenderView
-                  :element="{ ...child, data: resolveLeafData(child, item) }"
+                  :element="applyBgImageToContainer({ ...child, data: resolveLeafData(child, item) }, item)"
                   :parent-data="{ ...finalData, _inherited_item: item }"
                 />
               </div>
@@ -290,8 +353,8 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
             v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
             class="relative transition-all outline-none"
             :style="{
-              width: formatSize(child.styles?.width, '100%'),
-              height: formatSize(child.styles?.height)
+              width: formatSize(normalizeStyles(child.styles)?.width, '100%'),
+              height: formatSize(normalizeStyles(child.styles)?.height)
             }"
           >
             <BlocRenderView
