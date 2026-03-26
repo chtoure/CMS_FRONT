@@ -16,7 +16,6 @@ import {
 } from 'lucide-vue-next'
 import { useRoute, RouterLink, useRouter } from 'vue-router'
 import { cn } from '../../lib/utils'
-import { useGetParameters } from '../../hook/parameter'
 import { userStore } from '../../stores/user'
 import { useLogout } from '../../hook/user'
 import Button from '../ui/button/Button.vue'
@@ -30,12 +29,15 @@ import {
 } from '../ui/dropdown-menu'
 import { useGetContentTypes } from '../../hook/content-type'
 import { usePermission } from '../../hook/usePermission'
+import { useParameter } from '../../stores/parameter'
+import { storeToRefs } from 'pinia'
 
 
 
 const route = useRoute()
 const router = useRouter()
-const { data: params} = useGetParameters()
+const store = useParameter();
+const { parameter } = storeToRefs(store);
 const storeUser = userStore();
 const { data: contentTypes} = useGetContentTypes();
 
@@ -217,14 +219,14 @@ const activeItem = computed(() => {
           isOpen ? 'opacity-100' : 'hidden'
         )"
       >
-        <img v-if="params?.media?.type === 'image'" :src="params?.media?.file_path" alt="logo" class="w-full  object-contain">
-        <video v-else-if="params?.media?.type === 'video'" autoplay loop muted :src="params?.media?.file_path" alt="logo" class="w-full  object-contain"></video>
+        <img v-if="parameter?.media?.type === 'image'" :src="parameter?.media?.file_path" alt="logo" class="w-full  object-contain">
+        <video v-else-if="parameter?.media?.type === 'video'" autoplay loop muted :src="parameter?.media?.file_path" alt="logo" class="w-full  object-contain"></video>
 
       </div>
 
       <div v-if="isCollapsed" class="w-12 h-12 flex items-center justify-center relative z-10">
-        <img v-if="params?.media?.type === 'image'" :src="params?.media?.file_path" alt="logo" class="object-contain">
-        <video v-else-if="params?.media?.type === 'video'" autoplay loop muted :src="params?.media?.file_path" alt="logo" class="w-full  object-contain"></video>
+        <img v-if="parameter?.media?.type === 'image'" :src="parameter?.media?.file_path" alt="logo" class="object-contain">
+        <video v-else-if="parameter?.media?.type === 'video'" autoplay loop muted :src="parameter?.media?.file_path" alt="logo" class="w-full  object-contain"></video>
       </div>
     </div>
 

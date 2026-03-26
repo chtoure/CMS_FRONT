@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import type { Parameter, UpdateParameterPayload } from "../type/parameter";
 
 import api, { handleResponse } from "../api/fetchConfig";
+import { useParameter } from "../stores/parameter";
 
 const useGetParameters = () => {
   return useQuery({
@@ -22,7 +23,11 @@ const useUpdateParameters = () => {
         body: JSON.stringify(payload)
       }));
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['parameters'] })
+    onSuccess: (data) =>{
+      const {setParameter} =useParameter();
+      setParameter(data);
+      queryClient.invalidateQueries({ queryKey: ['parameters'] })
+    } 
   });
 };
 

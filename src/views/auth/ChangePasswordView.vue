@@ -1,55 +1,3 @@
-
-
-
-
-<template>
-
-  <CompositionLoading v-if="isLoading" />
-
-  <div v-else class="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-sm">
-      <img class="mx-auto h-10 w-auto" src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=600" alt="Your Company" />
-      <h2 class="mt-10 text-center text-2xl/9 font-bold tracking-tight text-text">Changer le mot de passe</h2>
-    </div>
-
-    <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-      <form @submit.prevent="handleSubmit" class="space-y-4">
-
-        <div class="sm:col-span-3">
-            <BasePasswordForceInput
-              label="Nouveau mot de passe"
-              v-model="new_password"
-              placeholder="Entrer le mot de passe"
-            />
-          </div>
-
-          <div class="sm:col-span-3">
-            <BasePasswordForceInput
-              label="Confirmer le nouveau mot de passe"
-              v-model="confirm_new_password"
-              placeholder="Répéter le mot de passe"
-              :show-strength="false"
-            />
-            <p v-if="password_non_confirmed || isError" class="mt-2 text-xs text-destructive font-medium italic">
-              {{ error?.message || messageError }}
-            </p>
-          </div>
-
-        <div>
-          <button
-            type="submit"
-            class="flex w-full justify-center rounded-md bg-primary px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-          {{ isLoading ? 'Changement...' : 'Enregistrer' }}
-          </button>
-        </div>
-      </form>
-
-    </div>
-  </div>
-</template>
-
-
 <script setup lang="ts">
   import BasePasswordForceInput from '../../components/base/BasePasswordForceInput.vue';
   import { ref, watch } from 'vue';
@@ -57,10 +5,13 @@
   import { useChangePassword } from '../../hook/user';
   import { userStore } from '../../stores/user';
   import { useRouter } from 'vue-router';
-import type { Permission } from '../../type/permission';
+  import type { Permission } from '../../type/permission';
+  import { useParameter } from '../../stores/parameter';
+  import { storeToRefs } from 'pinia';
 
 
-  // Initialisation
+  const parameterStore = useParameter();
+  const { parameter } = storeToRefs(parameterStore);
   const new_password = ref('');
   const confirm_new_password = ref('');
   const password_non_confirmed = ref(false);
@@ -165,3 +116,59 @@ import type { Permission } from '../../type/permission';
   };
 
 </script>
+
+
+
+<template>
+
+  <div class="flex justify-center items-center h-full" v-if="isLoading">
+    <CompositionLoading  />
+  </div>
+
+
+  <div v-else class="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-sm">
+      <img v-if="parameter?.media?.type === 'image'" class="mx-auto h-20 w-auto" :src="parameter?.media?.file_path" alt="Your Company" />
+      <video v-else-if="parameter?.media?.type === 'video'" autoplay loop muted class="mx-auto h-20 w-auto" :src="parameter?.media?.file_path" alt="Your Company" />
+      <h2 class="mt-6 text-center text-huge font-bold tracking-tight text-text">Changer le mot de passe</h2>
+    </div>
+
+    <div class="mt-6 sm:mx-auto sm:w-full sm:max-w-sm">
+      <form @submit.prevent="handleSubmit" class="space-y-4">
+
+        <div class="sm:col-span-3">
+            <BasePasswordForceInput
+              label="Nouveau mot de passe"
+              v-model="new_password"
+              placeholder="Entrer le mot de passe"
+            />
+          </div>
+
+          <div class="sm:col-span-3">
+            <BasePasswordForceInput
+              label="Confirmer le nouveau mot de passe"
+              v-model="confirm_new_password"
+              placeholder="Répéter le mot de passe"
+              :show-strength="false"
+            />
+            <p v-if="password_non_confirmed || isError" class="mt-2 text-xs text-destructive font-medium italic">
+              {{ error?.message || messageError }}
+            </p>
+          </div>
+
+        <div>
+          <button
+            type="submit"
+            class="flex w-full justify-center rounded-md bg-primary px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+          {{ isLoading ? 'Changement...' : 'Enregistrer' }}
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</template>
+
+
+

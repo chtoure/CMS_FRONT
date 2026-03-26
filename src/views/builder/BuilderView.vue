@@ -30,6 +30,7 @@ const selectedSectionId = ref<string | null>(null);
 const builderMode = ref<'page' | 'library'>('page');
 const currentBreakpoint = ref<'default' | 'sm' | 'md' | 'lg'>('default');
 const isDragging = ref(false);
+const xRayMode = ref(false);
 const toggleStates = ref<Record<string, boolean>>({});
 const cmsCache = ref<Record<string, any>>({});
 
@@ -303,6 +304,7 @@ provide('builderState', {
   currentBreakpoint,
   isDragging,
   setIsDragging,
+  xRayMode,
   toggleStates,
   toggleVisibility,
   isVisible,
@@ -322,6 +324,19 @@ provide('builderState', {
     >
       <!-- Barre d'outils (Mode & Breakpoint) -->
       <div class="absolute top-0.5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 scale-90 transition-all duration-300">
+
+        <div class="p-1 scale-90 bg-builder-bar-background backdrop-blur-sm border border-border px-2 py-1 rounded shadow-lg flex items-center gap-2 text-[9px] tracking-wider font-bold">
+          <button
+            @click="xRayMode = !xRayMode"
+            class="px-3 py-1 rounded flex items-center gap-1 transition-all"
+            :class="xRayMode ? 'bg-indigo-500/20 text-indigo-400 ring-1 ring-indigo-500/50' : 'text-gray-500 hover:bg-gray-700/50 hover:text-gray-300'"
+            title="Mode Structure (Rayon X) pour mieux voir les conteneurs imbriqués"
+          >
+            <!-- Icône d'arborescence simple -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+            STRUCTURE
+          </button>
+        </div>
 
         <div class="p-1 scale-90 bg-builder-bar-background backdrop-blur-sm border border-border px-2 py-1 rounded shadow-lg flex items-center gap-2 text-[9px] tracking-wider font-bold">
           <button
