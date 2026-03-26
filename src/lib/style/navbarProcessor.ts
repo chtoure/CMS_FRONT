@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { resolveValue, resolveValueForBreakpoint } from "./core";
 import { VISUAL_MAPPER, EXTERNAL_MAPPER } from "./shared";
+import { applyPositioningInline } from "./common";
 
 export function buildNavbarStyles(styles?: Record<string, unknown>, resolver?: (v: unknown) => unknown): string {
   if (!styles) return '';

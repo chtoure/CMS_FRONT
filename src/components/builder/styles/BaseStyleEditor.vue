@@ -184,6 +184,78 @@ const bgRepeatOptions = [
       </div>
     </PropertyGroup>
 
+    <!-- ==== Positionnement Avancé ==== -->
+    <PropertyGroup v-if="showField('position') || showField('top')" title="Positionnement" :open="false" :icon="Layers">
+      <div class="space-y-3">
+        <div v-if="showField('position')" class="space-y-1.5 pt-1">
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text uppercase tracking-tighter">Type</label>
+          <select
+            class="w-full bg-builder-bar-item-background border border-border text-builder-bar-text text-xs p-1.5 rounded focus:outline-none focus:border-primary"
+            :value="getRawValue(styles.position) || 'static'"
+            @change="(e) => {
+              const newPos = (e.target as HTMLSelectElement).value;
+              const updates: Record<string, any> = { position: newPos };
+              if (newPos !== 'static') {
+                if (getRawValue(styles.top) === undefined) updates.top = 0;
+                if (getRawValue(styles.left) === undefined && newPos === 'fixed') updates.left = 0;
+              }
+              updateStyles(updates);
+            }"
+          >
+            <option value="static">Static (Défaut)</option>
+            <option value="fixed">Fixed</option>
+            <option value="sticky">Sticky</option>
+          </select>
+        </div>
+
+        <div v-if="(getRawValue(styles.position) !== 'static' && getRawValue(styles.position)) || !showField('position')" class="grid grid-cols-2 gap-2">
+          
+          <PropertyInput
+            v-if="showField('top')"
+            label="Top"
+            :model-value="getRawValue(styles.top) !== undefined ? getRawValue(styles.top) : ''"
+            @update:model-value="(val) => updateStyle('top', val !== '' ? Number(val) : undefined)"
+            type="number"
+            class="flex-1"
+          />
+          <PropertyInput
+            v-if="showField('right')"
+            label="Right"
+            :model-value="getRawValue(styles.right) !== undefined ? getRawValue(styles.right) : ''"
+            @update:model-value="(val) => updateStyle('right', val !== '' ? Number(val) : undefined)"
+            type="number"
+            class="flex-1"
+          />
+          <PropertyInput
+            v-if="showField('bottom')"
+            label="Bottom"
+            :model-value="getRawValue(styles.bottom) !== undefined ? getRawValue(styles.bottom) : ''"
+            @update:model-value="(val) => updateStyle('bottom', val !== '' ? Number(val) : undefined)"
+            type="number"
+            class="flex-1"
+          />
+          <PropertyInput
+            v-if="showField('left')"
+            label="Left"
+            :model-value="getRawValue(styles.left) !== undefined ? getRawValue(styles.left) : ''"
+            @update:model-value="(val) => updateStyle('left', val !== '' ? Number(val) : undefined)"
+            type="number"
+            class="flex-1"
+          />
+
+        </div>
+
+        <div v-if="showField('zIndex') && getRawValue(styles.position) !== 'static'" class="space-y-1.5 pt-1">
+            <PropertyInput
+              label="Z-Index"
+              :model-value="parseInt(getRawValue(styles.zIndex) as string) || 0"
+              @update:model-value="(val) => updateStyle('zIndex', parseInt(val.toString()) || 0)"
+              type="number"
+            />
+        </div>
+      </div>
+    </PropertyGroup>
+
     <!-- Appearance Section -->
     <PropertyGroup v-if="showField('shadow') || showField('opacity')" title="Apparence" :open="true" :icon="Droplets">
       <div class="space-y-2">

@@ -160,16 +160,18 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
 <template>
   <div 
     class="relative group/slider w-full" 
-    :class="[
-      computedClasses,
-      builderState.isDragging?.value ? 'overflow-visible' : 'overflow-hidden'
-    ]" 
+    :class="computedClasses" 
     :style="computedInlineStyles"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
   >
-    <div
-      class="slider-track transition-transform ease-in-out h-full w-full"
+    <!-- Viewport Container (clips content to padding area) -->
+    <div 
+      class="w-full h-full transition-all"
+      :class="builderState.isDragging?.value ? 'overflow-visible' : 'overflow-hidden'"
+    >
+      <div
+        class="slider-track transition-transform ease-in-out h-full w-full"
       :style="{
         transform: builderState.isDragging?.value ? 'none' : 'translateX(-' + (currentSlide * (100 / slidesPerView)) + '%)',
         transitionDuration: builderState.isDragging?.value ? '0ms' : sliderConfig.transitionDuration + 'ms',
@@ -182,6 +184,7 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
         </div>
       </slot>
     </div>
+  </div>
     
     <button v-show="slidesCount > slidesPerView && !builderState.isDragging?.value" @click.stop="prevSlide" :style="arrowStyles" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover/slider:opacity-100 z-10 flex items-center justify-center">
       <ChevronLeft class="w-6 h-6" :style="{ color: paginationStyles.color }" />
@@ -212,7 +215,7 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
 </template>
 
 <style scoped>
-/* Le conteneur immédiat du slot (div 130 dans BlocRender) */
+/* On s'assure que le viewport et le track font bien la taille du contenu */
 .slider-track :deep(> div) {
    width: 100%;
    height: 100%;
@@ -225,6 +228,9 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
    flex-wrap: nowrap !important;
    width: 100%;
    height: 100%;
+   padding: 0 !important;
+   margin: 0 !important;
+   gap: 0 !important;
 }
 
 /* Les slides réels (div 149 dans BlocRender) */

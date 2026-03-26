@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { computed, watchEffect, ref, onMounted, onUnmounted, provide } from 'vue';
 import { UseRenderPage } from '../../hook/page';
 import CompositionError from '../../components/composition/CompositionError.vue';
 import CompositionLoading from '../../components/composition/CompositionLoading.vue';
 import BlocRenderView from './BlocRenderView.vue';
-import NotFoundPage from '@/views/error/NotFoundPage.vue';
+import { ApiError } from '../../api/apiError';
+
+
 
 
 
 const route = useRoute();
+const router = useRouter();
 
 // Extraction réactive du slug depuis l'URL
 const slug = computed(() => (route.params.slug as string));
@@ -32,6 +35,10 @@ watchEffect(() => {
     document.title = slug.value === "" ? "Accueil" : formattedSlug;
   }
   console.log("data page Render : ",page.value);
+  
+  if (page.value === null || (getError.value instanceof ApiError && getError.value.status === 404)) {
+    router.push({ name: 'notfound' });
+  }
 });
 
 // Gestion responsive
@@ -88,7 +95,7 @@ provide('builderState', {
   <main>
 
     <CompositionError
-      v-if="isgetError"
+      v-if="isgetError && (!(getError instanceof ApiError) || getError.status !== 404)"
       :error="getError?.message"
     />
 
@@ -104,9 +111,7 @@ provide('builderState', {
       />
     </div>
 
-    <div v-else>
-      <NotFoundPage />
-    </div>
+
 
   </main>
 </template>

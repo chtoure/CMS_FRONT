@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { resolveValue, resolveValueForBreakpoint, formatDimension } from "./core";
+import { applyPositioningInline } from "./common";
 
 const BLOC_LAYOUT_MAPPER = {
   columns: (v: any) => `grid-cols-${v}`,
@@ -84,6 +85,11 @@ export function buildBlocLayoutInlineStyles(
   if (align) {
     const map: Record<string, string> = { start: 'flex-start', center: 'center', end: 'flex-end', stretch: 'stretch' };
     if (typeof align === 'string' && map[align]) inline.alignItems = map[align];
+  }
+
+  if (styles.bgRepeat) {
+    const val = getValue(styles.bgRepeat);
+    if (val) inline.backgroundRepeat = val as string;
   }
 
   return inline;

@@ -20,7 +20,7 @@ const buildQueryParams = (filter?: Ref<userFilter> | userFilter) => {
 
 
 // Hook get users list
-export const useGetUsers = (filter?: Ref<userFilter> | userFilter) => {
+const useGetUsers = (filter?: Ref<userFilter> | userFilter) => {
   return useQuery({
     queryKey: ["users",filter],
     queryFn:async () => {
@@ -32,9 +32,19 @@ export const useGetUsers = (filter?: Ref<userFilter> | userFilter) => {
   })
 }
 
+const useGetUserById = (id: number | Ref<number>) => {
+  return useQuery({
+    queryKey: ["users",id],
+    queryFn:async () => {
+      const response = await api(`/users/${unref(id)}`)
+      return handleResponse<User>(response)
+    }
+  })
+}
+
 
 // Hook personnalisé pour la mutation de connexion
-export const useLogin = () => {
+const useLogin = () => {
   return useMutation({
     mutationFn: async (credentials: LoginCredentials) => {
       return handleResponse<AuthResponse>(await api('/login', {
@@ -48,7 +58,7 @@ export const useLogin = () => {
 
 
 //Hook personnalisé pour la mutation de déconnexion
-export const useLogout = () =>{
+const useLogout = () =>{
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () =>{
@@ -69,7 +79,7 @@ export const useLogout = () =>{
 
 
 // Hook update profil utilisateur
-export const useUpdateProfile = () => {
+const useUpdateProfile = () => {
   return useMutation ({
     mutationFn: async (userData:{
       profileData : UpdateProfileData;
@@ -112,7 +122,7 @@ export const useUpdateProfile = () => {
 
 
 // Hook addUser
-export const useAddUser = () => {
+const useAddUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn:async (newUser: AddUserData) => {
@@ -130,7 +140,7 @@ export const useAddUser = () => {
 
 
 // Hook change password
-export const useChangePassword = () => {
+const useChangePassword = () => {
   return useMutation({
     mutationFn: async (data: { passwordData: ChangePasswordData; id: number }) => {
       return handleResponse<AuthResponse>(await api(`/change-password/${data.id}`, {
@@ -143,7 +153,7 @@ export const useChangePassword = () => {
 
 
 //  Hook forgot password(Send code to email)
-export const useForgotPassword = () => {
+const useForgotPassword = () => {
   return useMutation({
     mutationFn: async (toEmail: string) => {
       return handleResponse<AuthResponse>(await api("/send-verification-code", {
@@ -159,7 +169,7 @@ export const useForgotPassword = () => {
 
 
 // Hook verify code of forgot password
-export  const useVerifyCode = () => {
+const useVerifyCode = () => {
   return useMutation({
     mutationFn: async (data:{id: number, code: string}) => {
       return handleResponse<VerifyCode>(await api(`/verify-code/${data.id}`, {
@@ -172,7 +182,7 @@ export  const useVerifyCode = () => {
 
 
 // Hook reset password && login
-export const useResetPassword = () => {
+const useResetPassword = () => {
   return useMutation({
     mutationFn: async (data: { resetData: LoginCredentials, id: number }) => {
       return handleResponse<AuthResponse>(await api(`/reset-password/${data.id}`, {
@@ -185,7 +195,7 @@ export const useResetPassword = () => {
 
 
 // Archiver un user
-export const useArchiveUser = () => {
+const useArchiveUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (idUser: number) => {
@@ -204,7 +214,7 @@ export const useArchiveUser = () => {
 
 
 // Restorer un user
-export const useRestoreUser = () => {
+const useRestoreUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (idUser: number) => {
@@ -221,7 +231,7 @@ export const useRestoreUser = () => {
 
 
 // Supprimer un user
-export const useDeleteUser = () => {
+const useDeleteUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (idUser: number) => {
@@ -239,7 +249,7 @@ export const useDeleteUser = () => {
 
 
 // Resend confirmation email
-export const useResendConfirmEmail = () => {
+const useResendConfirmEmail = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (idUser: number) => {
@@ -253,3 +263,21 @@ export const useResendConfirmEmail = () => {
     }
   });
 };
+
+
+export {
+  useGetUsers,
+  useGetUserById,
+  useLogin,
+  useLogout,
+  useUpdateProfile,
+  useAddUser,
+  useChangePassword,
+  useForgotPassword,
+  useVerifyCode,
+  useResetPassword,
+  useArchiveUser,
+  useRestoreUser,
+  useDeleteUser,
+  useResendConfirmEmail
+}

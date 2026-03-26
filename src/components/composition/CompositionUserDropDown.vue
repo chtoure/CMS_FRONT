@@ -30,12 +30,12 @@ const handleLogout = () => {
   logout(void 0, {
 
     onSuccess() {
-      storeUser.setUserInfo(null);
+      storeUser.setUserInfo(null, []);
       router.push({ name: 'auth.login' });
     },
     onError(err) {
       console.error('Erreur de déconnexion :', err);
-      storeUser.setUserInfo(null);
+      storeUser.setUserInfo(null, []);
       router.push({ name: 'auth.login' });
     }
   });
@@ -53,7 +53,7 @@ const handleLogout = () => {
             </div>
             <div class="flex flex-col">
             <span class="font-semibold text-sm text-foreground">{{ storeUser.userInfo?.full_name }}</span>
-            <span class="text-xs text-muted-foreground">{{ storeUser.userInfo?.role }}</span>
+            <span class="text-xs text-muted-foreground">{{ storeUser.userInfo?.role?.name }}</span>
             </div>
         </div>
         <div class="my-2 h-px bg-border" />

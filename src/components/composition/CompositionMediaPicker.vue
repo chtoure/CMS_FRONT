@@ -126,7 +126,7 @@ const selectedMedia = computed(() => {
   <CompositionModal v-model:open="open" title="Médiathèque" description="Sélectionnez ou téléversez un média">
     <template #trigger>
       <slot name="trigger">
-         <Button variant="outline" class="justify-start text-left font-normal min-w-[200px]" @click="open = true">
+         <Button variant="outline" class="justify-start text-left font-normal min-w-[200px] !border !border-border" @click="open = true">
             <template v-if="!multiple && selectedMedia && !Array.isArray(selectedMedia)">
                 <img v-if="selectedMedia.type === 'image'" :src="selectedMedia.file_path" class="h-6 w-6 mr-2 object-cover rounded-sm" />
                 <FileVideo v-else-if="selectedMedia.type === 'video'" class="h-4 w-4 mr-2 text-primary" />
@@ -142,7 +142,7 @@ const selectedMedia = computed(() => {
                          <FileText v-else-if="media.type === 'document'" class="h-4 w-4 text-blue-500" />
                          <Archive v-else-if="media.type === 'archive'" class="h-4 w-4 text-amber-500" />
                     </span>
-                    <span v-if="selectedMedia.length > 3" class="text-xs text-muted-foreground">+{{ selectedMedia.length - 3 }}</span>
+                    <span v-if="selectedMedia.length > 3" class="text-xs text-muted-foreground rounded-full px-2 py-1">+{{ selectedMedia.length - 3 }}</span>
                     <span class="ml-2">{{ selectedMedia.length }} sélectionné(s)</span>
                  </span>
             </template>
@@ -152,7 +152,7 @@ const selectedMedia = computed(() => {
     </template>
 
     <template #content>
-      <div class="flex flex-col w-[850px] max-w-full h-[600px]">
+      <div class="flex flex-col w-[850px] max-w-full h-[400px]">
           <Tabs v-model="activeTab" class="flex-1 flex flex-col overflow-hidden">
             <div class="px-6 py-4">
                 <TabsList class="grid w-full grid-cols-2 gap-2 ">
@@ -163,8 +163,8 @@ const selectedMedia = computed(() => {
 
             <TabsContent value="upload" class="flex-1 p-6 mt-0">
                 <div
-                    class="w-full h-full border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-center p-10 transition-all"
-                    :class="isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'"
+                    class="w-full h-full border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-center p-6"
+                    :class="isDragging ? 'border-primary bg-primary' : 'border-border'"
                     @dragover.prevent="isDragging = true"
                     @dragleave.prevent="isDragging = false"
                     @drop.prevent="onDrop"
@@ -199,7 +199,7 @@ const selectedMedia = computed(() => {
                         <div
                             v-for="item in mediaList"
                             :key="item.id"
-                            class="group relative aspect-square border border-border overflow-hidden cursor-pointer transition-all bg-muted/20 hover:ring-2 hover:ring-primary/50"
+                            class="group relative aspect-square border border-border overflow-hidden cursor-pointer bg-muted/20 hover:ring-2 hover:ring-primary/50"
                             @click="selectMedia(item)"
                         >
                             <img
@@ -228,7 +228,7 @@ const selectedMedia = computed(() => {
                                 </div>
                             </div>
 
-                            <div class="absolute bottom-0 left-0 right-0 bg-black/70 p-1.5 text-[9px] text-white truncate opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div class="absolute bottom-0 left-0 right-0 bg-black/70 p-1.5 text-[9px] text-white truncate opacity-0 group-hover:opacity-100">
                                 {{ item.alt }}
                             </div>
                         </div>
@@ -243,7 +243,9 @@ const selectedMedia = computed(() => {
                         <Button variant="ghost" size="sm" @click="open = false">Annuler</Button>
                         <Button @click="confirmSelection"
                                 :disabled="multiple ? !(Array.isArray(selectedMediaIds) && selectedMediaIds.length > 0) : !selectedMediaIds"
-                                size="sm">
+                                size="sm"
+                                class="!text-white"
+                                >
                             Confirmer la sélection
                         </Button>
                     </div>

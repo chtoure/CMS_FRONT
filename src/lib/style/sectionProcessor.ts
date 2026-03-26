@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { resolveValue, resolveValueForBreakpoint, formatColor, formatDimension } from "./core";
 import { VISUAL_MAPPER } from "./shared";
+import { applyPositioningInline } from "./common";
 
 const SECTION_LAYOUT_MAPPER = {
   direction: (v: any) => v === 'vertical' ? 'flex-col' : 'flex-row',
@@ -120,6 +121,21 @@ export function buildSectionInlineStyles(
   if (styles.opacity !== undefined) {
     const val = getValue(styles.opacity);
     if (val !== undefined) inline.opacity = String(val);
+  }
+
+  // Positioning only (to avoid layout breakage)
+  applyPositioningInline(inline, styles, getValue);
+
+  const positionVal = getValue(styles.position);
+  
+  if ((positionVal === 'sticky' || positionVal === 'fixed' || positionVal === 'absolute') && !inline.zIndex) {
+    inline.zIndex = '10';
+  }
+
+  // When position is fixed or absolute, sections normally shrink to content width.
+  // Apply width: 100% by default unless the user has explicitly set a width.
+  if ((positionVal === 'fixed' || positionVal === 'absolute') && !styles.width) {
+    inline.width = '100%';
   }
 
   return inline;
