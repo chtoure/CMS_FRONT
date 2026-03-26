@@ -5,8 +5,8 @@ export type StyleMapper<T> = { [K in keyof T]?: (v: unknown) => string };
 export const EXTERNAL_MAPPER: StyleMapper<Record<string, unknown>> = {
   marginTop: (v) => formatDimension('mt', v),
   marginBottom: (v) => formatDimension('mb', v),
-  width: (v) => `w-[${v}px]`,
-  height: (v) => `h-[${v}px]`,
+  width: (v) => formatDimension('w', v),
+  height: (v) => formatDimension('h', v),
 };
 
 export const VISUAL_MAPPER: StyleMapper<Record<string, unknown>> = {
@@ -19,6 +19,7 @@ export const VISUAL_MAPPER: StyleMapper<Record<string, unknown>> = {
   opacity: (v) => isNumeric(v) ? `opacity-[${v}]` : `opacity-${v}`,
   borderWidth: (v) => formatDimension('border', v),
   borderColor: (v) => formatColor('border', v),
+  border: (v) => formatColor('border', v), // Fallback for old properties
   borderStyle: (v) => `border-${v}`,
 };
 
