@@ -91,6 +91,9 @@ export function useBlockTemplate() {
             let currentSectionId = section.sectionId;
 
             if (!currentSectionId) {
+                if (section.order === undefined) {
+                    section.order = i;
+                }
                 const newSection = await useCreateSection(section as AnySectionInstance, pageRevisionId);
                 currentSectionId = newSection.id;
 

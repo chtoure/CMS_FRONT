@@ -152,7 +152,7 @@ const selectedMedia = computed(() => {
     </template>
 
     <template #content>
-      <div class="flex flex-col w-[850px] max-w-full h-[400px]">
+      <div class="flex flex-col w-full max-w-full h-[400px]">
           <Tabs v-model="activeTab" class="flex-1 flex flex-col overflow-hidden">
             <div class="px-6 py-4">
                 <TabsList class="grid w-full grid-cols-2 gap-2 ">

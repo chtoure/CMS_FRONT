@@ -21,6 +21,7 @@ defineOptions({
 interface Props {
   element: AnyComponentInstance;
   isClone?: boolean; // Si true, ce bloc est un clone non-éditable (itération)
+  depth?: number;    // Profondeur dans l'arbre pour le mode Blueprint
 }
 
 const props = defineProps<Props>();
@@ -35,6 +36,8 @@ const builderState = inject<{
   selectComponent: (id: string | null) => void
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
   isDragging: { value: boolean }
+  setIsDragging: (val: boolean) => void
+  xRayMode: { value: boolean }
   toggleStates: { value: Record<string, boolean> }
   isVisible: (id: string, backendId?: number | null) => boolean
   cmsCache: { value: Record<string, any> }
@@ -44,6 +47,8 @@ const { resolveValue } = useVariableResolver();
 
 // Computed réactifs
 const isSelected = computed(() => builderState?.selectedId.value === props.element.id);
+const isDraggingOver = computed(() => builderState?.isDragging?.value ?? false);
+const isXRayMode = computed(() => builderState?.xRayMode?.value ?? false);
 const canHaveChildren = computed(() => {
   // Le bouton ne doit plus être un conteneur
   if (props.element.tag === 'ButtonBuilder') return false;
@@ -72,7 +77,6 @@ const bgVideoUrl = computed((): string | null => {
   return null;
 });
 
-const isDraggingOver = computed(() => builderState?.isDragging?.value ?? false);
 const isVisible = computed(() => {
   return builderState?.isVisible(props.element.id, props.element.blocTemplateId) ?? true;
 });
@@ -247,7 +251,6 @@ const applyItemToChildren = (children: AnyComponentInstance[], item: any): AnyCo
     class="relative isolate h-full group/renderer transition-all duration-200"
     :class="{
       'ring-1 ring-blue-500 ring-inset z-10': isSelected,
-      'hover:ring-1 hover:ring-gray-300': !isSelected && !isDraggingOver && !isClone,
       'drop-zone-potential': isDraggingOver && canHaveChildren && !isClone,
       'opacity-20 grayscale-[0.8] border-2 border-dashed border-red-500/50': !isVisible && !isClone,
     }"
@@ -288,7 +291,7 @@ const applyItemToChildren = (children: AnyComponentInstance[], item: any): AnyCo
         <!-- Mode Clone : pas de drag & drop, rendu simple des enfants -->
         <template v-if="isClone">
           <div
-            class="min-h-[50px] w-full h-full"
+            class="w-full h-full"
             :class="element.tag !== 'SliderBuilder' ? [layoutClasses, 'pb-10'] : ''"
             :style="element.tag !== 'SliderBuilder' ? layoutInlineStyles : {}"
           >
@@ -315,17 +318,20 @@ const applyItemToChildren = (children: AnyComponentInstance[], item: any): AnyCo
             :animation="100"
             :delay="0"
             ghost-class="ghost-item"
-            class="w-full h-full transition-all duration-300 min-h-[80px]"
+            class="w-full h-full transition-all duration-300"
             :class="[
               element.tag !== 'SliderBuilder' ? layoutClasses : '',
               {
                 'drop-zone-active': isDraggingOver && element.tag !== 'SliderBuilder',
                 'p-4': (!childrenModel || childrenModel.length === 0) && element.tag !== 'SliderBuilder',
-                'p-2': childrenModel && childrenModel.length > 0 && isDraggingOver && element.tag !== 'SliderBuilder'
+                'blueprint-target': element.tag !== 'SliderBuilder',
+                'blueprint-mode': (isDraggingOver || isXRayMode) && element.tag !== 'SliderBuilder',
               }
             ]"
             :style="element.tag !== 'SliderBuilder' ? layoutInlineStyles : {}"
             @update:model-value="handleChildrenChange"
+            @start="builderState?.setIsDragging(true)"
+            @end="builderState?.setIsDragging(false)"
           >
             <div
               v-for="(child, index) in childrenModel"
@@ -345,6 +351,7 @@ const applyItemToChildren = (children: AnyComponentInstance[], item: any): AnyCo
                 <ResizerWrapper
                   :element="child"
                   :active="builderState?.selectedId.value === child.id"
+                  :depth="(props.depth ?? 0) + 1"
                   @update:element="(newChild: AnyComponentInstance) => {
                     const { _inherited_item, ...cleanData } = newChild.data as any;
                     handleChildUpdate(index, { ...newChild, data: cleanData });
@@ -389,6 +396,7 @@ const applyItemToChildren = (children: AnyComponentInstance[], item: any): AnyCo
                 v-else
                 :element="child"
                 :active="builderState?.selectedId.value === child.id"
+                :depth="(props.depth ?? 0) + 1"
                 @update:element="(newChild) => handleChildUpdate(index, newChild)"
                 @resizing="isResizingItem = $event"
                 :style="!isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {}"
@@ -411,6 +419,15 @@ const applyItemToChildren = (children: AnyComponentInstance[], item: any): AnyCo
   outline: 2px dashed #3b82f6;
   outline-offset: -2px;
   background-color: rgba(59, 130, 246, 0.08);
+}
+
+/* Mode Blueprint: al drag, on écarte les enfants et on ajoute un padding visuel */
+.blueprint-mode {
+  gap: 8px !important;
+  padding: 8px !important;
+  outline: 1px dashed rgba(139, 92, 246, 0.6);
+  outline-offset: -3px;
+  background-color: rgba(139, 92, 246, 0.04);
 }
 
 .drop-zone-potential {

@@ -8,9 +8,10 @@
   import { useForm,Field } from 'vee-validate';
   import { validationSchemaLogin } from '../../validation/loginValidate';
   import { useRouter } from 'vue-router';
-  import { useGetParameters } from '../../hook/parameter';
   import { useGetPermissionsByRoleId } from '../../hook/permission';
   import { ref } from 'vue';
+  import { useParameter } from '../../stores/parameter';
+  import { storeToRefs } from 'pinia';
 
 
   const roleId= ref<number>(0)
@@ -20,8 +21,9 @@
     refetch: refetchPermissions
    } = useGetPermissionsByRoleId(roleId);
 
-  // Initialisation
-  const { data: params} = useGetParameters()
+  
+  const store = useParameter();
+  const { parameter } = storeToRefs(store);
   const storeUser = userStore();
   const { handleSubmit } = useForm({
     validationSchema: validationSchemaLogin,
@@ -97,18 +99,19 @@ const initials = ((full_name:string) => {
 
 
 <template>
-  <div class="min-h-screen">
-    <CompositionLoading v-if="isLoggingIn" />
+
+  <div class="flex justify-center items-center h-full" v-if="isLoggingIn">
+    <CompositionLoading  />
+  </div>
 
   <div v-else class="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
     <div class="sm:mx-auto sm:w-full sm:max-w-sm">
-      <img v-if="params?.media?.type === 'image'" class="mx-auto h-20 w-auto" :src="params?.media?.file_path" alt="Your Company" />
-      <video v-else-if="params?.media?.type === 'video'" autoplay loop muted class="mx-auto h-20 w-auto" :src="params?.media?.file_path" alt="Your Company" />
+      <img v-if="parameter?.media?.type === 'image'" class="mx-auto h-20 w-auto" :src="parameter?.media?.file_path" alt="Your Company" />
+      <video v-else-if="parameter?.media?.type === 'video'" autoplay loop muted class="mx-auto h-20 w-auto" :src="parameter?.media?.file_path" alt="Your Company" />
       <h2 class="mt-6 text-center text-huge font-bold tracking-tight text-text">Connexion</h2>
     </div>
 
     <div class="mt-6 sm:mx-auto sm:w-full sm:max-w-sm">
-      <!-- <form @submit.prevent="onSubmit" class="space-y-4"> -->
       <Field name="email" v-slot="{ field, errorMessage }">
         <div>
           <label for="email" class="block text-sm/6 font-medium text-text">Email address</label>
@@ -139,20 +142,19 @@ const initials = ((full_name:string) => {
         </div>
       </Field>
 
-        <p v-if="isError" class="mt-4 text-center text-destructive">
-          {{ error?.message }}
-        </p>
+      <p v-if="isError" class="mt-4 text-center text-destructive">
+        {{ error?.message }}
+      </p>
 
-        <div class="mt-4">
-          <Button
-            @click="onSubmit"
-            :disabled="isLoggingIn"
-            class="w-full h-10"
-          >
-            {{ isLoggingIn ? 'Connexion...' : 'Se Loger' }}
-          </Button>
-        </div>
-      <!-- </form> -->
+      <div class="mt-4">
+        <Button
+          @click="onSubmit"
+          :disabled="isLoggingIn"
+          class="w-full h-10 text-white"
+        >
+          {{ isLoggingIn ? 'Connexion...' : 'Se Loger' }}
+        </Button>
+      </div>
 
       <div class="mt-10 text-center text-sm/6 text-text opacity-80">
         <div class="text-sm">
@@ -161,7 +163,7 @@ const initials = ((full_name:string) => {
       </div>
     </div>
   </div>
-  </div>
+
 
 </template>
 

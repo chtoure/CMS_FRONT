@@ -6,7 +6,7 @@ import type { AnySectionInstance } from '../../type/section';
 import BlocRender from './BlocRender.vue';
 import ResizerWrapper from './ResizerWrapper.vue';
 import { formatSize, resolveValueForBreakpoint } from '../../lib/style/core';
-import { buildSectionStyles, buildSectionInlineStyles } from '../../lib/style/sectionProcessor';
+import { buildSectionStyles, buildSectionLayoutStyles, buildSectionInlineStyles } from '../../lib/style/sectionProcessor';
 import { getWrapperPositionStyles } from '../../lib/style/common';
 import { useVariableResolver } from '../../hook/variable';
 
@@ -26,12 +26,15 @@ const builderState = inject<{
   selectComponent: (id: string | null) => void
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
   isDragging: { value: boolean }
+  setIsDragging: (val: boolean) => void
+  xRayMode: { value: boolean }
 }>('builderState');
 
 const { resolveValue } = useVariableResolver();
 
 // Computed réactifs
 const isDraggingOver = computed(() => builderState?.isDragging?.value ?? false);
+const isXRayMode = computed(() => builderState?.xRayMode?.value ?? false);
 
 // Handlers
 const handleSelect = (e: MouseEvent) => {
@@ -70,11 +73,15 @@ const isSticky = (element: any) => {
   return resolveValueForBreakpoint<string>(pos, bp, resolveValue) === 'sticky';
 };
 
-// Classes dynamiques
 const sectionClasses = computed(() => {
   return [
-    { 'ring-1 ring-blue-500 ring-inset z-10': props.active },
     buildSectionStyles(props.section.styles as Record<string, unknown>, resolveValue)
+  ];
+});
+
+const sectionLayoutClasses = computed(() => {
+  return [
+    buildSectionLayoutStyles(props.section.styles as Record<string, unknown>, resolveValue)
   ];
 });
 
@@ -94,9 +101,11 @@ const bgVideoUrl = computed((): string | null => {
 });
 
 const draggableClasses = computed(() => ({
-  'min-h-[120px]': props.section.children.length === 0,
+  'py-4': props.section.children.length === 0,
   'pb-16': props.section.children.length > 0,
-  'drop-zone-active': isDraggingOver.value
+  'drop-zone-active': isDraggingOver.value,
+  'blueprint-target': props.section.children.length > 0,
+  'blueprint-active': (isDraggingOver.value || isXRayMode.value) && props.section.children.length > 0
 }));
 
 </script>
@@ -106,7 +115,7 @@ const draggableClasses = computed(() => ({
     :class="[
       // 'relative' prevents sticky/fixed from working correctly — remove it when positioned
       !isSectionPositioned && 'relative',
-      'group/section transition-all duration-200',
+      'group/section flex flex-col transition-all duration-200',
       ...sectionClasses
     ]"
     :style="sectionStyles"
@@ -126,10 +135,16 @@ const draggableClasses = computed(() => ({
     <!-- Label de section sélectionnée -->
     <div 
       v-if="active"
-      class="absolute top-0 left-0 bg-blue-600 text-white text-[10px] px-2 py-0.5 font-bold uppercase z-50 shadow-sm whitespace-nowrap pointer-events-none"
+      class="absolute top-0 left-0 bg-blue-600 text-white text-[10px] px-2 py-0.5 font-bold uppercase z-[65] shadow-sm whitespace-nowrap pointer-events-none"
     >
       Section: {{ section.name || "Sans titre" }}
     </div>
+
+    <!-- Overlay de sélection de la section (au-dessus des enfants) -->
+    <div
+      v-if="active"
+      class="absolute inset-0 border-2 border-blue-500 pointer-events-none z-[55]"
+    />
 
     <!-- Conteneur Draggable pour les blocs -->
     <VueDraggable
@@ -137,9 +152,11 @@ const draggableClasses = computed(() => ({
       :group="{ name: 'blocks', put: true, pull: true }"
       :animation="150"
       ghost-class="ghost-item"
-      class="w-full h-full"
-      :class="draggableClasses"
+      class="w-full flex-1"
+      :class="[draggableClasses, ...sectionLayoutClasses]"
       @update:model-value="handleChildrenChange"
+      @start="builderState?.setIsDragging(true)"
+      @end="builderState?.setIsDragging(false)"
     >
       <div
         v-for="(element, index) in section.children"
@@ -154,6 +171,7 @@ const draggableClasses = computed(() => ({
         <ResizerWrapper
           :element="element"
           :active="builderState?.selectedId.value === element.id"
+          :depth="0"
           @update:element="(newElem) => handleElementUpdate(index, newElem)"
           :style="!isSticky(element) ? getWrapperPositionStyles(element.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {}"
         >
@@ -172,6 +190,15 @@ const draggableClasses = computed(() => ({
   outline: 2px dashed #3b82f6;
   outline-offset: -4px;
   background-color: rgba(59, 130, 246, 0.05);
+}
+
+/* Mode Blueprint : les composants de la section s'écartent pour mieux voir l'imbrication */
+.blueprint-active {
+  gap: 8px !important;
+  padding: 8px !important;
+  outline: 1px dashed rgba(59, 130, 246, 0.6);
+  outline-offset: -3px;
+  background-color: rgba(59, 130, 246, 0.02);
 }
 
 :deep(.ghost-item) {

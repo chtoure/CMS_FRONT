@@ -18,7 +18,10 @@ import { getErrorMessage } from '../../lib/errorMessage'
 import { showToast } from '../../lib/toast'
 import { useRouter } from 'vue-router'
 import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue'
+import { usePermission } from '../../hook/usePermission'
 
+
+const { hasPermission } = usePermission();
 const router = useRouter()
 const search = ref('')
 const currentPage = ref(1)
@@ -167,14 +170,14 @@ const navigateToPreview = (entryId: number) => {
                     <Eye class="w-4 h-4" /> Aperçu
                   </button>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem :disabled="isRestoreContentEntryPending" class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
+                <DropdownMenuSeparator v-if="hasPermission(['update_content_entry'])" />
+                <DropdownMenuItem v-if="hasPermission(['update_content_entry'])" :disabled="isRestoreContentEntryPending" class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
                   <button @click="handleRestoreContentEntry(row.id)" class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
                     <RefreshCw class="w-4 h-4" /> Restaurer
                   </button>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem @select.prevent :disabled="isDeleteContentEntryPending" class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
+                <DropdownMenuSeparator v-if="hasPermission(['delete_content_entry'])" />
+                <DropdownMenuItem v-if="hasPermission(['delete_content_entry'])" @select.prevent :disabled="isDeleteContentEntryPending" class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
                   <CompositionConfirmDialog
                     cancelText="Annuler"
                     actionText="Supprimer"

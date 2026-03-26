@@ -2,14 +2,16 @@
 import CompositionDarkMode from '@/components/composition/CompositionDarkMode.vue';
 import { useHead } from '@vueuse/head';
 import { computed } from 'vue';
-import { useGetParameters } from '../hook/parameter';
+import { useParameter } from '../stores/parameter';
+import { storeToRefs } from 'pinia';
 
-const { data: params} = useGetParameters()
+const parameterStore = useParameter();
+const { parameter } = storeToRefs(parameterStore);
 
 const seoData = computed(() => ({
-  title: params.value?.title || "Compositor",
-  description: params.value?.description || "Gérez vos actifs visuels avec précision sur la plateforme Compositor.",
-  image: params.value?.logo || ""
+  title: parameter.value?.title || "Compositor",
+  description: parameter.value?.description || "Gérez vos actifs visuels avec précision sur la plateforme Compositor.",
+  image: parameter.value?.media?.file_path || ""
 }))
 
 useHead({
@@ -32,16 +34,10 @@ useHead({
 
 <template>
 
-  <div class="flex justify-end">
-    <div class=" items-end p-4">
+  <div class="fixed top-4 right-4 z-50">
     <CompositionDarkMode/>
-
-    </div>
   </div>
-
-
-
-  <main class="p-4">
+  <main class="h-screen p-4">
     <RouterView/>
   </main>
 

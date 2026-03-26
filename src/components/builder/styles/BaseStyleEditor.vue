@@ -8,6 +8,7 @@ import CompositionColorPicker from '../../composition/CompositionColorPicker.vue
 import PropertyGroup from '../ui/PropertyGroup.vue';
 import PropertyRow from '../ui/PropertyRow.vue';
 import PropertyInput from '../ui/PropertyInput.vue';
+import PropertyDimension from '../ui/PropertyDimension.vue';
 import ButtonGroup from '../ui/ButtonGroup.vue';
 import VariableInputControl from '../../../type/VariableInputControl.vue';
 import {
@@ -89,14 +90,11 @@ const bgRepeatOptions = [
     <PropertyGroup v-if="showField('width') || showField('height') || showField('padding')" title="Position" :open="true" :icon="Layers">
       <div class="space-y-2">
         <PropertyRow v-if="showField('width') || showField('height')">
-          <PropertyInput
+          <PropertyDimension
             v-if="showField('width')"
-            type="text"
             label="W"
             :model-value="getRawValue(styles.width)"
-            @update:model-value="(val) => updateStyle('width', val)"
-            placeholder="auto"
-            class="flex-1"
+            @update:model-value="(val: any) => updateStyle('width', val)"
           >
             <template #action>
               <VariableInputControl
@@ -105,16 +103,13 @@ const bgRepeatOptions = [
                 variable-type="NUMBER"
               />
             </template>
-          </PropertyInput>
+          </PropertyDimension>
 
-          <PropertyInput
+          <PropertyDimension
             v-if="showField('height')"
             label="H"
-            type="text"
             :model-value="getRawValue(styles.height)"
-            @update:model-value="(val) => updateStyle('height', val)"
-            placeholder="auto"
-            class="flex-1"
+            @update:model-value="(val: any) => updateStyle('height', val)"
           >
             <template #action>
               <VariableInputControl
@@ -123,7 +118,7 @@ const bgRepeatOptions = [
                 variable-type="NUMBER"
               />
             </template>
-          </PropertyInput>
+          </PropertyDimension>
         </PropertyRow>
 
         <div v-if="showField('padding')" class="space-y-1">
