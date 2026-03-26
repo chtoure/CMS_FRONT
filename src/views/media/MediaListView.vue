@@ -6,7 +6,6 @@
     ChevronLeft, 
     ChevronRight, 
     FileText, 
-
     Layers, 
     Play, 
     Plus, 
@@ -28,6 +27,7 @@
   import type { Media } from '../../type/media'
   import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
   import CompositionVideoImageModal from '../../components/composition/CompositionVideoImageModal.vue'
+import { usePermission } from '../../hook/usePermission'
 
   useHead({
     title: 'Médiathèque | Compositor',
@@ -35,6 +35,8 @@
       { name: 'description', content: 'Gérez vos actifs visuels avec précision sur la plateforme Compositor.' },
     ],
   })
+
+  const { hasPermission } = usePermission();
 
   const selectedMediaId = ref<number | null>(null);
   const searchQuery = ref("");
@@ -163,12 +165,12 @@
 </script>
 
 <template>
-  <div class="h-full flex flex-col space-y-6 overflow-hidden">
+  <div class="h-full flex flex-col space-y-8">
     <CompositionPageHeader>
       <template #content>
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div class="flex items-center gap-4">
-            <div class="p-3 pl-0 bg-primary/10 rounded-2xl">
+            <div class="p-3 pl-0">
               <img src="/icons/file1.svg" alt="" class="w-8 h-8" />
             </div>
             <div>
@@ -179,9 +181,9 @@
             </div>
           </div>
           
-          <div class="flex items-center gap-3">
+          <div v-if="hasPermission(['upload_media'])" class="flex items-center gap-3">
             <input ref="fileInput" type="file" class="hidden" multiple @change="handleFileUpload" />
-            <Button class="rounded-xl h-12 px-6 bg-primary hover:bg-primary/90 text-white font-bold shadow-lg shadow-primary/20 transition-all active:scale-95" @click="triggerFileInput">
+            <Button class="rounded-xl h-12 px-6 bg-primary text-white font-bold shadow-lg shadow-primary/20 transition-all active:scale-95" @click="triggerFileInput">
               <Plus class="w-5 h-5 mr-2" /> Importer
             </Button>
           </div>
@@ -192,7 +194,7 @@
     <div class="flex-1 flex flex-col card rounded-none overflow-hidden">
       <div class="p-4 border-b border-border bg-background backdrop-blur-md z-30">
         <div class="flex flex-col sm:flex-row gap-4 items-center justify-between">
-          <div class="flex items-center bg-muted/50 p-1 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar custom-scrollbar">
+          <div class="flex items-center bg-muted p-1 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar custom-scrollbar">
             <button 
               v-for="opt in filterOptions" 
               :key="opt.value"
@@ -218,7 +220,7 @@
 
       <div class="flex-1 flex overflow-hidden relative">
         
-        <main class="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-muted-foreground/20 custom-scrollbar">
+        <main class="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-muted-foreground custom-scrollbar">
           <CompositionLoading v-if="mediaQuery.isLoading.value && !mediaQuery.data.value" />
           <CompositionError v-else-if="mediaQuery.isError.value" :error="mediaQuery.error.value?.message" />
           
@@ -313,7 +315,7 @@
               </div>
             </div>
 
-            <div class="space-y-3 pt-2">
+            <div v-if="hasPermission(['update_media'])" class="space-y-3 pt-2">
               <label class="text-[10px] font-black text-muted-foreground px-1">Accessibilité (ALT)</label>
               <textarea 
                 v-model="editedAlt" 
@@ -340,7 +342,7 @@
                   </Button>
                 </template>
               </CompositionVideoImageModal>
-              <Button variant="ghost" class="w-full justify-start rounded-xl text-destructive hover:bg-destructive/10 font-bold gap-3" @click="deleteMedia(selectedMedia.id)">
+              <Button v-if="hasPermission(['delete_media'])" variant="ghost" class="w-full justify-start rounded-xl text-destructive hover:bg-destructive/10 font-bold gap-3" @click="deleteMedia(selectedMedia.id)">
                 <Trash2 class="w-4 h-4" /> Supprimer
               </Button>
               

@@ -32,6 +32,10 @@ import { showToast } from "../../lib/toast"
 import { validateValueByType } from "../../lib/validateType"
 import CompositionListEmpty from "../../components/composition/CompositionListEmpty.vue"
 import { getErrorMessage } from "../../lib/errorMessage"
+import { usePermission } from "../../hook/usePermission"
+
+
+const { hasPermission } = usePermission();
 
 const searchQuery = ref("")
 
@@ -157,9 +161,6 @@ const handleUpdate = async (id: number, field: "name" | "value", newValue: strin
     }
   }
 
-  console.log('eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
-  
-
   editingCell.value = null;
 
   updateVar({ id, data: { [field]: cleanValue } }, {
@@ -261,7 +262,8 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
       <div class="p-6 space-y-6 pl-0">
         <div class="flex items-center justify-between">
           <h2 class="p12 font-bold uppercase tracking-widest text-muted-foreground">Collections</h2>
-          <DropdownMenu>
+
+          <DropdownMenu v-if="hasPermission(['create_collection'])">
             <DropdownMenuTrigger as-child>
               <button class="hover:bg-muted p-1 rounded transition-colors">
                 <Plus :size="16" :stroke-width="1.2" />
@@ -295,25 +297,28 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
               <span class="p14 truncate">Tout</span>
               <span class="p11 opacity-60"></span>
             </div>
-            <ContextMenu v-for="collection in (collections ?? [])" :key="collection.id">
-              <ContextMenuTrigger>
-                <div
-                  @click="selectedCollectionId = collection.id"
-                  :class="['flex items-center justify-between px-3 py-1.5 rounded cursor-pointer transition-all font-mono',
-                    selectedCollectionId === collection.id ? 'bg-primary text-white' : 'hover:bg-muted']"
-                >
-                  <span class="p14 truncate">{{ collection.name }}</span>
-                  <span class="p11 opacity-60">{{ collection.variables.length }} ({{ collection.type }})</span>
-                </div>
-              </ContextMenuTrigger>
+            <template v-if="hasPermission(['read_collection'])">
+              <ContextMenu v-for="collection in (collections ?? [])" :key="collection.id">
+                <ContextMenuTrigger>
+                  <div
+                    @click="selectedCollectionId = collection.id"
+                    :class="['flex items-center justify-between px-3 py-1.5 rounded cursor-pointer transition-all font-mono',
+                      selectedCollectionId === collection.id ? 'bg-primary text-white' : 'hover:bg-muted']"
+                  >
+                    <span class="p14 truncate">{{ collection.name }}</span>
+                    <span class="p11 opacity-60">{{ collection.variables.length }} ({{ collection.type }})</span>
+                  </div>
+                </ContextMenuTrigger>
 
-              <ContextMenuContent class="w-auto border-border font-mono">
-                <ContextMenuItem @click="selectedCollectionId = collection.id"><Edit3 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Open</ContextMenuItem>
-                <ContextMenuItem @click="deleteCollection(collection.id)" class="text-destructive">
-                  <Trash2 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Delete
-                </ContextMenuItem>
-              </ContextMenuContent>
-            </ContextMenu>
+                <ContextMenuContent class="w-auto border-border font-mono">
+                  <ContextMenuItem @click="selectedCollectionId = collection.id"><Edit3 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Open</ContextMenuItem>
+                  <ContextMenuItem @click="deleteCollection(collection.id)" class="text-destructive">
+                    <Trash2 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Delete
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
+            </template>
+            
 
           </div>
         </div>
@@ -335,7 +340,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
               {{ selectedCollectionId === 0 ? 'Tout' : (selectedCollection?.name || 'Sélectionner') }}
             </p>
           </div>
-          <button v-if="selectedCollectionId !==0 && !searchQuery" @click="addNewVariable" class="text-muted-foreground hover:text-primary transition-colors">
+          <button v-if="selectedCollectionId !==0 && !searchQuery && hasPermission(['create_variable'])" @click="addNewVariable" class="text-muted-foreground hover:text-primary transition-colors">
             <Plus :size="20" :stroke-width="1.2" />
           </button>
         </div>

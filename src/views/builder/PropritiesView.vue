@@ -13,6 +13,8 @@ import DataEditor from '../../components/builder/DataEditor.vue';
 import { MousePointer2, Webhook } from 'lucide-vue-next';
 
 // Injection de l'état global
+const { hasPermission } = usePermission();
+
 const builderState = inject<{
   pageTree: { value: (AnyComponentInstance | AnySectionInstance)[] };
   libraryTree: { value: AnyComponentInstance[] };
@@ -25,6 +27,7 @@ import { useBlockTemplate } from '../../hook/bloc-template';
 import { Save } from 'lucide-vue-next';
 import CompositionModal from '../../components/composition/CompositionModal.vue';
 import VariableListView from '../variable/VariableListView.vue';
+import { usePermission } from '../../hook/usePermission';
 
 const { useSaveAsCustom } = useBlockTemplate();
 const saveAsCustomMut = useSaveAsCustom();
@@ -69,7 +72,7 @@ const selectedElement = computed(() => {
           <div class="flex flex-row gap-4 items-center w-full">
             <p v-if="'tag' in selectedElement" class="text-xs text-gray-500 font-mono">{{ selectedElement.tag }}</p>
             <p v-else class="text-xs text-gray-500 font-mono">Layout Section</p>
-            <CompositionModal title="Variables">
+            <CompositionModal v-if="hasPermission(['read_collection', 'read_variable'])" title="Variables">
               <template #trigger>
                 <button class="hover:text-primary">
                   <Webhook class="w-3.5 h-3.5" />

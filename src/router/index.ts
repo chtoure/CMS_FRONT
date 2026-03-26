@@ -45,9 +45,6 @@ const router = createRouter({
             {
                 path: 'auth',
                 component: DefaultLayout,
-                // Empeche l'accès à la page de login si l'utilisateur est déjà authentifié
-
-
                 children: [
                     {
                         path: 'login',
@@ -274,7 +271,8 @@ const router = createRouter({
         ]
     },
 
-    {path: '/:pathMatch(.*)*',
+    {
+        path: '/:pathMatch(.*)*',
         component: DefaultLayout,
         children: [
             {

@@ -15,6 +15,16 @@ export function buildSectionStyles(styles?: Record<string, unknown>, resolver?: 
   if (!styles) return '';
   const classes: string[] = [];
 
+  // Visual (Partial)
+  if (styles.shadow) classes.push(resolveValue(styles.shadow, (v) => v === 'none' ? 'shadow-none' : `shadow-${v}`, resolver));
+
+  return classes.filter(Boolean).join(' ');
+}
+
+export function buildSectionLayoutStyles(styles?: Record<string, unknown>, resolver?: (v: unknown) => unknown): string {
+  if (!styles) return '';
+  const classes: string[] = [];
+
   // Display
   if (styles.display !== undefined) {
     classes.push(resolveValue(styles.display, (v) => v as string, resolver));
@@ -29,9 +39,6 @@ export function buildSectionStyles(styles?: Record<string, unknown>, resolver?: 
       classes.push(resolveValue(value, SECTION_LAYOUT_MAPPER[key], resolver));
     }
   });
-
-  // Visual (Partial)
-  if (styles.shadow) classes.push(resolveValue(styles.shadow, (v) => v === 'none' ? 'shadow-none' : `shadow-${v}`, resolver));
 
   return classes.filter(Boolean).join(' ');
 }

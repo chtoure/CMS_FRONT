@@ -6,6 +6,7 @@ import type { AnyComponentInstance } from '../../type/component';
 const props = defineProps<{
   element: AnyComponentInstance;
   active: boolean;
+  depth?: number; // Profondeur dans l'arbre (0 = enfant direct de section)
 }>();
 
 const emit = defineEmits(['update:element', 'select']);
@@ -13,7 +14,18 @@ const emit = defineEmits(['update:element', 'select']);
 const builderState = inject<{
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
   isDragging?: { value: boolean }
+  xRayMode?: { value: boolean }
 }>('builderState');
+
+// Couleur du ring de survol selon la profondeur (stable)
+const hoverRingClass = computed(() => {
+  const d = props.depth ?? 0;
+  if (d === 0) return 'hover:ring-1 hover:ring-blue-400/60 hover:ring-dashed';
+  if (d === 1) return 'hover:ring-1 hover:ring-violet-400/60 hover:ring-dashed';
+  return 'hover:ring-1 hover:ring-pink-400/60 hover:ring-dashed';
+});
+
+
 
 import { resolveValueForBreakpoint, formatSize } from '../../lib/style/core';
 import { useVariableResolver } from '../../hook/variable';
@@ -101,11 +113,11 @@ const startResize = (e: MouseEvent, direction: string) => {
 <template>
   <div
     ref="resizableRef"
-    class="relative group/resizer overflow-hidden"
+    class="relative group/resizer transition-all duration-200"
     :class="[
+      hoverRingClass,
       isPositionedOutOfFlow ? '' : 'w-full h-full',
       {
-        'ring-1 ring-inset ring-blue-500': active,
         'rescaling': isResizing
       }
     ]"
@@ -117,7 +129,7 @@ const startResize = (e: MouseEvent, direction: string) => {
     <!-- Label du composant sélectionné -->
     <div
       v-if="active"
-      class="absolute top-0 left-0 bg-blue-500 text-white text-[10px] px-2 py-0.5 font-bold uppercase z-[60] shadow-sm whitespace-nowrap pointer-events-none"
+      class="absolute top-0 left-0 bg-blue-500 text-white text-[10px] px-2 py-0.5 font-bold uppercase z-[60] shadow-sm whitespace-nowrap pointer-events-none max-w-[90%] truncate"
     >
       {{ element.name }}
     </div>
@@ -125,6 +137,12 @@ const startResize = (e: MouseEvent, direction: string) => {
     <div class="w-full h-full">
       <slot />
     </div>
+
+    <!-- Overlay de sélection (au-dessus des enfants) -->
+    <div
+      v-if="active"
+      class="absolute inset-0 border-2 border-blue-500 pointer-events-none z-[55] rounded-[inherit]"
+    />
 
     <!-- Resize Handles - Visible quand actif -->
     <template v-if="active">
