@@ -25,7 +25,7 @@ import { handleError } from '../../lib/error';
 import { useGetPermissions } from '../../hook/permission';
 
 
-// Initialisation
+
 const open = ref(false)
 const emit = defineEmits(['success', 'cancel'])
 
@@ -178,8 +178,8 @@ const handleCancel = () =>{
                       </Button>
                     </PopoverTrigger>
 
-                    <PopoverContent class="p-0">
-                      <Command>
+                    <PopoverContent class="p-0 border-border">
+                      <Command class="bg-background border !border-border">
                         <CommandInput placeholder="Rechercher une permission..." />
                         <CommandEmpty>Aucune permission trouvée.</CommandEmpty>
                         <CommandList class="group custom-scrollbar">

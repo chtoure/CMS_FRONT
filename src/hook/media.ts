@@ -34,6 +34,7 @@ const useGetMedia = (id : number) => {
 
 
 const useGetMediaList = (filter?: Ref<MediaFilter> | MediaFilter) => {
+  
   return useQuery({
     queryKey: ['medias', filter],
     queryFn: async () => {
@@ -49,6 +50,7 @@ const useGetMediaList = (filter?: Ref<MediaFilter> | MediaFilter) => {
       }
       if (params?.page) query.append('page', params.page.toString())
       if (params?.limit) query.append('limit', params.limit.toString())
+      if (params?.search) query.append('search', params.search)
 
       console.log(query.toString());
 
@@ -78,6 +80,29 @@ const useDeleteMedia = () => {
   });
 };
 
+const useEditMedia = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({payload, mediaId}: {payload: SaveMediaPayload, mediaId: number}) => {
+
+      console.log('data', mediaId, payload);
+
+      const response = await api(`/media/image/${mediaId}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload.operations)
+      });
+      return handleResponse(response);
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['media', variables] });
+    },
+    onError: (error) => {
+      console.error("Erreur lors de la sauvegarde :", error);
+    }
+  });
+}
+
 const useUpdateMedia = () => {
   const queryClient = useQueryClient();
 
@@ -86,9 +111,9 @@ const useUpdateMedia = () => {
 
       console.log('data', mediaId, payload);
 
-      const response = await api(`/media/${mediaId}`, {
+      const response = await api(`/media/update/${mediaId}`, {
         method: 'PUT',
-        body: JSON.stringify(payload.operations)
+        body: JSON.stringify(payload.operations.metadata)
       });
       return handleResponse(response);
     },
@@ -108,5 +133,6 @@ export {
   useGetMedia,
   useGetMediaList,
   useDeleteMedia,
+  useEditMedia,
   useUpdateMedia
 }

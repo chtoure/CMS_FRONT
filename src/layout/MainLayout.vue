@@ -62,7 +62,7 @@ const toggleSidebar = () => {
 
     <div
       :class="cn(
-        'transition-all duration-500 ease-in-out z-50',
+        'z-50',
         'fixed inset-y-0 left-0 bg-sidebar shadow-2xl lg:shadow-none',
         'lg:static lg:translate-x-0 border-r border-sidebar-border',
         isSidebarCollapsed

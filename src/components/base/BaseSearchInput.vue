@@ -17,7 +17,7 @@
     const inputBaseClasses = cn(
         'w-full',
         'px-2.5 py-1.5',
-        'input-custom transition-all duration-300 focus:ring-1 focus:ring-primary/20',
+        'input-custom rounded-none focus:ring-1 focus:ring-primary/20',
     );
 
     const iconLeftClasses = cn(
@@ -26,15 +26,15 @@
     );
 
     const shortcutRightClasses = cn(
-        'absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer transition-colors',
+        'absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer',
         'flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground',
         'px-1.5 py-0.5 border border-border rounded hover:bg-muted bg-transparent'
     );
 
     const dropdownClasses = cn(
         'absolute left-0 right-0 mt-12',
-        'rounded-2xl shadow-2xl ring-1 ring-border border border-border/50',
-        'z-[100] bg-background backdrop-blur-xl max-h-[400px] overflow-y-auto scrollbar-hide animate-in fade-in zoom-in-95 duration-200'
+        'rounded-2xl shadow-2xl ring-1 ring-border border border-border',
+        'z-[100] bg-background backdrop-blur-xl max-h-[400px] overflow-y-auto scrollbar-hide animate-in fade-in zoom-in-95'
     );
 
     const showDropdown = ref(false);
@@ -152,12 +152,12 @@
                         @click="selectItem(item)"
                         @mouseenter="setSelectedIndexFromItem(item)"
                         :class="cn(
-                            'flex items-center gap-4 p-3 rounded-xl transition-all cursor-pointer group',
+                            'flex items-center gap-4 p-3 rounded-xl cursor-pointer group',
                             isItemSelected(item) ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]' : 'hover:bg-secondary'
                         )"
                     >
                         <div :class="cn(
-                            'p-2 rounded-lg transition-colors',
+                            'p-2 rounded-lg',
                             isItemSelected(item) ? 'bg-white/20' : 'bg-primary/10 text-primary'
                         )">
                             <component :is="item.icon" class="w-4 h-4" />

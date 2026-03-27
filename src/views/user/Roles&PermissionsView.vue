@@ -190,8 +190,6 @@ const resultPermissionsNoPaginate = computed(() => dataPermissionsNoPaginate.val
 const {
   mutate:updateRole,
   isPending:updateLoading,
-  isError:isErrorRole,
-  error:errorRoleUpdate
 }= useUpdateRole()
 
 
@@ -248,19 +246,14 @@ const togglePermission = (permission: Permission) => {
 // Hook Role Restore & Archive
 const {
   mutate : archiveRole,
-  isPending: archibePendingRole,
-  isError : isArchiveErrorRole,
-  error : errorArchiveRole
-
+  isPending: archibePendingRole
 } = useDeleteRole()
 
 
 
 const {
   mutate : restoreRole,
-  isPending: restorePendingRole,
-  isError : isrestorErrorRole,
-  error : errorRestorRle
+  isPending: restorePendingRole
 
 } = useRestoreRole()
 
@@ -269,9 +262,7 @@ const {
 // Hook Perms Restore & Archive
 const {
   mutate : archivePerms,
-  isPending: archibePendingPerms,
-  isError : isArchiveErrorPerms,
-  error : errorArchivePerms
+  isPending: archibePendingPerms
 
 } = useDeletePermission()
 
@@ -279,9 +270,7 @@ const {
 
 const {
   mutate : restorePerms,
-  isPending: restorePendingPerms,
-  isError : isrestorErrorPerms,
-  error : errorRestorPerms
+  isPending: restorePendingPerms
 
 } = useRestorePermission()
 
@@ -374,8 +363,8 @@ const handleRoleCancel = () => {
   <CompositionLoading v-if="loadingRole || loadingPermission || updateLoading || loadingPermissionNoPaginate || archibePendingRole || restorePendingRole || archibePendingPerms || restorePendingPerms" />
 
   <CompositionError
-    v-else-if="ErrorRole || ErrorPermission || isErrorRole || isArchiveErrorRole || isrestorErrorRole || isArchiveErrorPerms || isrestorErrorPerms"
-    :error="errorRole?.message || errorPermission?.message || errorRoleUpdate?.message || errorArchiveRole?.message || errorRestorRle?.message || errorArchivePerms?.message || errorRestorPerms?.message"
+    v-else-if="ErrorRole || ErrorPermission"
+    :error="errorRole?.message || errorPermission?.message"
   />
 
   <div v-else class="min-h-screen space-y-10">
@@ -394,7 +383,7 @@ const handleRoleCancel = () => {
           <CompositionModal title="Role" v-model:open="isRoleModalOpen">
             <template #trigger>
               <div class="flex items-center gap-4">
-                <Button class=" flex items-center rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95">
+                <Button class=" flex items-center rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-xl shadow-primary/20 active:scale-95">
                   <Plus class="w-6 h-6 mr-2" />
                   Role
                 </Button>
@@ -414,8 +403,8 @@ const handleRoleCancel = () => {
 
         <div class="flex items-start">
             <TabsList class="flex space-x-4 py-4 px-2 font-medium text-sm rounded-none rounded-t-2xl border border-border">
-              <TabsTrigger value="role" class="!shadow-none py-2 px-3 border border-border data-[state=active]:text-primary"> Roles </TabsTrigger>
-              <TabsTrigger value="permission" class="!shadow-none py-2 px-3 border border-border data-[state=active]:text-primary"> Permissions </TabsTrigger>
+              <TabsTrigger value="role" class="!shadow-none py-2 px-3 border border-border data-[state=active]:text-primary transition-none"> Roles </TabsTrigger>
+              <TabsTrigger value="permission" class="!shadow-none py-2 px-3 border border-border data-[state=active]:text-primary transition-none"> Permissions </TabsTrigger>
             </TabsList>
         </div>
 
@@ -448,7 +437,7 @@ const handleRoleCancel = () => {
                     class="group cursor-pointer"
                     @dblclick="startEdit(role)"
                   >
-                    <div class="card p-5 h-auto transition-all hover:-translate-y-1 flex flex-col">
+                    <div class="card p-5 h-auto flex flex-col">
 
                       <div class="flex items-start justify-between gap-4">
 
@@ -545,13 +534,13 @@ const handleRoleCancel = () => {
                         </div>
 
                         <CompositionVerifyButton :if="!role.archive">
-                          <div v-if="editingId !== role.id" class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div v-if="editingId !== role.id" class="flex items-center gap-1 opacity-0 group-hover:opacity-100">
                             <button @click.stop="startEdit(role)" class="p-2 hover:bg-muted rounded-full text-text hover:text-primary">
                               <Pencil class="h-4 w-4" />
                             </button>
                             <CompositionConfirmDialog @confirm="archivedRole(role.id)" header="Suppression de role" description="Êtes-vous sûr de vouloir Archiver ?" cancelText="Annuler" actionText="Archiver" >
                                <template #dialogButton>
-                                  <button class="p-2 hover:bg-muted rounded-full text-text hover:text-destructive transition-colors">
+                                  <button class="p-2 hover:bg-muted rounded-full text-text hover:text-destructive">
                                     <Archive class="h-4 w-4" />
                                   </button>
                                </template>
@@ -560,10 +549,10 @@ const handleRoleCancel = () => {
                         </CompositionVerifyButton>
 
                          <CompositionVerifyButton :if="role.archive">
-                          <div v-if="editingId !== role.id" class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div v-if="editingId !== role.id" class="flex items-center gap-1 opacity-0 group-hover:opacity-100">
                             <CompositionConfirmDialog @confirm="restoredRole(role.id)" header="Restoration de role" description="Êtes-vous sûr de vouloir restorer ?" cancelText="Annuler" actionText="Restorer" >
                               <template #dialogButton>
-                                  <button class="p-2 hover:bg-muted rounded-full text-text hover:text-destructive transition-colors">
+                                  <button class="p-2 hover:bg-muted rounded-full text-text hover:text-destructive">
                                     <ArchiveRestore class="h-4 w-4" />
                                   </button>
                               </template>
@@ -577,13 +566,13 @@ const handleRoleCancel = () => {
                       <div v-if="editingId === role.id" class="mt-4 pt-4 border-t border-border/10 flex justify-center gap-6">
                         <button
                           @click="saveEdit(role.id)"
-                          class="flex items-center gap-1 px-4 py-1 text-success hover:bg-muted rounded-md transition-all text-xs font-bold tracking-widest"
+                          class="flex items-center gap-1 px-4 py-1 text-success hover:bg-muted rounded-md text-xs font-bold tracking-widest"
                         >
                           <Check :size="16" stroke-width="3" /> Valider
                         </button>
                         <button
                           @click="cancelEdit"
-                          class="flex items-center gap-1 px-4 py-1 text-destructive hover:bg-muted rounded-md transition-all text-xs font-bold  tracking-widest"
+                          class="flex items-center gap-1 px-4 py-1 text-destructive hover:bg-muted rounded-md text-xs font-bold  tracking-widest"
                         >
                           <X :size="16" stroke-width="3" /> Annuler
                         </button>

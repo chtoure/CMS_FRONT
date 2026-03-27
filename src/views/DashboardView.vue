@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import {
   FolderOpen,
-  Database,
   Plus,
   ArrowUpRight,
   Clock,
@@ -10,7 +9,6 @@ import {
   FileText,
   Tags
 } from 'lucide-vue-next'
-import DashboardStatCard from '@/components/dashboard/DashboardStatCard.vue'
 import Button from '@/components/ui/button/Button.vue'
 import CompositionPageHeader from '@/components/composition/CompositionPageHeader.vue'
 import { useGetMediaList } from '../hook/media'
@@ -20,6 +18,7 @@ import { useGetContentTypes } from '../hook/content-type'
 import { useGetTaxonomies } from '../hook/taxonomy'
 import { useHead } from '@vueuse/head'
 import CompositionMediaPreview from '../components/composition/CompositionMediaPreview.vue'
+import { usePermission } from '../hook/usePermission'
 
 useHead({
   meta: [
@@ -28,6 +27,8 @@ useHead({
     { property: 'og:description', content: 'Voici votre tableau de bord' },
   ],
 })
+
+const { hasPermission } = usePermission();
 
 const mediaQuery = useGetMediaList()
 const variableQuery = useGetVariables()
@@ -48,33 +49,37 @@ const stats = computed(() => [
   {
     title: 'Contenus',
     value: totalContentType.value,
-    icon: FileText,
+    icon: '/icons/folder1.svg',
     description: 'Types de contenu dédiés',
+    hasPermission: hasPermission('read_content_type')
   },
   {
     title: 'Médiathèque',
     value: totalMedia.value,
-    icon: FolderOpen,
+    icon: '/icons/file2.svg',
     description: 'Fichiers importés',
+    hasPermission: hasPermission('read_media')
   },
   {
     title: 'Variables',
     value: totalVariable.value,
-    icon: Database,
+    icon: '/icons/variable1.svg',
     description: 'Variables de données',
+    hasPermission: hasPermission('read_variable')
   },
   {
     title: 'Taxonomies',
     value: totalTaxonomy.value,
-    icon: Tags,
+    icon: '/icons/tag1.svg',
     description: 'Vocabulaires gérés',
+    hasPermission: hasPermission('read_taxonomy')
   }
 ])
 
 const quickActions = [
-  { label: 'Nouveau Contenu', icon: Plus, href: 'admin.content-type', color: 'bg-primary' },
-  { label: 'Importer Média', icon: FolderOpen, href: 'admin.media', color: 'bg-slate-900' },
-  { label: 'Gérer Taxonomies', icon: Tags, href: 'admin.taxonomy', color: 'bg-accent' },
+  { label: 'Nouveau Contenu', icon: Plus, href: 'admin.content-type', color: 'bg-primary', hasPermission: hasPermission('create_content_type') },
+  { label: 'Importer Média', icon: FolderOpen, href: 'admin.media', color: 'bg-slate-900', hasPermission: hasPermission('upload_media') },
+  { label: 'Gérer Taxonomies', icon: Tags, href: 'admin.taxonomy', color: 'bg-accent', hasPermission: hasPermission('create_taxonomy') },
 ]
 
 const now = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -86,23 +91,39 @@ const now = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'nume
       <template #content>
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
           <div class="space-y-2">
-            <p class="text-5xl font-black text-accent tracking-tighter leading-none">
-              Hello, <span class="text-primary italic">{{ storeUser.userInfo?.full_name }}</span>
+            <p class="text-md font-black text-accent tracking-tighter leading-none">
+              Bienvenue, <span class="text-primary italic">{{ storeUser.userInfo?.full_name }}</span>
             </p>
-            <p class="text-background opacity-80 text-lg font-medium">Nous sommes le {{ now }}. Prêt à créer ?</p>
+            <p class="text-background opacity-80 text-xs font-medium">Nous sommes le {{ now }}. Prêt à créer ?</p>
           </div>
+        </div>
+        <div class="w-full mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <template v-for="stat in stats" :key="stat.title">
+            <div v-if="stat.hasPermission" class="">
+              <div class="flex items-start gap-2">
+                <div class="p-2.5 w-fit rounded-full bg-secondary text-primary group-hover:scale-110 transition-transform duration-500">
+                  <img :src="stat.icon" class="w-8 h-8" />
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-[10px] text-secondary capitalize tracking-[0.15em] opacity-60">
+                      total {{ stat.title }}
+                    </span>
+                    <p class="text-xl font-black tracking-tighter text-sid"> {{ stat.value }}</p>
+                  </div>
+                  <div v-if="stat.description " class="flex items-center gap-2 pt-1">
+                    <span class="text-[10px] text-secondary leading-none opacity-50">{{ stat.description }}</span>
+                  </div>
+                </div>
+                
+              </div>
+
+            </div>
+          </template>
         </div>
       </template>
     </CompositionPageHeader>
 
-    <!-- Statistiques Compactes -->
-    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-      <DashboardStatCard
-        v-for="stat in stats"
-        :key="stat.title"
-        v-bind="stat"
-      />
-    </div>
 
     <!-- Layout Principal -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -116,7 +137,7 @@ const now = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'nume
               <FileText class="w-6 h-6 text-primary" />
               Types de Contenu
             </h2>
-            <Button variant="ghost" class="text-primary font-bold hover:bg-primary/5" @click="$router.push({ name: 'admin.content-types' })">
+            <Button v-if="hasPermission('read_content_entry')" variant="ghost" class="text-primary font-bold hover:bg-primary/5" @click="$router.push({ name: 'admin.content-types' })">
               Gérer <ArrowUpRight class="w-4 h-4 ml-1" />
             </Button>
           </div>
@@ -137,15 +158,16 @@ const now = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'nume
               </div>
             </div>
             <div v-if="recentContentTypes.length === 0" class="col-span-2 card p-12 text-center border-dashed flex flex-col items-center gap-3">
-              <FileText class="w-10 h-10 text-muted-foreground/20" />
+              <!-- <FileText class="w-10 h-10 text-muted-foreground/20" /> -->
+              <img src="/icons/folder1.svg" alt="" class="w-12 h-12" />
               <p class="text-muted-foreground font-medium">Aucun type de contenu créé.</p>
-              <Button size="sm" @click="$router.push({ name: 'admin.content-type' })">Créer un Type</Button>
+              <Button variant="ghost" v-if="hasPermission('create_content_type')" size="sm" @click="$router.push({ name: 'admin.content-types.create' })" class="!text-primary">Créer un Type</Button>
             </div>
           </div>
         </div>
 
         <!-- Médias Récents -->
-        <div class="space-y-6">
+        <div v-if="hasPermission('read_media')" class="space-y-6">
           <div class="flex items-center justify-between">
             <h2 class="text-2xl font-black tracking-tight flex items-center gap-2">
               <Clock class="w-6 h-6 text-primary" />
@@ -156,7 +178,7 @@ const now = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'nume
             </Button>
           </div>
 
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div  class="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div
               v-for="item in recentMedia"
               :key="item.id"
@@ -178,21 +200,26 @@ const now = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'nume
         <div class="space-y-6">
           <h2 class="text-2xl font-black tracking-tight">Raccourcis</h2>
           <div class="space-y-3">
-            <button
+            <template
               v-for="action in quickActions"
               :key="action.label"
-              @click="$router.push({ name: action.href })"
-              class="w-full flex items-center justify-between p-4 card border-transparent hover:border-primary/50 hover:bg-sidebar-accent/50 transition-all group relative overflow-hidden"
             >
-              <div class="flex items-center gap-4 relative z-10 transition-transform group-hover:translate-x-1">
-                <div :class="['p-3 rounded-xl text-white shadow-lg', action.color]">
-                  <component :is="action.icon" class="w-5 h-5" />
+              <button
+                v-if="action.hasPermission"
+                @click="$router.push({ name: action.href })"
+                class="w-full flex items-center justify-between p-4 card border-transparent hover:border-primary/50 hover:bg-sidebar-accent/50 group relative overflow-hidden"
+              >
+                <div class="flex items-center gap-4 relative z-10 ">
+                  <div :class="['p-3 rounded-xl text-white shadow-lg', action.color]">
+                    <component :is="action.icon" class="w-5 h-5" />
+                  </div>
+                  <span class="font-bold tracking-tight">{{ action.label }}</span>
                 </div>
-                <span class="font-bold tracking-tight">{{ action.label }}</span>
-              </div>
-              <ArrowUpRight class="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 group-hover:-translate-y-1 transition-all relative z-10" />
-              <div class="absolute inset-0 bg-primary/5 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-            </button>
+                <ArrowUpRight class="w-5 h-5 text-muted-foreground group-hover:text-primary relative z-10" />
+                <div class="absolute inset-0 bg-primary/5"></div>
+              </button>
+            </template>
+            
           </div>
         </div>
 
@@ -209,7 +236,7 @@ const now = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'nume
               <span class="text-white font-bold text-xs uppercase tracking-wider">Online</span>
             </div>
           </div>
-          <div class="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 group-hover:rotate-12 transition-all duration-1000">
+          <div class="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 group-hover:rotate-12">
             <Zap class="w-24 h-24 text-white" />
           </div>
         </div>

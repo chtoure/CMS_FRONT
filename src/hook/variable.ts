@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import type { Collection, Variable, VariableType } from "../type/variable";
-import { toValue, type MaybeRefOrGetter } from "vue";
+import { toValue, type MaybeRefOrGetter, computed } from "vue";
+import type { VariableProperty } from "../type/component";
 import api, { handleResponse } from "../api/fetchConfig";
 
 const useGetCollections = (searchQuery?: MaybeRefOrGetter<string | undefined>) => {
@@ -103,6 +104,38 @@ const useDeleteCollection = () => {
   });
 };
 
+/**
+ * Hook pour résoudre les valeurs des variables.
+ * Utile pour le rendu des composants qui doivent afficher la valeur réelle (ex: couleur hex)
+ * au lieu de la clé de la variable.
+ */
+const useVariableResolver = () => {
+  const { data: variables, isLoading } = useGetVariables();
+
+  const variableMap = computed(() => {
+    if (!variables.value) return new Map<string, string>();
+    return new Map(variables.value.map(v => [v.name, v.value]));
+  });
+
+  const resolveValue = <T>(prop: VariableProperty<T> | T | undefined): T | string | undefined => {
+    if (!prop) return undefined;
+
+    // Si c'est une VariableProperty
+    if (typeof prop === 'object' && prop !== null && 'type' in prop && 'value' in prop) {
+       const varProp = prop as VariableProperty<T>;
+       if (varProp.type === 'variable') {
+         return variableMap.value.get(varProp.value) ?? varProp.value;
+       }
+       return varProp.value;
+    }
+    
+    // Valeur legacy ou simple
+    return prop as T;
+  };
+
+  return { resolveValue, isLoading };
+};
+
 export {
   useGetCollections,
   useGetVariables,
@@ -110,5 +143,6 @@ export {
   useDeleteCollection,
   useCreateVariable,
   useUpdateVariable,
-  useDeleteVariable
+  useDeleteVariable,
+  useVariableResolver
 };

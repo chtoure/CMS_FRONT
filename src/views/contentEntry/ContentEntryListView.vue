@@ -21,7 +21,10 @@ import { EntryStatus, type IContentEntry } from '../../type/content-entry'
 import CompositionError from '../../components/composition/CompositionError.vue'
 import { getErrorMessage } from '../../lib/errorMessage'
 import { showToast } from '../../lib/toast'
+import { usePermission } from '../../hook/usePermission'
 
+
+const { hasPermission } = usePermission();
 const router = useRouter()
 const search = ref('')
 const filterStatus = ref('all')
@@ -123,6 +126,15 @@ const getStatusColor = (status: string) => {
   }
 }
 
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case 'PUBLISHED': return 'Publié'
+    case 'DRAFT': return 'Brouillon'
+    case 'ARCHIVED': return 'Archivé'
+    default: return status
+  }
+}
+
 
 const handleRowClick = (row: ContentEntryStub) => {
   console.log('Row clicked:', row)
@@ -157,7 +169,7 @@ const navigateToPreview = (entryId: number) => {
               <p class="text-background text-sm font-medium">Gérez l'ensemble de vos contenus dynamiques.</p>
             </div>
           </div>
-          <div class="flex items-center gap-4">
+          <div v-if="hasPermission(['create_content_entry'])" class="flex items-center gap-4">
             <Button
               @click="navigateToCreate"
               class="rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95"
@@ -208,7 +220,7 @@ const navigateToPreview = (entryId: number) => {
               variant="outline"
               :class="cn('px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', getStatusColor(row.status as string))"
             >
-              {{ (row.status as string) }}
+              {{ getStatusLabel(row.status as string) }}
             </Badge>
           </template>
 
@@ -228,26 +240,26 @@ const navigateToPreview = (entryId: number) => {
                     <Eye class="w-4 h-4" /> Aperçu
                   </button>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem class=" transition-colors focus:bg-primary/10 focus:text-primary">
+                <DropdownMenuSeparator v-if="hasPermission(['update_content_entry'])" />
+                <DropdownMenuItem v-if="hasPermission(['update_content_entry'])" class=" transition-colors focus:bg-primary/10 focus:text-primary">
                   <button @click="navigateToUpdate(row.id)" class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
                     <Pencil class="w-4 h-4" /> Modifier
                   </button>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
+                <DropdownMenuSeparator v-if="hasPermission(['delete_content_entry'])" />
+                <DropdownMenuItem v-if="hasPermission(['delete_content_entry'])" class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
                   <button class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
                     <Trash2 class="w-4 h-4" /> Supprimer
                   </button>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
+                <DropdownMenuSeparator v-if="hasPermission(['update_content_entry'])" />
+                <DropdownMenuItem v-if="hasPermission(['update_content_entry'])" class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
                   <button @click="handleSwitchStatus(row)" class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
                     <Lock class="w-4 h-4" /> {{ row.status === EntryStatus.PUBLISHED ? 'Brouillon' : 'Publier' }}
                   </button>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
+                <DropdownMenuSeparator v-if="hasPermission(['delete_content_entry'])"/>
+                <DropdownMenuItem v-if="hasPermission(['delete_content_entry'])" class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
                   <button @click="handleArchiveContentEntry(row)" class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
                     <Archive class="w-4 h-4" /> Archiver
                   </button>

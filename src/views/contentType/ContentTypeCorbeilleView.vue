@@ -20,7 +20,7 @@ import CompositionConfirmDialog from '../../components/composition/CompositionCo
 const columns = [
   { key: 'num', label: 'Num', class: 'w-16' },
   { key: 'name', label: 'Nom' },
-  { key: 'slug', label: 'Slug' },
+  { key: 'slug', label: 'Identifiant' },
   { key: 'description', label: 'Description'},
   { key: 'entriesCount', label: 'Champs Entrées', class: 'text-center' },
   { key: 'actions', label: 'Actions', class: 'w-10' }
@@ -129,7 +129,7 @@ const handleDelete = (id: number) => {
 
                 searchable
                 v-model:search="search"
-                searchPlaceholder="Rechercher par nom ou slug..."
+                searchPlaceholder="Rechercher par nom ou identifiant..."
 
                 :isLoading="isLoadingContentTypes || isLoadingRestoreContentType || isLoadingDeleteContentType"
               >

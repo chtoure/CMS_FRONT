@@ -141,6 +141,9 @@ let unregisterGuard: () => void;
 onMounted(() => {
   if (contentTypeData.value) {
     populateForm(contentTypeData.value)
+    if (contentTypeData.value.entries && contentTypeData.value.entries.length > 0) {
+      isEntries.value = true
+    }
   }
   unregisterGuard = router.beforeEach(async (to, from) => {
     if (to.name !== from.name && EnregistrerBrouillon.value && confirmDialogUrl.value) {
@@ -364,6 +367,11 @@ const cleanedFields = (fieldsArray: IFieldDefinition[]): IFieldDefinition[] => {
       description: f.description,
     }
 
+    if (f.label === '') {
+      messageErrorTypeChamp.value = 'Veuillez saisir un libellé'
+    } else {
+      messageErrorTypeChamp.value = ''
+    }
 
 
     if (f.type===FieldType.RELATION) {
@@ -528,6 +536,8 @@ const handleTypeAttempt = (field: IFieldDefinition & { _isNew?: boolean, _typeCo
     return;
   }
 
+  console.log(field.type,targetType)
+
   const sensitiveTypes = [
     FieldType.MEDIA,
     FieldType.RELATION,
@@ -620,7 +630,7 @@ const confirmChange = () => {
                 <p v-if="errors.name" class="text-xs text-destructive px-1 font-medium italic animate-in slide-in-from-top-1">{{ errors.name }}</p>
               </div>
               <div class="space-y-2">
-                <Label for="slug" class="text-sm font-bold text-text px-1">Slug (Identifiant)</Label>
+                <Label for="slug" class="text-sm font-bold text-text px-1">Identifiant</Label>
                 <Input
                   id="slug"
                   v-model="form.slug"
@@ -792,6 +802,7 @@ const confirmChange = () => {
                         <div class="space-y-2">
                           <Label class="text-xs font-medium text-text">Libellé du champ</Label>
                           <Input v-model="field.label" placeholder="Texte affiché à l'utilisateur" class="input-custom" />
+                          <span v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</span>
                         </div>
                         <div class="space-y-2">
                           <Label class="text-xs font-medium text-text"> Placeholder </Label>

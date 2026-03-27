@@ -90,6 +90,7 @@ const useRegisterContentType = () => {
     },
      onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contentTypes"] });
+      queryClient.invalidateQueries({ queryKey: ["content-type"] });
     },
   });
 };
@@ -105,6 +106,7 @@ const useUpdateContentType = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contentTypes"] });
+      queryClient.invalidateQueries({ queryKey: ["content-type"] });
     },
   });
 };

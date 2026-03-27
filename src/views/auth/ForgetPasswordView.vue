@@ -1,119 +1,3 @@
-
-
-
-<template>
-  <CompositionLoading v-if="isSendCode || isVerifying || isResetting" />
-
-  <div v-else class="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-sm">
-      <img class="mx-auto h-10 w-auto" src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=600" alt="Your Company" />
-      <h2 class="mt-10 text-center text-huge font-bold tracking-tight text-text">Mot de passe oublié</h2>
-    </div>
-
-    <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-      <form @submit.prevent="onSubmit" class="space-y-4">
-        <div v-if="!sendEmail && !reset_password">
-          <label for="email" class="block font-medium text-text">Email address</label>
-          <div class="mt-2">
-            <input
-              v-model="email"
-              type="email"
-              id="email"
-              placeholder="Entrez votre email"
-              autocomplete="email"
-              required
-              class="input-custom"
-            />
-          </div>
-        </div>
-
-        <div v-if="sendEmail">
-            <label for="code" class="block font-medium text-text">Code</label>
-            <div class="mt-2">
-              <input
-                v-model="code"
-                type="text"
-                id="code"
-                placeholder="Entrez le code reçu par email"
-                autocomplete="code"
-                required
-                class="input-custom"
-              />
-            </div>
-
-            <div class="mt-2 text-center">
-              <p class="text-xs text-text " v-if="sendEmail && !reset_password">Veuillez entrer le code envoyé à votre adresse email.</p>
-              <p v-if="timeLeft > 0" class="text-sm text-text">
-                Le code expire dans : <span class="font-medium text-primary">{{ formattedTime }}</span>
-              </p>
-              <p v-else class="text-sm text-destructive font-medium">Le code a expiré.</p>
-            </div>
-        </div>
-
-         <div v-if="reset_password">
-          <p class="text-xs text-text">Veuillez entrer votre nouveau mot de passe.</p>
-
-           <div class="sm:col-span-3">
-            <BasePasswordForceInput
-              label="Nouveau mot de passe"
-              v-model="new_password"
-              placeholder="Entrer le mot de passe"
-            />
-          </div>
-          <div class="sm:col-span-3">
-            <BasePasswordForceInput
-              label="Confirmer le nouveau mot de passe"
-              v-model="confirm_new_password"
-              placeholder="Répéter le mot de passe"
-              :show-strength="false"
-            />
-          </div>
-          <p v-if="password_non_confirmed" class="mt-2 text-xs text-destructive font-medium italic">
-              {{  messageError }}
-          </p>
-
-         </div>
-
-
-        <p v-if="isError" class="text-xs text-destructive font-medium">
-          {{ (error as any)?.response?.data?.message || 'Erreur lors de l\'envoi du code' }}
-        </p>
-
-        <p v-if="isErrorVerify" class="text-xs text-destructive font-medium">
-          {{ (errorVerify as any)?.response?.data?.message || 'Code invalide' }}
-        </p>
-        <p v-if="isErrorReset" class="text-xs text-destructive font-medium">
-          {{ (errorReset as any)?.response?.data?.message || 'Erreur lors du changement de mot de passe' }}
-        </p>
-
-
-
-
-        <div>
-          <button
-            type="submit"
-            :disabled="isSendCode"
-            class="flex w-full justify-center rounded-md bg-primary px-3 py-1.5 text-sm/6  text-white shadow-sm hover:bg-active-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {{ getButtonText() }}
-          </button>
-        </div>
-      </form>
-
-      <div class="flex items-center justify-between mt-10 text-center text-sm/6 text-text">
-        <div class="">
-          <router-link :to="{ name: 'auth.login' }" class=" text-primary font-semibold opacity-80">Connexion</router-link>
-        </div>
-         <div class="">
-          <button v-if="sendEmail" @click="onSubmitSendCode" type="button"
-          :disabled="timeLeft > 0 && !isErrorVerify" class=" text-accent hover:text-accent-foreground">Renvoyer le code</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
-
 <script setup lang="ts">
 
   import { ref, computed, onUnmounted } from 'vue';
@@ -122,13 +6,18 @@
   import { useForgotPassword } from '../../hook/user';
   import { useVerifyCode } from '../../hook/user';
   import { useResetPassword } from '../../hook/user';
-import { watch } from 'vue';
-import BasePasswordForceInput from '../../components/base/BasePasswordForceInput.vue';
-import { useRouter } from 'vue-router';
+  import { watch } from 'vue';
+  import BasePasswordForceInput from '../../components/base/BasePasswordForceInput.vue';
+  import { useRouter } from 'vue-router';
+  import { useParameter } from '../../stores/parameter';
+  import { storeToRefs } from 'pinia';
+  import { useGetPermissionsByRoleId } from '../../hook/permission';
 
 
 
   // Initialisation
+  const store = useParameter();
+  const { parameter } = storeToRefs(store);
   const email = ref('');
   const code = ref('');
   const new_password = ref('');
@@ -139,6 +28,14 @@ import { useRouter } from 'vue-router';
   const password_non_confirmed = ref(false);
   const messageError = ref('');
   const router = useRouter()
+
+  const roleId= ref<number>(0)
+
+  const { 
+    data: permissions,
+    refetch: refetchPermissions
+   } = useGetPermissionsByRoleId(roleId);
+
 
 
 
@@ -245,11 +142,14 @@ const onSubmitSendCode = () => {
    sendCode(
       email.value,
       {
-        onSuccess(data) {
+        async onSuccess(data) {
           sendEmail.value = true;
 
-          // On stocke les infos reçues du backend dans Pinia
-          storeUser.setUserInfo({...data.user, initials:initials(data.user.full_name) });
+          roleId.value = data.user?.role?.id || data.user?.role_id || 0
+
+          await refetchPermissions()
+          
+          storeUser.setUserInfo({...data.user, initials:initials(data.user.full_name) }, permissions.value || []);
           startTimer(600); // Démarre le timer à l'envoi réussi
         },
         onError(error) {
@@ -328,9 +228,11 @@ const onSubmitResetPassword = () => {
       id: storeUser.userInfo?.id
     },
     {
-      onSuccess(data) {
-        // On stocke les infos reçues du backend dans Pinia
-        storeUser.setUserInfo({...data.user, initials:initials(data.user.full_name) });
+      async onSuccess(data) {
+        roleId.value = data.user?.role?.id || data.user?.role_id || 0
+
+        await refetchPermissions()
+        storeUser.setUserInfo({...data.user, initials:initials(data.user.full_name) }, permissions.value || []);
         reset_password.value = false;
         sendEmail.value = false;
         router.push({ name: 'admin.dashboard' }); // Redirige après succès
@@ -350,3 +252,123 @@ const getButtonText = () => {
 };
 
 </script>
+
+
+
+<template>
+  <div class="flex justify-center items-center h-full" v-if="isSendCode || isVerifying || isResetting">
+    <CompositionLoading  />
+  </div>
+  
+
+  <div v-else class="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-sm">
+      <img v-if="parameter?.media?.type === 'image'" class="mx-auto h-20 w-auto" :src="parameter?.media?.file_path" alt="Your Company" />
+      <video v-else-if="parameter?.media?.type === 'video'" autoplay loop muted class="mx-auto h-20 w-auto" :src="parameter?.media?.file_path" alt="Your Company" />
+      <h2 class="mt-6 text-center text-huge font-bold tracking-tight text-text">Mot de passe oublié</h2>
+    </div>
+
+    <div class="mt-6 sm:mx-auto sm:w-full sm:max-w-sm">
+      <form @submit.prevent="onSubmit" class="space-y-4">
+        <div v-if="!sendEmail && !reset_password">
+          <label for="email" class="block text-sm/6 font-medium text-text">Email address</label>
+          <div class="mt-2">
+            <input
+              v-model="email"
+              type="email"
+              id="email"
+              placeholder="Entrez votre email"
+              autocomplete="email"
+              required
+              class="input-custom"
+            />
+          </div>
+        </div>
+
+        <div v-if="sendEmail">
+            <label for="code" class="block text-sm/6 font-medium text-text">Code</label>
+            <div class="mt-2">
+              <input
+                v-model="code"
+                type="text"
+                id="code"
+                placeholder="Entrez le code reçu par email"
+                autocomplete="code"
+                required
+                class="input-custom"
+              />
+            </div>
+
+            <div class="mt-2 text-center">
+              <p class="text-xs text-text " v-if="sendEmail && !reset_password">Veuillez entrer le code envoyé à votre adresse email.</p>
+              <p v-if="timeLeft > 0" class="text-sm text-text">
+                Le code expire dans : <span class="font-medium text-primary">{{ formattedTime }}</span>
+              </p>
+              <p v-else class="text-sm text-destructive font-medium">Le code a expiré.</p>
+            </div>
+        </div>
+
+         <div v-if="reset_password">
+          <p class="text-xs text-text">Veuillez entrer votre nouveau mot de passe.</p>
+
+           <div class="sm:col-span-3">
+            <BasePasswordForceInput
+              label="Nouveau mot de passe"
+              v-model="new_password"
+              placeholder="Entrer le mot de passe"
+            />
+          </div>
+          <div class="sm:col-span-3">
+            <BasePasswordForceInput
+              label="Confirmer le nouveau mot de passe"
+              v-model="confirm_new_password"
+              placeholder="Répéter le mot de passe"
+              :show-strength="false"
+            />
+          </div>
+          <p v-if="password_non_confirmed" class="mt-2 text-xs text-destructive font-medium italic">
+              {{  messageError }}
+          </p>
+
+         </div>
+
+
+        <p v-if="isError" class="text-xs text-destructive font-medium">
+          {{ (error as any)?.response?.data?.message || 'Erreur lors de l\'envoi du code' }}
+        </p>
+
+        <p v-if="isErrorVerify" class="text-xs text-destructive font-medium">
+          {{ (errorVerify as any)?.response?.data?.message || 'Code invalide' }}
+        </p>
+        <p v-if="isErrorReset" class="text-xs text-destructive font-medium">
+          {{ (errorReset as any)?.response?.data?.message || 'Erreur lors du changement de mot de passe' }}
+        </p>
+
+
+
+
+        <div>
+          <button
+            type="submit"
+            :disabled="isSendCode"
+            class="flex w-full justify-center rounded-md bg-primary px-3 py-1.5 text-sm/6  text-white shadow-sm hover:bg-active-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {{ getButtonText() }}
+          </button>
+        </div>
+      </form>
+
+      <div class="flex items-center justify-between mt-10 text-center text-sm/6 text-text">
+        <div class="">
+          <router-link :to="{ name: 'auth.login' }" class=" text-primary font-semibold opacity-80">Connexion</router-link>
+        </div>
+         <div class="">
+          <button v-if="sendEmail" @click="onSubmitSendCode" type="button"
+          :disabled="timeLeft > 0 && !isErrorVerify" class=" text-accent hover:text-accent-foreground">Renvoyer le code</button>
+        </div>
+      </div>
+    </div>
+  </div> -->
+</template>
+
+

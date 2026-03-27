@@ -10,7 +10,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
+  <div class="flex flex-col items-center justify-center text-center animate-fade-in">
     <div class="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
       <component :is="icon" class="h-8 w-8 text-muted-foreground" />
     </div>

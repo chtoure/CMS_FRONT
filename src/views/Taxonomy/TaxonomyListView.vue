@@ -22,7 +22,7 @@ import { handleError } from '../../lib/error'
 const columns = [
   { key: 'num', label: 'Num', class: 'w-16' },
   { key: 'name', label: 'Nom' },
-  { key: 'slug', label: 'Slug' },
+  { key: 'slug', label: 'Identifiant' },
   { key: 'description', label: 'Description'},
   { key: 'status', label: 'Statut', class: 'w-32' },
   { key: 'values', label: 'Termes', class: 'text-center' },
@@ -129,7 +129,7 @@ const handleCreate = () => {
 
                 searchable
                 v-model:search="search"
-                searchPlaceholder="Rechercher par nom ou slug..."
+                searchPlaceholder="Rechercher par nom ou identifiant..."
 
                 :isLoading="isLoadingTaxonomies || isLoadingArchiveTaxonomy"
               >

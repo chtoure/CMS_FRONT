@@ -20,7 +20,7 @@ import Badge from '../../components/ui/badge/Badge.vue'
 const columns = [
   { key: 'num', label: 'Num', class: 'w-16' },
   { key: 'name', label: 'Nom' },
-  { key: 'slug', label: 'Slug' },
+  { key: 'slug', label: 'Identifiant' },
   { key: 'description', label: 'Description'},
   { key: 'values', label: 'Termes', class: 'text-center' },
   { key: 'actions', label: 'Actions', class: 'w-10' }
@@ -139,7 +139,7 @@ const handleCreate = () => {
 
                 searchable
                 v-model:search="search"
-                searchPlaceholder="Rechercher par nom ou slug..."
+                searchPlaceholder="Rechercher par nom ou identifiant..."
 
                 :isLoading="isLoadingTaxonomies || isLoadingRestoreTaxonomy || isLoadingDeleteTaxonomy"
               >
