@@ -6,6 +6,7 @@ import type { AnyComponentInstance } from '../../type/component';
 import { buildLinkStyles, buildLinkInlineStyles } from '../../lib/style/linkProcessor';
 import { resolveValueForBreakpoint } from '../../lib/style/core';
 import { useVariableResolver } from '../../hook/variable';
+import * as LucideIcons from 'lucide-vue-next';
 
 interface Props {
   styles?: LinkStyles;
@@ -13,6 +14,8 @@ interface Props {
     text?: string;
     url?: string;
     target?: string;
+    icon?: string;
+    iconPosition?: 'left' | 'right' | 'only';
   };
   element?: AnyComponentInstance;
   children?: AnyComponentInstance[];
@@ -69,6 +72,16 @@ const linkText = computed(() => (resolveValue(props.data?.text) as string) || 'L
 const linkUrl = computed(() => (resolveValue(props.data?.url) as string) || '#');
 const linkTarget = computed(() => (resolveValue(props.data?.target) as string) || '_self');
 
+const iconName = computed(() => {
+  const name = resolveValue(props.data?.icon) as string;
+  return name && name in LucideIcons ? name : null;
+});
+const LucideIcon = computed(() =>
+  iconName.value ? (LucideIcons as Record<string, unknown>)[iconName.value] : null
+);
+const iconPosition = computed(() => (resolveValue(props.data?.iconPosition) as string) || 'left');
+const showIconOnly = computed(() => !!LucideIcon.value && iconPosition.value === 'only');
+
 // --- Édition inline ---
 const isEditing = ref(false);
 const editorRef = ref<HTMLElement | null>(null);
@@ -123,19 +136,29 @@ const handleKeyDown = (e: KeyboardEvent) => {
     <!-- En mode builder : <a> classique avec navigation bloquée + édition inline -->
     <a
       v-if="isBuilder"
-      ref="editorRef"
       :href="linkUrl"
       :target="linkTarget"
       :class="[computedClasses, isSelected ? 'cursor-text outline-none' : '']"
       :style="computedInlineStyles"
-      class="inline-block hover:underline transition-all"
-      :contenteditable="isEditing ? 'true' : 'false'"
+      class="inline-flex items-center gap-1.5 hover:underline transition-all"
       @click.prevent
       @dblclick="startEditing"
-      @blur="commitEdit"
-      @keydown="handleKeyDown"
     >
-      {{ linkText }}
+      <!-- Icône à GAUCHE -->
+      <component v-if="LucideIcon && iconPosition === 'left'" :is="LucideIcon" :size="14" class="shrink-0" />
+      <!-- Texte (caché si icône seule) -->
+      <span
+        v-if="!showIconOnly"
+        ref="editorRef"
+        :contenteditable="isEditing ? 'true' : 'false'"
+        @blur="commitEdit"
+        @keydown="handleKeyDown"
+        v-html="linkText"
+      />
+      <!-- Icône à DROITE -->
+      <component v-if="LucideIcon && iconPosition === 'right'" :is="LucideIcon" :size="14" class="shrink-0" />
+      <!-- Icône seule -->
+      <component v-if="showIconOnly" :is="LucideIcon" :size="16" class="shrink-0" />
     </a>
     <!-- En mode rendu/preview : RouterLink fonctionnel -->
     <RouterLink
@@ -144,9 +167,12 @@ const handleKeyDown = (e: KeyboardEvent) => {
       :target="linkTarget"
       :class="computedClasses"
       :style="computedInlineStyles"
-      class="inline-block hover:underline transition-all"
+      class="inline-flex items-center gap-1.5 hover:underline transition-all"
     >
-      {{ linkText }}
+      <component v-if="LucideIcon && iconPosition === 'left'" :is="LucideIcon" :size="14" class="shrink-0" />
+      <span v-if="!showIconOnly" v-html="linkText" />
+      <component v-if="LucideIcon && iconPosition === 'right'" :is="LucideIcon" :size="14" class="shrink-0" />
+      <component v-if="showIconOnly" :is="LucideIcon" :size="16" class="shrink-0" />
     </RouterLink>
   </div>
 </template>

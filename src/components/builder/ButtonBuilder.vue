@@ -5,12 +5,18 @@ import { executeAction } from '../../registry/cliquable';
 import { buildButtonStyles, buildButtonInlineStyles } from '../../lib/style/buttonProcessor';
 import { useVariableResolver } from '../../hook/variable';
 import { inject } from 'vue';
+import * as LucideIcons from 'lucide-vue-next';
 
 interface Props {
   styles?: InteractiveStyles;
   data?: {
     content?: string | Record<string, unknown>;
+    contentVisible?: string;
     cliquable?: CliquableAction;
+    icon?: string;
+    iconVisible?: string;
+    iconPosition?: 'left' | 'right' | 'only';
+    iconPositionVisible?: 'left' | 'right' | 'only';
   };
   element?: AnyComponentInstance;
   children?: AnyComponentInstance[];
@@ -25,6 +31,7 @@ const builderState = inject<{
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' };
   selectedId: { value: string | null };
   toggleVisibility?: (id: string) => void;
+  toggleStates?: { value: Record<string, boolean> };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }>('builderState', { currentBreakpoint: { value: 'default' }, selectedId: { value: null } } as any);
 
@@ -55,7 +62,47 @@ const computedInlineStyles = computed(() => {
   return buildButtonInlineStyles(props.styles as Record<string, unknown>, bp, resolveValue);
 });
 
-const content = computed(() => (resolveValue(props.data?.content) as string) || 'Nouveau Bouton');
+// Computed partagé : est-ce que la cible TOGGLE_VISIBILITY est actuellement MASQUÉE ?
+const isToggleTargetHidden = computed(() => {
+  const cliquable = resolveValue(props.data?.cliquable) as CliquableAction;
+  if (cliquable?.action === 'TOGGLE_VISIBILITY') {
+    const targetId = cliquable.action_params?.targetId as string | undefined;
+    if (targetId) {
+      // toggleStates est une ref injectée depuis BuilderView, il faut accéder à .value
+      return builderState.toggleStates?.value?.[targetId] === false;
+    }
+  }
+  return null; // null = pas une action TOGGLE_VISIBILITY
+});
+
+const content = computed(() => {
+  if (isToggleTargetHidden.value === true) {
+    const altText = resolveValue(props.data?.contentVisible) as string | undefined;
+    if (altText) return altText;
+  }
+  return (resolveValue(props.data?.content) as string) || 'Nouveau Bouton';
+});
+
+const iconName = computed(() => {
+  // Si TOGGLE_VISIBILITY et cible masquée → utiliser iconVisible si défini
+  if (isToggleTargetHidden.value === true) {
+    const altIcon = resolveValue(props.data?.iconVisible) as string | undefined;
+    if (altIcon && altIcon in LucideIcons) return altIcon;
+  }
+  const name = resolveValue(props.data?.icon) as string;
+  return name && name in LucideIcons ? name : null;
+});
+const LucideIcon = computed(() =>
+  iconName.value ? (LucideIcons as Record<string, unknown>)[iconName.value] : null
+);
+const iconPosition = computed(() => {
+  if (isToggleTargetHidden.value === true) {
+    const altPos = resolveValue(props.data?.iconPositionVisible) as string | undefined;
+    if (altPos) return altPos;
+  }
+  return (resolveValue(props.data?.iconPosition) as string) || 'left';
+});
+const showIconOnly = computed(() => !!LucideIcon.value && iconPosition.value === 'only');
 
 // Édition inline
 const isEditing = ref(false);
@@ -127,16 +174,47 @@ const handleClick = () => {
 
 <template>
   <button
-    ref="editorRef"
     :class="[
-      'inline-flex items-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 w-full',
+      'inline-flex items-center justify-center gap-1.5 font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 w-full',
       computedClasses
     ]"
     :style="computedInlineStyles"
-    :contenteditable="isEditing ? 'true' : 'false'"
-    @click="!isEditing && handleClick($event)"
+    @click="!isEditing && handleClick()"
     @dblclick="startEditing"
-    @blur="commitEdit"
-    @keydown="handleKeyDown"
-  >{{ content }}</button>
+  >
+    <!-- Icône à GAUCHE -->
+    <component
+      v-if="LucideIcon && iconPosition === 'left'"
+      :is="LucideIcon"
+      :size="16"
+      class="shrink-0"
+    />
+
+    <!-- Texte (éditable inline, caché si mode 'only') -->
+    <span
+      v-if="!showIconOnly"
+      ref="editorRef"
+      :contenteditable="isEditing ? 'true' : 'false'"
+      @blur="commitEdit"
+      @keydown="handleKeyDown"
+      class="leading-none"
+      v-html="content"
+    />
+
+    <!-- Icône à DROITE -->
+    <component
+      v-if="LucideIcon && iconPosition === 'right'"
+      :is="LucideIcon"
+      :size="16"
+      class="shrink-0"
+    />
+
+    <!-- Icône seule -->
+    <component
+      v-if="showIconOnly"
+      :is="LucideIcon"
+      :size="18"
+      class="shrink-0"
+    />
+  </button>
 </template>

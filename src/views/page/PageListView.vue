@@ -13,8 +13,9 @@
     import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue'
     import { useHead } from '@vueuse/head'
     import { useGetPages } from '../../hook/page'
-    import PageFormView from './PageFormView.vue'
-    import type { Page } from '../../type/page'
+    import { useRouter } from 'vue-router'
+
+    const router = useRouter();
 
     useHead({
         meta: [
@@ -28,8 +29,6 @@
     const currentPage = ref(1);
     const limit = ref(10);
     const search = ref('');
-    const isEditing = ref(false);
-    const selectedPage = ref<Page | undefined>(undefined);
 
     const filterParams = computed(() => ({
         page: currentPage.value,
@@ -50,7 +49,7 @@
     const columns = [
         { key: 'id', label: 'ID' , class: 'w-6' },
         { key: 'name', label: 'Nom' },
-        { key: 'slug', label: 'Slug' },
+        { key: 'slug', label: 'Url' },
         { key: 'nb_revisions', label: 'Nb. Versions' },
         { key: 'user', label: 'Utilisateur'},
         { key: 'actions', label: 'Actions', class: 'w-10' },
@@ -60,19 +59,11 @@
     const totalItems = computed(() => pageQuery.data.value?.count || 0);
 
     const openAddPage = () => {
-        selectedPage.value = undefined;
-        isEditing.value = true;
+        router.push({ name: 'admin.page-add' });
     };
 
-    const openEditPage = (page: Page) => {
-        selectedPage.value = page;
-        isEditing.value = true;
-    };
-
-    const closeForm = () => {
-        isEditing.value = false;
-        selectedPage.value = undefined;
-        pageQuery.refetch();
+    const openEditPage = (id: number) => {
+        router.push({ name: 'admin.page-edit', params: { id } });
     };
 </script>
 
@@ -92,7 +83,7 @@
             <p class="text-background text-sm font-medium">Gérez vos pages visuels avec une précision chirurgicale.</p>
           </div>
           <div class="flex items-center gap-4">
-            <Button v-if="!isEditing" class="rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95" @click="openAddPage">
+            <Button class="rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95" @click="openAddPage">
               <Plus class="w-6 h-6 mr-2" />
               Ajouter
             </Button>
@@ -102,16 +93,7 @@
     </CompositionPageHeader>
 
     <main>
-      <section v-if="isEditing" class="animate-in fade-in slide-in-from-bottom-4 duration-300">
-        <PageFormView
-          :initial-data="selectedPage"
-          :is-editing="!!selectedPage"
-          @success="closeForm"
-          @cancel="closeForm"
-        />
-      </section>
-
-      <div v-else class="card rounded-none p-6" >
+      <div class="card rounded-none p-6" >
         <CompositionTable
           :columns="columns"
           :data="pageResults"
@@ -155,13 +137,13 @@
                   <DropdownMenuLabel>Actions</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel>
-                    <button class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110" @click="()=>{$router.push({ name: 'admin.pages.revisions', params: { id: row.id } })}">
+                    <button class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110" @click="()=>{router.push({ name: 'admin.pages.revisions', params: { id: row.id } })}">
                         <Eye class="w-4 h-4" /> Versionnement
                     </button>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel>
-                    <button @click="openEditPage(row)" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
+                    <button @click="openEditPage(row.id)" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
                       <Pencil class="w-4 h-4" /> Modifier
                     </button>
                   </DropdownMenuLabel>

@@ -5,7 +5,7 @@ import Button from "@/components/ui/button/Button.vue";
 </script>
 
 <template>
-  <div class="h-screen w-full flex items-center justify-center p-6 font-sans">
+  <div class="w-full flex flex-col min-h-full items-center justify-center p-6 font-sans">
     <div class="max-w-md w-full text-center space-y-6">
       <h1 class="text-9xl font-black text-text opacity-50 tracking-tighter">
         404

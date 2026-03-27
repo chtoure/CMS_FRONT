@@ -37,7 +37,7 @@ const useGetPage = (id: number | Ref<number>) => {
     queryFn: async () => {
       const targetId = unref(id);
       return handleResponse<Page>(
-        await api(`/pages/${targetId}`)
+        await api(`/page/${targetId}`)
       );
     },
     enabled: !!unref(id)
@@ -81,7 +81,7 @@ const useUpdatePage = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, pageData }: { id: number; pageData: UpdatePage }) => {
-      const response = await api(`/pages/${id}`, {
+      const response = await api(`/page/${id}`, {
         method: "PUT",
         body: JSON.stringify(pageData),
       });

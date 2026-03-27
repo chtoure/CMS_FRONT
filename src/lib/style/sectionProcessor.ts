@@ -134,7 +134,7 @@ export function buildSectionInlineStyles(
   applyPositioningInline(inline, styles, getValue);
 
   const positionVal = getValue(styles.position);
-  
+
   if ((positionVal === 'sticky' || positionVal === 'fixed' || positionVal === 'absolute') && !inline.zIndex) {
     inline.zIndex = '10';
   }

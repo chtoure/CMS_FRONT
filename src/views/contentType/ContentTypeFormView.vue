@@ -91,8 +91,8 @@ const fields = ref<any[]>([
   {
     type: FieldType.TEXT,
     name: 'title',
-    label: '',
-    placeholder: 'Saisir le titre',
+    label: 'Identifiant',
+    placeholder: 'Saisir l\'identifiant',
     required: true
   }
 ])
@@ -128,6 +128,24 @@ const isSlugCustom = ref(false);
 const isChangePageByUrl = ref(false);
 let resolveNavigation: (value: boolean) => void;
 
+// Ajouter un nouveau champ
+const addField = () => {
+  const baseName = 'champ'
+  const newName = generateUniqueName(baseName)
+
+  const newField: IFieldDefinition = {
+    type: FieldType.TEXT,
+    name: newName,
+    label: '',
+    required: false,
+    placeholder: '',
+    description: ''
+  }
+
+  fields.value.push(newField)
+  expandedFieldIndex.value = fields.value.length - 1
+}
+
 
 let unregisterGuard: () => void;
 
@@ -145,6 +163,8 @@ onMounted(() => {
     }
     return true;
   });
+  // Ajouter un champ par défaut
+  addField();
 })
 
 // On supprime la garde quand on quitte le composant
@@ -196,23 +216,7 @@ const generateUniqueName = (baseName: string) => {
   return `${baseName}_${crypto.randomUUID().split('-')[0]}`;
 };
 
-// Ajouter un nouveau champ
-const addField = () => {
-  const baseName = 'champ'
-  const newName = generateUniqueName(baseName)
 
-  const newField: IFieldDefinition = {
-    type: FieldType.TEXT,
-    name: newName,
-    label: '',
-    required: false,
-    placeholder: '',
-    description: ''
-  }
-
-  fields.value.push(newField)
-  expandedFieldIndex.value = fields.value.length - 1
-}
 
 const open = ref(false)
 const triggerRef = ref<HTMLElement | null>(null)
@@ -349,6 +353,13 @@ const cleanedFields = (fields: IFieldDefinition[]): IFieldDefinition[] => {
       required: f.required,
       placeholder: f.placeholder,
       description: f.description,
+    }
+
+
+    if (f.label === '') {
+      messageErrorTypeChamp.value = 'Veuillez saisir un libellé'
+    } else {
+      messageErrorTypeChamp.value = ''
     }
 
 
@@ -547,7 +558,7 @@ const handleCancel = () => {
                 <p v-if="errors.name" class="text-xs text-destructive px-1 font-medium italic animate-in slide-in-from-top-1">{{ errors.name }}</p>
               </div>
               <div class="space-y-2">
-                <Label for="slug" class="text-sm font-bold  text-text px-1">Slug (Identifiant)</Label>
+                <Label for="slug" class="text-sm font-bold  text-text px-1">Identifiant</Label>
                 <Input
                   id="slug"
                   v-model="form.slug"
@@ -647,6 +658,7 @@ const handleCancel = () => {
                 >
                   {{ field.label || '(aucun libellé)' }}
                 </span>
+
                 <!-- Mini actions au survol ou si déplié -->
                 <div v-if="expandedFieldIndex === fields.indexOf(field)" class="flex items-center gap-3 mt-1 text-[10px] font-bold text-primary animate-in fade-in slide-in-from-left-1">
                    <button @click.stop="duplicateField(fields.indexOf(field))" class="hover:text-primary/70">Dupliquer</button>
@@ -714,6 +726,7 @@ const handleCancel = () => {
                       <div class="space-y-2">
                         <Label class="text-xs font-medium text-text">Libellé du champ</Label>
                         <Input v-model="field.label" placeholder="Texte affiché à l'utilisateur" class="input-custom" />
+                        <span v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</span>
                       </div>
                       <div class="space-y-2">
                         <Label class="text-xs font-medium text-text"> Placeholder </Label>

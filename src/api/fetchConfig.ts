@@ -138,7 +138,7 @@ const api = async (endpoint: string, options: RequestInit = {}) => {
       }
     } catch (error) {
       const storeUser = userStore();
-      storeUser.setUserInfo(null);
+      storeUser.setUserInfo(null, []);
       router.push({ name: 'auth.login' });
       return Promise.reject(error);
     }

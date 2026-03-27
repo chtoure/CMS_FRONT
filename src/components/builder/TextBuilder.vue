@@ -111,5 +111,6 @@ const handleKeyDown = (e: KeyboardEvent) => {
     @dblclick="startEditing"
     @blur="commitEdit"
     @keydown="handleKeyDown"
-  >{{ content }}</component>
+    v-html="content"
+  ></component>
 </template>
