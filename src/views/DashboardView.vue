@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import {
   FolderOpen,
-  Database,
   Plus,
   ArrowUpRight,
   Clock,
@@ -50,28 +49,28 @@ const stats = computed(() => [
   {
     title: 'Contenus',
     value: totalContentType.value,
-    icon: FileText,
+    icon: '/icons/folder1.svg',
     description: 'Types de contenu dédiés',
     hasPermission: hasPermission('read_content_type')
   },
   {
     title: 'Médiathèque',
     value: totalMedia.value,
-    icon: FolderOpen,
+    icon: '/icons/file2.svg',
     description: 'Fichiers importés',
     hasPermission: hasPermission('read_media')
   },
   {
     title: 'Variables',
     value: totalVariable.value,
-    icon: Database,
+    icon: '/icons/variable1.svg',
     description: 'Variables de données',
     hasPermission: hasPermission('read_variable')
   },
   {
     title: 'Taxonomies',
     value: totalTaxonomy.value,
-    icon: Tags,
+    icon: '/icons/tag1.svg',
     description: 'Vocabulaires gérés',
     hasPermission: hasPermission('read_taxonomy')
   }
@@ -98,28 +97,28 @@ const now = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'nume
             <p class="text-background opacity-80 text-xs font-medium">Nous sommes le {{ now }}. Prêt à créer ?</p>
           </div>
         </div>
-        <div class="w-full mt-4 flex justify-between">
+        <div class="w-full mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <template v-for="stat in stats" :key="stat.title">
-          <div v-if="stat.hasPermission" class="">
-            <div class="flex items-start justify-between gap-2">
-              <div class="p-2.5 w-fit rounded-full bg-secondary text-primary group-hover:scale-110 transition-transform duration-500">
-                <component :is="stat.icon" class="w-8 h-8" />
-              </div>
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="text-[10px] text-secondary capitalize tracking-[0.15em] opacity-60">
-                    total {{ stat.title }}
-                  </span>
-                  <p class="text-xl font-black tracking-tighter text-sid"> {{ stat.value }}</p>
+            <div v-if="stat.hasPermission" class="">
+              <div class="flex items-start gap-2">
+                <div class="p-2.5 w-fit rounded-full bg-secondary text-primary group-hover:scale-110 transition-transform duration-500">
+                  <img :src="stat.icon" class="w-8 h-8" />
                 </div>
-                <div v-if="stat.description " class="flex items-center gap-2 pt-1">
-                  <span class="text-[10px] text-secondary leading-none opacity-50">{{ stat.description }}</span>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-[10px] text-secondary capitalize tracking-[0.15em] opacity-60">
+                      total {{ stat.title }}
+                    </span>
+                    <p class="text-xl font-black tracking-tighter text-sid"> {{ stat.value }}</p>
+                  </div>
+                  <div v-if="stat.description " class="flex items-center gap-2 pt-1">
+                    <span class="text-[10px] text-secondary leading-none opacity-50">{{ stat.description }}</span>
+                  </div>
                 </div>
+                
               </div>
-              
-            </div>
 
-          </div>
+            </div>
           </template>
         </div>
       </template>

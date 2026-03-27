@@ -185,7 +185,7 @@ const bgRepeatOptions = [
         <div v-if="showField('position')" class="space-y-1.5 pt-1">
           <label class="text-[10px] font-mono font-bold text-builder-bar-text uppercase tracking-tighter">Type</label>
           <select
-            class="w-full bg-builder-bar-item-background border border-border text-builder-bar-text text-xs p-1.5 rounded focus:outline-none focus:border-primary"
+            class="w-full bg-builder-input-bg border border-border text-builder-bar-text text-xs p-1.5 rounded focus:outline-none focus:border-primary"
             :value="getRawValue(styles.position) || 'static'"
             @change="(e) => {
               const newPos = (e.target as HTMLSelectElement).value;
