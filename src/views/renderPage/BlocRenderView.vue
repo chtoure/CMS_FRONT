@@ -24,12 +24,12 @@ const props = defineProps<Props>();
 const componentToRender = COMPONENT_MAP[props.element.tag];
 
 
-const builderState = inject<{ 
+const builderState = inject<{
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' },
   isVisible: (id: string | number, backendId?: number | null) => boolean
-}>('builderState', { 
+}>('builderState', {
   currentBreakpoint: { value: 'default' },
-  isVisible: () => true 
+  isVisible: () => true
 } as any);
 
 const { resolveValue } = useVariableResolver();
@@ -112,10 +112,10 @@ const canHaveChildren = computed(() => {
 function formatSize(value: unknown, defaultValue: string | undefined = undefined) {
   const resolved = resolveValue(value);
   if (resolved === undefined || resolved === null || resolved === '') return defaultValue;
-  
+
   let finalValue = resolved;
   const bp = builderState.currentBreakpoint.value;
-  
+
   if (typeof resolved === 'object' && resolved !== null && 'default' in (resolved as Record<string, unknown>)) {
     const resObj = resolved as Record<string, any>;
     if (bp === 'lg' && resObj.lg !== undefined) finalValue = resObj.lg;
@@ -123,26 +123,59 @@ function formatSize(value: unknown, defaultValue: string | undefined = undefined
     else if (bp !== 'default' && resObj.sm !== undefined) finalValue = resObj.sm;
     else finalValue = resObj.default;
   }
-  
+
   if (finalValue === 'full') return '100%';
   if (typeof finalValue === 'number') return `${finalValue}px`;
   if (typeof finalValue === 'string' && !isNaN(Number(finalValue)) && finalValue.trim() !== '') return `${finalValue}px`;
   return finalValue as string;
 }
 
-function formatColor(value: unknown) {
-  const raw = formatSize(value);
-  if (!raw || typeof raw !== 'string') return undefined;
-  if (raw.startsWith('#') || raw.startsWith('rgba') || raw.startsWith('hsl') || raw.startsWith('bg-') || raw.startsWith('text-') || raw.startsWith('border-')) {
-    return raw;
-  }
-  if (/^[0-9A-Fa-f]{6}$/.test(raw)) return `#${raw}`;
-  return raw;
-}
+// function formatColor(value: unknown) {
+//   const raw = formatSize(value);
+//   if (!raw || typeof raw !== 'string') return undefined;
+//   if (raw.startsWith('#') || raw.startsWith('rgba') || raw.startsWith('hsl') || raw.startsWith('bg-') || raw.startsWith('text-') || raw.startsWith('border-')) {
+//     return raw;
+//   }
+//   if (/^[0-9A-Fa-f]{6}$/.test(raw)) return `#${raw}`;
+//   return raw;
+// }
 
 // Tri par order supprimé pour parité parfaite avec CanvaView / VueDraggable qui lit le tableau natif.
 const elementChildren = computed(() => {
   return props.element.children || [];
+});
+
+/**
+ * Styles supplémentaires pour les sections : marginTop, marginBottom, height
+ * (valeurs non gérées dans buildSectionInlineStyles mais présentes dans le builder)
+ */
+const extraSectionStyles = computed(() => {
+  const styles = normalizedElementStyles.value;
+  const bp = builderState.currentBreakpoint.value;
+  const extra: Record<string, string> = {};
+
+  const pick = (val: any): string | undefined => {
+    if (!val) return undefined;
+    const inner = (val && typeof val === 'object' && 'value' in val) ? val.value : val;
+    let v = inner;
+    if (typeof inner === 'object' && inner !== null && 'default' in inner) {
+      v = inner[bp] ?? inner.lg ?? inner.md ?? inner.sm ?? inner.default;
+    }
+    if (v === 'full') return '100%';
+    if (typeof v === 'number') return `${v}px`;
+    if (typeof v === 'string' && !isNaN(Number(v)) && v.trim() !== '') return `${v}px`;
+    if (typeof v === 'string') return v;
+    return undefined;
+  };
+
+  const mt = pick(styles.marginTop);
+  if (mt) extra.marginTop = mt;
+  const mb = pick(styles.marginBottom);
+  if (mb) extra.marginBottom = mb;
+  const h = pick(styles.height);
+  if (h) extra.height = h;
+
+  return extra;
 });
 
 /**
@@ -241,9 +274,9 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
   <section
     v-show="builderState.isVisible(element.id, (element as any).blocTemplateId)"
     v-if="!componentToRender && element.children"
-    class="relative group/section transition-all duration-200 isolate"
+    class="relative group/section flex flex-col transition-all duration-200"
     :class="buildSectionStyles(normalizedElementStyles, resolveValue)"
-    :style="buildSectionInlineStyles(normalizedElementStyles, builderState.currentBreakpoint.value, resolveValue)"
+    :style="{ ...buildSectionInlineStyles(normalizedElementStyles, builderState.currentBreakpoint.value, resolveValue), ...extraSectionStyles }"
   >
     <!-- Background Video -->
     <video
@@ -256,11 +289,8 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
       class="absolute inset-0 w-full h-full object-cover -z-10 pointer-events-none"
     ></video>
 
-    <!-- On imite exactement le VueDraggable du SectionBuilder.vue -->
-    <div
-      class="w-full h-full p-1"
-      :class="{ 'min-h-[120px]': element.children.length === 0 }"
-    >
+    <!-- Conteneur enfants (sans padding ni min-h artificiels du builder) -->
+    <div class="w-full flex-1">
       <template v-for="child in elementChildren" :key="child.id">
         <!-- Cas 1 : Itération activée pour cet enfant lié à une liste -->
         <template v-if="isLeafLinkedToQuery(child)">

@@ -166,6 +166,7 @@ const navItems = computed<NavItem[]>(() =>{
     id: `content-type-${ct.id}`,
     label: ct.name,
     icon: Database,
+    hasPermission: hasPermission('read_content_entry'),
     href: 'admin.content-entry.list',
     params: { slug: ct.slug }
   })) : [];
@@ -292,7 +293,7 @@ const activeItem = computed(() => {
               <DropdownMenuLabel class="text-xs font-bold text-sidebar-foreground/50 px-2 pb-1">{{ item.label }}</DropdownMenuLabel>
               <DropdownMenuSeparator class="bg-sidebar-border" />
               <DropdownMenuItem
-                
+
                 v-for="child in item.children"
                 :key="child.id"
                 as-child
@@ -363,7 +364,7 @@ const activeItem = computed(() => {
                     <span>{{ child.label }}</span>
                   </RouterLink>
                 </template>
-                
+
               </div>
             </transition>
           </template>

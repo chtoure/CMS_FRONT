@@ -2,10 +2,35 @@
 import { useRoute, useRouter } from 'vue-router';
 import { computed, watchEffect, ref, onMounted, onUnmounted, provide } from 'vue';
 import { UseRenderPage } from '../../hook/page';
+import { useGetParameters } from '../../hook/parameter';
 import CompositionError from '../../components/composition/CompositionError.vue';
 import CompositionLoading from '../../components/composition/CompositionLoading.vue';
 import BlocRenderView from './BlocRenderView.vue';
 import { ApiError } from '../../api/apiError';
+
+// Chargement dynamique d'une Google Font dans le <head>
+function loadGoogleFont(family: string) {
+  if (!family) return;
+  const id = `gfont-${family.replace(/\s/g, '-')}`;
+  if (document.getElementById(id)) return;
+  const link = document.createElement('link');
+  link.id = id;
+  link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@300;400;500;600;700&display=swap`;
+  document.head.appendChild(link);
+}
+
+// Mise à jour d'une balise <meta>
+function setMeta(name: string, content: string, property = false) {
+  const attr = property ? 'property' : 'name';
+  let el = document.querySelector(`meta[${attr}="${name}"]`) as HTMLMetaElement | null;
+  if (!el) {
+    el = document.createElement('meta');
+    el.setAttribute(attr, name);
+    document.head.appendChild(el);
+  }
+  el.setAttribute('content', content);
+}
 
 
 
@@ -24,6 +49,45 @@ const {
   isError: isgetError,
   error: getError
 } = UseRenderPage(slug);
+
+// Paramètres globaux du site (logo, font, meta)
+const { data: siteParams } = useGetParameters();
+
+watchEffect(() => {
+  const p = siteParams.value;
+  if (!p) return;
+
+  // ── Police globale ──────────────────────────────────────────────
+  if (p.family_name) {
+    loadGoogleFont(p.family_name);
+    document.body.style.fontFamily = `'${p.family_name}', sans-serif`;
+  }
+
+  // ── Meta SEO ─────────────────────────────────────────────────────
+  if (p.title) {
+    setMeta('og:title', p.title, true);
+  }
+  if (p.description) {
+    setMeta('description', p.description);
+    setMeta('og:description', p.description, true);
+  }
+
+  // ── Logo → Favicon dynamique ─────────────────────────────────────
+  // Le logo défini dans ParameterView s'affiche dans l'onglet du navigateur
+  if (p.media?.file_path) {
+    setMeta('og:image', p.media.file_path, true);
+
+    // Mise à jour ou création du favicon
+    let favicon = document.querySelector("link[rel~='icon']") as HTMLLinkElement | null;
+    if (!favicon) {
+      favicon = document.createElement('link');
+      favicon.rel = 'icon';
+      document.head.appendChild(favicon);
+    }
+    favicon.href = p.media.file_path;
+    favicon.type = p.media.file_path.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
+  }
+});
 
 //  Mise à jour du titre du document (SEO)
 // Tri des sections par order supprimé pour s'aligner sur CanvaView (qui utilise l'ordre natif du tableau)
@@ -88,6 +152,9 @@ provide('builderState', {
   toggleVisibility,
   isVisible
 });
+
+// Exposition des paramètres globaux du site (logo, font, nom) aux composants enfants
+provide('siteParams', siteParams);
 
 </script>
 
