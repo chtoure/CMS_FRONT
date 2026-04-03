@@ -30,10 +30,10 @@ import BuilderLayout from '../layout/BuilderLayout.vue'
 import PageListView from '../views/page/PageListView.vue'
 import PageRevisionListView from '../views/pageRevision/PageRevisionListView.vue'
 import PageRenderView from '../views/renderPage/PageRenderView.vue'
-import UserFormView from '../views/user/UserFormView.vue'
 import UserCreateFormView from '../views/user/UserCreateFormView.vue'
 import UserUpdateFormView from '../views/user/UserUpdateFormView.vue'
 import { setupPermissionGuard } from '../middleware/routerAccessPermission'
+import RenderNotFound from '../views/error/RenderNotFound.vue'
 
 
 const router = createRouter({
@@ -253,6 +253,11 @@ const router = createRouter({
                   name: 'admin.page-revision.update',
                   component: BuilderView,
                   meta: { permissions: 'update_page' }
+                },
+                {
+                  path: 'notfound',
+                  name: 'builder.notfound',
+                  component: RenderNotFound,
                 }
               ]
             }
