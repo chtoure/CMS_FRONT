@@ -3,12 +3,41 @@
 ## 1. Présentation
 Ce projet est le frontend de l'application **Compositor Web** (Enelog), développé avec **Vue 3** et **Vite**. Il permet l'administration et la gestion de médias via une interface moderne.
 
-## 2. Prérequis Techniques
+## 2. Table des Matières de la Documentation
+
+La documentation de ce projet est découpée en plusieurs fichiers thématiques dans ce répertoire :
+
+### Vue d'Ensemble & Accès
+- [README.md](./README.md) : Lisez-moi (ce fichier)
+- [Auth.md](./Auth.md) : Gestion de l'authentification et interception API
+- [RolePermission.md](./RolePermission.md) : Système de Permissions (`hasPermission`) et protection de l'UI
+
+### Le Constructeur (Builder)
+- [BuilderComponentStyle.md](./BuilderComponentStyle.md) : Modélisation CSS statique, dynamique et responsive
+- [BuilderDataParameter.md](./BuilderDataParameter.md) : Injection de texte, images, et variables dans les blocs
+
+### Contenus & Média
+- [Mediatheque.md](./Mediatheque.md) : Gestion asynchrone des fichiers et de leurs métadonnées
+- [CollectionVariable.md](./CollectionVariable.md) : Typage et création de variables réutilisables
+- [ContentType.md](./ContentType.md) : Définitions et modèles des schémas de données structurées
+- [ContentEntry.md](./ContentEntry.md) : Création et gestion du cycle de vie des entrées de contenu
+
+### Moteur de Rendu
+- [Templating.md](./Templating.md) : Composition visuelle des modèles de blocs et de sections
+- [Render.md](./Render.md) : Compilation finale et rendu côté client ou SSR
+
+### Configuration Serveur & Déploiement
+- [Config.md](./Config.md) : Fichiers .env et configuration Vite
+- [Deployement.md](./Deployement.md) : Build et consignes de déploiement
+
+---
+
+## 3. Prérequis Techniques
 Avant de commencer, assurez-vous d'avoir l'environnement suivant :
 - **Node.js** : Version `^20.19.0` ou `>=22.12.0` (Testé avec v24.12.0).
 - **NPM** : Installé avec Node.js.
 
-## 3. Installation et Démarrage
+## 4. Installation et Démarrage
 
 ### Installation des dépendances
 À la racine du projet, exécutez :
@@ -29,7 +58,7 @@ npm run build
 ```
 Les fichiers compilés seront dans le dossier `dist/`.
 
-## 4. Stack Technique
+## 5. Stack Technique
 Le projet repose sur un écosystème moderne :
 
 - **Core** : [Vue 3](https://vuejs.org/) (Composition API) + [TypeScript](https://www.typescriptlang.org/)
@@ -43,7 +72,7 @@ Le projet repose sur un écosystème moderne :
   - [Lucide Vue Next](https://lucide.dev/) (Icônes)
 - **Qualité de code** : ESLint, Prettier, Oxlint.
 
-## 5. Architecture du Dossier `src/`
+## 6. Architecture du Dossier `src/`
 
 | Dossier | Description |
 | :--- | :--- |
@@ -57,7 +86,7 @@ Le projet repose sur un écosystème moderne :
 | **`stores/`** | Stores Pinia pour la gestion d'état global (ex: `theme.ts`). |
 | **`views/`** | Pages principales de l'application. |
 
-## 6. Routes Principales de l'Application
+## 7. Routes Principales de l'Application
 
 Les routes sont définies dans `src/router/index.ts`. Voici les principaux accès :
 
@@ -67,7 +96,7 @@ Les routes sont définies dans `src/router/index.ts`. Voici les principaux accè
   - **Médias** : `/site/admin/media` (`MediaListView`)
   - **Mise à jour Média** : `/site/admin/media/update/:id` (`MediaUpdateView`)
 
-## 7. Scripts NPM Disponibles
+## 8. Scripts NPM Disponibles
 
 | Commande | Description |
 | :--- | :--- |
