@@ -4,9 +4,9 @@ import { computed, watchEffect, ref, onMounted, onUnmounted, provide } from 'vue
 import { UseRenderPage } from '../../hook/page';
 import { useGetParameters } from '../../hook/parameter';
 import CompositionError from '../../components/composition/CompositionError.vue';
-import CompositionLoading from '../../components/composition/CompositionLoading.vue';
 import BlocRenderView from './BlocRenderView.vue';
 import { ApiError } from '../../api/apiError';
+import RenderLoading from '../error/RenderLoading.vue';
 
 // Chargement dynamique d'une Google Font dans le <head>
 function loadGoogleFont(family: string) {
@@ -99,9 +99,9 @@ watchEffect(() => {
     document.title = slug.value === "" ? "Accueil" : formattedSlug;
   }
   console.log("data page Render : ",page.value);
-  
+
   if (page.value === null || (getError.value instanceof ApiError && getError.value.status === 404)) {
-    router.push({ name: 'notfound' });
+    router.push({ name: 'builder.notfound' });
   }
 });
 
@@ -166,7 +166,7 @@ provide('siteParams', siteParams);
       :error="getError?.message"
     />
 
-    <CompositionLoading
+    <RenderLoading
       v-else-if="isLoading"
     />
 

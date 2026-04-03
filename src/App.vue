@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
 
-import { useTheme } from './stores/theme'; 
+import { useTheme } from './stores/theme';
 import { watch, onMounted, watchEffect } from 'vue';
 
 import { useGetParameters } from './hook/parameter';
 import { useParameter } from './stores/parameter';
-import CompositionLoading from './components/composition/CompositionLoading.vue';
+import RenderLoading from './views/error/RenderLoading.vue';
 
 const themeStore = useTheme();
 const { data: params, isLoading: parameterLoading} = useGetParameters()
@@ -40,7 +40,7 @@ watch(
 
 <template>
     <template v-if="parameterLoading">
-        <CompositionLoading/>
+        <RenderLoading/>
     </template>
     <template v-else>
         <RouterView />
