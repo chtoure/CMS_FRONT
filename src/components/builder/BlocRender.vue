@@ -66,6 +66,52 @@ const layoutInlineStyles = computed(() => {
   return buildBlocLayoutInlineStyles(props.element.styles as Record<string, unknown>, bp, resolveValue);
 });
 
+// Calcul dynamique du layout (classes) uniquement pour la <div> de boucle si on a des clones
+const iteratedWrapperLayoutClasses = computed(() => {
+  return (child: any) => {
+    // CONDITION STRICTE : Si ce n'est pas un enfant en mode itération avec des clones, on ne fait rien
+    const isIteratedChild = props.element.data?.isIterated &&
+      ((child.data as any)?.linkedQueryParamName || getLeafQueryItems(child).length > 0);
+
+    if (!isIteratedChild) return '';
+
+    // oxlint-disable-next-line no-useless-fallback-in-spread
+    const stylesObj = { ...((props.element.styles as Record<string, unknown>) || {}) };
+    delete stylesObj.padding; // Ne pas hériter le padding du parent
+
+    const classes = buildBlocLayoutStyles(stylesObj, resolveValue);
+
+    // Reproduction de la structure CSS du parent
+    if (classes.includes('grid')) {
+      return `w-full ${classes}`;
+    } else if (classes.includes('flex')) {
+      return `w-full ${classes} ${stylesObj.direction === 'horizontal' ? 'flex-wrap' : ''}`;
+    } else if (stylesObj.direction) {
+      return `w-full flex ${classes} ${stylesObj.direction === 'horizontal' ? 'flex-wrap' : ''}`;
+    }
+
+    // Aucun réglage : comportement naturel en block
+    return 'w-full block';
+  };
+});
+
+// Pareil pour les styles inline (marge etc)
+const iteratedWrapperInlineStyles = computed(() => {
+  return (child: any) => {
+    const isIteratedChild = props.element.data?.isIterated &&
+      ((child.data as any)?.linkedQueryParamName || getLeafQueryItems(child).length > 0);
+
+    if (!isIteratedChild) return {};
+
+    const bp = builderState?.currentBreakpoint.value || 'default';
+    // oxlint-disable-next-line no-useless-fallback-in-spread
+    const stylesObj = { ...((props.element.styles as Record<string, unknown>) || {}) };
+    delete stylesObj.padding;
+
+    return buildBlocLayoutInlineStyles(stylesObj, bp, resolveValue);
+  };
+});
+
 // Helper pour extraire l'URL depuis la propriété bgVideo (qui est enveloppée en { type:'static', value: {...} })
 const bgVideoUrl = computed((): string | null => {
   const raw = (props.element.styles as any)?.bgVideo;
@@ -392,10 +438,12 @@ const applyItemToChildren = (
               v-for="(child, index) in childrenModel"
               :key="child.id"
               class="relative transition-all"
+              :class="iteratedWrapperLayoutClasses(child)"
               :style="{
                 width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
                 height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
-                ...(isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
+                ...(isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {}),
+                ...iteratedWrapperInlineStyles(child)
               }"
               @click.stop="builderState?.selectComponent(child.id)"
             >
