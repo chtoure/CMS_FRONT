@@ -34,7 +34,8 @@ export function buildBlocLayoutStyles(styles?: Record<string, unknown>, resolver
 export function buildBlocLayoutInlineStyles(
   styles?: Record<string, unknown>,
   breakpoint: 'default' | 'sm' | 'md' | 'lg' = 'default',
-  resolver?: (v: unknown) => unknown
+  resolver?: (v: unknown) => unknown,
+  isBuilderMode: boolean = false
 ): Record<string, string> {
   if (!styles) return {};
   const inline: Record<string, string> = {};
@@ -57,34 +58,43 @@ export function buildBlocLayoutInlineStyles(
     }
   }
 
-  // Grid
-  if (styles.display === 'grid' || getValue(styles.display) === 'grid') {
-    const cols = getValue(styles.columns);
-    if (typeof cols === 'number' && cols > 0) {
-      inline.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
-      inline.display = 'grid';
+  // --- DYNAMIC PREVIEW OVERRIDES (Uniquement dans le Builder) ---
+  if (isBuilderMode) {
+    // Dans le builder, on a besoin des inline styles pour preview la responsivité au resize
+    // car le viewport natif ne se redimensionne pas
+    
+    // Si la propriété display est explicitement définie (ou cachée) on l'applique
+    const displayOverride = getValue(styles.display);
+    if (displayOverride !== undefined) {
+        inline.display = displayOverride === 'hidden' ? 'none' : displayOverride as string;
     }
-  }
 
-  // Flex Direction
-  const dir = getValue(styles.direction);
-  if (dir) {
-    inline.display = inline.display || 'flex';
-    inline.flexDirection = dir === 'horizontal' ? 'row' : 'column';
-    if (dir === 'horizontal') inline.flexWrap = 'wrap';
-  }
+    if (styles.display === 'grid' || displayOverride === 'grid') {
+      const cols = getValue(styles.columns);
+      if (typeof cols === 'number' && cols > 0) {
+        inline.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+        inline.display = 'grid';
+      }
+    }
 
-  // Justify & Align
-  const justify = getValue(styles.justify);
-  if (justify) {
-    const map: Record<string, string> = { start: 'flex-start', center: 'center', end: 'flex-end', between: 'space-between' };
-    if (typeof justify === 'string' && map[justify]) inline.justifyContent = map[justify];
-  }
-  
-  const align = getValue(styles.align);
-  if (align) {
-    const map: Record<string, string> = { start: 'flex-start', center: 'center', end: 'flex-end', stretch: 'stretch' };
-    if (typeof align === 'string' && map[align]) inline.alignItems = map[align];
+    const dir = getValue(styles.direction);
+    if (dir && inline.display !== 'grid' && inline.display !== 'none') {
+      inline.display = inline.display || 'flex';
+      inline.flexDirection = dir === 'horizontal' ? 'row' : 'column';
+      if (dir === 'horizontal') inline.flexWrap = 'wrap';
+    }
+
+    const justify = getValue(styles.justify);
+    if (justify) {
+      const map: Record<string, string> = { start: 'flex-start', center: 'center', end: 'flex-end', between: 'space-between' };
+      if (typeof justify === 'string' && map[justify]) inline.justifyContent = map[justify];
+    }
+    
+    const align = getValue(styles.align);
+    if (align) {
+      const map: Record<string, string> = { start: 'flex-start', center: 'center', end: 'flex-end', stretch: 'stretch' };
+      if (typeof align === 'string' && map[align]) inline.alignItems = map[align];
+    }
   }
 
   if (styles.bgRepeat) {

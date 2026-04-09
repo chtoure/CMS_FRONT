@@ -135,7 +135,7 @@ const navItemsResults = computed(() => navItems.value || []);
                            type="text"
                            :value="(element.data.url as string)"
                            @input="(e) => updateDataAndParam('url', (e.target as HTMLInputElement).value)"
-                           @keydown.enter="urlSearchOpen = false"
+                           @keydown.enter="(e) => { (e.target as HTMLInputElement).blur(); updateDataAndParam('url', (e.target as HTMLInputElement).value); urlSearchOpen = false }"
                            placeholder="Ex: https://google.com"
                            class="w-full bg-builder-bar-background border border-builder-bar-border rounded px-2 py-1 text-[10px] focus:outline-none focus:border-primary"
                          />

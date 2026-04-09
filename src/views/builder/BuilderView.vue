@@ -214,12 +214,16 @@ watch(pageTree, async (newVal) => {
   historyIndex.value++;
 
   const syncedTree = await autoSaveMut.mutateAsync({ sections: newVal, pageRevisionId: pageRevisionId.value });
-  // On ne remplace PAS pageTree par syncedTree car le timing asynchrone ferait perdre
-  // des modifications qui ont eu lieu PENDANT la sauvegarde.
-  // On merge uniquement les blocTemplateId manquants (nouveaux noeuds qui viennent d'être créés).
+  // On merge uniquement les blocTemplateId manquants (nouveaux noeuds).
   if (syncedTree) {
-    isInternalChange.value = true;
+    const jsonBefore = JSON.stringify(pageTree.value);
     mergeBlocTemplateIds(pageTree.value, syncedTree);
+    const jsonAfter = JSON.stringify(pageTree.value);
+    
+    // Si on a réellement ajouté des IDs, on met à jour l'historique courant
+    if (jsonBefore !== jsonAfter) {
+      history.value[historyIndex.value] = jsonAfter;
+    }
   }
 }, { deep: true });
 
@@ -238,8 +242,13 @@ watch(libraryTree, async (newVal) => {
 
   const syncedTree = await autoSaveLibraryMut.mutateAsync(newVal);
   if (syncedTree) {
-    isInternalChange.value = true;
+    const jsonBefore = JSON.stringify(libraryTree.value);
     mergeBlocTemplateIds(libraryTree.value, syncedTree);
+    const jsonAfter = JSON.stringify(libraryTree.value);
+    
+    if (jsonBefore !== jsonAfter) {
+      history.value[historyIndex.value] = jsonAfter;
+    }
     // Invalider le cache pour que le Panel Latéral (Sidebar) ait la dernière version du Modèle
     queryClient.invalidateQueries({ queryKey: ['builder-bloc-templates-custom'] });
   }

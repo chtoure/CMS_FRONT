@@ -102,7 +102,6 @@ const bgVideoUrl = computed((): string | null => {
 
 const draggableClasses = computed(() => ({
   'py-4': props.section.children.length === 0,
-  'pb-16': props.section.children.length > 0,
   'drop-zone-active': isDraggingOver.value,
   'blueprint-target': props.section.children.length > 0,
   'blueprint-active': (isDraggingOver.value || isXRayMode.value) && props.section.children.length > 0

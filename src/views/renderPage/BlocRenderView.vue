@@ -32,6 +32,8 @@ const builderState = inject<{
   isVisible: () => true
 } as any);
 
+const isBuilderMode = inject('isBuilder', false) as boolean;
+
 const { resolveValue } = useVariableResolver();
 
 const normalizeStyles = (rawStyles: any): Record<string, unknown> => {
@@ -52,7 +54,7 @@ const layoutClasses = computed(() => {
 });
 
 const layoutInlineStyles = computed(() => {
-  return buildBlocLayoutInlineStyles(normalizedElementStyles.value, builderState.currentBreakpoint.value, resolveValue);
+  return buildBlocLayoutInlineStyles(normalizedElementStyles.value, builderState.currentBreakpoint.value, resolveValue, isBuilderMode);
 });
 
 /**
@@ -276,7 +278,7 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
     v-if="!componentToRender && element.children"
     class="relative group/section flex flex-col transition-all duration-200"
     :class="buildSectionStyles(normalizedElementStyles, resolveValue)"
-    :style="{ ...buildSectionInlineStyles(normalizedElementStyles, builderState.currentBreakpoint.value, resolveValue), ...extraSectionStyles }"
+    :style="{ ...buildSectionInlineStyles(normalizedElementStyles, builderState.currentBreakpoint.value, resolveValue, isBuilderMode), ...extraSectionStyles }"
   >
     <!-- Background Video -->
     <video

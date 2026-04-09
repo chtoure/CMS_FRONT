@@ -63,7 +63,7 @@ const layoutClasses = computed(() => {
 
 const layoutInlineStyles = computed(() => {
   const bp = builderState?.currentBreakpoint.value || 'default';
-  return buildBlocLayoutInlineStyles(props.element.styles as Record<string, unknown>, bp, resolveValue);
+  return buildBlocLayoutInlineStyles(props.element.styles as Record<string, unknown>, bp, resolveValue, true);
 });
 
 // Calcul dynamique du layout (classes) uniquement pour la <div> de boucle si on a des clones
@@ -108,7 +108,7 @@ const iteratedWrapperInlineStyles = computed(() => {
     const stylesObj = { ...((props.element.styles as Record<string, unknown>) || {}) };
     delete stylesObj.padding;
 
-    return buildBlocLayoutInlineStyles(stylesObj, bp, resolveValue);
+    return buildBlocLayoutInlineStyles(stylesObj, bp, resolveValue, true);
   };
 });
 

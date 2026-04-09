@@ -14,8 +14,51 @@ export function useBlockTemplate() {
 
   const isSaving = ref(false);
   const lastSavedState = ref<string>('');
-  const saveTimeout = ref<number | null>(null);
-  let pendingSaveResolve: ((value: any) => void) | null = null;
+  
+  // Variables pour le Latest-State Lock
+  let isExecuting = false;
+  let pendingSaveArg: any = null;
+  let pendingSaveResolveFn: ((val: any) => void) | null = null;
+  let pendingSaveRejectFn: ((err: any) => void) | null = null;
+
+  const processQueue = async (mode: 'page' | 'library') => {
+    if (isExecuting || !pendingSaveArg) return;
+    
+    isExecuting = true;
+    isSaving.value = true;
+    
+    const argToProcess = pendingSaveArg;
+    const resolve = pendingSaveResolveFn!;
+    const reject = pendingSaveRejectFn!;
+    
+    pendingSaveArg = null;
+    pendingSaveResolveFn = null;
+    pendingSaveRejectFn = null;
+
+    try {
+      let syncedTree;
+      if (mode === 'page') {
+        syncedTree = await useSyncAll(argToProcess.sections, argToProcess.pageRevisionId);
+      } else {
+        syncedTree = await useSyncTree(argToProcess.nodes, null, undefined, true);
+      }
+      
+      lastSavedState.value = JSON.stringify(syncedTree);
+      console.log(mode === 'page' ? 'Auto-save success' : 'Library auto-save success');
+      resolve(syncedTree);
+    } catch (error) {
+      console.error(mode === 'page' ? 'Auto-save failed' : 'Library auto-save failed', error);
+      reject(error);
+    } finally {
+      isExecuting = false;
+      // S'il y a une demande en attente accumulée pendant l'exécution, on la traite
+      if (pendingSaveArg) {
+        processQueue(mode);
+      } else {
+        isSaving.value = false;
+      }
+    }
+  };
   const { useCreateSection, useUpdateSection, useGetSections, useDeleteSection } = useSection();
 
   /**
@@ -190,32 +233,17 @@ export function useBlockTemplate() {
         const currentState = JSON.stringify(sections);
         if (currentState === lastSavedState.value) return Promise.resolve(undefined);
 
-        if (saveTimeout.value && pendingSaveResolve) {
-          clearTimeout(saveTimeout.value);
-          pendingSaveResolve(undefined); // On résout l'ancienne promesse pour libérer le watcher
-          pendingSaveResolve = null;
-        }
-
         return new Promise<AnySectionInstance[] | void>((resolve, reject) => {
-          pendingSaveResolve = resolve;
-          saveTimeout.value = window.setTimeout(async () => {
-            isSaving.value = true;
-            try {
-              const syncedTree = await useSyncAll(sections, pageRevisionId);
-              lastSavedState.value = JSON.stringify(syncedTree);
-              console.log('Auto-save success');
-              resolve(syncedTree);
-            } catch (error) {
-              console.error('Auto-save failed', error);
-              reject(error);
-            } finally {
-              isSaving.value = false;
-              saveTimeout.value = null;
-              if (pendingSaveResolve === resolve) {
-                pendingSaveResolve = null;
-              }
-            }
-          }, 1000);
+          if (pendingSaveResolveFn) {
+            // Résoudre discrètement l'ancienne requête ignorée pour ne pas bloquer Vue-Query
+            pendingSaveResolveFn(undefined);
+          }
+          
+          pendingSaveArg = { sections, pageRevisionId };
+          pendingSaveResolveFn = resolve;
+          pendingSaveRejectFn = reject;
+          
+          processQueue('page');
         });
       },
       onSuccess: (data, variables) => {
@@ -235,32 +263,16 @@ export function useBlockTemplate() {
         const currentState = JSON.stringify(nodes);
         if (currentState === lastSavedState.value) return Promise.resolve(undefined);
 
-        if (saveTimeout.value && pendingSaveResolve) {
-          clearTimeout(saveTimeout.value);
-          pendingSaveResolve(undefined); // On résout l'ancienne promesse pour libérer le watcher
-          pendingSaveResolve = null;
-        }
-
         return new Promise<AnyComponentInstance[] | void>((resolve, reject) => {
-          pendingSaveResolve = resolve;
-          saveTimeout.value = window.setTimeout(async () => {
-            isSaving.value = true;
-            try {
-              const syncedTree = await useSyncTree(nodes, null, undefined, true);
-              lastSavedState.value = JSON.stringify(syncedTree);
-              console.log('Library auto-save success');
-              resolve(syncedTree);
-            } catch (error) {
-              console.error('Library auto-save failed', error);
-              reject(error);
-            } finally {
-              isSaving.value = false;
-              saveTimeout.value = null;
-              if (pendingSaveResolve === resolve) {
-                pendingSaveResolve = null;
-              }
-            }
-          }, 1000);
+          if (pendingSaveResolveFn) {
+            pendingSaveResolveFn(undefined);
+          }
+          
+          pendingSaveArg = { nodes };
+          pendingSaveResolveFn = resolve;
+          pendingSaveRejectFn = reject;
+          
+          processQueue('library');
         });
       },
       onSuccess: (data) => {
@@ -278,7 +290,10 @@ export function useBlockTemplate() {
   const useForceSave = () => {
     return useMutation({
       mutationFn: async ({ sections, pageRevisionId }: { sections: AnySectionInstance[], pageRevisionId: number }) => {
-        if (saveTimeout.value) clearTimeout(saveTimeout.value);
+        // En mode Force Save, si une file d'attente existe, on l'écrase
+        if (pendingSaveResolveFn) pendingSaveResolveFn(undefined);
+        
+        isExecuting = true;
         isSaving.value = true;
         try {
           const syncedTree = await useSyncAll(sections, pageRevisionId);
@@ -288,7 +303,13 @@ export function useBlockTemplate() {
           console.error('Force save failed', error);
           throw error;
         } finally {
-          isSaving.value = false;
+          isExecuting = false;
+          // S'il y a quelque chose empilé pendant ce temps, process Queue relancera
+          if (pendingSaveArg) {
+            processQueue('page');
+          } else {
+            isSaving.value = false;
+          }
         }
       },
       onSuccess: (data, variables) => {

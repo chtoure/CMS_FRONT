@@ -46,7 +46,8 @@ export function buildSectionLayoutStyles(styles?: Record<string, unknown>, resol
 export function buildSectionInlineStyles(
   styles?: Record<string, unknown>,
   breakpoint: 'default' | 'sm' | 'md' | 'lg' = 'default',
-  resolver?: (v: unknown) => unknown
+  resolver?: (v: unknown) => unknown,
+  isBuilderMode: boolean = false
 ): Record<string, string> {
   if (!styles) return {};
   const inline: Record<string, string> = {};
@@ -102,11 +103,26 @@ export function buildSectionInlineStyles(
     }
   }
 
-  // Grid
-  if (styles.display === 'grid' || getValue(styles.display) === 'grid') {
-    const cols = getValue(styles.columns);
-    if (typeof cols === 'number' && cols > 0) {
-      inline.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+  if (isBuilderMode) {
+    const displayOverride = getValue(styles.display);
+    if (displayOverride !== undefined) {
+        inline.display = displayOverride === 'hidden' ? 'none' : displayOverride as string;
+    }
+    // Grid
+    if (styles.display === 'grid' || displayOverride === 'grid') {
+      const cols = getValue(styles.columns);
+      if (typeof cols === 'number' && cols > 0) {
+        inline.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+        inline.display = 'grid';
+      }
+    }
+    // Sections default to flex in buildSectionLayoutStyles if undefined.
+    // We only enforce override direction inline if we are in builder.
+    const dir = getValue(styles.direction);
+    if (dir && inline.display !== 'grid' && inline.display !== 'none') {
+      inline.display = inline.display || 'flex';
+      inline.flexDirection = dir === 'vertical' ? 'column' : 'row';
+      if (dir === 'horizontal') inline.flexWrap = 'wrap';
     }
   }
 
