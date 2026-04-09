@@ -134,7 +134,7 @@ const allComponents = computed(() => {
                            type="text"
                            :value="(element.data.cliquable as any).action_params?.url"
                            @input="(e) => updateData('cliquable', { ...(element.data.cliquable as object), action_params: { url: (e.target as HTMLInputElement).value } })"
-                           @keydown.enter="urlSearchOpen = false"
+                           @keydown.enter="(e) => { (e.target as HTMLInputElement).blur(); updateData('cliquable', { ...(element.data.cliquable as object), action_params: { url: (e.target as HTMLInputElement).value } }); urlSearchOpen = false }"
                            placeholder="Ex: https://google.com"
                            class="w-full bg-builder-bar-background border border-builder-bar-border rounded px-2 py-1 text-[10px] focus:outline-none focus:border-primary"
                          />

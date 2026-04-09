@@ -39,6 +39,7 @@ const emit = defineEmits<{
         :type="type"
         :value="modelValue"
         @input="(e) => emit('update:modelValue', (e.target as HTMLInputElement).value)"
+        @keydown.enter="(e) => { (e.target as HTMLInputElement).blur(); emit('update:modelValue', (e.target as HTMLInputElement).value) }"
         :placeholder="placeholder"
         :min="min"
         :max="max"

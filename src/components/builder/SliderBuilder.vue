@@ -40,7 +40,7 @@ const computedInlineStyles = computed(() => {
   const styles = props.styles as Record<string, unknown> || {};
 
   const inline = {
-    ...buildBlocLayoutInlineStyles(styles, bp, resolveValue)
+    ...buildBlocLayoutInlineStyles(styles, bp, resolveValue, true)
   };
 
   // Appliquer les styles visuels (fond, bordures, arrondis, ombres)
