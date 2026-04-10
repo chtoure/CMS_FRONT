@@ -3,6 +3,7 @@ import { ref, computed, inject } from 'vue';
 import type { AnyComponentInstance, CliquableAction } from '../../../type/component';
 import PropertyGroup from '../ui/PropertyGroup.vue';
 import PropertyInput from '../ui/PropertyInput.vue';
+import CompositionMediaPicker from '../../composition/CompositionMediaPicker.vue';
 import Select from '../../../components/ui/select/Select.vue';
 import SelectTrigger from '../../../components/ui/select/SelectTrigger.vue';
 import SelectValue from '../../../components/ui/select/SelectValue.vue';
@@ -75,6 +76,9 @@ const allComponents = computed(() => {
               <SelectItem value="SHOW_ALERT">
                 <span class="text-[10px]">Afficher Alerte</span>
               </SelectItem>
+              <SelectItem value="DOWNLOAD_MEDIA">
+                <span class="text-[10px]">Télécharger Média</span>
+              </SelectItem>
               <SelectItem value="TOGGLE_VISIBILITY">
                 <span class="text-[10px]">Toggle Visibilité</span>
               </SelectItem>
@@ -144,6 +148,23 @@ const allComponents = computed(() => {
                 </Command>
               </PopoverContent>
             </Popover>
+          </div>
+        </div>
+
+        <div v-if="(element.data.cliquable as CliquableAction).action === 'DOWNLOAD_MEDIA'" class="space-y-2">
+          <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Fichier à télécharger</label>
+          <div class="flex flex-col gap-2">
+            <span v-if="(element.data.cliquable as any).action_params?.filename" class="text-[10px] text-green-500 font-medium truncate px-1">
+              Fichier lié : {{ (element.data.cliquable as any).action_params?.filename }}
+            </span>
+            <CompositionMediaPicker
+              :model-value="undefined"
+              @media-selected="(media) => updateData('cliquable', { 
+                ...(element.data.cliquable as object), 
+                action_params: { url: media.file_path, filename: media.file_name || 'download' } 
+              })"
+              trigger-text="Sélectionner un média..."
+            />
           </div>
         </div>
 

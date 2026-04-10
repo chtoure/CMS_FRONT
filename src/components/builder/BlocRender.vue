@@ -13,6 +13,7 @@ import api, { handleResponse } from '../../api/fetchConfig';
 import { useGetMediaList } from '../../hook/media';
 import { useGetContentTypes } from '../../hook/content-type';
 import { FieldType } from '../../type/field';
+import type { IContenusField, IContenusQuery } from '../../type/params';
 
 defineOptions({
   name: 'BlocRender'
@@ -196,8 +197,9 @@ onMounted(async () => {
     // Déjà dans le cache ? Pas la peine de refetcher.
     if (builderState?.cmsCache.value[paramName]) continue;
 
-    const contentTypeId = param.type.contentTypeId;
-    const config = param.type.config || {};
+    const paramType = param.type as IContenusField;
+    const contentTypeId = paramType.contentTypeId;
+    const config = paramType.config as IContenusQuery || {};
 
     try {
       const qp = new URLSearchParams();
