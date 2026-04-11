@@ -9,6 +9,8 @@ const BLOC_LAYOUT_MAPPER = {
   justify: (v: any) => `justify-${v}`,
   align: (v: any) => `items-${v}`,
   padding: (v: any) => formatDimension('p', v),
+  paddingX: (v: any) => formatDimension('px', v),
+  paddingY: (v: any) => formatDimension('py', v),
 };
 
 export function buildBlocLayoutStyles(styles?: Record<string, unknown>, resolver?: (v: unknown) => unknown): string {
@@ -47,6 +49,22 @@ export function buildBlocLayoutInlineStyles(
     const val = getValue(styles.padding);
     if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
       inline.padding = `${val}px`;
+    }
+  }
+
+  // Padding Horizontal/Vertical
+  if (styles.paddingX !== undefined) {
+    const val = getValue(styles.paddingX);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.paddingLeft = `${val}px`;
+      inline.paddingRight = `${val}px`;
+    }
+  }
+  if (styles.paddingY !== undefined) {
+    const val = getValue(styles.paddingY);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.paddingTop = `${val}px`;
+      inline.paddingBottom = `${val}px`;
     }
   }
 

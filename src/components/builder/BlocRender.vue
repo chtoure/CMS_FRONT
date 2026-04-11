@@ -418,13 +418,15 @@ const applyItemToChildren = (
             :group="{ name: 'blocks', put: true, pull: true }"
             :animation="100"
             :delay="0"
+            :fallbackOnBody="true"
+            :swapThreshold="0.65"
             ghost-class="ghost-item"
             class="w-full h-full transition-all duration-300"
             :class="[
               element.tag !== 'SliderBuilder' ? layoutClasses : '',
               {
                 'drop-zone-active': isDraggingOver && element.tag !== 'SliderBuilder',
-                'p-4': (!childrenModel || childrenModel.length === 0) && element.tag !== 'SliderBuilder',
+                'p-4 min-h-[60px]': (!childrenModel || childrenModel.length === 0) && element.tag !== 'SliderBuilder',
                 'blueprint-target': element.tag !== 'SliderBuilder',
                 'blueprint-mode': (isDraggingOver || isXRayMode) && element.tag !== 'SliderBuilder',
               }

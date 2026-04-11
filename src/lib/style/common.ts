@@ -94,6 +94,20 @@ export function applyLayoutInline(
     else if (val) inline.padding = val as string;
   }
 
+  // const paddings={
+  //   paddingx: 'paddingx',
+  //   paddingy: 'paddingy',
+  // }
+
+
+  // Object.entries(paddings).forEach(([prop, styleKey]) => {
+  //   if (styles[prop] !== undefined) {
+  //     const val = getValue(styles[prop]);
+  //     if (isNumeric(val)) inline[styleKey] = `${val}px`;
+  //     else if (val) inline[styleKey] = val as string;
+  //   }
+  // });
+
   if (styles.marginTop !== undefined) {
     const val = getValue(styles.marginTop);
     if (isNumeric(val)) inline.marginTop = `${val}px`;

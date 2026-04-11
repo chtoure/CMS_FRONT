@@ -2,8 +2,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { computed } from 'vue';
 import { Webhook, Link2, Link2Off } from 'lucide-vue-next';
-import type { VariableProperty } from './component';
-import { useGetVariables } from '../hook/variable';
+import type { VariableProperty } from '../../../type/component';
+import { useGetVariables } from '../../../hook/variable';
 import { 
   DropdownMenu,
   DropdownMenuTrigger,
@@ -11,7 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuItem 
-} from '../components/ui/dropdown-menu';
+} from '../../ui/dropdown-menu';
 
 const props = defineProps<{
   modelValue: VariableProperty<T> | T | undefined;

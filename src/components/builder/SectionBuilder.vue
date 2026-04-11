@@ -132,12 +132,12 @@ const draggableClasses = computed(() => ({
     ></video>
 
     <!-- Label de section sélectionnée -->
-    <div 
+    <!-- <div 
       v-if="active"
       class="absolute top-0 left-0 bg-blue-600 text-white text-[10px] px-2 py-0.5 font-bold uppercase z-[65] shadow-sm whitespace-nowrap pointer-events-none"
     >
       Section: {{ section.name || "Sans titre" }}
-    </div>
+    </div> -->
 
     <!-- Overlay de sélection de la section (au-dessus des enfants) -->
     <div
@@ -150,6 +150,8 @@ const draggableClasses = computed(() => ({
       :model-value="section.children"
       :group="{ name: 'blocks', put: true, pull: true }"
       :animation="150"
+      :fallbackOnBody="true"
+      :swapThreshold="0.65"
       ghost-class="ghost-item"
       class="w-full flex-1"
       :class="[draggableClasses, ...sectionLayoutClasses]"

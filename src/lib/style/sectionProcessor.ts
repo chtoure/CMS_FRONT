@@ -9,6 +9,8 @@ const SECTION_LAYOUT_MAPPER = {
   align: (v: any) => `items-${v}`,
   gap: (v: any) => formatDimension('gap', v),
   columns: (v: any) => `grid-cols-${v}`,
+  paddingX: (v: any) => formatDimension('px', v),
+  paddingY: (v: any) => formatDimension('py', v),
 };
 
 export function buildSectionStyles(styles?: Record<string, unknown>, resolver?: (v: unknown) => unknown): string {
@@ -92,6 +94,22 @@ export function buildSectionInlineStyles(
       inline.padding = `${val}px`;
     } else if (typeof val === 'string') {
       inline.padding = val;
+    }
+  }
+
+  // Padding Horizontal/Vertical
+  if (styles.paddingX !== undefined) {
+    const val = getValue(styles.paddingX);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.paddingLeft = `${val}px`;
+      inline.paddingRight = `${val}px`;
+    }
+  }
+  if (styles.paddingY !== undefined) {
+    const val = getValue(styles.paddingY);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.paddingTop = `${val}px`;
+      inline.paddingBottom = `${val}px`;
     }
   }
 

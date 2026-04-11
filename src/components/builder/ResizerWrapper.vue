@@ -127,12 +127,12 @@ const startResize = (e: MouseEvent, direction: string) => {
     } : {}"
   >
     <!-- Label du composant sélectionné -->
-    <div
+    <!-- <div
       v-if="active"
       class="absolute top-0 left-0 bg-blue-500 text-white text-[10px] px-2 py-0.5 font-bold uppercase z-[60] shadow-sm whitespace-nowrap pointer-events-none max-w-[90%] truncate"
     >
       {{ element.name }}
-    </div>
+    </div> -->
 
     <div class="w-full h-full">
       <slot />

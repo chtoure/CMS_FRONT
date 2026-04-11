@@ -52,6 +52,30 @@ export function buildCardInlineStyles(
     }
   });
 
+  // Padding
+  if (styles.padding !== undefined) {
+    const val = getValue(styles.padding);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.padding = `${val}px`;
+    }
+  }
+
+  // Padding Horizontal/Vertical
+  if (styles.paddingX !== undefined) {
+    const val = getValue(styles.paddingX);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.paddingLeft = `${val}px`;
+      inline.paddingRight = `${val}px`;
+    }
+  }
+  if (styles.paddingY !== undefined) {
+    const val = getValue(styles.paddingY);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.paddingTop = `${val}px`;
+      inline.paddingBottom = `${val}px`;
+    }
+  }
+
   // --- Background Media (Image / Video) ---
   const bgImageVal = getValue(styles.bgImage);
   if (bgImageVal) {
