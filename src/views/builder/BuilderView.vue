@@ -408,7 +408,7 @@ provide('builderState', {
 
     <!-- Sidebar Composants -->
     <aside
-      class="absolute top-0 left-0 h-full w-64 bg-builder-bar-background border-r border-border z-10 transform transition-transform duration-300 ease-in-out shadow-xl"
+      class="absolute top-0 left-0 h-full w-64 bg-builder-bar-background border-r border-border z-10 transform transition-transform duration-300 ease-in-out shadow-xl custom-scrollbar"
       :class="showComponentView ? 'translate-x-0' : '-translate-x-full'"
     >
       <div class="flex items-center justify-between p-4 border-b border-border">

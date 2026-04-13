@@ -216,7 +216,7 @@ watch(() => pageTree.value, (newVal) => {
                 ghost-class="ghost-preview"
                 @start="builderState?.setIsDragging(true)"
                 @end="builderState?.setIsDragging(false)"
-                class="w-full min-h-full relative flex flex-col p-0 z-0 bg-white"
+                class="w-full min-h-full relative flex flex-col p-0 pb-40 z-0 bg-white"
               >
                 <template v-for="(section, index) in pageTree" :key="section.id">
                   <SectionBuilder
@@ -243,7 +243,7 @@ watch(() => pageTree.value, (newVal) => {
                 ghost-class="ghost-preview"
                 @start="builderState?.setIsDragging(true)"
                 @end="builderState?.setIsDragging(false)"
-                class="w-full min-h-full relative flex flex-col z-0 bg-transparent items-center"
+                class="w-full min-h-full relative flex flex-col pb-40 z-0 bg-transparent items-center"
               >
                  <div 
                    v-for="(element, index) in builderState!.libraryTree.value" 

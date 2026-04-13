@@ -3,10 +3,13 @@ import { formatDimension, formatColor, isNumeric } from "./core";
 export type StyleMapper<T> = { [K in keyof T]?: (v: unknown) => string };
 
 export const EXTERNAL_MAPPER: StyleMapper<Record<string, unknown>> = {
-  marginTop: (v) => formatDimension('mt', v),
-  marginBottom: (v) => formatDimension('mb', v),
-  width: (v) => formatDimension('w', v),
-  height: (v) => formatDimension('h', v),
+  marginTop: (v) => '', // Handled inline to support dynamic JIT strings
+  marginBottom: (v) => '',
+  width: (v) => '',
+  height: (v) => '',
+  padding: (v) => '',
+  paddingX: (v) => '',
+  paddingY: (v) => '',
 };
 
 export const VISUAL_MAPPER: StyleMapper<Record<string, unknown>> = {

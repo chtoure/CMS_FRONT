@@ -95,15 +95,23 @@ const handleNumberInput = (e: Event) => {
 
 <template>
   <div class="property-dimension">
+    <div class="flex items-center justify-between">
+      <label for="">
+        <span class="text-[9px] font-bold font-mono tracking-tight">{{ label }}</span>
+      </label>
+      <div class="shrink-0 col-span-1 flex items-center justify-end z-30">
+        <slot name="action" />
+      </div>
+    </div>
     <div class="grid grid-cols-10 items-center justify-between h-7 px-1 bg-builder-input-bg border border-builder-bar-border rounded hover:border-builder-bar-border transition-all focus-within:border-primary group relative">
       
       <!-- Label Area -->
-      <div class="col-span-2 flex items-center justify-start gap-1.5 shrink-0 opacity-40 group-hover:opacity-60 transition-opacity">
+      <!-- <div class="col-span-2 flex items-center justify-start gap-1.5 shrink-0 opacity-40 group-hover:opacity-60 transition-opacity bg-red-500">
         <span class="text-[9px] font-bold font-mono tracking-tight">{{ label }}</span>
-      </div>
+      </div> -->
 
       <!-- Input Area -->
-      <div class="col-span-7 flex items-center w-full h-full relative">
+      <div class="col-span-10 flex items-center w-full h-full relative">
         <select 
           :value="isCustom ? 'custom' : localSelectValue"
           @change="handleSelectChange"
@@ -141,9 +149,9 @@ const handleNumberInput = (e: Event) => {
       </div>
 
       <!-- Variable/Action Slot for VariableInputControl -->
-      <div class="shrink-0 col-span-1 flex items-center justify-end z-30">
+      <!-- <div class="shrink-0 col-span-1 flex items-center justify-end z-30">
         <slot name="action" />
-      </div>
+      </div> -->
 
     </div>
   </div>
