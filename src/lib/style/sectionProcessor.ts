@@ -4,12 +4,58 @@ import { VISUAL_MAPPER } from "./shared";
 import { applyPositioningInline } from "./common";
 
 const SECTION_LAYOUT_MAPPER = {
-  direction: (v: any) => v === 'vertical' ? 'flex-col' : 'flex-row',
-  justify: (v: any) => `justify-${v}`,
-  align: (v: any) => `items-${v}`,
-  gap: (v: any) => formatDimension('gap', v),
+  direction: (v: any) => {
+    const map: Record<string, string> = { horizontal: 'flex-row', vertical: 'flex-col' };
+    return typeof v === 'string' ? map[v] || '' : '';
+  },
+  justify: (v: any) => {
+    const map: Record<string, string> = { start: 'justify-start', center: 'justify-center', end: 'justify-end', between: 'justify-between', around: 'justify-around', evenly: 'justify-evenly' };
+    return typeof v === 'string' ? map[v] || '' : '';
+  },
+  align: (v: any) => {
+    const map: Record<string, string> = { start: 'items-start', center: 'items-center', end: 'items-end', stretch: 'items-stretch' };
+    return typeof v === 'string' ? map[v] || '' : '';
+  },
+  gap: (v: any) => '', // Gap is handled inline because Tailwind can't JIT arbitrary dynamic sizes like gap-[20px] unless safelisted
   columns: (v: any) => `grid-cols-${v}`,
+  paddingX: (v: any) => '', // We handle paddingX and paddingY inline too, to be safe.
+  paddingY: (v: any) => '',
 };
+
+export function buildSectionLayoutInlineStyles(
+  styles?: Record<string, unknown>,
+  breakpoint: 'default' | 'sm' | 'md' | 'lg' = 'default',
+  resolver?: (v: unknown) => unknown
+): Record<string, string> {
+  if (!styles) return {};
+  const inline: Record<string, string> = {};
+  const getValue = (val: unknown) => resolveValueForBreakpoint(val, breakpoint, resolver);
+
+  if (styles.gap !== undefined) {
+    const val = getValue(styles.gap);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.gap = `${val}px`;
+    }
+  }
+
+  if (styles.paddingX !== undefined) {
+    const val = getValue(styles.paddingX);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.paddingLeft = `${val}px`;
+      inline.paddingRight = `${val}px`;
+    }
+  }
+
+  if (styles.paddingY !== undefined) {
+    const val = getValue(styles.paddingY);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.paddingTop = `${val}px`;
+      inline.paddingBottom = `${val}px`;
+    }
+  }
+
+  return inline;
+}
 
 export function buildSectionStyles(styles?: Record<string, unknown>, resolver?: (v: unknown) => unknown): string {
   if (!styles) return '';
@@ -95,34 +141,19 @@ export function buildSectionInlineStyles(
     }
   }
 
-  // Gap
-  if (styles.gap !== undefined) {
-    const val = getValue(styles.gap);
+  // Padding Horizontal/Vertical
+  if (styles.paddingX !== undefined) {
+    const val = getValue(styles.paddingX);
     if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
-      inline.gap = `${val}px`;
+      inline.paddingLeft = `${val}px`;
+      inline.paddingRight = `${val}px`;
     }
   }
-
-  if (isBuilderMode) {
-    const displayOverride = getValue(styles.display);
-    if (displayOverride !== undefined) {
-        inline.display = displayOverride === 'hidden' ? 'none' : displayOverride as string;
-    }
-    // Grid
-    if (styles.display === 'grid' || displayOverride === 'grid') {
-      const cols = getValue(styles.columns);
-      if (typeof cols === 'number' && cols > 0) {
-        inline.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
-        inline.display = 'grid';
-      }
-    }
-    // Sections default to flex in buildSectionLayoutStyles if undefined.
-    // We only enforce override direction inline if we are in builder.
-    const dir = getValue(styles.direction);
-    if (dir && inline.display !== 'grid' && inline.display !== 'none') {
-      inline.display = inline.display || 'flex';
-      inline.flexDirection = dir === 'vertical' ? 'column' : 'row';
-      if (dir === 'horizontal') inline.flexWrap = 'wrap';
+  if (styles.paddingY !== undefined) {
+    const val = getValue(styles.paddingY);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.paddingTop = `${val}px`;
+      inline.paddingBottom = `${val}px`;
     }
   }
 

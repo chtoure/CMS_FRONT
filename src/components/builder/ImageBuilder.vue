@@ -3,6 +3,7 @@ import { computed, inject } from 'vue';
 import type { StaticStyles, AnyComponentInstance } from '../../type/component';
 import { buildImageStyles, buildImageInlineStyles } from '../../lib/style/imageProcessor';
 import { useVariableResolver } from '../../hook/variable';
+import { filterResponsiveClasses } from '../../lib/style/core';
 
 interface Props {
   styles?: StaticStyles;
@@ -24,7 +25,10 @@ const builderState = inject<{
 const { resolveValue } = useVariableResolver();
 
 const computedClasses = computed(() => {
-  return buildImageStyles(props.styles as Record<string, unknown>, resolveValue);
+  return filterResponsiveClasses(
+    buildImageStyles(props.styles as Record<string, unknown>, resolveValue),
+    builderState.currentBreakpoint.value
+  );
 });
 
 const computedInlineStyles = computed(() => {

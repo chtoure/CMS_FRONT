@@ -64,7 +64,7 @@
   --pagination-item-text: #000000;
 
   --border-width: 1px;
-  --scrollbar-color: #e2e8f0;
+  --scrollbar-color: #4b5563;
 }
 
 .dark {
@@ -224,8 +224,11 @@ body {
   }
 
   .custom-scrollbar::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar:hover {
+    width: 8px;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
     background-color: transparent;
@@ -239,6 +242,7 @@ body {
   .custom-scrollbar:hover::-webkit-scrollbar-thumb {
     background-color: var(--scrollbar-color);
   }
+
 
   .p14 {
     font-size: 14px;

@@ -10,7 +10,7 @@ import PropertyRow from '../ui/PropertyRow.vue';
 import PropertyInput from '../ui/PropertyInput.vue';
 import ButtonGroup from '../ui/ButtonGroup.vue';
 import CompositionColorPicker from '../../composition/CompositionColorPicker.vue';
-import VariableInputControl from '../../../type/VariableInputControl.vue';
+import VariableInputControl from '../ui/VariableInputControl.vue';
 import {
   ChevronRight,
   MoreHorizontal,

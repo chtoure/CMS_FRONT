@@ -9,7 +9,7 @@ import PropertyInput from '../ui/PropertyInput.vue';
 import ButtonGroup from '../ui/ButtonGroup.vue';
 import IconButtonGroup from '../ui/IconButtonGroup.vue';
 import CompositionColorPicker from '../../composition/CompositionColorPicker.vue';
-import VariableInputControl from '../../../type/VariableInputControl.vue';
+import VariableInputControl from '../ui/VariableInputControl.vue';
 import { MessageSquare, AlignCenter, AlignLeft, AlignRight, AlignJustify } from 'lucide-vue-next';
 
 const props = defineProps<{

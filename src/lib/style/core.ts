@@ -108,3 +108,36 @@ export const formatSize = (value: unknown, breakpoint: 'default' | 'sm' | 'md' |
   }
   return finalValue as string;
 };
+
+/**
+ * Filtre les classes Tailwind (sm:, md:, lg:, xl:, 2xl:) pour ne garder
+ * que celles qui sont inférieures ou égales au breakpoint simulé actif.
+ * Ceci permet au Builder de ne pas appliquer les styles desktop sur un petit écran simulé.
+ */
+export function filterResponsiveClasses(classesStr: string, activeBreakpoint: 'default' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' = 'default'): string {
+  if (!classesStr) return '';
+  const classes = classesStr.split(/\s+/).filter(Boolean);
+  
+  const levels: Record<string, number> = {
+    'default': 0,
+    'sm': 1,
+    'md': 2,
+    'lg': 3,
+    'xl': 4,
+    '2xl': 5
+  };
+  
+  const activeLevel = levels[activeBreakpoint] ?? 0;
+  
+  return classes.filter(cls => {
+    let clsLevel = 0;
+    if (cls.startsWith('sm:')) clsLevel = 1;
+    else if (cls.startsWith('md:')) clsLevel = 2;
+    else if (cls.startsWith('lg:')) clsLevel = 3;
+    else if (cls.startsWith('xl:')) clsLevel = 4;
+    else if (cls.startsWith('2xl:')) clsLevel = 5;
+    
+    // On conserve la classe "base" ou les classes <= au niveau actif
+    return clsLevel <= activeLevel;
+  }).join(' ');
+}

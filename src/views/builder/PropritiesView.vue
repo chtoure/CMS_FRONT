@@ -130,7 +130,7 @@ const selectedElement = computed(() => {
   </div>
 </template>
 
-<style scoped>
+<style scoped >
 .input-custom {
   @apply h-9 w-full !rounded px-3 py-1 text-[11px] shadow-sm transition-all outline-none font-mono;
 

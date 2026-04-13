@@ -6,6 +6,9 @@ interface BaseStyles {
   marginTop?: VariableProperty<ResponsiveProp<number | string>>;
   marginBottom?: VariableProperty<ResponsiveProp<number | string>>;
   padding?: VariableProperty<ResponsiveProp<number | string>>;
+  paddingX?: VariableProperty<ResponsiveProp<number | string>>;
+  paddingY?: VariableProperty<ResponsiveProp<number | string>>;
+
   
   // Positionnement
   position?: VariableProperty<ResponsiveProp<'static' | 'relative' | 'absolute' | 'fixed' | 'sticky'>>;

@@ -361,6 +361,9 @@ export function useBlockTemplate() {
           styles: t.props?.styles || {},
           data: t.props?.data || {},
           params: t.props?.params || def.defaultProps?.params || [],
+          // Restaurer modelId pour que les instances de modèles custom
+          // conservent leur référence au modèle après un refresh de page
+          modelId: t.modelId ?? undefined,
           children: []
         };
         nodeMap.set(t.id, node);
