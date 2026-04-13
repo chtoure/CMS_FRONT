@@ -433,7 +433,7 @@ const applyItemToChildren = (
               element.tag !== 'SliderBuilder' ? layoutClasses : '',
               {
                 'drop-zone-active': isDraggingOver && element.tag !== 'SliderBuilder',
-                'p-4 min-h-[60px]': (!childrenModel || childrenModel.length === 0) && element.tag !== 'SliderBuilder',
+                'p-4 min-h-[60px]': !childrenModel || childrenModel.length === 0,
                 'blueprint-target': true,
                 'blueprint-mode': (isDraggingOver || isXRayMode) && element.tag !== 'SliderBuilder',
                 'blueprint-mode-slider': isXRayMode && element.tag === 'SliderBuilder',

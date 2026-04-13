@@ -5,7 +5,7 @@ import { COMPONENT_MAP } from '../../registry/component_registry';
 import { FAMILY_CAPABILITIES, type ComponentFamily } from '../../type/component';
 import type { HydratedBlock } from '../../type/page'; // Import de l'interface créée
 import { buildBlocLayoutStyles, buildBlocLayoutInlineStyles } from '../../lib/style/blocProcessor';
-import { buildSectionStyles, buildSectionInlineStyles } from '../../lib/style/sectionProcessor';
+import { buildSectionStyles, buildSectionInlineStyles, buildSectionLayoutStyles } from '../../lib/style/sectionProcessor';
 import { useVariableResolver } from '../../hook/variable';
 
 // On définit le nom pour la récursivité
@@ -55,6 +55,24 @@ const layoutClasses = computed(() => {
 
 const layoutInlineStyles = computed(() => {
   return buildBlocLayoutInlineStyles(normalizedElementStyles.value, builderState.currentBreakpoint.value, resolveValue, isBuilderMode);
+});
+
+// Séparation des styles de Section (comme dans SectionBuilder)
+const sectionVisualStyles = computed(() => {
+  if (!props.element.children) return {};
+  const all = buildSectionInlineStyles(normalizedElementStyles.value, builderState.currentBreakpoint.value, resolveValue, isBuilderMode);
+  const { gap, justifyContent, alignItems, ...visual } = all;
+  return visual;
+});
+
+const sectionLayoutInlineStyles = computed(() => {
+  if (!props.element.children) return {};
+  const all = buildSectionInlineStyles(normalizedElementStyles.value, builderState.currentBreakpoint.value, resolveValue, isBuilderMode);
+  const result: Record<string, string> = {};
+  if (all.gap) result.gap = all.gap;
+  if (all.justifyContent) result.justifyContent = all.justifyContent;
+  if (all.alignItems) result.alignItems = all.alignItems;
+  return result;
 });
 
 /**
@@ -278,7 +296,7 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
     v-if="!componentToRender && element.children"
     class="relative group/section flex flex-col transition-all duration-200"
     :class="buildSectionStyles(normalizedElementStyles, resolveValue)"
-    :style="{ ...buildSectionInlineStyles(normalizedElementStyles, builderState.currentBreakpoint.value, resolveValue, isBuilderMode), ...extraSectionStyles }"
+    :style="{ ...sectionVisualStyles, ...extraSectionStyles }"
   >
     <!-- Background Video -->
     <video
@@ -292,7 +310,11 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
     ></video>
 
     <!-- Conteneur enfants (sans padding ni min-h artificiels du builder) -->
-    <div class="w-full flex-1">
+    <div 
+      class="w-full flex-1"
+      :class="buildSectionLayoutStyles(normalizedElementStyles, resolveValue)"
+      :style="sectionLayoutInlineStyles"
+    >
       <template v-for="child in elementChildren" :key="child.id">
         <!-- Cas 1 : Itération activée pour cet enfant lié à une liste -->
         <template v-if="isLeafLinkedToQuery(child)">
