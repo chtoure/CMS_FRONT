@@ -5,7 +5,7 @@ import { FAMILY_CAPABILITIES, type AnyComponentInstance } from '../../type/compo
 import { VueDraggable } from 'vue-draggable-plus';
 import { COMPONENT_MAP } from '../../registry/component_registry';
 import { buildBlocLayoutStyles, buildBlocLayoutInlineStyles } from '../../lib/style/blocProcessor';
-import { formatSize, resolveValueForBreakpoint } from '../../lib/style/core';
+import { formatSize, resolveValueForBreakpoint, filterResponsiveClasses } from '../../lib/style/core';
 import { useVariableResolver } from '../../hook/variable';
 import { getWrapperPositionStyles } from '../../lib/style/common';
 import ResizerWrapper from './ResizerWrapper.vue';
@@ -58,7 +58,10 @@ const canHaveChildren = computed(() => {
 });
 
 const layoutClasses = computed(() => {
-  return buildBlocLayoutStyles(props.element.styles as Record<string, unknown>, resolveValue);
+  return filterResponsiveClasses(
+    buildBlocLayoutStyles(props.element.styles as Record<string, unknown>, resolveValue),
+    builderState?.currentBreakpoint.value || 'default'
+  );
 });
 
 const layoutInlineStyles = computed(() => {
@@ -79,7 +82,10 @@ const iteratedWrapperLayoutClasses = computed(() => {
     const stylesObj = { ...((props.element.styles as Record<string, unknown>) || {}) };
     delete stylesObj.padding; // Ne pas hériter le padding du parent
 
-    const classes = buildBlocLayoutStyles(stylesObj, resolveValue);
+    const classes = filterResponsiveClasses(
+      buildBlocLayoutStyles(stylesObj, resolveValue),
+      builderState?.currentBreakpoint.value || 'default'
+    );
 
     // Reproduction de la structure CSS du parent
     if (classes.includes('grid')) {
@@ -355,6 +361,7 @@ const applyItemToChildren = (
       'drop-zone-potential': isDraggingOver && canHaveChildren && !isClone,
       'opacity-20 grayscale-[0.8] border-2 border-dashed border-red-500/50': !isVisible && !isClone,
     }"
+    :style="isXRayMode && element.tag === 'SliderBuilder' && !isSelected ? { outline: '1px dashed rgba(139, 92, 246, 0.6)', outlineOffset: '-3px', backgroundColor: 'rgba(139, 92, 246, 0.04)' } : {}"
     v-show="isVisible || isSelected"
     @click="handleSelect"
     @update:element="(newVal: AnyComponentInstance) => emit('update:element', newVal)"
@@ -427,8 +434,9 @@ const applyItemToChildren = (
               {
                 'drop-zone-active': isDraggingOver && element.tag !== 'SliderBuilder',
                 'p-4 min-h-[60px]': (!childrenModel || childrenModel.length === 0) && element.tag !== 'SliderBuilder',
-                'blueprint-target': element.tag !== 'SliderBuilder',
+                'blueprint-target': true,
                 'blueprint-mode': (isDraggingOver || isXRayMode) && element.tag !== 'SliderBuilder',
+                'blueprint-mode-slider': isXRayMode && element.tag === 'SliderBuilder',
               }
             ]"
             :style="element.tag !== 'SliderBuilder' ? layoutInlineStyles : {}"
@@ -579,6 +587,16 @@ const applyItemToChildren = (
   outline-offset: -3px;
   background-color: rgba(139, 92, 246, 0.04);
 }
+
+/* Mode Structure pour le Slider : contour identique aux autres mais SANS gap/padding pour ne pas casser le layout */
+.blueprint-mode-slider {
+  outline: 1px dashed rgba(139, 92, 246, 0.6);
+  outline-offset: -3px;
+  background-color: rgba(139, 92, 246, 0.04);
+}
+
+/* Outline violet appliqué sur le WRAPPER RACINE du SliderBuilder en mode Structure */
+/* Remplacé par ring-inset Tailwind directement dans le template - plus fiable */
 
 .drop-zone-potential {
   outline: 1px dashed rgba(59, 130, 246, 0.5);

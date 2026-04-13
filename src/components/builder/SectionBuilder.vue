@@ -5,8 +5,8 @@ import { VueDraggable } from 'vue-draggable-plus';
 import type { AnySectionInstance } from '../../type/section';
 import BlocRender from './BlocRender.vue';
 import ResizerWrapper from './ResizerWrapper.vue';
-import { formatSize, resolveValueForBreakpoint } from '../../lib/style/core';
-import { buildSectionStyles, buildSectionLayoutStyles, buildSectionInlineStyles } from '../../lib/style/sectionProcessor';
+import { formatSize, resolveValueForBreakpoint, filterResponsiveClasses } from '../../lib/style/core';
+import { buildSectionStyles, buildSectionLayoutStyles, buildSectionInlineStyles, buildSectionLayoutInlineStyles } from '../../lib/style/sectionProcessor';
 import { getWrapperPositionStyles } from '../../lib/style/common';
 import { useVariableResolver } from '../../hook/variable';
 
@@ -75,14 +75,28 @@ const isSticky = (element: any) => {
 
 const sectionClasses = computed(() => {
   return [
-    buildSectionStyles(props.section.styles as Record<string, unknown>, resolveValue)
+    filterResponsiveClasses(
+      buildSectionStyles(props.section.styles as Record<string, unknown>, resolveValue),
+      builderState?.currentBreakpoint.value || 'default'
+    )
   ];
 });
 
 const sectionLayoutClasses = computed(() => {
   return [
-    buildSectionLayoutStyles(props.section.styles as Record<string, unknown>, resolveValue)
+    filterResponsiveClasses(
+      buildSectionLayoutStyles(props.section.styles as Record<string, unknown>, resolveValue),
+      builderState?.currentBreakpoint.value || 'default'
+    )
   ];
+});
+
+const sectionLayoutInlineStyles = computed(() => {
+  return buildSectionLayoutInlineStyles(
+    props.section.styles as Record<string, unknown>,
+    builderState?.currentBreakpoint.value || 'default',
+    resolveValue
+  );
 });
 
 const sectionStyles = computed(() => {
@@ -145,7 +159,6 @@ const draggableClasses = computed(() => ({
       class="absolute inset-0 border-2 border-blue-500 pointer-events-none z-[55]"
     />
 
-    <!-- Conteneur Draggable pour les blocs -->
     <VueDraggable
       :model-value="section.children"
       :group="{ name: 'blocks', put: true, pull: true }"
@@ -155,6 +168,7 @@ const draggableClasses = computed(() => ({
       ghost-class="ghost-item"
       class="w-full flex-1"
       :class="[draggableClasses, ...sectionLayoutClasses]"
+      :style="sectionLayoutInlineStyles"
       @update:model-value="handleChildrenChange"
       @start="builderState?.setIsDragging(true)"
       @end="builderState?.setIsDragging(false)"

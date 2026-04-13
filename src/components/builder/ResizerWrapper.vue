@@ -207,10 +207,10 @@ const startResize = (e: MouseEvent, direction: string) => {
   @apply hover:scale-125 hover:bg-blue-500/50 active:bg-blue-500;
 }
 
-.resize-handle-nw { @apply top-[-5px] left-[-5px]; }
-.resize-handle-ne { @apply top-[-5px] right-[-5px]; }
-.resize-handle-sw { @apply bottom-[-5px] left-[-5px]; }
-.resize-handle-se { @apply bottom-[-5px] right-[-5px]; }
+.resize-handle-nw { @apply top-0 left-0 -translate-x-1/2 -translate-y-1/2; }
+.resize-handle-ne { @apply top-0 right-0 translate-x-1/2 -translate-y-1/2; }
+.resize-handle-sw { @apply bottom-0 left-0 -translate-x-1/2 translate-y-1/2; }
+.resize-handle-se { @apply bottom-0 right-0 translate-x-1/2 translate-y-1/2; }
 
 /* Handles latéraux */
 .resize-handle-side {
@@ -218,10 +218,10 @@ const startResize = (e: MouseEvent, direction: string) => {
   @apply hover:bg-blue-600 active:bg-blue-700;
 }
 
-.resize-handle-n { @apply top-[-3px] left-1/2 -translate-x-1/2 w-6 h-1.5 rounded-full; }
-.resize-handle-s { @apply bottom-[-3px] left-1/2 -translate-x-1/2 w-6 h-1.5 rounded-full; }
-.resize-handle-w { @apply left-[-3px] top-1/2 -translate-y-1/2 w-1.5 h-6 rounded-full; }
-.resize-handle-e { @apply right-[-3px] top-1/2 -translate-y-1/2 w-1.5 h-6 rounded-full; }
+.resize-handle-n { @apply top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-1.5 rounded-full; }
+.resize-handle-s { @apply bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-6 h-1.5 rounded-full; }
+.resize-handle-w { @apply left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-1.5 h-6 rounded-full; }
+.resize-handle-e { @apply right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-1.5 h-6 rounded-full; }
 
 .rescaling {
   @apply opacity-90;

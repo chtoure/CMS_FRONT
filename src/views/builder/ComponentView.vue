@@ -78,7 +78,7 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
   return instance as ComponentInstance<T>;
 };
 
-const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
+const onCloneCustom = (block: BlocTemplate, isTopLevel = true): AnyComponentInstance => {
   // Extraire les dimensions si elles existent pour un pré-rendu fluide
   const initialStyles: BaseStyles = {};
   if (block.props?.styles?.width) initialStyles.width = block.props.styles.width;
@@ -95,12 +95,16 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
     family: block.component?.family || 'container',
     supportedActions: block.component?.supportedActions || [],
     componentDefinitionId: block.componentId,
-    modelId: block.modelId || block.id, // Liaison avec le modèle
+    // modelId uniquement sur le nœud RACINE de l'instance.
+    // Les enfants n'ont pas de modelId pour que le backend sauvegarde
+    // leurs props indépendamment (sinon il les traite comme des références
+    // et ignore leurs props → rechargement avec contenu vide).
+    modelId: isTopLevel ? (block.modelId || block.id) : undefined,
     blocTemplateId: undefined, // Nouvelle instance sur la page
     styles: { ...(block.props?.styles || initialStyles) },
     data: { ...(block.props?.data || {}) },
     params: block.props?.params ? [...block.props.params] : [],
-    children: Array.isArray(backendChildren) ? backendChildren.map(onCloneCustom) : []
+    children: Array.isArray(backendChildren) ? backendChildren.map(child => onCloneCustom(child, false)) : []
   };
   return instance;
 };

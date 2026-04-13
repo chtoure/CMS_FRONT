@@ -60,6 +60,8 @@ const layoutWhitelist = [
   'width',
   'height',
   'padding',
+  'paddingX',
+  'paddingY',
   'marginTop',
   'marginBottom',
   'rounded',
