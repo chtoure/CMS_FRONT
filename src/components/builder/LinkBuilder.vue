@@ -16,6 +16,8 @@ interface Props {
     target?: string;
     icon?: string;
     iconPosition?: 'left' | 'right' | 'only';
+    linkType?: string;
+    filename?: string;
   };
   element?: AnyComponentInstance;
   children?: AnyComponentInstance[];
@@ -112,9 +114,19 @@ const commitEdit = () => {
   isEditing.value = false;
   const newText = editorRef.value?.innerText?.trim() ?? '';
   if (newText !== linkText.value) {
+    // Mettre à jour data.text ET params[].type.value pour que la valeur
+    // soit correctement sauvegardée (le rendu lit depuis params lors du rechargement)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const newParams = (props.element.params || []).map((p: any) => {
+      if (p.name === 'text' && p.type?.source === 'static') {
+        return { ...p, type: { ...p.type, value: newText } };
+      }
+      return p;
+    });
     emit('update:element', {
       ...props.element,
-      data: { ...props.element.data, text: newText }
+      data: { ...props.element.data, text: newText },
+      params: newParams
     });
   }
 };
