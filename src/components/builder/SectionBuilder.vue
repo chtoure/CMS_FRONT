@@ -6,7 +6,7 @@ import type { AnySectionInstance } from '../../type/section';
 import BlocRender from './BlocRender.vue';
 import ResizerWrapper from './ResizerWrapper.vue';
 import { formatSize, resolveValueForBreakpoint, filterResponsiveClasses } from '../../lib/style/core';
-import { buildSectionStyles, buildSectionLayoutStyles, buildSectionInlineStyles, buildSectionLayoutInlineStyles } from '../../lib/style/sectionProcessor';
+import { buildSectionStyles, buildSectionLayoutStyles, buildSectionInlineStyles } from '../../lib/style/sectionProcessor';
 import { getWrapperPositionStyles } from '../../lib/style/common';
 import { useVariableResolver } from '../../hook/variable';
 
@@ -91,17 +91,24 @@ const sectionLayoutClasses = computed(() => {
   ];
 });
 
-const sectionLayoutInlineStyles = computed(() => {
-  return buildSectionLayoutInlineStyles(
-    props.section.styles as Record<string, unknown>,
-    builderState?.currentBreakpoint.value || 'default',
-    resolveValue
-  );
+// Styles VISUELS uniquement (bg, padding, border) → appliqués à la balise <section>
+const sectionVisualStyles = computed(() => {
+  const bp = builderState?.currentBreakpoint.value || 'default';
+  const all = buildSectionInlineStyles(props.section.styles as Record<string, unknown>, bp, resolveValue);
+  // On retire les propriétés de layout qui doivent aller sur le VueDraggable
+  const { gap, justifyContent, alignItems, ...visual } = all;
+  return visual;
 });
 
-const sectionStyles = computed(() => {
+// Styles de LAYOUT (gap, justify, align) → appliqués au VueDraggable (le vrai conteneur flex)
+const sectionLayoutInlineStyles = computed(() => {
   const bp = builderState?.currentBreakpoint.value || 'default';
-  return buildSectionInlineStyles(props.section.styles as Record<string, unknown>, bp, resolveValue);
+  const all = buildSectionInlineStyles(props.section.styles as Record<string, unknown>, bp, resolveValue);
+  const result: Record<string, string> = {};
+  if (all.gap) result.gap = all.gap;
+  if (all.justifyContent) result.justifyContent = all.justifyContent;
+  if (all.alignItems) result.alignItems = all.alignItems;
+  return result;
 });
 
 // Helper pour extraire l'URL depuis bgVideo (la valeur est encapsulée en { type:'static', value: {...} })
@@ -131,7 +138,7 @@ const draggableClasses = computed(() => ({
       'group/section flex flex-col transition-all duration-200',
       ...sectionClasses
     ]"
-    :style="sectionStyles"
+    :style="sectionVisualStyles"
     @click="handleSelect"
   >
     <!-- Background Video -->
@@ -145,20 +152,13 @@ const draggableClasses = computed(() => ({
       class="absolute inset-0 w-full h-full object-cover -z-10 pointer-events-none"
     ></video>
 
-    <!-- Label de section sélectionnée -->
-    <!-- <div 
-      v-if="active"
-      class="absolute top-0 left-0 bg-blue-600 text-white text-[10px] px-2 py-0.5 font-bold uppercase z-[65] shadow-sm whitespace-nowrap pointer-events-none"
-    >
-      Section: {{ section.name || "Sans titre" }}
-    </div> -->
-
     <!-- Overlay de sélection de la section (au-dessus des enfants) -->
     <div
       v-if="active"
       class="absolute inset-0 border-2 border-blue-500 pointer-events-none z-[55]"
     />
 
+    <!-- Conteneur Draggable pour les blocs -->
     <VueDraggable
       :model-value="section.children"
       :group="{ name: 'blocks', put: true, pull: true }"

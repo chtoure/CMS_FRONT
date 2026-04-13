@@ -113,8 +113,13 @@ const useVariableResolver = () => {
   const { data: variables, isLoading } = useGetVariables();
 
   const variableMap = computed(() => {
-    if (!variables.value) return new Map<string, string>();
-    return new Map(variables.value.map(v => [v.name, v.value]));
+    if (!variables.value) return Object.create(null) as Record<string, string>;
+    return variables.value.reduce<Record<string, string>>((acc, v) => {
+      // Indexer par ID (stringifié) et par nom pour la rétrocompatibilité
+      acc[String(v.id)] = v.value;
+      acc[v.name] = v.value;
+      return acc;
+    }, {});
   });
 
   const resolveValue = <T>(prop: VariableProperty<T> | T | undefined): T | string | undefined => {
@@ -124,7 +129,8 @@ const useVariableResolver = () => {
     if (typeof prop === 'object' && prop !== null && 'type' in prop && 'value' in prop) {
        const varProp = prop as VariableProperty<T>;
        if (varProp.type === 'variable') {
-         return variableMap.value.get(varProp.value) ?? varProp.value;
+         // lookup value inside the map
+         return variableMap.value[String(varProp.value)] ?? varProp.value;
        }
        return varProp.value;
     }

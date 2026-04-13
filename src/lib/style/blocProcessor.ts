@@ -3,20 +3,14 @@ import { resolveValue, resolveValueForBreakpoint, formatDimension } from "./core
 import { applyPositioningInline } from "./common";
 
 const BLOC_LAYOUT_MAPPER = {
-  columns: (v: any) => `grid-cols-${v}`, // Usually grid-cols-1, grid-cols-2 are safelisted or you might need a map
-  gap: (v: any) => '',
+  columns: (v: any) => `grid-cols-${v}`,
+  gap: (v: any) => '', // Géré en inline style (plus fiable)
   direction: (v: any) => {
     const map: Record<string, string> = { horizontal: 'flex-row', vertical: 'flex-col' };
     return typeof v === 'string' ? map[v] || '' : '';
   },
-  justify: (v: any) => {
-    const map: Record<string, string> = { start: 'justify-start', center: 'justify-center', end: 'justify-end', between: 'justify-between', around: 'justify-around', evenly: 'justify-evenly' };
-    return typeof v === 'string' ? map[v] || '' : '';
-  },
-  align: (v: any) => {
-    const map: Record<string, string> = { start: 'items-start', center: 'items-center', end: 'items-end', stretch: 'items-stretch' };
-    return typeof v === 'string' ? map[v] || '' : '';
-  },
+  justify: (v: any) => '', // Géré en inline style
+  align: (v: any) => '',   // Géré en inline style
   padding: (v: any) => formatDimension('p', v),
   paddingX: (v: any) => formatDimension('px', v),
   paddingY: (v: any) => formatDimension('py', v),
@@ -31,7 +25,7 @@ export function buildBlocLayoutStyles(styles?: Record<string, unknown>, resolver
     classes.push(resolveValue(styles.display, (v) => v as string, resolver));
   }
 
-  // Layout Properties
+  // Layout Properties (direction only from class mapper)
   (Object.keys(BLOC_LAYOUT_MAPPER) as Array<keyof typeof BLOC_LAYOUT_MAPPER>).forEach(key => {
     const value = styles[key];
     if (value !== undefined) {
@@ -77,12 +71,31 @@ export function buildBlocLayoutInlineStyles(
     }
   }
 
-  // Gap
+  // Gap inline (les classes arbitraires Tailwind ne fonctionnent pas avec valeurs dynamiques)
   if (styles.gap !== undefined) {
     const val = getValue(styles.gap);
     if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
       inline.gap = `${val}px`;
     }
+  }
+
+  // Justify Content inline
+  const justify = getValue(styles.justify);
+  if (justify) {
+    const justifyMap: Record<string, string> = {
+      start: 'flex-start', center: 'center', end: 'flex-end',
+      between: 'space-between', around: 'space-around', evenly: 'space-evenly'
+    };
+    if (typeof justify === 'string' && justifyMap[justify]) inline.justifyContent = justifyMap[justify];
+  }
+
+  // Align Items inline
+  const align = getValue(styles.align);
+  if (align) {
+    const alignMap: Record<string, string> = {
+      start: 'flex-start', center: 'center', end: 'flex-end', stretch: 'stretch'
+    };
+    if (typeof align === 'string' && alignMap[align]) inline.alignItems = alignMap[align];
   }
 
   if (styles.bgRepeat) {
