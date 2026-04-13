@@ -71,6 +71,8 @@ const wrapperInlineStyles = computed(() => {
 const linkText = computed(() => (resolveValue(props.data?.text) as string) || 'Lien');
 const linkUrl = computed(() => (resolveValue(props.data?.url) as string) || '#');
 const linkTarget = computed(() => (resolveValue(props.data?.target) as string) || '_self');
+const linkType = computed(() => (resolveValue(props.data?.linkType) as string) || 'url');
+const linkFilename = computed(() => (resolveValue(props.data?.filename) as string) || 'download');
 
 const iconName = computed(() => {
   const name = resolveValue(props.data?.icon) as string;
@@ -158,6 +160,21 @@ const handleKeyDown = (e: KeyboardEvent) => {
       <!-- Icône à DROITE -->
       <component v-if="LucideIcon && iconPosition === 'right'" :is="LucideIcon" :size="14" class="shrink-0" />
       <!-- Icône seule -->
+      <component v-if="showIconOnly" :is="LucideIcon" :size="16" class="shrink-0" />
+    </a>
+    <!-- En mode rendu/preview : Téléchargement Média -->
+    <a
+      v-else-if="linkType === 'media'"
+      :href="linkUrl"
+      target="_blank"
+      :download="linkFilename"
+      :class="computedClasses"
+      :style="computedInlineStyles"
+      class="inline-flex items-center gap-1.5 hover:underline transition-all"
+    >
+      <component v-if="LucideIcon && iconPosition === 'left'" :is="LucideIcon" :size="14" class="shrink-0" />
+      <span v-if="!showIconOnly" v-html="linkText" />
+      <component v-if="LucideIcon && iconPosition === 'right'" :is="LucideIcon" :size="14" class="shrink-0" />
       <component v-if="showIconOnly" :is="LucideIcon" :size="16" class="shrink-0" />
     </a>
     <!-- En mode rendu/preview : RouterLink fonctionnel -->
