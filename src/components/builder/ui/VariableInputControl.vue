@@ -1,6 +1,6 @@
 <script setup lang="ts" generic="T">
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { Webhook, Link2, Link2Off } from 'lucide-vue-next';
 import type { VariableProperty } from '../../../type/component';
 import { useGetVariables } from '../../../hook/variable';
@@ -19,21 +19,53 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: VariableProperty<T>): void;
+  (e: 'update:modelValue', value: VariableProperty<T> | undefined): void;
 }>();
+
+const builderState = inject<{ currentBreakpoint: { value: string } }>('builderState');
 
 const { data: variables, isLoading } = useGetVariables();
 
+const rawNode = computed(() => {
+  const prop = props.modelValue as any;
+  if (!prop) return undefined;
+
+  let valueToProcess = prop;
+  // Déballer les variables racines si le modèle était buggé/statique
+  if (typeof prop === 'object' && prop !== null && 'type' in prop && 'value' in prop) {
+      if (prop.type === 'variable') return prop;
+      valueToProcess = prop.value;
+  }
+
+  const bp = builderState?.currentBreakpoint?.value || 'default';
+  const isResponsiveObj = typeof valueToProcess === 'object' && valueToProcess !== null && 
+                          ('default' in valueToProcess || 'sm' in valueToProcess || 'md' in valueToProcess || 'lg' in valueToProcess);
+
+  if (isResponsiveObj) {
+    if (valueToProcess[bp] !== undefined) return valueToProcess[bp];
+    if (bp === 'lg' && valueToProcess.md !== undefined) return valueToProcess.md;
+    if ((bp === 'lg' || bp === 'md') && valueToProcess.sm !== undefined) return valueToProcess.sm;
+    return valueToProcess.default;
+  }
+  return valueToProcess;
+});
+
 const isVariableMode = computed(() => {
-  if (typeof props.modelValue === 'object' && props.modelValue !== null && 'type' in props.modelValue) {
-    return (props.modelValue as VariableProperty<T>).type === 'variable';
+  if (typeof rawNode.value === 'object' && rawNode.value !== null && 'type' in rawNode.value) {
+    return (rawNode.value as VariableProperty<T>).type === 'variable';
   }
   return false;
 });
 
 const variableName = computed(() => {
   if (isVariableMode.value) {
-    return (props.modelValue as VariableProperty<T>).value;
+    const val = (rawNode.value as VariableProperty<T>).value;
+    if (variables.value) {
+        // Recherche par ID d'abord (nouveau système) puis par nom (ancien système)
+        const found = variables.value.find(v => String(v.id) === String(val) || v.name === val);
+        if (found) return found.name;
+    }
+    return val;
   }
   return null;
 });
@@ -56,16 +88,12 @@ const filteredVariables = computed(() => {
   );
 });
 
-function selectVariable(vName: string) {
-  emit('update:modelValue', { type: 'variable', value: vName });
+function selectVariable(vId: string) {
+  emit('update:modelValue', { type: 'variable', value: vId });
 }
 
 function detachVariable() {
-  // Logic to keep the current value if possible or set to static
-  // Since we don't have the resolved value here easily without passing it as prop,
-  // we'll just emit a "static" with the name to let useStyleEditor handle it if possible, 
-  // or just reset. 
-  emit('update:modelValue', { type: 'static', value: '' as any });
+  emit('update:modelValue', undefined);
 }
 </script>
 
@@ -81,7 +109,7 @@ function detachVariable() {
           class="w-5 h-5 flex items-center justify-center transition-all rounded-sm z-20"
           :class="[
             isVariableMode 
-              ? ' text-white shadow-sm' 
+              ? 'shadow-sm' 
               : ' text-builder-bar-text hover:text-primary',
             $slots.default ? 'absolute right-1 top-1/2 -translate-y-1/2' : ''
           ]"
@@ -93,11 +121,11 @@ function detachVariable() {
       </DropdownMenuTrigger>
       
       <DropdownMenuContent align="end" class="min-w-[180px] bg-builder-bar-background border-builder-bar-border text-builder-bar-text shadow-xl p-1">
-        <DropdownMenuLabel class="text-[10px] font-bold uppercase tracking-widest text-builder-bar-text/40 px-2 py-1.5">
+        <DropdownMenuLabel class="text-[10px] tracking-widest text-builder-bar-text/40 px-2 py-1.5">
           {{ isVariableMode ? 'Linked Variable' : 'Connect Variable' }}
         </DropdownMenuLabel>
         
-        <div v-if="isVariableMode" class="px-2 py-2 mb-1 bg-primary border border-primary/20 rounded-sm">
+        <div v-if="isVariableMode" class="p-1 mb-1 border border-primary/20 rounded-none">
           <div class="flex items-center justify-between gap-3">
              <div class="flex items-center gap-2 overflow-hidden">
                <Webhook :size="12" class="text-primary shrink-0" />
@@ -117,8 +145,8 @@ function detachVariable() {
             <DropdownMenuItem 
               v-for="variable in filteredVariables" 
               :key="variable.id" 
-              @click="selectVariable(variable.name)"
-              class="flex items-center gap-2 px-2 py-1.5 rounded-sm cursor-pointer hover:bg-white/5 transition-colors group"
+              @click="selectVariable(String(variable.id))"
+              class="flex items-center gap-2 px-2 py-1.5 rounded-none cursor-pointer hover:!bg-gray-500 !p-1"
             >
               <div class="w-2 h-2 rounded-full" :style="{ backgroundColor: variable.collection?.type === 'COLOR' ? variable.value : 'transparent', border: variable.collection?.type === 'COLOR' ? '1px solid rgba(255,255,255,0.1)' : 'none' }">
                 <div v-if="variable.collection?.type !== 'COLOR'" class="w-full h-full bg-primary/40 rounded-full" />

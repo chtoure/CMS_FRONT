@@ -16,46 +16,11 @@ const SECTION_LAYOUT_MAPPER = {
     const map: Record<string, string> = { start: 'items-start', center: 'items-center', end: 'items-end', stretch: 'items-stretch' };
     return typeof v === 'string' ? map[v] || '' : '';
   },
-  gap: (v: any) => '', // Gap is handled inline because Tailwind can't JIT arbitrary dynamic sizes like gap-[20px] unless safelisted
+  gap: (v: any) => '', // Gap géré en inline style
   columns: (v: any) => `grid-cols-${v}`,
-  paddingX: (v: any) => '', // We handle paddingX and paddingY inline too, to be safe.
-  paddingY: (v: any) => '',
+  paddingX: (v: any) => formatDimension('px', v),
+  paddingY: (v: any) => formatDimension('py', v),
 };
-
-export function buildSectionLayoutInlineStyles(
-  styles?: Record<string, unknown>,
-  breakpoint: 'default' | 'sm' | 'md' | 'lg' = 'default',
-  resolver?: (v: unknown) => unknown
-): Record<string, string> {
-  if (!styles) return {};
-  const inline: Record<string, string> = {};
-  const getValue = (val: unknown) => resolveValueForBreakpoint(val, breakpoint, resolver);
-
-  if (styles.gap !== undefined) {
-    const val = getValue(styles.gap);
-    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
-      inline.gap = `${val}px`;
-    }
-  }
-
-  if (styles.paddingX !== undefined) {
-    const val = getValue(styles.paddingX);
-    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
-      inline.paddingLeft = `${val}px`;
-      inline.paddingRight = `${val}px`;
-    }
-  }
-
-  if (styles.paddingY !== undefined) {
-    const val = getValue(styles.paddingY);
-    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
-      inline.paddingTop = `${val}px`;
-      inline.paddingBottom = `${val}px`;
-    }
-  }
-
-  return inline;
-}
 
 export function buildSectionStyles(styles?: Record<string, unknown>, resolver?: (v: unknown) => unknown): string {
   if (!styles) return '';
@@ -155,6 +120,28 @@ export function buildSectionInlineStyles(
       inline.paddingTop = `${val}px`;
       inline.paddingBottom = `${val}px`;
     }
+  }
+
+  // Gap inline (plus fiable que les classes Tailwind arbitraires JIT)
+  if (styles.gap !== undefined) {
+    const val = getValue(styles.gap);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.gap = `${val}px`;
+    }
+  }
+
+  // Justify Content inline
+  const justify = getValue(styles.justify);
+  if (justify) {
+    const justifyMap: Record<string, string> = { start: 'flex-start', center: 'center', end: 'flex-end', between: 'space-between', around: 'space-around', evenly: 'space-evenly' };
+    if (typeof justify === 'string' && justifyMap[justify]) inline.justifyContent = justifyMap[justify];
+  }
+
+  // Align Items inline
+  const align = getValue(styles.align);
+  if (align) {
+    const alignMap: Record<string, string> = { start: 'flex-start', center: 'center', end: 'flex-end', stretch: 'stretch' };
+    if (typeof align === 'string' && alignMap[align]) inline.alignItems = alignMap[align];
   }
 
   // Borders

@@ -5,7 +5,7 @@ import type { ContainerStyles, AnyComponentInstance } from '../../type/component
 import { buildBlocLayoutStyles, buildBlocLayoutInlineStyles } from '../../lib/style/blocProcessor';
 import { buildSliderConfig, buildSliderArrowStyles, buildSliderPaginationStyles } from '../../lib/style/sliderProcessor';
 import { applyVisualInline } from '../../lib/style/common';
-import { formatSize, resolveValueForBreakpoint, filterResponsiveClasses } from '../../lib/style/core';
+import { filterResponsiveClasses } from '../../lib/style/core';
 import { useVariableResolver } from '../../hook/variable';
 
 interface Props {
@@ -167,8 +167,8 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
 
 <template>
   <div 
-    class="relative group/slider w-full overflow-hidden" 
-    :class="computedClasses" 
+    class="relative group/slider w-full" 
+    :class="[computedClasses, builderState.isDragging?.value ? 'overflow-visible' : 'overflow-hidden']" 
     :style="computedInlineStyles"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
