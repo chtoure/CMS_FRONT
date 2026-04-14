@@ -6,6 +6,7 @@ import { FAMILY_CAPABILITIES, type ComponentFamily } from '../../type/component'
 import type { HydratedBlock } from '../../type/page'; // Import de l'interface créée
 import { buildBlocLayoutStyles, buildBlocLayoutInlineStyles } from '../../lib/style/blocProcessor';
 import { buildSectionStyles, buildSectionInlineStyles, buildSectionLayoutStyles } from '../../lib/style/sectionProcessor';
+import { formatSize } from '../../lib/style/core';
 import { useVariableResolver } from '../../hook/variable';
 
 // On définit le nom pour la récursivité
@@ -61,6 +62,7 @@ const layoutInlineStyles = computed(() => {
 const sectionVisualStyles = computed(() => {
   if (!props.element.children) return {};
   const all = buildSectionInlineStyles(normalizedElementStyles.value, builderState.currentBreakpoint.value, resolveValue, isBuilderMode);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { gap, justifyContent, alignItems, ...visual } = all;
   return visual;
 });
@@ -127,27 +129,12 @@ const canHaveChildren = computed(() => {
 });
 
 /**
- * Fonctions Helper identiques au SectionBuilder pour garantir la parité
+ * Helper pour résoudre une dimension responsive au breakpoint courant.
+ * Délègue à formatSize de core.ts qui gère : 'full'→'100%', 'screen'→'100vh',
+ * les objets responsifs avec ou sans clé 'default', et les valeurs numériques.
  */
-function formatSize(value: unknown, defaultValue: string | undefined = undefined) {
-  const resolved = resolveValue(value);
-  if (resolved === undefined || resolved === null || resolved === '') return defaultValue;
-
-  let finalValue = resolved;
-  const bp = builderState.currentBreakpoint.value;
-
-  if (typeof resolved === 'object' && resolved !== null && 'default' in (resolved as Record<string, unknown>)) {
-    const resObj = resolved as Record<string, any>;
-    if (bp === 'lg' && resObj.lg !== undefined) finalValue = resObj.lg;
-    else if ((bp === 'lg' || bp === 'md') && resObj.md !== undefined) finalValue = resObj.md;
-    else if (bp !== 'default' && resObj.sm !== undefined) finalValue = resObj.sm;
-    else finalValue = resObj.default;
-  }
-
-  if (finalValue === 'full') return '100%';
-  if (typeof finalValue === 'number') return `${finalValue}px`;
-  if (typeof finalValue === 'string' && !isNaN(Number(finalValue)) && finalValue.trim() !== '') return `${finalValue}px`;
-  return finalValue as string;
+function resolveDimension(value: unknown, defaultValue?: string): string | undefined {
+  return formatSize(value, builderState.currentBreakpoint.value, resolveValue, defaultValue);
 }
 
 // function formatColor(value: unknown) {
@@ -310,7 +297,7 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
     ></video>
 
     <!-- Conteneur enfants (sans padding ni min-h artificiels du builder) -->
-    <div 
+    <div
       class="w-full flex-1"
       :class="buildSectionLayoutStyles(normalizedElementStyles, resolveValue)"
       :style="sectionLayoutInlineStyles"
@@ -324,8 +311,8 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
             v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
             class="relative transition-all outline-none"
             :style="{
-              width: formatSize(normalizeStyles(child.styles)?.width, '100%'),
-              height: formatSize(normalizeStyles(child.styles)?.height)
+              width: resolveDimension(normalizeStyles(child.styles)?.width, '100%'),
+              height: resolveDimension(normalizeStyles(child.styles)?.height)
             }"
           >
             <BlocRenderView
@@ -341,8 +328,8 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
           v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
           class="relative transition-all outline-none"
           :style="{
-            width: formatSize(normalizeStyles(child.styles)?.width, '100%'),
-            height: formatSize(normalizeStyles(child.styles)?.height)
+            width: resolveDimension(normalizeStyles(child.styles)?.width, '100%'),
+            height: resolveDimension(normalizeStyles(child.styles)?.height)
           }"
         >
           <BlocRenderView
@@ -388,10 +375,10 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
                 v-for="(item, itemIndex) in getItemsForChild(child)"
                 :key="`${child.id}-${itemIndex}`"
                 v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
-                class="relative transition-all outline-none"
+                class="relative transition-all outline-none w-full h-full"
                 :style="{
-                  width: formatSize(normalizeStyles(child.styles)?.width, '100%'),
-                  height: formatSize(normalizeStyles(child.styles)?.height)
+                  width: resolveDimension(normalizeStyles(child.styles)?.width) || undefined,
+                  height: resolveDimension(normalizeStyles(child.styles)?.height) || undefined
                 }"
               >
                 <BlocRenderView
@@ -405,10 +392,10 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
           <div
             v-else
             v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
-            class="relative transition-all outline-none"
+            class="relative transition-all outline-none w-full h-full"
             :style="{
-              width: formatSize(normalizeStyles(child.styles)?.width, '100%'),
-              height: formatSize(normalizeStyles(child.styles)?.height)
+              width: resolveDimension(normalizeStyles(child.styles)?.width) || undefined,
+              height: resolveDimension(normalizeStyles(child.styles)?.height) || undefined
             }"
           >
             <BlocRenderView
