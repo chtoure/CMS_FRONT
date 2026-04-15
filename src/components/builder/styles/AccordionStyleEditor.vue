@@ -104,7 +104,7 @@ const containerWhitelist = [
               <template #trigger>
                 <button
                   @click="activePicker = 'questionColor'"
-                  class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80 transition-colors"
+                  class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80"
                 >
                   <div
                     class="w-4 h-4 rounded-sm border border-builder-bar-border shrink-0"

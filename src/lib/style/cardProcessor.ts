@@ -122,8 +122,5 @@ export function buildCardInlineStyles(
   if (styles.bgPosition) { const val = getValue(styles.bgPosition); if (val) inline.backgroundPosition = val as string; }
   if (styles.bgRepeat)   { const val = getValue(styles.bgRepeat);   if (val) inline.backgroundRepeat   = val as string; }
 
-  // Positionnement
-  applyPositioningInline(inline, styles, getValue);
-
   return inline;
 }

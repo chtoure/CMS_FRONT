@@ -7,6 +7,7 @@ import { buildSliderConfig, buildSliderArrowStyles, buildSliderPaginationStyles 
 import { applyVisualInline } from '../../lib/style/common';
 import { filterResponsiveClasses } from '../../lib/style/core';
 import { useVariableResolver } from '../../hook/variable';
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 
 interface Props {
   styles?: ContainerStyles;

@@ -1,7 +1,6 @@
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
 import { computed, inject } from 'vue';
-import { VueDraggable } from 'vue-draggable-plus';
 import type { AnySectionInstance } from '../../type/section';
 import BlocRender from './BlocRender.vue';
 import ResizerWrapper from './ResizerWrapper.vue';
@@ -28,6 +27,8 @@ const builderState = inject<{
   isDragging: { value: boolean }
   setIsDragging: (val: boolean) => void
   xRayMode: { value: boolean }
+  clipboard: { value: AnyComponentInstance | null }
+  setClipboard: (item: AnyComponentInstance | null) => void
 }>('builderState');
 
 const { resolveValue } = useVariableResolver();
@@ -71,6 +72,13 @@ const isSticky = (element: any) => {
   const bp = builderState?.currentBreakpoint.value || 'default';
   const pos = element.styles?.position;
   return resolveValueForBreakpoint<string>(pos, bp, resolveValue) === 'sticky';
+};
+
+const isOutOfFlow = (element: any) => {
+  const bp = builderState?.currentBreakpoint.value || 'default';
+  const pos = element.styles?.position;
+  const p = resolveValueForBreakpoint<string>(pos, bp, resolveValue);
+  return p === 'fixed' || p === 'absolute';
 };
 
 const sectionClasses = computed(() => {
@@ -123,9 +131,8 @@ const bgVideoUrl = computed((): string | null => {
 
 const draggableClasses = computed(() => ({
   'py-4': props.section.children.length === 0,
-  'drop-zone-active': isDraggingOver.value,
   'blueprint-target': props.section.children.length > 0,
-  'blueprint-active': (isDraggingOver.value || isXRayMode.value) && props.section.children.length > 0
+  'blueprint-active': isXRayMode.value && props.section.children.length > 0
 }));
 
 </script>
@@ -158,55 +165,41 @@ const draggableClasses = computed(() => ({
       class="absolute inset-0 border-2 border-blue-500 pointer-events-none z-[55]"
     />
 
-    <!-- Conteneur Draggable pour les blocs -->
-    <VueDraggable
-      :model-value="section.children"
-      :group="{ name: 'blocks', put: true, pull: true }"
-      :animation="150"
-      :fallbackOnBody="true"
-      :swapThreshold="0.65"
-      ghost-class="ghost-item"
-      class="w-full flex-1"
+    <!-- Conteneur pour les blocs -->
+    <div
+      class="w-full flex-1 relative"
       :class="[draggableClasses, ...sectionLayoutClasses]"
       :style="sectionLayoutInlineStyles"
-      @update:model-value="handleChildrenChange"
-      @start="builderState?.setIsDragging(true)"
-      @end="builderState?.setIsDragging(false)"
     >
-      <div
-        v-for="(element, index) in section.children"
-        :key="element.id"
-        class="relative transition-all"
-        :style="{
-          width: formatSize(element.styles?.width, builderState?.currentBreakpoint.value, resolveValue), 
-          height: formatSize(element.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
-          ...(isSticky(element) ? getWrapperPositionStyles(element.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
-        }"
-      >
-        <ResizerWrapper
-          :element="element"
-          :active="builderState?.selectedId.value === element.id"
-          :depth="0"
-          @update:element="(newElem) => handleElementUpdate(index, newElem)"
-          :style="!isSticky(element) ? getWrapperPositionStyles(element.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {}"
+      <template v-for="(element, index) in section.children" :key="element.id">
+        <div
+          class="transition-all"
+          :class="isOutOfFlow(element) ? '' : 'relative'"
+          :style="{
+            width: formatSize(element.styles?.width, builderState?.currentBreakpoint.value, resolveValue), 
+            height: formatSize(element.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
+            ...(isSticky(element) ? getWrapperPositionStyles(element.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
+          }"
         >
-          <BlocRender
+          <ResizerWrapper
             :element="element"
+            :active="builderState?.selectedId.value === element.id"
+            :depth="0"
             @update:element="(newElem) => handleElementUpdate(index, newElem)"
-          />
-        </ResizerWrapper>
-      </div>
-    </VueDraggable>
+            :style="!isSticky(element) ? getWrapperPositionStyles(element.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {}"
+          >
+            <BlocRender
+              :element="element"
+              @update:element="(newElem) => handleElementUpdate(index, newElem)"
+            />
+          </ResizerWrapper>
+        </div>
+      </template>
+    </div>
   </section>
 </template>
 
 <style scoped>
-.drop-zone-active {
-  outline: 2px dashed #3b82f6;
-  outline-offset: -4px;
-  background-color: rgba(59, 130, 246, 0.05);
-}
-
 /* Mode Blueprint : les composants de la section s'écartent pour mieux voir l'imbrication */
 .blueprint-active {
   gap: 8px !important;
@@ -214,11 +207,5 @@ const draggableClasses = computed(() => ({
   outline: 1px dashed rgba(59, 130, 246, 0.6);
   outline-offset: -3px;
   background-color: rgba(59, 130, 246, 0.02);
-}
-
-:deep(.ghost-item) {
-  opacity: 0.3;
-  background: #3b82f6 !important;
-  border-radius: 4px;
 }
 </style>

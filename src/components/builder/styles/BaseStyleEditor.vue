@@ -234,6 +234,11 @@ const bgRepeatOptions = [
               if (newPos !== 'static') {
                 if (getRawValue(styles.top) === undefined) updates.top = 0;
                 if (getRawValue(styles.left) === undefined && newPos === 'fixed') updates.left = 0;
+
+                const curWidth = getRawValue(styles.width);
+                const curHeight = getRawValue(styles.height);
+                if (typeof curWidth === 'string' && curWidth.includes('%')) updates.width = undefined;
+                if (typeof curHeight === 'string' && curHeight.includes('%')) updates.height = undefined;
               }
               updateStyles(updates);
             }"
@@ -434,7 +439,7 @@ const bgRepeatOptions = [
             <template #trigger>
               <button 
                 @click="activePicker = 'color'" 
-                class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80 transition-colors"
+                class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80"
               >
                 <div 
                   class="w-4 h-4 rounded-sm border border-builder-bar-border shrink-0" 
@@ -466,7 +471,7 @@ const bgRepeatOptions = [
             <template #trigger>
               <button
                 @click="activePicker = 'bg'"
-                class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80 transition-colors"
+                class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80"
               >
                 <div
                   class="w-4 h-4 rounded-sm border border-builder-bar-border shrink-0"
@@ -616,7 +621,7 @@ const bgRepeatOptions = [
               <template #trigger>
                 <button
                   @click="activePicker = 'border'"
-                  class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80 transition-colors"
+                  class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80"
                 >
                   <div
                     class="w-4 h-4 rounded-sm border border-builder-bar-border shrink-0"
@@ -634,7 +639,5 @@ const bgRepeatOptions = [
 </template>
 
 <style scoped>
-select {
-  @apply transition-all duration-200;
-}
+
 </style>
