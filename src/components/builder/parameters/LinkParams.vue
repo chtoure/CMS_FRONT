@@ -5,6 +5,7 @@ import type { AnyComponentInstance } from '../../../type/component';
 import PropertyGroup from '../ui/PropertyGroup.vue';
 import PropertyInput from '../ui/PropertyInput.vue';
 import IconPicker from '../ui/IconPicker.vue';
+import CompositionMediaPicker from '../../composition/CompositionMediaPicker.vue';
 import Select from '../../../components/ui/select/Select.vue';
 import SelectTrigger from '../../../components/ui/select/SelectTrigger.vue';
 import SelectValue from '../../../components/ui/select/SelectValue.vue';
@@ -83,7 +84,45 @@ const navItemsResults = computed(() => navItems.value || []);
             </SelectContent>
           </Select>
         </div>
-        <div class="space-y-1">
+
+        <!-- Type de Lien (Action du clic) -->
+        <div class="space-y-1 flex flex-col pt-2 border-t border-builder-bar-border/30">
+          <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Type d'action</label>
+          <Select
+            :model-value="getDataValue(element.data.linkType) || 'url'"
+            @update:model-value="(val) => val && updateData('linkType', val as string)"
+          >
+            <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
+              <SelectValue placeholder="Type..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="url"><span class="text-[10px]">Lien Classique</span></SelectItem>
+              <SelectItem value="media"><span class="text-[10px]">Télécharger Média</span></SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <!-- MODE MEDIA -->
+        <div v-if="getDataValue(element.data.linkType) === 'media'" class="space-y-2">
+          <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Fichier à télécharger</label>
+          <div class="flex flex-col gap-2">
+            <span v-if="(element.data as any).filename" class="text-[10px] text-green-500 font-medium truncate px-1">
+              Fichier lié : {{ (element.data as any).filename }}
+            </span>
+            <CompositionMediaPicker
+              :model-value="undefined"
+              @media-selected="(media) => {
+                updateDataAndParam('url', media.file_path);
+                updateData('filename', media.file_name || 'download');
+              }"
+              trigger-text="Sélectionner un média..."
+            />
+          </div>
+        </div>
+
+        <!-- MODE URL CLASSIQUE -->
+        <template v-else>
+          <div class="space-y-1">
           <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">URL de destination</label>
           <div class="relative">
             <Popover v-model:open="urlSearchOpen">
@@ -135,7 +174,7 @@ const navItemsResults = computed(() => navItems.value || []);
                            type="text"
                            :value="(element.data.url as string)"
                            @input="(e) => updateDataAndParam('url', (e.target as HTMLInputElement).value)"
-                           @keydown.enter="urlSearchOpen = false"
+                           @keydown.enter="(e) => { (e.target as HTMLInputElement).blur(); updateDataAndParam('url', (e.target as HTMLInputElement).value); urlSearchOpen = false }"
                            placeholder="Ex: https://google.com"
                            class="w-full bg-builder-bar-background border border-builder-bar-border rounded px-2 py-1 text-[10px] focus:outline-none focus:border-primary"
                          />
@@ -163,6 +202,7 @@ const navItemsResults = computed(() => navItems.value || []);
             </SelectContent>
           </Select>
         </div>
+        </template>
       </div>
     </PropertyGroup>
   </div>

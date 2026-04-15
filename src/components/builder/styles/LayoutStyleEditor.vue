@@ -119,7 +119,7 @@ const showGrid = computed(() => getRawValue(styles.value.display) === 'grid');
           <button 
             @click="updateStyle('justify', getRawValue(styles.justify) === 'between' ? 'start' : 'between')"
             :class="[
-              'w-full h-7 px-2 flex items-center justify-center rounded text-[10px] font-bold border transition-all',
+              'w-full h-7 px-2 flex items-center justify-center rounded text-[10px] font-bold border',
               getRawValue(styles.justify) === 'between'
                 ? 'bg-primary border-primary text-white'
                 : 'bg-builder-input-bg border-builder-bar-border text-builder-bar-text hover:bg-white/5'

@@ -1,7 +1,6 @@
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script lang="ts" setup>
-import { ref, computed, inject, watch, onMounted, onUnmounted } from 'vue';
-import { VueDraggable } from 'vue-draggable-plus';
+import { ref, computed, inject, onMounted, onUnmounted } from 'vue';
 import { ZoomIn, ZoomOut, Maximize, MousePointer2 } from 'lucide-vue-next';
 import SectionBuilder from '../../components/builder/SectionBuilder.vue';
 import BlocRender from '../../components/builder/BlocRender.vue';
@@ -20,6 +19,8 @@ const builderState = inject<{
   selectComponent: (id: string | null) => void;
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' };
   setIsDragging: (val: boolean) => void;
+  clipboard: { value: AnyComponentInstance | null };
+  setClipboard: (item: AnyComponentInstance | null) => void;
 }>('builderState');
 
 const windowHeight = ref(window?.innerHeight || 850);
@@ -97,47 +98,39 @@ const deselect = () => {
   selectComponent(null);
 };
 
-watch(() => pageTree.value, (newVal) => {
-  // Uniquement en mode PAGE : forcer les composants dans des sections
-  if (builderState?.builderMode.value !== 'page') return;
-
-  const orphanComponents = newVal.filter((item: any) => 'tag' in item);
+// Insertion Click & Drop
+const insertAtRoot = (index: number) => {
+  if (!builderState?.clipboard.value) return;
+  const item = JSON.parse(JSON.stringify(builderState.clipboard.value));
   
-  if (orphanComponents.length > 0) {
-    const newTree = [...newVal] as any[];
-    orphanComponents.forEach(comp => {
-      const idx = newTree.indexOf(comp);
-      if (idx !== -1) {
-        // Est-ce qu'on a une section vide ?
-        const emptySection = newTree.find(s => !('tag' in s) && s.children.length === 0);
-        
-        if (emptySection) {
-          emptySection.children.push(comp);
-          newTree.splice(idx, 1);
-        } else {
-          // Créer une nouvelle section
-          const newSection: AnySectionInstance = {
-            id: crypto.randomUUID(),
-            order: newTree.length,
-            family: 'section',
-            styles: {},
-            children: [comp as unknown as AnyComponentInstance]
-          };
-          newTree.splice(idx, 1, newSection);
-        }
-      }
-    });
-    pageTree.value = newTree as AnySectionInstance[];
+  if (builderState.builderMode.value === 'page') {
+    let newEntry: any = item;
+    if ('tag' in item) { // Wrapped into section auto
+      newEntry = {
+        id: crypto.randomUUID(),
+        order: index,
+        family: 'section',
+        styles: {},
+        children: [item]
+      };
+    }
+    const newTree = [...pageTree.value];
+    newTree.splice(index, 0, newEntry);
+    pageTree.value = newTree;
+  } else {
+    const newTree = [...builderState.libraryTree.value];
+    newTree.splice(index, 0, item);
+    builderState.libraryTree.value = newTree;
   }
   
-  // console.log('PageTree updated:', JSON.parse(JSON.stringify(newVal)));
-}, { deep: true });
+  builderState.setClipboard(null);
+};
 
 // La fonction formatSize locale est supprimée car on utilise celle de core.ts
 </script>
 
 <template>
-  <div class="h-full w-full bg-white relative flex flex-col overflow-hidden" @click="deselect">
+  <div class="h-full w-full bg-white relative flex flex-col overflow-hidden no-dark" @click="deselect">
     
     <!-- Contrôles de Zoom -->
     <div @click.stop class="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-builder-bar-background border border-border px-3 py-1 rounded shadow-2xl">
@@ -188,7 +181,7 @@ watch(() => pageTree.value, (newVal) => {
           <div 
             class="device-wrapper absolute top-0 bg-white border border-dashed border-border origin-top transition-all duration-500 ease-in-out box-border overflow-hidden"
             :style="[canvasStyle, { width: `${CANVAS_BASE_WIDTH}px` }]"
-            @click.stop
+            @click.stop="builderState?.selectComponent(null)"
           >
              <!-- Scroll Context: la hauteur est fixée à celle du viewport simulé -->
              <!-- Cela crée un vrai contexte de scroll INTERNE au device-wrapper -->
@@ -206,17 +199,9 @@ watch(() => pageTree.value, (newVal) => {
                 <p class="text-xs uppercase tracking-widest font-bold">Canevas Vide</p>
               </div>
 
-              <VueDraggable
+              <div
                 v-if="builderState?.builderMode.value === 'page'"
-                v-model="pageTree"
-                :group="{ name: 'blocks', put: true, pull: true }"
-                :animation="100"
-                :delay="0"
-                :delay-on-touch-only="true"
-                ghost-class="ghost-preview"
-                @start="builderState?.setIsDragging(true)"
-                @end="builderState?.setIsDragging(false)"
-                class="w-full min-h-full relative flex flex-col p-0 z-0 bg-white"
+                class="w-full min-h-full relative flex flex-col p-0 pb-40 z-0 bg-white"
               >
                 <template v-for="(section, index) in pageTree" :key="section.id">
                   <SectionBuilder
@@ -230,56 +215,43 @@ watch(() => pageTree.value, (newVal) => {
                     }"
                   />
                 </template>
-              </VueDraggable>
+              </div>
 
               <!-- Mode Bibliothèque (SANS Sections) -->
-              <VueDraggable
+              <div
                 v-else
-                v-model="builderState!.libraryTree.value"
-                :group="{ name: 'blocks', put: true, pull: true }"
-                :animation="100"
-                :delay="0"
-                :delay-on-touch-only="true"
-                ghost-class="ghost-preview"
-                @start="builderState?.setIsDragging(true)"
-                @end="builderState?.setIsDragging(false)"
-                class="w-full min-h-full relative flex flex-col z-0 bg-transparent items-center"
+                class="w-full min-h-full relative flex flex-col pb-40 z-0 bg-transparent items-center pt-8"
               >
-                 <div 
-                   v-for="(element, index) in builderState!.libraryTree.value" 
-                   :key="element.id"
-                   class="relative transition-all outline-none mb-6 bg-white/5 p-1 rounded-sm border border-white/5 group/lib-item max-w-full"
-                   :style="{
-                     width: formatSize(element.styles?.width), 
-                     height: formatSize(element.styles?.height) 
-                   }"
-                 >
-                    <!-- Label du composant custom -->
-                    <!-- <div class="absolute top-2 left-4 bg-primary text-white text-[10px] px-2 py-0.5 rounded shadow-lg opacity-80 group-hover/lib-item:opacity-100 transition-opacity">
-                      MODÈLE : {{ element.name }}
-                    </div> -->
-
-                    <ResizerWrapper
-                      :element="element"
-                      :active="builderState?.selectedId.value === element.id" 
-                      @click.stop="builderState?.selectComponent(element.id)"
-                      @update:element="(newVal: AnyComponentInstance) => {
-                        const newTree = [...builderState!.libraryTree.value];
-                        newTree[index] = newVal;
-                        builderState!.libraryTree.value = newTree;
-                      }"
-                    >
-                      <BlocRender
-                        :element="element" 
+                 <template v-for="(element, index) in builderState!.libraryTree.value" :key="element.id">
+                   <div 
+                     class="relative transition-all outline-none mb-6 bg-white/5 p-1 rounded-sm border border-white/5 group/lib-item max-w-full"
+                     :style="{
+                       width: formatSize(element.styles?.width), 
+                       height: formatSize(element.styles?.height) 
+                     }"
+                   >
+                      <ResizerWrapper
+                        :element="element"
+                        :active="builderState?.selectedId.value === element.id" 
+                        @click.stop="builderState?.selectComponent(element.id)"
                         @update:element="(newVal: AnyComponentInstance) => {
                           const newTree = [...builderState!.libraryTree.value];
                           newTree[index] = newVal;
                           builderState!.libraryTree.value = newTree;
                         }"
-                      />
-                    </ResizerWrapper>
-                 </div>
-              </VueDraggable>
+                      >
+                        <BlocRender
+                          :element="element" 
+                          @update:element="(newVal: AnyComponentInstance) => {
+                            const newTree = [...builderState!.libraryTree.value];
+                            newTree[index] = newVal;
+                            builderState!.libraryTree.value = newTree;
+                          }"
+                        />
+                      </ResizerWrapper>
+                   </div>
+                 </template>
+              </div>
              </div>
           </div>
           
@@ -297,6 +269,7 @@ watch(() => pageTree.value, (newVal) => {
 </template>
 
 <style scoped>
+
 :deep(.ghost-preview) {
   opacity: 0.25 !important;
   background: #3b82f6 !important;

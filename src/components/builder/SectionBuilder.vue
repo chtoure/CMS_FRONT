@@ -1,11 +1,10 @@
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
 import { computed, inject } from 'vue';
-import { VueDraggable } from 'vue-draggable-plus';
 import type { AnySectionInstance } from '../../type/section';
 import BlocRender from './BlocRender.vue';
 import ResizerWrapper from './ResizerWrapper.vue';
-import { formatSize, resolveValueForBreakpoint } from '../../lib/style/core';
+import { formatSize, resolveValueForBreakpoint, filterResponsiveClasses } from '../../lib/style/core';
 import { buildSectionStyles, buildSectionLayoutStyles, buildSectionInlineStyles } from '../../lib/style/sectionProcessor';
 import { getWrapperPositionStyles } from '../../lib/style/common';
 import { useVariableResolver } from '../../hook/variable';
@@ -28,6 +27,8 @@ const builderState = inject<{
   isDragging: { value: boolean }
   setIsDragging: (val: boolean) => void
   xRayMode: { value: boolean }
+  clipboard: { value: AnyComponentInstance | null }
+  setClipboard: (item: AnyComponentInstance | null) => void
 }>('builderState');
 
 const { resolveValue } = useVariableResolver();
@@ -73,21 +74,49 @@ const isSticky = (element: any) => {
   return resolveValueForBreakpoint<string>(pos, bp, resolveValue) === 'sticky';
 };
 
+const isOutOfFlow = (element: any) => {
+  const bp = builderState?.currentBreakpoint.value || 'default';
+  const pos = element.styles?.position;
+  const p = resolveValueForBreakpoint<string>(pos, bp, resolveValue);
+  return p === 'fixed' || p === 'absolute';
+};
+
 const sectionClasses = computed(() => {
   return [
-    buildSectionStyles(props.section.styles as Record<string, unknown>, resolveValue)
+    filterResponsiveClasses(
+      buildSectionStyles(props.section.styles as Record<string, unknown>, resolveValue),
+      builderState?.currentBreakpoint.value || 'default'
+    )
   ];
 });
 
 const sectionLayoutClasses = computed(() => {
   return [
-    buildSectionLayoutStyles(props.section.styles as Record<string, unknown>, resolveValue)
+    filterResponsiveClasses(
+      buildSectionLayoutStyles(props.section.styles as Record<string, unknown>, resolveValue),
+      builderState?.currentBreakpoint.value || 'default'
+    )
   ];
 });
 
-const sectionStyles = computed(() => {
+// Styles VISUELS uniquement (bg, padding, border) → appliqués à la balise <section>
+const sectionVisualStyles = computed(() => {
   const bp = builderState?.currentBreakpoint.value || 'default';
-  return buildSectionInlineStyles(props.section.styles as Record<string, unknown>, bp, resolveValue);
+  const all = buildSectionInlineStyles(props.section.styles as Record<string, unknown>, bp, resolveValue);
+  // On retire les propriétés de layout qui doivent aller sur le VueDraggable
+  const { gap, justifyContent, alignItems, ...visual } = all;
+  return visual;
+});
+
+// Styles de LAYOUT (gap, justify, align) → appliqués au VueDraggable (le vrai conteneur flex)
+const sectionLayoutInlineStyles = computed(() => {
+  const bp = builderState?.currentBreakpoint.value || 'default';
+  const all = buildSectionInlineStyles(props.section.styles as Record<string, unknown>, bp, resolveValue);
+  const result: Record<string, string> = {};
+  if (all.gap) result.gap = all.gap;
+  if (all.justifyContent) result.justifyContent = all.justifyContent;
+  if (all.alignItems) result.alignItems = all.alignItems;
+  return result;
 });
 
 // Helper pour extraire l'URL depuis bgVideo (la valeur est encapsulée en { type:'static', value: {...} })
@@ -102,10 +131,8 @@ const bgVideoUrl = computed((): string | null => {
 
 const draggableClasses = computed(() => ({
   'py-4': props.section.children.length === 0,
-  'pb-16': props.section.children.length > 0,
-  'drop-zone-active': isDraggingOver.value,
   'blueprint-target': props.section.children.length > 0,
-  'blueprint-active': (isDraggingOver.value || isXRayMode.value) && props.section.children.length > 0
+  'blueprint-active': isXRayMode.value && props.section.children.length > 0
 }));
 
 </script>
@@ -118,7 +145,7 @@ const draggableClasses = computed(() => ({
       'group/section flex flex-col transition-all duration-200',
       ...sectionClasses
     ]"
-    :style="sectionStyles"
+    :style="sectionVisualStyles"
     @click="handleSelect"
   >
     <!-- Background Video -->
@@ -132,66 +159,47 @@ const draggableClasses = computed(() => ({
       class="absolute inset-0 w-full h-full object-cover -z-10 pointer-events-none"
     ></video>
 
-    <!-- Label de section sélectionnée -->
-    <div 
-      v-if="active"
-      class="absolute top-0 left-0 bg-blue-600 text-white text-[10px] px-2 py-0.5 font-bold uppercase z-[65] shadow-sm whitespace-nowrap pointer-events-none"
-    >
-      Section: {{ section.name || "Sans titre" }}
-    </div>
-
     <!-- Overlay de sélection de la section (au-dessus des enfants) -->
     <div
       v-if="active"
       class="absolute inset-0 border-2 border-blue-500 pointer-events-none z-[55]"
     />
 
-    <!-- Conteneur Draggable pour les blocs -->
-    <VueDraggable
-      :model-value="section.children"
-      :group="{ name: 'blocks', put: true, pull: true }"
-      :animation="150"
-      ghost-class="ghost-item"
-      class="w-full flex-1"
+    <!-- Conteneur pour les blocs -->
+    <div
+      class="w-full flex-1 relative"
       :class="[draggableClasses, ...sectionLayoutClasses]"
-      @update:model-value="handleChildrenChange"
-      @start="builderState?.setIsDragging(true)"
-      @end="builderState?.setIsDragging(false)"
+      :style="sectionLayoutInlineStyles"
     >
-      <div
-        v-for="(element, index) in section.children"
-        :key="element.id"
-        class="relative transition-all"
-        :style="{
-          width: formatSize(element.styles?.width, builderState?.currentBreakpoint.value, resolveValue), 
-          height: formatSize(element.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
-          ...(isSticky(element) ? getWrapperPositionStyles(element.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
-        }"
-      >
-        <ResizerWrapper
-          :element="element"
-          :active="builderState?.selectedId.value === element.id"
-          :depth="0"
-          @update:element="(newElem) => handleElementUpdate(index, newElem)"
-          :style="!isSticky(element) ? getWrapperPositionStyles(element.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {}"
+      <template v-for="(element, index) in section.children" :key="element.id">
+        <div
+          class="transition-all"
+          :class="isOutOfFlow(element) ? '' : 'relative'"
+          :style="{
+            width: formatSize(element.styles?.width, builderState?.currentBreakpoint.value, resolveValue), 
+            height: formatSize(element.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
+            ...(isSticky(element) ? getWrapperPositionStyles(element.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
+          }"
         >
-          <BlocRender
+          <ResizerWrapper
             :element="element"
+            :active="builderState?.selectedId.value === element.id"
+            :depth="0"
             @update:element="(newElem) => handleElementUpdate(index, newElem)"
-          />
-        </ResizerWrapper>
-      </div>
-    </VueDraggable>
+            :style="!isSticky(element) ? getWrapperPositionStyles(element.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {}"
+          >
+            <BlocRender
+              :element="element"
+              @update:element="(newElem) => handleElementUpdate(index, newElem)"
+            />
+          </ResizerWrapper>
+        </div>
+      </template>
+    </div>
   </section>
 </template>
 
 <style scoped>
-.drop-zone-active {
-  outline: 2px dashed #3b82f6;
-  outline-offset: -4px;
-  background-color: rgba(59, 130, 246, 0.05);
-}
-
 /* Mode Blueprint : les composants de la section s'écartent pour mieux voir l'imbrication */
 .blueprint-active {
   gap: 8px !important;
@@ -199,11 +207,5 @@ const draggableClasses = computed(() => ({
   outline: 1px dashed rgba(59, 130, 246, 0.6);
   outline-offset: -3px;
   background-color: rgba(59, 130, 246, 0.02);
-}
-
-:deep(.ghost-item) {
-  opacity: 0.3;
-  background: #3b82f6 !important;
-  border-radius: 4px;
 }
 </style>

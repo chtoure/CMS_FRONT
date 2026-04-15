@@ -27,11 +27,19 @@ const emit = defineEmits<{
 
 <template>
   <div :class="['property-input', compact ? 'compact' : '']">
+    <div class="flex items-center justify-between">
+      <label for="">
+        <span class="text-[9px] font-bold font-mono tracking-tight">{{ label }}</span>
+      </label>
+      <div class="shrink-0 col-span-1">
+        <slot name="action" />
+      </div>
+    </div>
     <div class="grid grid-cols-10 items-center justify-between h-7 px-1 bg-builder-input-bg border border-builder-bar-border rounded hover:border-builder-bar-border transition-all focus-within:border-primary group">
       <!-- Icon/Label Area -->
       <div class="col-span-2 flex items-center gap-1.5 shrink-0 opacity-40 group-hover:opacity-60 transition-opacity">
         <component v-if="icon" :is="icon" class="w-3 h-3" />
-        <span v-else class="text-[9px] font-bold font-mono tracking-tight">{{ label }}</span>
+        <!-- <span v-else class="text-[9px] font-bold font-mono tracking-tight">{{ label }}</span> -->
       </div>
 
       <!-- Input Area -->
@@ -39,18 +47,17 @@ const emit = defineEmits<{
         :type="type"
         :value="modelValue"
         @input="(e) => emit('update:modelValue', (e.target as HTMLInputElement).value)"
+        @keydown.enter="(e) => { (e.target as HTMLInputElement).blur(); emit('update:modelValue', (e.target as HTMLInputElement).value) }"
         :placeholder="placeholder"
         :min="min"
         :max="max"
         :step="step"
         :disabled="disabled"
-        class="input-field col-span-7"
+        class="input-field col-span-8"
       />
 
       <!-- Variable/Action Slot -->
-      <div class="shrink-0 col-span-1">
-        <slot name="action" />
-      </div>
+      
     </div>
   </div>
 </template>

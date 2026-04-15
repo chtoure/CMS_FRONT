@@ -27,6 +27,7 @@ import ContentTypeCorbeilleView from '../views/contentType/ContentTypeCorbeilleV
 import TaxonomyCorbeilleView from '../views/Taxonomy/TaxonomyCorbeilleView.vue'
 import BuilderView from '../views/builder/BuilderView.vue'
 import BuilderLayout from '../layout/BuilderLayout.vue'
+import RenderLayout from '../layout/RenderLayout.vue'
 import PageListView from '../views/page/PageListView.vue'
 import PageRevisionListView from '../views/pageRevision/PageRevisionListView.vue'
 import PageRenderView from '../views/renderPage/PageRenderView.vue'
@@ -67,13 +68,13 @@ const router = createRouter({
                 ]
             },
             {
-                path: '',
+                path: 'dashboard',
                 component: MainLayout,
                 // Permet de proteger les urls (Ici toutes les routes enfants)
                 meta: { requiresAuth: true },
                 children: [
                     {
-                      path: 'dashboard',
+                      path: '',
                       name: 'admin.dashboard',
                       component: DashboardView,
                       meta: { permissions: 'read_page_admin' }
@@ -97,22 +98,22 @@ const router = createRouter({
                       meta: { permissions: 'update_user' }
                     },
                     {
-                      path: '',
+                      path: 'users',
                       children:[
                         {
-                          path: 'users',
+                          path: '',
                           name: 'admin.users.list',
                           component: AdminVue,
                           meta: { permissions: 'read_user' }
                         },
                         {
-                          path: 'users/create',
+                          path: 'create',
                           name: 'admin.users.create',
                           component: UserCreateFormView,
                           meta: { permissions: 'create_user' }
                         },
                         {
-                          path: 'users/edit/:id',
+                          path: 'edit/:id',
                           name: 'admin.users.edit',
                           component: UserUpdateFormView,
                           meta: { permissions: 'update_user' }
@@ -266,7 +267,7 @@ const router = createRouter({
 
     {
         path: '/:slug?',
-        component: BuilderLayout,
+        component: RenderLayout,
         children: [
             {
                 path: '',

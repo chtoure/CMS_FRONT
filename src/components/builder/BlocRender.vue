@@ -2,10 +2,9 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, ref, watch } from 'vue';
 import { FAMILY_CAPABILITIES, type AnyComponentInstance } from '../../type/component';
-import { VueDraggable } from 'vue-draggable-plus';
 import { COMPONENT_MAP } from '../../registry/component_registry';
 import { buildBlocLayoutStyles, buildBlocLayoutInlineStyles } from '../../lib/style/blocProcessor';
-import { formatSize, resolveValueForBreakpoint } from '../../lib/style/core';
+import { formatSize, resolveValueForBreakpoint, filterResponsiveClasses } from '../../lib/style/core';
 import { useVariableResolver } from '../../hook/variable';
 import { getWrapperPositionStyles } from '../../lib/style/common';
 import ResizerWrapper from './ResizerWrapper.vue';
@@ -13,6 +12,7 @@ import api, { handleResponse } from '../../api/fetchConfig';
 import { useGetMediaList } from '../../hook/media';
 import { useGetContentTypes } from '../../hook/content-type';
 import { FieldType } from '../../type/field';
+import type { IContenusField, IContenusQuery } from '../../type/params';
 
 defineOptions({
   name: 'BlocRender'
@@ -41,6 +41,8 @@ const builderState = inject<{
   toggleStates: { value: Record<string, boolean> }
   isVisible: (id: string, backendId?: number | null) => boolean
   cmsCache: { value: Record<string, any> }
+  clipboard: { value: AnyComponentInstance | null }
+  setClipboard: (item: AnyComponentInstance | null) => void
 }>('builderState');
 
 const { resolveValue } = useVariableResolver();
@@ -58,12 +60,64 @@ const canHaveChildren = computed(() => {
 });
 
 const layoutClasses = computed(() => {
-  return buildBlocLayoutStyles(props.element.styles as Record<string, unknown>, resolveValue);
+  return filterResponsiveClasses(
+    buildBlocLayoutStyles(props.element.styles as Record<string, unknown>, resolveValue),
+    builderState?.currentBreakpoint.value || 'default'
+  );
 });
 
 const layoutInlineStyles = computed(() => {
   const bp = builderState?.currentBreakpoint.value || 'default';
-  return buildBlocLayoutInlineStyles(props.element.styles as Record<string, unknown>, bp, resolveValue);
+  return buildBlocLayoutInlineStyles(props.element.styles as Record<string, unknown>, bp, resolveValue, true);
+});
+
+// Calcul dynamique du layout (classes) uniquement pour la <div> de boucle si on a des clones
+const iteratedWrapperLayoutClasses = computed(() => {
+  return (child: any) => {
+    // CONDITION STRICTE : Si ce n'est pas un enfant en mode itération avec des clones, on ne fait rien
+    const isIteratedChild = props.element.data?.isIterated &&
+      ((child.data as any)?.linkedQueryParamName || getLeafQueryItems(child).length > 0);
+
+    if (!isIteratedChild) return '';
+
+    // oxlint-disable-next-line no-useless-fallback-in-spread
+    const stylesObj = { ...((props.element.styles as Record<string, unknown>) || {}) };
+    delete stylesObj.padding; // Ne pas hériter le padding du parent
+
+    const classes = filterResponsiveClasses(
+      buildBlocLayoutStyles(stylesObj, resolveValue),
+      builderState?.currentBreakpoint.value || 'default'
+    );
+
+    // Reproduction de la structure CSS du parent
+    if (classes.includes('grid')) {
+      return `w-full ${classes}`;
+    } else if (classes.includes('flex')) {
+      return `w-full ${classes} ${stylesObj.direction === 'horizontal' ? 'flex-wrap' : ''}`;
+    } else if (stylesObj.direction) {
+      return `w-full flex ${classes} ${stylesObj.direction === 'horizontal' ? 'flex-wrap' : ''}`;
+    }
+
+    // Aucun réglage : comportement naturel en block
+    return 'w-full block';
+  };
+});
+
+// Pareil pour les styles inline (marge etc)
+const iteratedWrapperInlineStyles = computed(() => {
+  return (child: any) => {
+    const isIteratedChild = props.element.data?.isIterated &&
+      ((child.data as any)?.linkedQueryParamName || getLeafQueryItems(child).length > 0);
+
+    if (!isIteratedChild) return {};
+
+    const bp = builderState?.currentBreakpoint.value || 'default';
+    // oxlint-disable-next-line no-useless-fallback-in-spread
+    const stylesObj = { ...((props.element.styles as Record<string, unknown>) || {}) };
+    delete stylesObj.padding;
+
+    return buildBlocLayoutInlineStyles(stylesObj, bp, resolveValue, true);
+  };
 });
 
 // Helper pour extraire l'URL depuis la propriété bgVideo (qui est enveloppée en { type:'static', value: {...} })
@@ -119,6 +173,13 @@ const isSticky = (element: any) => {
   return resolveValueForBreakpoint<string>(pos, bp, resolveValue) === 'sticky';
 };
 
+const isOutOfFlow = (element: any) => {
+  const bp = builderState?.currentBreakpoint.value || 'default';
+  const pos = element.styles?.position;
+  const p = resolveValueForBreakpoint<string>(pos, bp, resolveValue);
+  return p === 'fixed' || p === 'absolute';
+};
+
 const handleChildrenChange = (newChildren: AnyComponentInstance[]) => {
   childrenModel.value = newChildren;
 };
@@ -150,8 +211,9 @@ onMounted(async () => {
     // Déjà dans le cache ? Pas la peine de refetcher.
     if (builderState?.cmsCache.value[paramName]) continue;
 
-    const contentTypeId = param.type.contentTypeId;
-    const config = param.type.config || {};
+    const paramType = param.type as IContenusField;
+    const contentTypeId = paramType.contentTypeId;
+    const config = paramType.config as IContenusQuery || {};
 
     try {
       const qp = new URLSearchParams();
@@ -309,6 +371,7 @@ const applyItemToChildren = (
       'drop-zone-potential': isDraggingOver && canHaveChildren && !isClone,
       'opacity-20 grayscale-[0.8] border-2 border-dashed border-red-500/50': !isVisible && !isClone,
     }"
+    :style="isXRayMode && element.tag === 'SliderBuilder' && !isSelected ? { outline: '1px dashed rgba(139, 92, 246, 0.6)', outlineOffset: '-3px', backgroundColor: 'rgba(139, 92, 246, 0.04)' } : {}"
     v-show="isVisible || isSelected"
     @click="handleSelect"
     @update:element="(newVal: AnyComponentInstance) => emit('update:element', newVal)"
@@ -365,37 +428,34 @@ const applyItemToChildren = (
           </div>
         </template>
 
-        <!-- Mode Normal : drag & drop actif, logique d'itération -->
+        <!-- Mode Normal : Click & Drop actif, logique d'itération -->
         <template v-else>
-          <VueDraggable
-            :model-value="childrenModel"
-            :group="{ name: 'blocks', put: true, pull: true }"
-            :animation="100"
-            :delay="0"
-            ghost-class="ghost-item"
-            class="w-full h-full transition-all duration-300"
+          <div
+            class="w-full h-full transition-all duration-300 relative"
             :class="[
               element.tag !== 'SliderBuilder' ? layoutClasses : '',
               {
-                'drop-zone-active': isDraggingOver && element.tag !== 'SliderBuilder',
-                'p-4': (!childrenModel || childrenModel.length === 0) && element.tag !== 'SliderBuilder',
-                'blueprint-target': element.tag !== 'SliderBuilder',
-                'blueprint-mode': (isDraggingOver || isXRayMode) && element.tag !== 'SliderBuilder',
+                'p-4 min-h-[60px]': !childrenModel || childrenModel.length === 0,
+                'blueprint-target': true,
+                'blueprint-mode': isXRayMode && element.tag !== 'SliderBuilder',
+                'blueprint-mode-slider': isXRayMode && element.tag === 'SliderBuilder',
               }
             ]"
             :style="element.tag !== 'SliderBuilder' ? layoutInlineStyles : {}"
-            @update:model-value="handleChildrenChange"
-            @start="builderState?.setIsDragging(true)"
-            @end="builderState?.setIsDragging(false)"
           >
             <div
               v-for="(child, index) in childrenModel"
               :key="child.id"
-              class="relative transition-all"
+              class="transition-all"
+              :class="[
+                 iteratedWrapperLayoutClasses(child),
+                 isOutOfFlow(child) ? '' : 'relative'
+              ]"
               :style="{
                 width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
                 height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
-                ...(isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
+                ...(isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {}),
+                ...iteratedWrapperInlineStyles(child)
               }"
               @click.stop="builderState?.selectComponent(child.id)"
             >
@@ -507,7 +567,7 @@ const applyItemToChildren = (
                 />
               </ResizerWrapper>
             </div>
-          </VueDraggable>
+          </div>
         </template>
       </div>
     </template>
@@ -515,13 +575,7 @@ const applyItemToChildren = (
 </template>
 
 <style scoped>
-.drop-zone-active {
-  outline: 2px dashed #3b82f6;
-  outline-offset: -2px;
-  background-color: rgba(59, 130, 246, 0.08);
-}
-
-/* Mode Blueprint: al drag, on écarte les enfants et on ajoute un padding visuel */
+/* Mode Blueprint: on écarte les enfants et on ajoute un padding visuel */
 .blueprint-mode {
   gap: 8px !important;
   padding: 8px !important;
@@ -530,19 +584,15 @@ const applyItemToChildren = (
   background-color: rgba(139, 92, 246, 0.04);
 }
 
-.drop-zone-potential {
-  outline: 1px dashed rgba(59, 130, 246, 0.5);
-  outline-offset: -1px;
+/* Mode Structure pour le Slider : contour identique aux autres mais SANS gap/padding pour ne pas casser le layout */
+.blueprint-mode-slider {
+  outline: 1px dashed rgba(139, 92, 246, 0.6);
+  outline-offset: -3px;
+  background-color: rgba(139, 92, 246, 0.04);
 }
 
-.drop-zone-potential:hover {
-  outline: 2px solid #3b82f6 !important;
-  background-color: rgba(59, 130, 246, 0.05);
-}
+/* Outline violet appliqué sur le WRAPPER RACINE du SliderBuilder en mode Structure */
+/* Remplacé par ring-inset Tailwind directement dans le template - plus fiable */
 
-:deep(.ghost-item) {
-  opacity: 0.2 !important;
-  background: #3b82f6 !important;
-  border-radius: 4px;
-}
+/* Remplacé par ring-inset Tailwind directement dans le template - plus fiable */
 </style>

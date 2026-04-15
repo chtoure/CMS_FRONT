@@ -74,9 +74,18 @@ const commitEdit = () => {
   isEditing.value = false;
   const newContent = editorRef.value?.innerText?.trim() ?? '';
   if (newContent !== content.value) {
+    // Mettre à jour data.content ET params[].type.value pour que la valeur
+    // soit correctement sauvegardée (le rendu lit depuis params lors du rechargement)
+    const newParams = (props.element.params || []).map((p: any) => {
+      if (p.name === 'content' && p.type?.source === 'static') {
+        return { ...p, type: { ...p.type, value: newContent } };
+      }
+      return p;
+    });
     emit('update:element', {
       ...props.element,
-      data: { ...props.element.data, content: newContent }
+      data: { ...props.element.data, content: newContent },
+      params: newParams
     });
   }
 };
@@ -98,6 +107,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
 </script>
 
 <template>
+  <!-- eslint-disable vue/no-v-text-v-html-on-component -->
   <component
     :is="tag"
     ref="editorRef"

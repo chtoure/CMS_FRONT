@@ -14,8 +14,51 @@ export function useBlockTemplate() {
 
   const isSaving = ref(false);
   const lastSavedState = ref<string>('');
-  const saveTimeout = ref<number | null>(null);
-  let pendingSaveResolve: ((value: any) => void) | null = null;
+  
+  // Variables pour le Latest-State Lock
+  let isExecuting = false;
+  let pendingSaveArg: any = null;
+  let pendingSaveResolveFn: ((val: any) => void) | null = null;
+  let pendingSaveRejectFn: ((err: any) => void) | null = null;
+
+  const processQueue = async (mode: 'page' | 'library') => {
+    if (isExecuting || !pendingSaveArg) return;
+    
+    isExecuting = true;
+    isSaving.value = true;
+    
+    const argToProcess = pendingSaveArg;
+    const resolve = pendingSaveResolveFn!;
+    const reject = pendingSaveRejectFn!;
+    
+    pendingSaveArg = null;
+    pendingSaveResolveFn = null;
+    pendingSaveRejectFn = null;
+
+    try {
+      let syncedTree;
+      if (mode === 'page') {
+        syncedTree = await useSyncAll(argToProcess.sections, argToProcess.pageRevisionId);
+      } else {
+        syncedTree = await useSyncTree(argToProcess.nodes, null, undefined, true);
+      }
+      
+      lastSavedState.value = JSON.stringify(syncedTree);
+      console.log(mode === 'page' ? 'Auto-save success' : 'Library auto-save success');
+      resolve(syncedTree);
+    } catch (error) {
+      console.error(mode === 'page' ? 'Auto-save failed' : 'Library auto-save failed', error);
+      reject(error);
+    } finally {
+      isExecuting = false;
+      // S'il y a une demande en attente accumulée pendant l'exécution, on la traite
+      if (pendingSaveArg) {
+        processQueue(mode);
+      } else {
+        isSaving.value = false;
+      }
+    }
+  };
   const { useCreateSection, useUpdateSection, useGetSections, useDeleteSection } = useSection();
 
   /**
@@ -83,56 +126,93 @@ export function useBlockTemplate() {
    * Synchronise l'ensemble de l'arbre (Sections -> Blocs)
    */
   const useSyncAll = async (sections: AnySectionInstance[], pageRevisionId: number): Promise<AnySectionInstance[]> => {
-    const syncedSections: AnySectionInstance[] = [];
-
-    for (let i = 0; i < sections.length; i++) {
-        const section = { ...sections[i] };
-        try {
-            let currentSectionId = section.sectionId;
-
-            if (!currentSectionId) {
-                if (section.order === undefined) {
-                    section.order = i;
-                }
-                const newSection = await useCreateSection(section as AnySectionInstance, pageRevisionId);
-                currentSectionId = newSection.id;
-
-                // CONTOURNEMENT BACKEND: Le POST ignore les styles/bloc_json. On force un Update juste après.
-                try {
-                    await useUpdateSection(currentSectionId, section);
-                } catch (e) {
-                    console.error("Failed to force update after create section", e);
-                }
-            } else {
-                await useUpdateSection(currentSectionId, section);
-            }
-
-            // Synchroniser les blocs de cette section
-            const syncedChildren = await useSyncTree(section.children || [], null, currentSectionId);
-
-            syncedSections.push({
-                ...section,
-                id: section.id || crypto.randomUUID(),
-                order: section.order ?? i,
-                family: 'section',
-                sectionId: currentSectionId,
-                styles: section.styles || {},
-                children: syncedChildren
-            });
-        } catch (error) {
-            console.error(`Error syncing section ${section.id}`, error);
-            syncedSections.push({
-                ...section,
-                id: section.id || crypto.randomUUID(),
-                order: section.order ?? i,
-                family: 'section',
-                styles: section.styles || {},
-                children: section.children || []
-            });
+    try {
+      // FIX AUTOSAVE CORRUPTION: Forcer l'ordre réel généré par VueDraggable dans la propriété 'order' avant l'envoi
+      const fixOrder = (nodes: any[]) => {
+        for (let i = 0; i < nodes.length; i++) {
+          nodes[i].order = i;
+          if (nodes[i].children && nodes[i].children.length) {
+            fixOrder(nodes[i].children);
+          }
         }
-    }
+      };
+      
+      const sectionsCopy = JSON.parse(JSON.stringify(sections));
+      fixOrder(sectionsCopy);
 
-    return syncedSections;
+      const payload = { sections: sectionsCopy };
+      const response = await api(`/page-revision/${pageRevisionId}/sync`, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      
+      const data = await handleResponse<any>(response);
+      const resultSections = Array.isArray(data) ? data : (data.results || []);
+      
+      // Assurer le tri correct des sections par ordre (au cas où le backend ne le ferait pas)
+      resultSections.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+
+      const fullySyncedSections: AnySectionInstance[] = [];
+      for (const s of resultSections) {
+        let templates = s.children || [];
+        templates = flattenTemplates(templates);
+        const rootNodes = await buildTreeFromTemplates(templates);
+
+        fullySyncedSections.push({
+            id: s.id, 
+            sectionId: s.sectionId,
+            order: s.order,
+            family: 'section',
+            styles: s.styles || {},
+            children: rootNodes
+        });
+      }
+
+      // Map UUIDs to preserve Vue component keys and avoid losing focus
+      const mapUUIDs = (originNodes: any[], syncedNodes: any[]) => {
+        if (!originNodes || !syncedNodes) return;
+
+        // Etape 1: Identifier les éléments existants par leur ID backend
+        const originMap = new Map();
+        const unmatchedOrigins: any[] = [];
+        for (const origin of originNodes) {
+           if (origin.blocTemplateId) {
+             originMap.set(origin.blocTemplateId, origin);
+           } else {
+             unmatchedOrigins.push(origin);
+           }
+        }
+
+        let unmatchedIndex = 0;
+
+        // Etape 2: Lier de manière exacte ou séquentielle (pour les nouveaux)
+        for (let i = 0; i < syncedNodes.length; i++) {
+          const synced = syncedNodes[i];
+          let origin = null;
+
+          if (synced.blocTemplateId && originMap.has(synced.blocTemplateId)) {
+             origin = originMap.get(synced.blocTemplateId);
+          } else if (unmatchedIndex < unmatchedOrigins.length) {
+             origin = unmatchedOrigins[unmatchedIndex];
+             unmatchedIndex++;
+          }
+
+          if (origin && synced) {
+            synced.id = origin.id; // Preserve frontend unique key
+            if (origin.children && synced.children) {
+              mapUUIDs(origin.children, synced.children);
+            }
+          }
+        }
+      };
+
+      mapUUIDs(sections, fullySyncedSections);
+      return fullySyncedSections;
+      
+    } catch (error) {
+      console.error(`Error syncing all sections`, error);
+      throw error;
+    }
   };
 
   /**
@@ -190,32 +270,17 @@ export function useBlockTemplate() {
         const currentState = JSON.stringify(sections);
         if (currentState === lastSavedState.value) return Promise.resolve(undefined);
 
-        if (saveTimeout.value && pendingSaveResolve) {
-          clearTimeout(saveTimeout.value);
-          pendingSaveResolve(undefined); // On résout l'ancienne promesse pour libérer le watcher
-          pendingSaveResolve = null;
-        }
-
         return new Promise<AnySectionInstance[] | void>((resolve, reject) => {
-          pendingSaveResolve = resolve;
-          saveTimeout.value = window.setTimeout(async () => {
-            isSaving.value = true;
-            try {
-              const syncedTree = await useSyncAll(sections, pageRevisionId);
-              lastSavedState.value = JSON.stringify(syncedTree);
-              console.log('Auto-save success');
-              resolve(syncedTree);
-            } catch (error) {
-              console.error('Auto-save failed', error);
-              reject(error);
-            } finally {
-              isSaving.value = false;
-              saveTimeout.value = null;
-              if (pendingSaveResolve === resolve) {
-                pendingSaveResolve = null;
-              }
-            }
-          }, 1000);
+          if (pendingSaveResolveFn) {
+            // Résoudre discrètement l'ancienne requête ignorée pour ne pas bloquer Vue-Query
+            pendingSaveResolveFn(undefined);
+          }
+          
+          pendingSaveArg = { sections, pageRevisionId };
+          pendingSaveResolveFn = resolve;
+          pendingSaveRejectFn = reject;
+          
+          processQueue('page');
         });
       },
       onSuccess: (data, variables) => {
@@ -235,32 +300,16 @@ export function useBlockTemplate() {
         const currentState = JSON.stringify(nodes);
         if (currentState === lastSavedState.value) return Promise.resolve(undefined);
 
-        if (saveTimeout.value && pendingSaveResolve) {
-          clearTimeout(saveTimeout.value);
-          pendingSaveResolve(undefined); // On résout l'ancienne promesse pour libérer le watcher
-          pendingSaveResolve = null;
-        }
-
         return new Promise<AnyComponentInstance[] | void>((resolve, reject) => {
-          pendingSaveResolve = resolve;
-          saveTimeout.value = window.setTimeout(async () => {
-            isSaving.value = true;
-            try {
-              const syncedTree = await useSyncTree(nodes, null, undefined, true);
-              lastSavedState.value = JSON.stringify(syncedTree);
-              console.log('Library auto-save success');
-              resolve(syncedTree);
-            } catch (error) {
-              console.error('Library auto-save failed', error);
-              reject(error);
-            } finally {
-              isSaving.value = false;
-              saveTimeout.value = null;
-              if (pendingSaveResolve === resolve) {
-                pendingSaveResolve = null;
-              }
-            }
-          }, 1000);
+          if (pendingSaveResolveFn) {
+            pendingSaveResolveFn(undefined);
+          }
+          
+          pendingSaveArg = { nodes };
+          pendingSaveResolveFn = resolve;
+          pendingSaveRejectFn = reject;
+          
+          processQueue('library');
         });
       },
       onSuccess: (data) => {
@@ -278,7 +327,10 @@ export function useBlockTemplate() {
   const useForceSave = () => {
     return useMutation({
       mutationFn: async ({ sections, pageRevisionId }: { sections: AnySectionInstance[], pageRevisionId: number }) => {
-        if (saveTimeout.value) clearTimeout(saveTimeout.value);
+        // En mode Force Save, si une file d'attente existe, on l'écrase
+        if (pendingSaveResolveFn) pendingSaveResolveFn(undefined);
+        
+        isExecuting = true;
         isSaving.value = true;
         try {
           const syncedTree = await useSyncAll(sections, pageRevisionId);
@@ -288,7 +340,13 @@ export function useBlockTemplate() {
           console.error('Force save failed', error);
           throw error;
         } finally {
-          isSaving.value = false;
+          isExecuting = false;
+          // S'il y a quelque chose empilé pendant ce temps, process Queue relancera
+          if (pendingSaveArg) {
+            processQueue('page');
+          } else {
+            isSaving.value = false;
+          }
         }
       },
       onSuccess: (data, variables) => {
@@ -340,6 +398,9 @@ export function useBlockTemplate() {
           styles: t.props?.styles || {},
           data: t.props?.data || {},
           params: t.props?.params || def.defaultProps?.params || [],
+          // Restaurer modelId pour que les instances de modèles custom
+          // conservent leur référence au modèle après un refresh de page
+          modelId: t.modelId ?? undefined,
           children: []
         };
         nodeMap.set(t.id, node);
@@ -406,7 +467,11 @@ export function useBlockTemplate() {
 
   const fetchAll = async (pageRevisionId: number): Promise<AnySectionInstance[]> => {
     try {
-      const sections = await useGetSections(pageRevisionId);
+      let sections = await useGetSections(pageRevisionId);
+      
+      // Trier les sections par ordre de position (au cas où le backend ne le retournerait pas trié)
+      sections.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      
       const syncedSections: AnySectionInstance[] = [];
       for (const s of sections) {
           const rootNodes = await fetchTree(s.id);

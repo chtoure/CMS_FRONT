@@ -10,7 +10,7 @@ import PropertyRow from '../ui/PropertyRow.vue';
 import PropertyInput from '../ui/PropertyInput.vue';
 import PropertyDimension from '../ui/PropertyDimension.vue';
 import ButtonGroup from '../ui/ButtonGroup.vue';
-import VariableInputControl from '../../../type/VariableInputControl.vue';
+
 import {
   Layers,
   CornerUpLeft,
@@ -19,9 +19,12 @@ import {
   PanelTopDashed,
   PanelBottomDashed,
   Spline,
-  Image as ImageIcon
+  Image as ImageIcon,
+  StretchHorizontal,
+  StretchVertical
 } from 'lucide-vue-next';
 import CompositionMediaPicker from '../../composition/CompositionMediaPicker.vue';
+import VariableInputControl from '../ui/VariableInputControl.vue';
 
 const props = defineProps<{
   element: AnyComponentInstance | AnySectionInstance;
@@ -137,6 +140,44 @@ const bgRepeatOptions = [
               />
             </template>
           </PropertyInput>
+          <PropertyRow v-if="showField('paddingX') || showField('paddingY')">
+            <PropertyInput
+              v-if="showField('paddingX')"
+              label="Esp X"
+              :icon="StretchHorizontal"
+              :model-value="parseInt(getRawValue(styles.paddingX) as string) || 0"
+              @update:model-value="(val) => updateStyle('paddingX', parseInt(val.toString()) || 0)"
+              type="number"
+              class="flex-1"
+            >
+              <template #action>
+                <VariableInputControl
+                  :model-value="styles.paddingX"
+                  @update:model-value="(val: any) => updateStyle('paddingX', val)"
+                  variable-type="NUMBER"
+                />
+              </template>
+            </PropertyInput>
+
+            <PropertyInput
+              v-if="showField('paddingY')"
+              label="Esp Y"
+              :icon="StretchVertical"
+              :model-value="parseInt(getRawValue(styles.paddingY) as string) || 0"
+              @update:model-value="(val) => updateStyle('paddingY', parseInt(val.toString()) || 0)"
+              type="number"
+              class="flex-1"
+            >
+              <template #action>
+                <VariableInputControl
+                  :model-value="styles.paddingY"
+                  @update:model-value="(val: any) => updateStyle('paddingY', val)"
+                  variable-type="NUMBER"
+                />
+              </template>
+            </PropertyInput>
+          </PropertyRow>
+          
         </div>
 
         <PropertyRow v-if="showField('marginTop') || showField('marginBottom')">
@@ -193,6 +234,11 @@ const bgRepeatOptions = [
               if (newPos !== 'static') {
                 if (getRawValue(styles.top) === undefined) updates.top = 0;
                 if (getRawValue(styles.left) === undefined && newPos === 'fixed') updates.left = 0;
+
+                const curWidth = getRawValue(styles.width);
+                const curHeight = getRawValue(styles.height);
+                if (typeof curWidth === 'string' && curWidth.includes('%')) updates.width = undefined;
+                if (typeof curHeight === 'string' && curHeight.includes('%')) updates.height = undefined;
               }
               updateStyles(updates);
             }"
@@ -393,7 +439,7 @@ const bgRepeatOptions = [
             <template #trigger>
               <button 
                 @click="activePicker = 'color'" 
-                class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80 transition-colors"
+                class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80"
               >
                 <div 
                   class="w-4 h-4 rounded-sm border border-builder-bar-border shrink-0" 
@@ -425,7 +471,7 @@ const bgRepeatOptions = [
             <template #trigger>
               <button
                 @click="activePicker = 'bg'"
-                class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80 transition-colors"
+                class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80"
               >
                 <div
                   class="w-4 h-4 rounded-sm border border-builder-bar-border shrink-0"
@@ -575,7 +621,7 @@ const bgRepeatOptions = [
               <template #trigger>
                 <button
                   @click="activePicker = 'border'"
-                  class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80 transition-colors"
+                  class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80"
                 >
                   <div
                     class="w-4 h-4 rounded-sm border border-builder-bar-border shrink-0"
@@ -593,7 +639,5 @@ const bgRepeatOptions = [
 </template>
 
 <style scoped>
-select {
-  @apply transition-all duration-200;
-}
+
 </style>

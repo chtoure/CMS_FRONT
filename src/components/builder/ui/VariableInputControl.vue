@@ -1,9 +1,9 @@
 <script setup lang="ts" generic="T">
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { Webhook, Link2, Link2Off } from 'lucide-vue-next';
-import type { VariableProperty } from './component';
-import { useGetVariables } from '../hook/variable';
+import type { VariableProperty } from '../../../type/component';
+import { useGetVariables } from '../../../hook/variable';
 import { 
   DropdownMenu,
   DropdownMenuTrigger,
@@ -11,29 +11,61 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuItem 
-} from '../components/ui/dropdown-menu';
+} from '../../ui/dropdown-menu';
 
 const props = defineProps<{
   modelValue: VariableProperty<T> | T | undefined;
-  variableType?: string; // e.g. 'COLOR', 'NUMBER', 'STRING'
+  variableType?: string;
 }>();
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: VariableProperty<T>): void;
+  (e: 'update:modelValue', value: VariableProperty<T> | undefined): void;
 }>();
+
+const builderState = inject<{ currentBreakpoint: { value: string } }>('builderState');
 
 const { data: variables, isLoading } = useGetVariables();
 
+const rawNode = computed(() => {
+  const prop = props.modelValue as any;
+  if (!prop) return undefined;
+
+  let valueToProcess = prop;
+  // Déballer les variables racines si le modèle était buggé/statique
+  if (typeof prop === 'object' && prop !== null && 'type' in prop && 'value' in prop) {
+      if (prop.type === 'variable') return prop;
+      valueToProcess = prop.value;
+  }
+
+  const bp = builderState?.currentBreakpoint?.value || 'default';
+  const isResponsiveObj = typeof valueToProcess === 'object' && valueToProcess !== null && 
+                          ('default' in valueToProcess || 'sm' in valueToProcess || 'md' in valueToProcess || 'lg' in valueToProcess);
+
+  if (isResponsiveObj) {
+    if (valueToProcess[bp] !== undefined) return valueToProcess[bp];
+    if (bp === 'lg' && valueToProcess.md !== undefined) return valueToProcess.md;
+    if ((bp === 'lg' || bp === 'md') && valueToProcess.sm !== undefined) return valueToProcess.sm;
+    return valueToProcess.default;
+  }
+  return valueToProcess;
+});
+
 const isVariableMode = computed(() => {
-  if (typeof props.modelValue === 'object' && props.modelValue !== null && 'type' in props.modelValue) {
-    return (props.modelValue as VariableProperty<T>).type === 'variable';
+  if (typeof rawNode.value === 'object' && rawNode.value !== null && 'type' in rawNode.value) {
+    return (rawNode.value as VariableProperty<T>).type === 'variable';
   }
   return false;
 });
 
 const variableName = computed(() => {
   if (isVariableMode.value) {
-    return (props.modelValue as VariableProperty<T>).value;
+    const val = (rawNode.value as VariableProperty<T>).value;
+    if (variables.value) {
+        // Recherche seulement par ID (nouveau système strict)
+        const found = variables.value.find(v => Number(v.id) === Number(val));
+        if (found) return found.name;
+    }
+    return val;
   }
   return null;
 });
@@ -56,16 +88,12 @@ const filteredVariables = computed(() => {
   );
 });
 
-function selectVariable(vName: string) {
-  emit('update:modelValue', { type: 'variable', value: vName });
+function selectVariable(vId: number) {
+  emit('update:modelValue', { type: 'variable', value: vId });
 }
 
 function detachVariable() {
-  // Logic to keep the current value if possible or set to static
-  // Since we don't have the resolved value here easily without passing it as prop,
-  // we'll just emit a "static" with the name to let useStyleEditor handle it if possible, 
-  // or just reset. 
-  emit('update:modelValue', { type: 'static', value: '' as any });
+  emit('update:modelValue', undefined);
 }
 </script>
 
@@ -81,7 +109,7 @@ function detachVariable() {
           class="w-5 h-5 flex items-center justify-center transition-all rounded-sm z-20"
           :class="[
             isVariableMode 
-              ? ' text-white shadow-sm' 
+              ? 'shadow-sm' 
               : ' text-builder-bar-text hover:text-primary',
             $slots.default ? 'absolute right-1 top-1/2 -translate-y-1/2' : ''
           ]"
@@ -93,17 +121,17 @@ function detachVariable() {
       </DropdownMenuTrigger>
       
       <DropdownMenuContent align="end" class="min-w-[180px] bg-builder-bar-background border-builder-bar-border text-builder-bar-text shadow-xl p-1">
-        <DropdownMenuLabel class="text-[10px] font-bold uppercase tracking-widest text-builder-bar-text/40 px-2 py-1.5">
-          {{ isVariableMode ? 'Linked Variable' : 'Connect Variable' }}
+        <DropdownMenuLabel class="text-[10px] tracking-widest text-builder-bar-text px-2 py-1.5 italic">
+          {{ isVariableMode ? 'Variable liée' : 'Connecter une variable' }}
         </DropdownMenuLabel>
         
-        <div v-if="isVariableMode" class="px-2 py-2 mb-1 bg-primary border border-primary/20 rounded-sm">
+        <div v-if="isVariableMode" class="p-1 mb-1 border border-primary rounded-[3px]">
           <div class="flex items-center justify-between gap-3">
              <div class="flex items-center gap-2 overflow-hidden">
                <Webhook :size="12" class="text-primary shrink-0" />
-               <span class="text-xs font-medium truncate text-primary">{{ variableName }}</span>
+               <span class="text-xs font-medium truncate text-primary italic">{{ variableName }}</span>
              </div>
-             <button @click="detachVariable" class="text-builder-bar-text hover:text-red-400 transition-colors">
+             <button @click="detachVariable" class="text-secondary hover:text-accent transition-colors">
                <Link2Off :size="12" />
              </button>
           </div>
@@ -112,23 +140,23 @@ function detachVariable() {
         <DropdownMenuSeparator v-if="isVariableMode" class="bg-builder-bar-border/50" />
         
         <div class="max-h-48 overflow-y-auto custom-scrollbar p-1">
-            <div v-if="isLoading" class="text-[10px] text-center py-2 text-builder-bar-text/40 italic">Loading variables...</div>
+            <div v-if="isLoading" class="text-[10px] text-center py-2 text-builder-bar-text/40 italic">Chargement des variables...</div>
             
             <DropdownMenuItem 
               v-for="variable in filteredVariables" 
               :key="variable.id" 
-              @click="selectVariable(variable.name)"
-              class="flex items-center gap-2 px-2 py-1.5 rounded-sm cursor-pointer hover:bg-white/5 transition-colors group"
+              @click="selectVariable(variable.id)"
+              class="flex items-center gap-2 px-2 py-1.5 rounded-none cursor-pointer hover:!bg-gray-500 !p-1 italic"
             >
-              <div class="w-2 h-2 rounded-full" :style="{ backgroundColor: variable.collection?.type === 'COLOR' ? variable.value : 'transparent', border: variable.collection?.type === 'COLOR' ? '1px solid rgba(255,255,255,0.1)' : 'none' }">
+              <div v-if="variable.collection?.type == 'COLOR'"  class="w-2 h-2 rounded-full" :style="{ backgroundColor: variable.collection?.type === 'COLOR' ? `#${variable.value}` : 'transparent', border: variable.collection?.type === 'COLOR' ? '1px solid rgba(255,255,255,0.1)' : 'none' }">
                 <div v-if="variable.collection?.type !== 'COLOR'" class="w-full h-full bg-primary/40 rounded-full" />
               </div>
-              <span class="text-xs flex-1 truncate">{{ variable.name }}</span>
+              <span class="text-[9px] flex-1 truncate">{{ variable.name }}</span>
               <span class="text-[9px] text-builder-bar-text/30 group-hover:text-builder-bar-text/60 font-mono">{{ variable.value }}</span>
             </DropdownMenuItem>
 
             <div v-if="!isLoading && filteredVariables.length === 0" class="text-[10px] text-center py-4 text-builder-bar-text/30">
-                No {{ variableType?.toLowerCase() }} variables found
+                Aucune variable {{ variableType?.toLowerCase() }} trouvée
             </div>
         </div>
       </DropdownMenuContent>

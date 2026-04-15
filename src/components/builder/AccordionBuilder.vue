@@ -52,7 +52,7 @@ const containerClasses = computed(() =>
 );
 
 const containerInlineStyles = computed(() => ({
-  ...buildBlocLayoutInlineStyles(rawStyles.value as Record<string, unknown>, bp.value, resolveValue),
+  ...buildBlocLayoutInlineStyles(rawStyles.value as Record<string, unknown>, bp.value, resolveValue, true),
   ...buildAccordionContainerInlineStyles(rawStyles.value, bp.value, resolveValue),
 }));
 

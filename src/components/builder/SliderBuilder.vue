@@ -5,8 +5,9 @@ import type { ContainerStyles, AnyComponentInstance } from '../../type/component
 import { buildBlocLayoutStyles, buildBlocLayoutInlineStyles } from '../../lib/style/blocProcessor';
 import { buildSliderConfig, buildSliderArrowStyles, buildSliderPaginationStyles } from '../../lib/style/sliderProcessor';
 import { applyVisualInline } from '../../lib/style/common';
-import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { filterResponsiveClasses } from '../../lib/style/core';
 import { useVariableResolver } from '../../hook/variable';
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 
 interface Props {
   styles?: ContainerStyles;
@@ -21,18 +22,26 @@ const builderState = inject<{
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' };
   isDragging: { value: boolean };
   selectedId: { value: string | null };
+  xRayMode: { value: boolean };
 }>('builderState', {
   currentBreakpoint: { value: 'default' },
   isDragging: { value: false },
-  selectedId: { value: null }
+  selectedId: { value: null },
+  xRayMode: { value: false }
 } as any);
+
+const isXRayMode = computed(() => builderState?.xRayMode?.value ?? false);
+const isBuilder = inject('isBuilder', false) as boolean;
 
 const { resolveValue } = useVariableResolver();
 
 const currentSlide = ref(0);
 
 const computedClasses = computed(() => {
-  return buildBlocLayoutStyles(props.styles as Record<string, unknown>, resolveValue);
+  return filterResponsiveClasses(
+    buildBlocLayoutStyles(props.styles as Record<string, unknown>, resolveValue),
+    builderState.currentBreakpoint.value
+  );
 });
 
 const computedInlineStyles = computed(() => {
@@ -40,7 +49,7 @@ const computedInlineStyles = computed(() => {
   const styles = props.styles as Record<string, unknown> || {};
 
   const inline = {
-    ...buildBlocLayoutInlineStyles(styles, bp, resolveValue)
+    ...buildBlocLayoutInlineStyles(styles, bp, resolveValue, true)
   };
 
   // Appliquer les styles visuels (fond, bordures, arrondis, ombres)
@@ -160,24 +169,27 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
 <template>
   <div 
     class="relative group/slider w-full" 
-    :class="computedClasses" 
+    :class="[computedClasses, builderState.isDragging?.value ? 'overflow-visible' : 'overflow-hidden']" 
     :style="computedInlineStyles"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
   >
-    <!-- Viewport Container (clips content to padding area) -->
-    <div 
-      class="w-full h-full transition-all"
-      :class="builderState.isDragging?.value ? 'overflow-visible' : 'overflow-hidden'"
-    >
+    <!-- Viewport : toujours overflow-visible pour que SortableJS détecte correctement les drops -->
+    <div class="w-full h-full overflow-visible">
+      <!-- Slider-track : overflow-hidden pour clipper les slides dans la zone de contenu (hors padding) -->
+      <!-- overflow-visible seulement pendant le drag pour ne pas gêner le ghost SortableJS -->
       <div
-        class="slider-track transition-transform ease-in-out h-full w-full"
-      :style="{
-        transform: builderState.isDragging?.value ? 'none' : 'translateX(-' + (currentSlide * (100 / slidesPerView)) + '%)',
-        transitionDuration: builderState.isDragging?.value ? '0ms' : sliderConfig.transitionDuration + 'ms',
-        transitionTimingFunction: sliderConfig.transitionEase
-      }"
-    >
+        class="slider-track ease-in-out h-full w-full"
+        :class="[
+          isBuilder ? '' : 'transition-transform',
+          builderState.isDragging?.value ? 'overflow-visible' : 'overflow-hidden'
+        ]"
+        :style="isBuilder ? {} : {
+          transform: builderState.isDragging?.value ? 'none' : 'translateX(-' + (currentSlide * (100 / slidesPerView)) + '%)',
+          transitionDuration: sliderConfig.transitionDuration + 'ms',
+          transitionTimingFunction: sliderConfig.transitionEase
+        }"
+      >
       <slot>
         <div v-if="slidesCount === 0" class="w-full h-full flex flex-col items-center justify-center text-builder-bar-text/50 border-2 border-dashed border-builder-bar-border rounded-lg m-4 min-h-[100px]">
            <span class="text-sm font-medium">Déposez des slides ici</span>
@@ -186,10 +198,11 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
     </div>
   </div>
     
-    <button v-show="slidesCount > slidesPerView && !builderState.isDragging?.value" @click.stop="prevSlide" :style="arrowStyles" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover/slider:opacity-100 z-10 flex items-center justify-center">
+    <!-- Flèches et pagination : masquées dans le builder (slides visibles à plat) -->
+    <button v-show="!isBuilder && slidesCount > slidesPerView && !builderState.isDragging?.value" @click.stop="prevSlide" :style="arrowStyles" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover/slider:opacity-100 z-10 flex items-center justify-center">
       <ChevronLeft class="w-6 h-6" :style="{ color: paginationStyles.color }" />
     </button>
-    <button v-show="slidesCount > slidesPerView && !builderState.isDragging?.value" @click.stop="nextSlide" :style="arrowStyles" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover/slider:opacity-100 z-10 flex items-center justify-center">
+    <button v-show="!isBuilder && slidesCount > slidesPerView && !builderState.isDragging?.value" @click.stop="nextSlide" :style="arrowStyles" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover/slider:opacity-100 z-10 flex items-center justify-center">
       <ChevronRight class="w-6 h-6" :style="{ color: paginationStyles.color }" />
     </button>
 

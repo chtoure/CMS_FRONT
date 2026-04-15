@@ -8,7 +8,6 @@ import PropertyInput from '../ui/PropertyInput.vue';
 import ButtonGroup from '../ui/ButtonGroup.vue';
 import IconButtonGroup from '../ui/IconButtonGroup.vue';
 import CompositionColorPicker from '../../composition/CompositionColorPicker.vue';
-import VariableInputControl from '../../../type/VariableInputControl.vue';
 import BaseStyleEditor from './BaseStyleEditor.vue';
 import {
   Type,
@@ -20,6 +19,7 @@ import {
   Underline,
   Italic
 } from 'lucide-vue-next';
+import VariableInputControl from '../ui/VariableInputControl.vue';
 
 const props = defineProps<{
   element: AnyComponentInstance;
@@ -60,6 +60,8 @@ const layoutWhitelist = [
   'width',
   'height',
   'padding',
+  'paddingX',
+  'paddingY',
   'marginTop',
   'marginBottom',
   'rounded',
@@ -101,7 +103,7 @@ const layoutWhitelist = [
         </div>
 
         <!-- Font Size & Line Height & Align -->
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-2 items-end gap-2">
           <PropertyInput 
             label="Size" 
             type="number" 
@@ -146,7 +148,7 @@ const layoutWhitelist = [
                   <template #trigger>
                     <button
                       @click="activePicker = 'text'"
-                      class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border/80 transition-colors"
+                      class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:border-builder-bar-border"
                     >
                       <div
                         class="w-4 h-4 rounded-sm border border-builder-bar-border shrink-0"

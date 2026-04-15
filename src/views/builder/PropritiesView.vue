@@ -11,7 +11,7 @@ import type { AnySectionInstance } from '../../type/section';
 import StyleEditor from '../../components/builder/StyleEditor.vue';
 import DataEditor from '../../components/builder/DataEditor.vue';
 import BgImageParam from '../../components/builder/parameters/BgImageParam.vue';
-import { MousePointer2, Webhook } from 'lucide-vue-next';
+import { MousePointer2, Webhook, Save, Scissors, Trash2, ArrowUp, ArrowDown } from 'lucide-vue-next';
 
 // Injection de l'état global
 const { hasPermission } = usePermission();
@@ -22,10 +22,11 @@ const builderState = inject<{
   selectedId: { value: string | null };
   builderMode: { value: 'page' | 'library' };
   deleteComponent: (id: string) => void;
+  setClipboard: (item: AnyComponentInstance | null) => void;
+  moveComponent: (id: string, dir: 'up' | 'down') => void;
 }>('builderState');
 
 import { useBlockTemplate } from '../../hook/bloc-template';
-import { Save } from 'lucide-vue-next';
 import CompositionModal from '../../components/composition/CompositionModal.vue';
 import VariableListView from '../variable/VariableListView.vue';
 import { usePermission } from '../../hook/usePermission';
@@ -47,6 +48,31 @@ const handleSaveAsCustom = async () => {
     } catch (error) {
         console.error('Failed to save as custom:', error);
     }
+};
+
+const handleCut = () => {
+    if (!selectedElement.value) return;
+    const cloned = JSON.parse(JSON.stringify(selectedElement.value));
+    
+    if (builderState) {
+        // Remove locally immediately (this safely deselects without triggering auto-paste)
+        builderState.deleteComponent(selectedElement.value.id);
+        
+        // Set to clipboard AFTER so it's ready to be pasted
+        builderState.setClipboard(cloned);
+    }
+};
+
+const handleDelete = () => {
+    if (!selectedElement.value) return;
+    if (builderState) {
+        builderState.deleteComponent(selectedElement.value.id);
+    }
+};
+
+const handleMove = (dir: 'up' | 'down') => {
+    if (!selectedElement.value || !builderState) return;
+    builderState.moveComponent(selectedElement.value.id, dir);
 };
 
 // Calcul de l'élément sélectionné
@@ -85,16 +111,53 @@ const selectedElement = computed(() => {
             </CompositionModal>
           </div>
 
-          <!-- Save as Custom Button -->
-          <button
-            v-if="'tag' in selectedElement && builderState?.builderMode.value === 'page'"
-            @click="handleSaveAsCustom"
-            class="flex items-center gap-2 px-3 py-1.5 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-600/20 rounded transition-all text-[10px] uppercase font-bold"
-            title="Enregistrer comme composant réutilisable"
-          >
-            <Save class="w-3.5 h-3.5" />
-            Designer
-          </button>
+          <!-- Toolbar Buttons -->
+          <div class="flex flex-wrap gap-2 w-full mt-1">
+             <button
+               v-if="'tag' in selectedElement"
+               @click="handleCut"
+               class="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 rounded text-[9px] uppercase font-bold"
+               title="Déplacer"
+             >
+               <Scissors class="w-3.5 h-3.5" />
+               Couper
+             </button>
+
+             <div class="flex gap-1 ml-auto">
+               <button
+                 @click="handleMove('up')"
+                 class="flex items-center justify-center p-1.5 bg-gray-500/10 hover:bg-gray-500/20 text-gray-400 border border-gray-500/20 rounded"
+                 title="Monter"
+               >
+                 <ArrowUp class="w-3 h-3" />
+               </button>
+               <button
+                 @click="handleMove('down')"
+                 class="flex items-center justify-center p-1.5 bg-gray-500/10 hover:bg-gray-500/20 text-gray-400 border border-gray-500/20 rounded"
+                 title="Descendre"
+               >
+                 <ArrowDown class="w-3 h-3" />
+               </button>
+             </div>
+
+             <button
+               @click="handleDelete"
+               class="flex items-center gap-1.5 px-2 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded text-[9px] uppercase font-bold"
+               title="Supprimer (Suppr / Backspace)"
+             >
+               <Trash2 class="w-3.5 h-3.5" />
+             </button>
+             
+             <button
+               v-if="'tag' in selectedElement && builderState?.builderMode.value === 'page'"
+               @click="handleSaveAsCustom"
+               class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-600/20 rounded text-[9px] uppercase font-bold w-full justify-center mt-1"
+               title="Enregistrer comme composant réutilisable"
+             >
+               <Save class="w-3.5 h-3.5" />
+               Convertir en Modèle Interne
+             </button>
+          </div>
         </div>
 
         <hr class="border-border">
@@ -130,9 +193,9 @@ const selectedElement = computed(() => {
   </div>
 </template>
 
-<style scoped>
+<style scoped >
 .input-custom {
-  @apply h-9 w-full !rounded px-3 py-1 text-[11px] shadow-sm transition-all outline-none font-mono;
+  @apply h-9 w-full !rounded px-3 py-1 text-[11px] shadow-sm outline-none font-mono;
 
   background-color: var(--builder-input-bg);
   border: 1px solid var(--builder-input-border);
@@ -148,7 +211,7 @@ const selectedElement = computed(() => {
 }
 
 .select-item-custom {
-  @apply cursor-pointer transition-colors px-2 py-1.5 rounded-sm font-mono;
+  @apply cursor-pointer px-2 py-1.5 rounded-sm font-mono;
   color: var(--builder-bar-text);
 }
 
