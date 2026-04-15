@@ -2,7 +2,6 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, ref, watch } from 'vue';
 import { FAMILY_CAPABILITIES, type AnyComponentInstance } from '../../type/component';
-import { VueDraggable } from 'vue-draggable-plus';
 import { COMPONENT_MAP } from '../../registry/component_registry';
 import { buildBlocLayoutStyles, buildBlocLayoutInlineStyles } from '../../lib/style/blocProcessor';
 import { formatSize, resolveValueForBreakpoint, filterResponsiveClasses } from '../../lib/style/core';
@@ -41,6 +40,8 @@ const builderState = inject<{
   toggleStates: { value: Record<string, boolean> }
   isVisible: (id: string, backendId?: number | null) => boolean
   cmsCache: { value: Record<string, any> }
+  clipboard: { value: AnyComponentInstance | null }
+  setClipboard: (item: AnyComponentInstance | null) => void
 }>('builderState');
 
 const { resolveValue } = useVariableResolver();
@@ -169,6 +170,13 @@ const isSticky = (element: any) => {
   const bp = builderState?.currentBreakpoint.value || 'default';
   const pos = element.styles?.position;
   return resolveValueForBreakpoint<string>(pos, bp, resolveValue) === 'sticky';
+};
+
+const isOutOfFlow = (element: any) => {
+  const bp = builderState?.currentBreakpoint.value || 'default';
+  const pos = element.styles?.position;
+  const p = resolveValueForBreakpoint<string>(pos, bp, resolveValue);
+  return p === 'fixed' || p === 'absolute';
 };
 
 const handleChildrenChange = (newChildren: AnyComponentInstance[]) => {
@@ -418,37 +426,29 @@ const applyItemToChildren = (
           </div>
         </template>
 
-        <!-- Mode Normal : drag & drop actif, logique d'itération -->
+        <!-- Mode Normal : Click & Drop actif, logique d'itération -->
         <template v-else>
-          <VueDraggable
-            :model-value="childrenModel"
-            :group="{ name: 'blocks', put: true, pull: true }"
-            :animation="100"
-            :delay="0"
-            :fallbackOnBody="true"
-            :swapThreshold="0.65"
-            ghost-class="ghost-item"
-            class="w-full h-full transition-all duration-300"
+          <div
+            class="w-full h-full transition-all duration-300 relative"
             :class="[
               element.tag !== 'SliderBuilder' ? layoutClasses : '',
               {
-                'drop-zone-active': isDraggingOver && element.tag !== 'SliderBuilder',
                 'p-4 min-h-[60px]': !childrenModel || childrenModel.length === 0,
                 'blueprint-target': true,
-                'blueprint-mode': (isDraggingOver || isXRayMode) && element.tag !== 'SliderBuilder',
+                'blueprint-mode': isXRayMode && element.tag !== 'SliderBuilder',
                 'blueprint-mode-slider': isXRayMode && element.tag === 'SliderBuilder',
               }
             ]"
             :style="element.tag !== 'SliderBuilder' ? layoutInlineStyles : {}"
-            @update:model-value="handleChildrenChange"
-            @start="builderState?.setIsDragging(true)"
-            @end="builderState?.setIsDragging(false)"
           >
             <div
               v-for="(child, index) in childrenModel"
               :key="child.id"
-              class="relative transition-all"
-              :class="iteratedWrapperLayoutClasses(child)"
+              class="transition-all"
+              :class="[
+                 iteratedWrapperLayoutClasses(child),
+                 isOutOfFlow(child) ? '' : 'relative'
+              ]"
               :style="{
                 width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
                 height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
@@ -565,7 +565,7 @@ const applyItemToChildren = (
                 />
               </ResizerWrapper>
             </div>
-          </VueDraggable>
+          </div>
         </template>
       </div>
     </template>
@@ -573,13 +573,7 @@ const applyItemToChildren = (
 </template>
 
 <style scoped>
-.drop-zone-active {
-  outline: 2px dashed #3b82f6;
-  outline-offset: -2px;
-  background-color: rgba(59, 130, 246, 0.08);
-}
-
-/* Mode Blueprint: al drag, on écarte les enfants et on ajoute un padding visuel */
+/* Mode Blueprint: on écarte les enfants et on ajoute un padding visuel */
 .blueprint-mode {
   gap: 8px !important;
   padding: 8px !important;
@@ -598,19 +592,5 @@ const applyItemToChildren = (
 /* Outline violet appliqué sur le WRAPPER RACINE du SliderBuilder en mode Structure */
 /* Remplacé par ring-inset Tailwind directement dans le template - plus fiable */
 
-.drop-zone-potential {
-  outline: 1px dashed rgba(59, 130, 246, 0.5);
-  outline-offset: -1px;
-}
-
-.drop-zone-potential:hover {
-  outline: 2px solid #3b82f6 !important;
-  background-color: rgba(59, 130, 246, 0.05);
-}
-
-:deep(.ghost-item) {
-  opacity: 0.2 !important;
-  background: #3b82f6 !important;
-  border-radius: 4px;
-}
+/* Remplacé par ring-inset Tailwind directement dans le template - plus fiable */
 </style>

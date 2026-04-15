@@ -79,6 +79,24 @@ export function buildBlocLayoutInlineStyles(
     }
   }
 
+  // Comportement exclusif au Builder pour outrepasser les classes Tailwind non-compilées ou les queries de largeur d'écran physique
+  if (isBuilderMode) {
+    const displayVal = getValue(styles.display);
+    if (displayVal !== undefined && displayVal !== null && displayVal !== '') {
+      inline.display = displayVal === 'hidden' ? 'none' : (displayVal as string);
+    }
+    
+    const directionVal = getValue(styles.direction);
+    if (directionVal) {
+      inline.flexDirection = directionVal === 'horizontal' ? 'row' : 'column';
+    }
+
+    const columnsVal = getValue(styles.columns);
+    if (columnsVal && !isNaN(Number(columnsVal))) {
+      inline.gridTemplateColumns = `repeat(${columnsVal}, minmax(0, 1fr))`;
+    }
+  }
+
   // Justify Content inline
   const justify = getValue(styles.justify);
   if (justify) {

@@ -41,7 +41,7 @@ type VariableProperty<T> = {
   value: T;
 } | {
   type: 'variable';
-  value: string;
+  value: number;
 };
 
 type MediaProperty = {

@@ -100,21 +100,21 @@ export function useStyleEditor(initialElement: AnyComponentInstance | AnySection
     const isResponsiveObj = typeof valueToProcess === 'object' && valueToProcess !== null && 
                             ('default' in valueToProcess || 'sm' in valueToProcess || 'md' in valueToProcess || 'lg' in valueToProcess);
 
+    let nodeToProcess = valueToProcess;
+
     if (isResponsiveObj) {
       const res = valueToProcess as any;
-      let node;
-      if (res[bp] !== undefined) node = res[bp];
-      else if (bp === 'lg' && res.md !== undefined) node = res.md;
-      else if ((bp === 'lg' || bp === 'md') && res.sm !== undefined) node = res.sm;
-      else node = res.default;
-
-      if (typeof node === 'object' && node !== null && 'type' in node && 'value' in node) {
-        return node.value;
-      }
-      return node;
+      if (res[bp] !== undefined) nodeToProcess = res[bp];
+      else if (bp === 'lg' && res.md !== undefined) nodeToProcess = res.md;
+      else if ((bp === 'lg' || bp === 'md') && res.sm !== undefined) nodeToProcess = res.sm;
+      else nodeToProcess = res.default;
     }
 
-    return (typeof valueToProcess === 'string' || typeof valueToProcess === 'number') ? valueToProcess : undefined;
+    if (typeof nodeToProcess === 'object' && nodeToProcess !== null && 'type' in nodeToProcess && 'value' in nodeToProcess) {
+      return nodeToProcess.value;
+    }
+
+    return (typeof nodeToProcess === 'string' || typeof nodeToProcess === 'number') ? nodeToProcess : undefined;
   };
 
   const getRawNode = (prop: unknown): any => {
@@ -129,14 +129,17 @@ export function useStyleEditor(initialElement: AnyComponentInstance | AnySection
     const isResponsiveObj = typeof valueToProcess === 'object' && valueToProcess !== null && 
                             ('default' in valueToProcess || 'sm' in valueToProcess || 'md' in valueToProcess || 'lg' in valueToProcess);
 
+    let nodeToProcess = valueToProcess;
+    
     if (isResponsiveObj) {
       const res = valueToProcess as any;
-      if (res[bp] !== undefined) return res[bp];
-      if (bp === 'lg' && res.md !== undefined) return res.md;
-      if ((bp === 'lg' || bp === 'md') && res.sm !== undefined) return res.sm;
-      return res.default;
+      if (res[bp] !== undefined) nodeToProcess = res[bp];
+      else if (bp === 'lg' && res.md !== undefined) nodeToProcess = res.md;
+      else if ((bp === 'lg' || bp === 'md') && res.sm !== undefined) nodeToProcess = res.sm;
+      else nodeToProcess = res.default;
     }
-    return valueToProcess;
+
+    return nodeToProcess;
   };
 
   const getResolvedValue = (prop: unknown): any => {
