@@ -219,7 +219,7 @@ watch(pageTree, async (newVal) => {
     const jsonBefore = JSON.stringify(pageTree.value);
     mergeBlocTemplateIds(pageTree.value, syncedTree);
     const jsonAfter = JSON.stringify(pageTree.value);
-    
+
     // Si on a réellement ajouté des IDs, on met à jour l'historique courant
     if (jsonBefore !== jsonAfter) {
       history.value[historyIndex.value] = jsonAfter;
@@ -245,7 +245,7 @@ watch(libraryTree, async (newVal) => {
     const jsonBefore = JSON.stringify(libraryTree.value);
     mergeBlocTemplateIds(libraryTree.value, syncedTree);
     const jsonAfter = JSON.stringify(libraryTree.value);
-    
+
     if (jsonBefore !== jsonAfter) {
       history.value[historyIndex.value] = jsonAfter;
     }

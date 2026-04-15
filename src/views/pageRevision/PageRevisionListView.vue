@@ -164,70 +164,35 @@
             // 1. Trouver la version publiée actuelle
             const currentPublished = allRevisions.find(r => r.status === 'PUBLISHED');
 
-            // 1.5 Dictionnaire pour mapper les anciens IDs aux nouveaux
-            const idMap = new Map<string, string>();
-
-            // Fonction récursive pour générer des nouveaux UUIDs sur tout l'arbre
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const cleanComponentIds = (components: any[]): any[] => {
-                if (!components || !Array.isArray(components)) return [];
-                return components.map(c => {
-                    const newId = crypto.randomUUID();
-                    // On map l'ancien blocTemplateId ou id vers le nouveau UUID généré
-                    if (c.blocTemplateId) {
-                        idMap.set(c.blocTemplateId.toString(), newId);
-                    } else if (c.id) {
-                        idMap.set(c.id.toString(), newId);
-                    }
-
-                    return {
-                        ...c,
-                        id: newId, // Assigne explicitement la nouvelle ID générée
-                        blocTemplateId: undefined,
-                        children: cleanComponentIds(c.children)
-                    };
-                });
-            };
-
-            // Fonction pour mettre à jour les targetIds des actions (ex: TOGGLE_VISIBILITY)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const updateTargetIds = (components: any[]) => {
-                if (!components || !Array.isArray(components)) return;
-                components.forEach(c => {
-                    if (c.data?.cliquable?.action === 'TOGGLE_VISIBILITY' && c.data.cliquable.action_params?.targetId) {
-                        const oldTargetId = c.data.cliquable.action_params.targetId;
-                        if (idMap.has(oldTargetId)) {
-                            c.data.cliquable.action_params.targetId = idMap.get(oldTargetId);
-                        }
-                    }
-                    if (c.children) {
-                       updateTargetIds(c.children);
-                    }
-                });
-            };
-
             // 2. Préparer l'arbre complet de la révision cible (celle qu'on veut publier)
             const targetTreeRaw = await fetchAll(targetRevisionId);
             // Copie profonde pour s'assurer qu'absolument aucune référence n'est partagée
             const targetTree = JSON.parse(JSON.stringify(targetTreeRaw || []));
 
+            // PASS 1: Préparation. On nettoie les DB IDs pour forcer la création mais on les garde en 'old'.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const prepareTreeForClone = (components: any[]): any[] => {
+                if (!components || !Array.isArray(components)) return [];
+                return components.map(c => {
+                    return {
+                        ...c,
+                        id: crypto.randomUUID(), 
+                        oldBlocTemplateId: c.blocTemplateId, // Pour mapper plus tard
+                        blocTemplateId: undefined,
+                        children: prepareTreeForClone(c.children)
+                    };
+                });
+            };
+
             const treeToClone = targetTree.map((section: any) => {
-                const newSectionId = crypto.randomUUID();
-                if (section.sectionId) {
-                    idMap.set(section.sectionId.toString(), newSectionId);
-                } else if (section.id) {
-                   idMap.set(section.id.toString(), newSectionId);
-                }
                 return {
                     ...section,
-                    id: newSectionId, // forcer la création d'un nouvel UUID côté frontend
-                    sectionId: undefined, // forcer Create au lieu de Update dans useSyncAll
-                    children: cleanComponentIds(section.children)
+                    id: crypto.randomUUID(), 
+                    oldSectionId: section.sectionId, // Pour mapper plus tard
+                    sectionId: undefined, 
+                    children: prepareTreeForClone(section.children)
                 };
             });
-
-            // Met à jour toutes les clauses 'targetIds' obsolètes pour la nouvelle révision
-            treeToClone.forEach((section: any) => updateTargetIds(section.children));
 
             // 3. Passer la révision cible en PUBLISHED
             await pageRevisionStatusUpdate.mutateAsync({
@@ -235,19 +200,19 @@
                 status: 'PUBLISHED'
             });
 
+            // Déterminer où sauvegarder le clône
+            let targetDraftId: number | null = null;
+
             // 4. Gérer le clonage dans une révision DOIT rester en DRAFT (Brouillon)
             if (currentPublished && currentPublished.id !== targetRevisionId) {
                 // S'il y avait déjà une version publiée, on la recycle :
-                // - on la repasse en DRAFT
                 await pageRevisionStatusUpdate.mutateAsync({
                     id: currentPublished.id,
                     status: 'DRAFT'
                 });
 
-                // - on supprime ses anciennes sections (en purgeant d'abord les blocs pour éviter les contraintes de clés étrangères)
                 const oldTree = await fetchAll(currentPublished.id);
 
-                // Fonction pour supprimer tous les blocs récursivement de bas en haut
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const deleteBlocksRecursively = async (nodes: any[]) => {
                     if (!nodes || nodes.length === 0) return;
@@ -271,25 +236,76 @@
                         }
                     }
                 }
-
-                // - on copie les sections de la cible vers cette ancienne révision recyclée
-                if (treeToClone.length > 0) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    await useSyncAll(treeToClone as any, currentPublished.id);
-                }
+                
+                targetDraftId = currentPublished.id;
             } else if (!currentPublished) {
-                // S'il n'y avait AUCUNE version publiée avant (première publication de la page) :
-                // On crée une nouvelle révision Brouillon pour accueillir les futures modifications
                 const maxVersion = allRevisions.reduce((max, r) => Math.max(max, r.version || 0), 0);
                 const newRevision = await pageRevisionRegister.mutateAsync({
                     pageId: pageId.value,
                     status: 'DRAFT',
                     version: maxVersion + 1
                 });
+                
+                if (newRevision && newRevision.id) {
+                    targetDraftId = newRevision.id;
+                }
+            }
 
-                if (newRevision && newRevision.id && treeToClone.length > 0) {
+            // PASS 2: Synchroniser l'arbre brut, MAIS on récupère l'arbre synchronisé (avec les nouveaux DB_IDs)
+            if (targetDraftId && treeToClone.length > 0) {
+                // Première sauvegarde générera les vrais blocTemplateId en DB
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const syncedTree = await useSyncAll(treeToClone as any, targetDraftId);
+                
+                // On construit le map des vrais final DB_ID: old -> new
+                const dbIdMap = new Map<string, string>();
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const populateDbMap = (sections: any[]) => {
+                    for(const sec of sections) {
+                        if (sec.oldSectionId && sec.sectionId) {
+                            dbIdMap.set(sec.oldSectionId.toString(), sec.sectionId.toString());
+                        }
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const traverseNodes = (nodes: any[]) => {
+                            for(const n of nodes) {
+                                if (n.oldBlocTemplateId && n.blocTemplateId) {
+                                    dbIdMap.set(n.oldBlocTemplateId.toString(), n.blocTemplateId.toString());
+                                }
+                                if (n.children) traverseNodes(n.children);
+                            }
+                        };
+                        traverseNodes(sec.children || []);
+                    }
+                };
+                populateDbMap(syncedTree);
+
+                let hasChanges = false;
+
+                // Fonction pour mettre à jour les targetIds des actions avec le nouveau blocTemplateId
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const updateNodesTargets = (components: any[]) => {
+                    if (!components || !Array.isArray(components)) return;
+                    components.forEach(c => {
+                        if (c.data?.cliquable?.action === 'TOGGLE_VISIBILITY' && c.data.cliquable.action_params?.targetId) {
+                            const oldTargetId = c.data.cliquable.action_params.targetId.toString();
+                            if (dbIdMap.has(oldTargetId)) {
+                                c.data.cliquable.action_params.targetId = dbIdMap.get(oldTargetId);
+                                hasChanges = true;
+                            }
+                        }
+                        if (c.children) {
+                           updateNodesTargets(c.children);
+                        }
+                    });
+                };
+
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                syncedTree.forEach((sec: any) => updateNodesTargets(sec.children));
+
+                // Si des cibles ont été mises à jour avec les ID de BDD validés, on refait une synchronisation UPDATE
+                if (hasChanges) {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    await useSyncAll(treeToClone as any, newRevision.id);
+                    await useSyncAll(syncedTree as any, targetDraftId);
                 }
             }
 
