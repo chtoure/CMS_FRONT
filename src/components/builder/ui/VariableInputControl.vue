@@ -15,7 +15,7 @@ import {
 
 const props = defineProps<{
   modelValue: VariableProperty<T> | T | undefined;
-  variableType?: string; // e.g. 'COLOR', 'NUMBER', 'STRING'
+  variableType?: string;
 }>();
 
 const emit = defineEmits<{
@@ -61,8 +61,8 @@ const variableName = computed(() => {
   if (isVariableMode.value) {
     const val = (rawNode.value as VariableProperty<T>).value;
     if (variables.value) {
-        // Recherche par ID d'abord (nouveau système) puis par nom (ancien système)
-        const found = variables.value.find(v => String(v.id) === String(val) || v.name === val);
+        // Recherche seulement par ID (nouveau système strict)
+        const found = variables.value.find(v => Number(v.id) === Number(val));
         if (found) return found.name;
     }
     return val;
@@ -88,7 +88,7 @@ const filteredVariables = computed(() => {
   );
 });
 
-function selectVariable(vId: string) {
+function selectVariable(vId: number) {
   emit('update:modelValue', { type: 'variable', value: vId });
 }
 
@@ -121,17 +121,17 @@ function detachVariable() {
       </DropdownMenuTrigger>
       
       <DropdownMenuContent align="end" class="min-w-[180px] bg-builder-bar-background border-builder-bar-border text-builder-bar-text shadow-xl p-1">
-        <DropdownMenuLabel class="text-[10px] tracking-widest text-builder-bar-text/40 px-2 py-1.5">
-          {{ isVariableMode ? 'Linked Variable' : 'Connect Variable' }}
+        <DropdownMenuLabel class="text-[10px] tracking-widest text-builder-bar-text px-2 py-1.5 italic">
+          {{ isVariableMode ? 'Variable liée' : 'Connecter une variable' }}
         </DropdownMenuLabel>
         
-        <div v-if="isVariableMode" class="p-1 mb-1 border border-primary/20 rounded-none">
+        <div v-if="isVariableMode" class="p-1 mb-1 border border-primary rounded-[3px]">
           <div class="flex items-center justify-between gap-3">
              <div class="flex items-center gap-2 overflow-hidden">
                <Webhook :size="12" class="text-primary shrink-0" />
-               <span class="text-xs font-medium truncate text-primary">{{ variableName }}</span>
+               <span class="text-xs font-medium truncate text-primary italic">{{ variableName }}</span>
              </div>
-             <button @click="detachVariable" class="text-builder-bar-text hover:text-red-400 transition-colors">
+             <button @click="detachVariable" class="text-secondary hover:text-accent transition-colors">
                <Link2Off :size="12" />
              </button>
           </div>
@@ -140,23 +140,23 @@ function detachVariable() {
         <DropdownMenuSeparator v-if="isVariableMode" class="bg-builder-bar-border/50" />
         
         <div class="max-h-48 overflow-y-auto custom-scrollbar p-1">
-            <div v-if="isLoading" class="text-[10px] text-center py-2 text-builder-bar-text/40 italic">Loading variables...</div>
+            <div v-if="isLoading" class="text-[10px] text-center py-2 text-builder-bar-text/40 italic">Chargement des variables...</div>
             
             <DropdownMenuItem 
               v-for="variable in filteredVariables" 
               :key="variable.id" 
-              @click="selectVariable(String(variable.id))"
-              class="flex items-center gap-2 px-2 py-1.5 rounded-none cursor-pointer hover:!bg-gray-500 !p-1"
+              @click="selectVariable(variable.id)"
+              class="flex items-center gap-2 px-2 py-1.5 rounded-none cursor-pointer hover:!bg-gray-500 !p-1 italic"
             >
-              <div class="w-2 h-2 rounded-full" :style="{ backgroundColor: variable.collection?.type === 'COLOR' ? variable.value : 'transparent', border: variable.collection?.type === 'COLOR' ? '1px solid rgba(255,255,255,0.1)' : 'none' }">
+              <div v-if="variable.collection?.type == 'COLOR'"  class="w-2 h-2 rounded-full" :style="{ backgroundColor: variable.collection?.type === 'COLOR' ? `#${variable.value}` : 'transparent', border: variable.collection?.type === 'COLOR' ? '1px solid rgba(255,255,255,0.1)' : 'none' }">
                 <div v-if="variable.collection?.type !== 'COLOR'" class="w-full h-full bg-primary/40 rounded-full" />
               </div>
-              <span class="text-xs flex-1 truncate">{{ variable.name }}</span>
+              <span class="text-[9px] flex-1 truncate">{{ variable.name }}</span>
               <span class="text-[9px] text-builder-bar-text/30 group-hover:text-builder-bar-text/60 font-mono">{{ variable.value }}</span>
             </DropdownMenuItem>
 
             <div v-if="!isLoading && filteredVariables.length === 0" class="text-[10px] text-center py-4 text-builder-bar-text/30">
-                No {{ variableType?.toLowerCase() }} variables found
+                Aucune variable {{ variableType?.toLowerCase() }} trouvée
             </div>
         </div>
       </DropdownMenuContent>

@@ -158,16 +158,41 @@ const mergeBlocTemplateIds = (
   currentNodes: (AnyComponentInstance | AnySectionInstance)[],
   syncedNodes: (AnyComponentInstance | AnySectionInstance)[]
 ) => {
-  for (let i = 0; i < currentNodes.length; i++) {
-    const current = currentNodes[i] as any;
+  if (!currentNodes || !syncedNodes) return;
+
+  const currentById = new Map();
+  const unmatchedCurrents: any[] = [];
+  
+  for(const cur of currentNodes) {
+     if('blocTemplateId' in cur && cur.blocTemplateId) {
+        currentById.set(cur.blocTemplateId, cur);
+     } else {
+        unmatchedCurrents.push(cur);
+     }
+  }
+
+  let unmatchedIndex = 0;
+
+  for (let i = 0; i < syncedNodes.length; i++) {
     const synced = syncedNodes[i] as any;
-    if (!current || !synced) continue;
+    if (!synced) continue;
+
+    let current = null;
+    
+    if ('blocTemplateId' in synced && synced.blocTemplateId && currentById.has(synced.blocTemplateId)) {
+       current = currentById.get(synced.blocTemplateId);
+    } else if (unmatchedIndex < unmatchedCurrents.length) {
+       current = unmatchedCurrents[unmatchedIndex];
+       unmatchedIndex++;
+    }
+
+    if (!current) continue;
 
     // Propager le blocTemplateId si ce noeud vient d'être créé
     if (!current.blocTemplateId && synced.blocTemplateId) {
       current.blocTemplateId = synced.blocTemplateId;
     }
-    // Même chose pour sectionId
+    // Même chose pour sectionId (si c'est une section)
     if (!current.sectionId && synced.sectionId) {
       current.sectionId = synced.sectionId;
     }
@@ -214,14 +239,13 @@ watch(pageTree, async (newVal) => {
   historyIndex.value++;
 
   const syncedTree = await autoSaveMut.mutateAsync({ sections: newVal, pageRevisionId: pageRevisionId.value });
-  // On merge uniquement les blocTemplateId manquants (nouveaux noeuds).
   if (syncedTree) {
+    isInternalChange.value = true;
     const jsonBefore = JSON.stringify(pageTree.value);
     mergeBlocTemplateIds(pageTree.value, syncedTree);
     const jsonAfter = JSON.stringify(pageTree.value);
     
-    // Si on a réellement ajouté des IDs, on met à jour l'historique courant
-    if (jsonBefore !== jsonAfter) {
+    if (history.value[historyIndex.value] !== jsonAfter) {
       history.value[historyIndex.value] = jsonAfter;
     }
   }
@@ -337,7 +361,7 @@ provide('builderState', {
         <div class="p-1 scale-90 bg-builder-bar-background backdrop-blur-sm border border-border px-2 py-1 rounded shadow-lg flex items-center gap-2 text-[9px] tracking-wider font-bold">
           <button
             @click="xRayMode = !xRayMode"
-            class="px-3 py-1 rounded flex items-center gap-1 transition-all"
+            class="px-3 py-1 rounded flex items-center gap-1"
             :class="xRayMode ? 'bg-indigo-500/20 text-indigo-400 ring-1 ring-indigo-500/50' : 'text-gray-500 hover:bg-gray-700/50 hover:text-gray-300'"
             title="Mode Structure (Rayon X) pour mieux voir les conteneurs imbriqués"
           >

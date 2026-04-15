@@ -126,56 +126,90 @@ export function useBlockTemplate() {
    * Synchronise l'ensemble de l'arbre (Sections -> Blocs)
    */
   const useSyncAll = async (sections: AnySectionInstance[], pageRevisionId: number): Promise<AnySectionInstance[]> => {
-    const syncedSections: AnySectionInstance[] = [];
-
-    for (let i = 0; i < sections.length; i++) {
-        const section = { ...sections[i] };
-        try {
-            let currentSectionId = section.sectionId;
-
-            if (!currentSectionId) {
-                if (section.order === undefined) {
-                    section.order = i;
-                }
-                const newSection = await useCreateSection(section as AnySectionInstance, pageRevisionId);
-                currentSectionId = newSection.id;
-
-                // CONTOURNEMENT BACKEND: Le POST ignore les styles/bloc_json. On force un Update juste après.
-                try {
-                    await useUpdateSection(currentSectionId, section);
-                } catch (e) {
-                    console.error("Failed to force update after create section", e);
-                }
-            } else {
-                await useUpdateSection(currentSectionId, section);
-            }
-
-            // Synchroniser les blocs de cette section
-            const syncedChildren = await useSyncTree(section.children || [], null, currentSectionId);
-
-            syncedSections.push({
-                ...section,
-                id: section.id || crypto.randomUUID(),
-                order: section.order ?? i,
-                family: 'section',
-                sectionId: currentSectionId,
-                styles: section.styles || {},
-                children: syncedChildren
-            });
-        } catch (error) {
-            console.error(`Error syncing section ${section.id}`, error);
-            syncedSections.push({
-                ...section,
-                id: section.id || crypto.randomUUID(),
-                order: section.order ?? i,
-                family: 'section',
-                styles: section.styles || {},
-                children: section.children || []
-            });
+    try {
+      // FIX AUTOSAVE CORRUPTION: Forcer l'ordre réel généré par VueDraggable dans la propriété 'order' avant l'envoi
+      const fixOrder = (nodes: any[]) => {
+        for (let i = 0; i < nodes.length; i++) {
+          nodes[i].order = i;
+          if (nodes[i].children && nodes[i].children.length) {
+            fixOrder(nodes[i].children);
+          }
         }
-    }
+      };
+      
+      const sectionsCopy = JSON.parse(JSON.stringify(sections));
+      fixOrder(sectionsCopy);
 
-    return syncedSections;
+      const payload = { sections: sectionsCopy };
+      const response = await api(`/page-revision/${pageRevisionId}/sync`, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      
+      const data = await handleResponse<any>(response);
+      const resultSections = Array.isArray(data) ? data : (data.results || []);
+
+      const fullySyncedSections: AnySectionInstance[] = [];
+      for (const s of resultSections) {
+        let templates = s.children || [];
+        templates = flattenTemplates(templates);
+        const rootNodes = await buildTreeFromTemplates(templates);
+
+        fullySyncedSections.push({
+            id: s.id, 
+            sectionId: s.sectionId,
+            order: s.order,
+            family: 'section',
+            styles: s.styles || {},
+            children: rootNodes
+        });
+      }
+
+      // Map UUIDs to preserve Vue component keys and avoid losing focus
+      const mapUUIDs = (originNodes: any[], syncedNodes: any[]) => {
+        if (!originNodes || !syncedNodes) return;
+
+        // Etape 1: Identifier les éléments existants par leur ID backend
+        const originMap = new Map();
+        const unmatchedOrigins: any[] = [];
+        for (const origin of originNodes) {
+           if (origin.blocTemplateId) {
+             originMap.set(origin.blocTemplateId, origin);
+           } else {
+             unmatchedOrigins.push(origin);
+           }
+        }
+
+        let unmatchedIndex = 0;
+
+        // Etape 2: Lier de manière exacte ou séquentielle (pour les nouveaux)
+        for (let i = 0; i < syncedNodes.length; i++) {
+          const synced = syncedNodes[i];
+          let origin = null;
+
+          if (synced.blocTemplateId && originMap.has(synced.blocTemplateId)) {
+             origin = originMap.get(synced.blocTemplateId);
+          } else if (unmatchedIndex < unmatchedOrigins.length) {
+             origin = unmatchedOrigins[unmatchedIndex];
+             unmatchedIndex++;
+          }
+
+          if (origin && synced) {
+            synced.id = origin.id; // Preserve frontend unique key
+            if (origin.children && synced.children) {
+              mapUUIDs(origin.children, synced.children);
+            }
+          }
+        }
+      };
+
+      mapUUIDs(sections, fullySyncedSections);
+      return fullySyncedSections;
+      
+    } catch (error) {
+      console.error(`Error syncing all sections`, error);
+      throw error;
+    }
   };
 
   /**
