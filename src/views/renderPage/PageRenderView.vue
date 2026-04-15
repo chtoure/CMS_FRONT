@@ -61,6 +61,10 @@ watchEffect(() => {
   if (p.family_name) {
     loadGoogleFont(p.family_name);
     document.body.style.fontFamily = `'${p.family_name}', sans-serif`;
+    const renderRoot = document.getElementById('site-render-root');
+    if (renderRoot) {
+      renderRoot.style.fontFamily = `'${p.family_name}', sans-serif`;
+    }
   }
 
   // ── Meta SEO ─────────────────────────────────────────────────────

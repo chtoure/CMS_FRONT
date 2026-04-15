@@ -1,0 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&family=Outfit:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * CSS isolé pour le rendu public du site.
+ * Ce fichier est INDÉPENDANT de base.css utilisé par le builder/admin.
+ * Il ne contient PAS les variables de thème sombre de l'interface d'administration.
+ * Ainsi, même si l'admin est en mode dark, le site public n'est pas affecté.
+ */
+
+/* Conteneur racine du rendu — réinitialise l'héritage du thème admin */
+#site-render-root {
+  /* Couleurs neutres par défaut pour le site public */
+  color: initial;
+  background-color: initial;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Annuler l'effet de la classe .dark sur le conteneur de rendu */
+#site-render-root,
+.dark #site-render-root {
+  --background: initial;
+  --foreground: initial;
+}
