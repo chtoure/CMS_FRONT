@@ -11,7 +11,8 @@ import { useQueryClient } from '@tanstack/vue-query';
 import { useBlockTemplate } from '../../hook/bloc-template';
 import type { AnySectionInstance } from '../../type/section';
 import { useRouter } from 'vue-router';
-import { findComponentById, removeFromTree } from '../../lib/treeUtils';
+import { findComponentById, removeFromTree, insertIntoTree, moveInTree } from '../../lib/treeUtils';
+import { FAMILY_CAPABILITIES } from '../../type/component';
 
 const router = useRouter();
 const queryClient = useQueryClient();
@@ -52,13 +53,73 @@ const isVisible = (id: string, backendId?: number | null) => {
   const isBackendHidden = backendId != null && toggleStates.value[backendId.toString()] === false;
 
   const finalVisible = !isLocalHidden && !isBackendHidden;
-
-  // Logique de log silencieux sauf si changement ou debug
   return finalVisible;
 };
 
+const clipboard = ref<AnyComponentInstance | null>(null);
+
 const selectComponent = (id: string | null) => {
+  if (clipboard.value) {
+    if (!id) {
+       // Clic sur le canvas vide = ajout à la racine
+       const item = JSON.parse(JSON.stringify(clipboard.value));
+       if (builderMode.value === 'page') {
+         let newEntry: any = item;
+         if ('tag' in item) {
+           newEntry = {
+             id: crypto.randomUUID(),
+             order: pageTree.value.length,
+             family: 'section',
+             styles: {},
+             children: [item]
+           };
+         }
+         pageTree.value = insertIntoTree(pageTree.value, null, newEntry, 'append') as AnySectionInstance[];
+       } else {
+         libraryTree.value = insertIntoTree(libraryTree.value, null, item, 'append') as AnyComponentInstance[];
+       }
+       clipboard.value = null;
+       return;
+    }
+
+    const tree = builderMode.value === 'page' ? pageTree.value : libraryTree.value;
+    const target = findComponentById(tree, id);
+    if (!target) return;
+
+    const item = JSON.parse(JSON.stringify(clipboard.value));
+    const isContainer = target.family === 'section' || FAMILY_CAPABILITIES[target.family]?.canHaveChildren;
+
+    if ('family' in item && item.family === 'section' && target.family === 'section') {
+        alert("Impossible d'insérer une section dans un autre composant.");
+        return;
+    }
+
+    if (builderMode.value === 'page') {
+       pageTree.value = insertIntoTree(pageTree.value, id, item, isContainer ? 'append' : 'after') as AnySectionInstance[];
+    } else {
+       libraryTree.value = insertIntoTree(libraryTree.value, id, item, isContainer ? 'append' : 'after') as AnyComponentInstance[];
+    }
+
+    clipboard.value = null;
+    return;
+  }
+
   selectedId.value = id;
+};
+
+const setClipboard = (item: AnyComponentInstance | null) => {
+  clipboard.value = item ? JSON.parse(JSON.stringify(item)) : null;
+};
+const clearClipboard = () => {
+  clipboard.value = null;
+};
+
+const moveComponent = (id: string, direction: 'up' | 'down') => {
+  if (builderMode.value === 'page') {
+    pageTree.value = moveInTree(pageTree.value, id, direction) as AnySectionInstance[];
+  } else {
+    libraryTree.value = moveInTree(libraryTree.value, id, direction) as AnyComponentInstance[];
+  }
 };
 
 const setIsDragging = (val: boolean) => {
@@ -335,6 +396,10 @@ provide('builderState', {
   canUndo,
   canRedo,
   currentBreakpoint,
+  clipboard,
+  setClipboard,
+  clearClipboard,
+  moveComponent,
   isDragging,
   setIsDragging,
   xRayMode,
@@ -349,14 +414,14 @@ provide('builderState', {
   <div class="relative h-screen w-screen overflow-hidden bg-builder-background">
 
     <main
-      class="absolute inset-y-0 z-0 transition-all duration-300 ease-in-out flex"
+      class="absolute inset-y-0 z-0 flex"
       :style="{
         left: showComponentView ? '16rem' : '0',
         right: showPropertiesView ? '16rem' : '0'
       }"
     >
       <!-- Barre d'outils (Mode & Breakpoint) -->
-      <div class="absolute top-0.5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 scale-90 transition-all duration-300">
+      <div class="absolute top-0.5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 scale-90">
 
         <div class="p-1 scale-90 bg-builder-bar-background backdrop-blur-sm border border-border px-2 py-1 rounded shadow-lg flex items-center gap-2 text-[9px] tracking-wider font-bold">
           <button
@@ -432,7 +497,7 @@ provide('builderState', {
 
     <!-- Sidebar Composants -->
     <aside
-      class="absolute top-0 left-0 h-full w-64 bg-builder-bar-background border-r border-border z-10 transform transition-transform duration-300 ease-in-out shadow-xl custom-scrollbar"
+      class="absolute top-0 left-0 h-full w-64 bg-builder-bar-background border-r border-border z-10 transform shadow-xl custom-scrollbar"
       :class="showComponentView ? 'translate-x-0' : '-translate-x-full'"
     >
       <div class="flex items-center justify-between p-4 border-b border-border">
@@ -448,7 +513,7 @@ provide('builderState', {
 
     <!-- Sidebar Propriétés -->
     <aside
-      class="absolute top-0 right-0 h-full w-64 bg-builder-bar-background border-l border-border z-10 transform transition-transform duration-300 ease-in-out shadow-xl"
+      class="absolute top-0 right-0 h-full w-64 bg-builder-bar-background border-l border-border z-10 transform shadow-xl"
       :class="showPropertiesView ? 'translate-x-0' : 'translate-x-full'"
     >
       <div class="flex items-center justify-between p-4 border-b border-border">
@@ -463,11 +528,11 @@ provide('builderState', {
     </aside>
 
     <!-- Boutons Flottants (Menu & Undo/Redo) -->
-    <div class="absolute top-4 left-4 z-20 transition-all duration-300 flex items-center gap-2" :class="{ 'translate-x-64': showComponentView }">
+    <div class="absolute top-4 left-4 z-20 flex items-center gap-2" :class="{ 'translate-x-64': showComponentView }">
        <Button
         v-if="!showComponentView"
         @click="showComponentView = true"
-        class="flex items-center justify-center p-2 text-white shadow-lg transition-all !rounded"
+        class="flex items-center justify-center p-2 text-white shadow-lg !rounded"
         title="Ouvrir les composants"
       >
         <Menu class="h-5 w-5" />
@@ -485,7 +550,7 @@ provide('builderState', {
         <Button
           @click="undo"
           :disabled="!canUndo"
-          class="p-1.5 text-white hover:bg-gray-700 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          class="p-1.5 text-white hover:bg-gray-700 rounded disabled:opacity-30 disabled:cursor-not-allowed"
           title="Annuler (Ctrl+Z)"
         >
           <Undo class="h-4 w-4" />
@@ -493,7 +558,7 @@ provide('builderState', {
         <Button
           @click="redo"
           :disabled="!canRedo"
-          class="p-1.5 text-white hover:bg-gray-700 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          class="p-1.5 text-white hover:bg-gray-700 rounded disabled:opacity-30 disabled:cursor-not-allowed"
           title="Rétablir (Ctrl+Y)"
         >
           <Redo class="h-4 w-4" />

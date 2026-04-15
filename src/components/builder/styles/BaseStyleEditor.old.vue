@@ -101,7 +101,7 @@ const shadowOptions = [
           @color-change="(hex) => updateStyle('bg', hex)"
         >
           <template #trigger>
-            <button @click="activePicker = 'bg'" class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:bg-white/5 transition-colors">
+            <button @click="activePicker = 'bg'" class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:bg-white/5">
               <div class="w-4 h-4 rounded-sm border border-builder-bar-border" :style="{ backgroundColor: '#' + getHexValue(styles.bg) }"></div>
               <span class="text-builder-bar-text font-mono truncate">{{ getRawValue(styles.bg) || 'Transparent' }}</span>
             </button>
@@ -112,7 +112,7 @@ const shadowOptions = [
       <div v-if="showField('rounded')" class="space-y-1">
         <div class="flex items-center justify-between">
           <Label class="text-[11px] text-builder-bar-text !font-bold !font-mono">Arrondis</Label>
-          <button @click="showIndividualCorners = !showIndividualCorners" class="text-[10px] text-primary hover:text-white transition-colors">
+          <button @click="showIndividualCorners = !showIndividualCorners" class="text-[10px] text-primary hover:text-white">
             {{ showIndividualCorners ? 'Global' : 'Individuel' }}
           </button>
         </div>
@@ -188,7 +188,7 @@ const shadowOptions = [
           @color-change="(hex) => updateStyle('borderColor', hex)"
         >
           <template #trigger>
-            <button @click="activePicker = 'border'" class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:bg-white/5 transition-colors">
+            <button @click="activePicker = 'border'" class="w-full h-8 px-2 flex items-center gap-2 bg-builder-input-bg border border-builder-bar-border rounded text-xs hover:bg-white/5">
               <div class="w-4 h-4 rounded-sm border border-builder-bar-border" :style="{ backgroundColor: '#' + getHexValue(styles.borderColor) }"></div>
               <span class="text-builder-bar-text font-mono truncate">{{ getRawValue(styles.borderColor) || 'Transparent' }}</span>
             </button>
@@ -201,7 +201,7 @@ const shadowOptions = [
 
 <style scoped>
 .input-custom {
-  @apply h-8 w-full !rounded px-3 py-1 text-[11px] shadow-sm transition-all outline-none !font-mono;
+  @apply h-8 w-full !rounded px-3 py-1 text-[11px] shadow-sm outline-none !font-mono;
   background-color: var(--builder-input-bg);
   border: 1px solid var(--builder-input-border);
   color: var(--builder-input-text);

@@ -148,6 +148,9 @@ export function useBlockTemplate() {
       
       const data = await handleResponse<any>(response);
       const resultSections = Array.isArray(data) ? data : (data.results || []);
+      
+      // Assurer le tri correct des sections par ordre (au cas où le backend ne le ferait pas)
+      resultSections.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
 
       const fullySyncedSections: AnySectionInstance[] = [];
       for (const s of resultSections) {
@@ -464,7 +467,11 @@ export function useBlockTemplate() {
 
   const fetchAll = async (pageRevisionId: number): Promise<AnySectionInstance[]> => {
     try {
-      const sections = await useGetSections(pageRevisionId);
+      let sections = await useGetSections(pageRevisionId);
+      
+      // Trier les sections par ordre de position (au cas où le backend ne le retournerait pas trié)
+      sections.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      
       const syncedSections: AnySectionInstance[] = [];
       for (const s of sections) {
           const rootNodes = await fetchTree(s.id);
