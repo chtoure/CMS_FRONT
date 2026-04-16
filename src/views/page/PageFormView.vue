@@ -35,7 +35,8 @@ const isEditing = computed(() => props.isEditing || !!routeId.value);
 const effectiveId = computed(() => props.initialData?.id || routeId.value);
 
 // --- Données (Récupération par route si nécessaire) ---
-const { data: routePageData, isLoading: isFetching } = useGetPage(routeId as unknown as number);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const { data: routePageData, isLoading: isFetching } = useGetPage(routeId as any);
 
 // --- État du formulaire ---
 const name = ref('');

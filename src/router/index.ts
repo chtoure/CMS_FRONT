@@ -29,6 +29,8 @@ import BuilderView from '../views/builder/BuilderView.vue'
 import BuilderLayout from '../layout/BuilderLayout.vue'
 import RenderLayout from '../layout/RenderLayout.vue'
 import PageListView from '../views/page/PageListView.vue'
+import PageCreateFormView from '../views/page/PageCreateFormView.vue'
+import PageUpdateFormView from '../views/page/PageUpdateFormView.vue'
 import PageRevisionListView from '../views/pageRevision/PageRevisionListView.vue'
 import PageRenderView from '../views/renderPage/PageRenderView.vue'
 import UserCreateFormView from '../views/user/UserCreateFormView.vue'
@@ -233,6 +235,18 @@ const router = createRouter({
                           name: 'admin.pages',
                           component: PageListView,
                           meta: { permissions: 'read_page' }
+                        },
+                        {
+                          path: 'create',
+                          name: 'admin.page-add',
+                          component: PageCreateFormView,
+                          meta: { permissions: 'create_page' }
+                        },
+                        {
+                          path: 'edit/:id',
+                          name: 'admin.page-edit',
+                          component: PageUpdateFormView,
+                          meta: { permissions: 'update_page' }
                         },
                         {
                           path: 'page-revisions/:id',

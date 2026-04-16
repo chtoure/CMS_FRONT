@@ -99,32 +99,32 @@ const deselect = () => {
 };
 
 // Insertion Click & Drop
-const insertAtRoot = (index: number) => {
-  if (!builderState?.clipboard.value) return;
-  const item = JSON.parse(JSON.stringify(builderState.clipboard.value));
+// const insertAtRoot = (index: number) => {
+//   if (!builderState?.clipboard.value) return;
+//   const item = JSON.parse(JSON.stringify(builderState.clipboard.value));
   
-  if (builderState.builderMode.value === 'page') {
-    let newEntry: any = item;
-    if ('tag' in item) { // Wrapped into section auto
-      newEntry = {
-        id: crypto.randomUUID(),
-        order: index,
-        family: 'section',
-        styles: {},
-        children: [item]
-      };
-    }
-    const newTree = [...pageTree.value];
-    newTree.splice(index, 0, newEntry);
-    pageTree.value = newTree;
-  } else {
-    const newTree = [...builderState.libraryTree.value];
-    newTree.splice(index, 0, item);
-    builderState.libraryTree.value = newTree;
-  }
+//   if (builderState.builderMode.value === 'page') {
+//     let newEntry: any = item;
+//     if ('tag' in item) { // Wrapped into section auto
+//       newEntry = {
+//         id: crypto.randomUUID(),
+//         order: index,
+//         family: 'section',
+//         styles: {},
+//         children: [item]
+//       };
+//     }
+//     const newTree = [...pageTree.value];
+//     newTree.splice(index, 0, newEntry);
+//     pageTree.value = newTree;
+//   } else {
+//     const newTree = [...builderState.libraryTree.value];
+//     newTree.splice(index, 0, item);
+//     builderState.libraryTree.value = newTree;
+//   }
   
-  builderState.setClipboard(null);
-};
+//   builderState.setClipboard(null);
+// };
 
 // La fonction formatSize locale est supprimée car on utilise celle de core.ts
 </script>
@@ -150,7 +150,7 @@ const insertAtRoot = (index: number) => {
     </div>
 
     <!-- Zone de travail avec Overflow -->
-    <div class="flex-1 overflow-auto custom-scrollbar p-10 md:p-20">
+    <div class="flex-1 overflow-auto p-10 md:p-20 custom-scrollbar">
       
       <!-- Fil d'Ariane / Breadcrumbs (Descendu pour éviter le conflit) -->
       <div 
@@ -292,4 +292,5 @@ const insertAtRoot = (index: number) => {
   background: rgba(59, 130, 246, 0.1) !important;
   border: 1px dashed #3b82f6 !important;
 }
+
 </style>

@@ -65,6 +65,7 @@ const handleCut = () => {
     }
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const deepCloneWithNewIds = (node: any): any => {
     return {
         ...node,
@@ -72,6 +73,7 @@ const deepCloneWithNewIds = (node: any): any => {
         // Effacer les IDs backend pour forcer la création d'un nouveau nœud
         blocTemplateId: undefined,
         modelId: undefined,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         children: node.children ? node.children.map((child: any) => deepCloneWithNewIds(child)) : []
     };
 };
