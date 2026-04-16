@@ -11,7 +11,7 @@ import type { AnySectionInstance } from '../../type/section';
 import StyleEditor from '../../components/builder/StyleEditor.vue';
 import DataEditor from '../../components/builder/DataEditor.vue';
 import BgImageParam from '../../components/builder/parameters/BgImageParam.vue';
-import { MousePointer2, Webhook, Save, Scissors, Trash2, ArrowUp, ArrowDown } from 'lucide-vue-next';
+import { MousePointer2, Webhook, Save, Scissors, Trash2, ArrowUp, ArrowDown, Copy } from 'lucide-vue-next';
 
 // Injection de l'état global
 const { hasPermission } = usePermission();
@@ -52,14 +52,37 @@ const handleSaveAsCustom = async () => {
 
 const handleCut = () => {
     if (!selectedElement.value) return;
-    const cloned = JSON.parse(JSON.stringify(selectedElement.value));
     
     if (builderState) {
-        // Remove locally immediately (this safely deselects without triggering auto-paste)
-        builderState.deleteComponent(selectedElement.value.id);
+        // Régénère les IDs : le deleteComponent supprime les entrées DB,
+        // donc le clipboard doit avoir de nouveaux IDs pour que le backend crée
+        // de nouvelles entrées au collage (enfants inclus).
+        const clone = deepCloneWithNewIds(JSON.parse(JSON.stringify(selectedElement.value)));
         
-        // Set to clipboard AFTER so it's ready to be pasted
-        builderState.setClipboard(cloned);
+        // Supprime d'abord, puis place dans le presse-papiers
+        builderState.deleteComponent(selectedElement.value.id);
+        builderState.setClipboard(clone);
+    }
+};
+
+const deepCloneWithNewIds = (node: any): any => {
+    return {
+        ...node,
+        id: crypto.randomUUID(),
+        // Effacer les IDs backend pour forcer la création d'un nouveau nœud
+        blocTemplateId: undefined,
+        modelId: undefined,
+        children: node.children ? node.children.map((child: any) => deepCloneWithNewIds(child)) : []
+    };
+};
+
+const handleCopy = () => {
+    if (!selectedElement.value) return;
+    const cloned = JSON.parse(JSON.stringify(selectedElement.value));
+    const newCloned = deepCloneWithNewIds(cloned);
+    
+    if (builderState) {
+        builderState.setClipboard(newCloned);
     }
 };
 
@@ -112,18 +135,28 @@ const selectedElement = computed(() => {
           </div>
 
           <!-- Toolbar Buttons -->
-          <div class="flex flex-wrap gap-2 w-full mt-1">
+          <div class="flex flex-wrap w-full mt-1 justify-between">
              <button
                v-if="'tag' in selectedElement"
                @click="handleCut"
-               class="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 rounded text-[9px] uppercase font-bold"
+               class="flex items-center gap-1.5 px-1 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 rounded text-[9px] uppercase font-bold"
                title="Déplacer"
              >
-               <Scissors class="w-3.5 h-3.5" />
+               <Scissors class="w-3 h-3" />
                Couper
              </button>
 
-             <div class="flex gap-1 ml-auto">
+             <button
+               v-if="'tag' in selectedElement"
+               @click="handleCopy"
+               class="flex items-center gap-1.5 px-1 py-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 border border-teal-500/20 rounded text-[9px] uppercase font-bold"
+               title="Copier"
+             >
+               <Copy class="w-3 h-3" />
+               Copier
+             </button>
+
+             <div class="flex gap-1">
                <button
                  @click="handleMove('up')"
                  class="flex items-center justify-center p-1.5 bg-gray-500/10 hover:bg-gray-500/20 text-gray-400 border border-gray-500/20 rounded"
@@ -142,7 +175,7 @@ const selectedElement = computed(() => {
 
              <button
                @click="handleDelete"
-               class="flex items-center gap-1.5 px-2 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded text-[9px] uppercase font-bold"
+               class="flex items-center gap-1.5 px-1.5 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded text-[9px] uppercase font-bold"
                title="Supprimer (Suppr / Backspace)"
              >
                <Trash2 class="w-3.5 h-3.5" />

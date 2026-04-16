@@ -175,19 +175,61 @@ watch(selectedId, (newId) => {
 // Gestion de la suppression via touche clavier
 import { onMounted, onUnmounted } from 'vue';
 
-const handleKeyDown = (e: KeyboardEvent) => {
-  if (e.key === 'Delete' || e.key === 'Backspace') {
-    // Vérifier si l'utilisateur n'est pas en train d'écrire
-    const activeElement = document.activeElement;
-    const isInput = activeElement && (
-      activeElement.tagName === 'INPUT' ||
-      activeElement.tagName === 'TEXTAREA' ||
-      activeElement.getAttribute('contenteditable') === 'true'
-    );
+// Clone profond avec nouveaux IDs pour la copie (même logique que PropritiesView)
+const deepCloneWithNewIds = (node: any): any => {
+  return {
+    ...node,
+    id: crypto.randomUUID(),
+    blocTemplateId: undefined,
+    modelId: undefined,
+    children: node.children ? node.children.map((child: any) => deepCloneWithNewIds(child)) : []
+  };
+};
 
-    if (!isInput && selectedId.value) {
+const handleKeyDown = (e: KeyboardEvent) => {
+  // Vérifier si l'utilisateur n'est pas en train d'écrire
+  const activeElement = document.activeElement;
+  const isInput = activeElement && (
+    activeElement.tagName === 'INPUT' ||
+    activeElement.tagName === 'TEXTAREA' ||
+    activeElement.getAttribute('contenteditable') === 'true'
+  );
+
+  if (isInput) return;
+
+  // Supprimer (Delete / Backspace)
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (selectedId.value) {
       deleteComponent(selectedId.value);
     }
+    return;
+  }
+
+  // Ctrl+C : Copier le composant sélectionné
+  if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+    if (!selectedId.value) return;
+    const tree = builderMode.value === 'page' ? pageTree.value : libraryTree.value;
+    const node = findComponentById(tree as any[], selectedId.value);
+    if (!node || !('tag' in node)) return;
+    e.preventDefault();
+    const clone = deepCloneWithNewIds(JSON.parse(JSON.stringify(node)));
+    setClipboard(clone);
+    return;
+  }
+
+  // Ctrl+X : Couper le composant sélectionné
+  if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
+    if (!selectedId.value) return;
+    const tree = builderMode.value === 'page' ? pageTree.value : libraryTree.value;
+    const node = findComponentById(tree as any[], selectedId.value);
+    if (!node || !('tag' in node)) return;
+    e.preventDefault();
+    // On régénère les IDs pour que le backend crée de nouveaux nœuds au collage.
+    // (les anciens sont supprimés par deleteComponent → ils n'existent plus en DB)
+    const clone = deepCloneWithNewIds(JSON.parse(JSON.stringify(node)));
+    deleteComponent(selectedId.value);
+    setClipboard(clone);
+    return;
   }
 };
 
@@ -308,6 +350,13 @@ watch(pageTree, async (newVal) => {
     
     if (history.value[historyIndex.value] !== jsonAfter) {
       history.value[historyIndex.value] = jsonAfter;
+    }
+
+    // Si mergeBlocTemplateIds n'a rien changé, le watcher profond ne se redéclenchera
+    // pas pour remettre isInternalChange à false. On le fait manuellement pour éviter
+    // de bloquer la prochaine sauvegarde (ex: après un coller).
+    if (jsonBefore === jsonAfter) {
+      isInternalChange.value = false;
     }
   }
 }, { deep: true });

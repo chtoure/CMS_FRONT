@@ -59,11 +59,19 @@ const showGrid = computed(() => getRawValue(styles.value.display) === 'grid');
 
         <div v-if="showGrid" class="space-y-1.5">
           <PropertyInput 
-            label="Colonnes" 
-            type="number" 
-            :model-value="getRawValue(styles.columns)" 
-            @update:model-value="(val) => updateStyle('columns', parseInt(val.toString()))"
-            :icon="GripHorizontal"
+             label="Colonnes" 
+             type="number" 
+             :model-value="getRawValue(styles.columns)" 
+             @update:model-value="(val) => updateStyle('columns', parseInt(val.toString()))"
+             :icon="GripHorizontal"
+          />
+          <PropertyInput 
+             label="Espacement (Gap)" 
+             type="number" 
+             :model-value="getRawValue(styles.gap)" 
+             @update:model-value="(val) => updateStyle('gap', val)"
+             :icon="Maximize2"
+             placeholder="0"
           />
         </div>
       </div>
