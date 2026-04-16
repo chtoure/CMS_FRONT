@@ -202,7 +202,6 @@ const draggableClasses = computed(() => ({
 <style scoped>
 /* Mode Blueprint : les composants de la section s'écartent pour mieux voir l'imbrication */
 .blueprint-active {
-  gap: 8px !important;
   padding: 8px !important;
   outline: 1px dashed rgba(59, 130, 246, 0.6);
   outline-offset: -3px;

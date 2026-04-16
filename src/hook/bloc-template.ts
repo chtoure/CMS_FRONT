@@ -566,6 +566,7 @@ export function useBlockTemplate() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['custom-blocks'] });
         queryClient.invalidateQueries({ queryKey: ['library-tree'] });
+        queryClient.invalidateQueries({ queryKey: ['builder-bloc-templates-custom'] });
       }
     });
   };

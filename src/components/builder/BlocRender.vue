@@ -577,7 +577,6 @@ const applyItemToChildren = (
 <style scoped>
 /* Mode Blueprint: on écarte les enfants et on ajoute un padding visuel */
 .blueprint-mode {
-  gap: 8px !important;
   padding: 8px !important;
   outline: 1px dashed rgba(139, 92, 246, 0.6);
   outline-offset: -3px;
