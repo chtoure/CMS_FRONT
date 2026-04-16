@@ -467,7 +467,7 @@ export function useBlockTemplate() {
 
   const fetchAll = async (pageRevisionId: number): Promise<AnySectionInstance[]> => {
     try {
-      let sections = await useGetSections(pageRevisionId);
+      const sections = await useGetSections(pageRevisionId);
       
       // Trier les sections par ordre de position (au cas où le backend ne le retournerait pas trié)
       sections.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
