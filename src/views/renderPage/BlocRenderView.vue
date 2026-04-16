@@ -113,24 +113,99 @@ const isSectionPositioned = computed(() => {
   return p === 'fixed' || p === 'absolute' || p === 'sticky';
 });
 
+// ─── Helpers locaux au rendu (ne modifient pas les processors partagés) ──────
+
+/**
+ * Filtre les classes avec préfixe de breakpoint vide (ex: 'lg:', 'sm:')
+ * générées quand un mapper retourne '' pour une valeur responsive.
+ */
+function cleanClasses(raw: string): string {
+  return raw.split(' ').filter(c => c && !/^(sm|md|lg|xl|2xl):$/.test(c)).join(' ');
+}
+
+/**
+ * Styles sans padding/paddingX/paddingY pour le div INTERNE des enfants.
+ * Le padding est déjà appliqué par le composant lui-même (buildCardInlineStyles etc.).
+ * Évite le double padding : composant + div des enfants.
+ */
+const layoutOnlyStyles = computed(() => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { padding, paddingX, paddingY, ...rest } = normalizedElementStyles.value;
+  return rest;
+});
+
+/**
+ * Styles inline critiques pour le layout (display, flexDirection, gridTemplateColumns)
+ * que buildBlocLayoutInlineStyles(isBuilderMode=false) ne génère pas.
+ * Garantit le rendu correct en production même si les classes Tailwind dynamiques sont purgées.
+ */
+const criticalLayoutInlineStyles = computed(() => {
+  const bp = builderState.currentBreakpoint.value;
+  const styles = layoutOnlyStyles.value;
+  const inline: Record<string, string> = {};
+
+  const displayVal = resolveValueForBreakpoint<string>(styles.display, bp, resolveValue);
+  if (displayVal && displayVal !== '') {
+    inline.display = displayVal === 'hidden' ? 'none' : displayVal;
+  }
+
+  const directionVal = resolveValueForBreakpoint<string>(styles.direction, bp, resolveValue);
+  if (directionVal) {
+    inline.flexDirection = directionVal === 'horizontal' ? 'row' : 'column';
+  }
+
+  const columnsVal = resolveValueForBreakpoint<unknown>(styles.columns, bp, resolveValue);
+  if (columnsVal != null && !isNaN(Number(columnsVal))) {
+    inline.gridTemplateColumns = `repeat(${columnsVal}, minmax(0, 1fr))`;
+  }
+
+  return inline;
+});
+
+/**
+ * Idem pour les SECTIONS (CAS 1) : display + flexDirection inline
+ * pour garantir le rendu en production.
+ */
+const sectionCriticalLayoutInlineStyles = computed(() => {
+  const bp = builderState.currentBreakpoint.value;
+  const styles = normalizedElementStyles.value;
+  const inline: Record<string, string> = {};
+
+  const displayVal = resolveValueForBreakpoint<string>(styles.display, bp, resolveValue);
+  if (displayVal && displayVal !== '') {
+    inline.display = displayVal === 'hidden' ? 'none' : displayVal;
+  }
+
+  const directionVal = resolveValueForBreakpoint<string>(styles.direction, bp, resolveValue);
+  if (directionVal) {
+    inline.flexDirection = directionVal === 'horizontal' ? 'row' : 'column';
+  }
+
+  const columnsVal = resolveValueForBreakpoint<unknown>(styles.columns, bp, resolveValue);
+  if (columnsVal != null && !isNaN(Number(columnsVal))) {
+    inline.gridTemplateColumns = `repeat(${columnsVal}, minmax(0, 1fr))`;
+  }
+
+  return inline;
+});
+
 // ─── Layout des blocs (conteneurs avec enfants) ───────────────────────────────
 // On utilise les CLASSES Tailwind natives (buildBlocLayoutStyles) SANS filterResponsiveClasses
 // car dans le rendu public, le navigateur gère les media queries nativement.
-// On NE force PAS isBuilderMode=true : les inline styles du builder sont réservés au canvas
-// où la largeur est simulée (pas de media queries réelles).
 
 const layoutClasses = computed(() => {
-  return buildBlocLayoutStyles(normalizedElementStyles.value, resolveValue);
+  // layoutOnlyStyles : sans padding (déjà géré par le composant lui-même)
+  // cleanClasses : filtre les classes breakpoint vides (lg:, sm:...)
+  return cleanClasses(buildBlocLayoutStyles(layoutOnlyStyles.value, resolveValue));
 });
 
-// Styles inline pour les blocs : seulement gap, justifyContent, alignItems
-// (les propriétés que Tailwind ne peut pas exprimer avec des valeurs dynamiques)
+// Styles inline pour les blocs : gap, justifyContent, alignItems
 const layoutInlineStyles = computed(() => {
   return buildBlocLayoutInlineStyles(
-    normalizedElementStyles.value,
+    layoutOnlyStyles.value,
     builderState.currentBreakpoint.value,
     resolveValue,
-    isBuilderMode // false → pas de forçage inline de display/flexDirection/gridTemplateColumns
+    isBuilderMode // false → classes Tailwind + criticalLayoutInlineStyles gèrent display etc.
   );
 });
 
@@ -344,8 +419,8 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
     <!-- Miroir du VueDraggable dans SectionBuilder.vue                              -->
     <div
       class="w-full flex-1"
-      :class="buildSectionLayoutStyles(normalizedElementStyles, resolveValue)"
-      :style="sectionLayoutInlineStyles"
+      :class="cleanClasses(buildSectionLayoutStyles(normalizedElementStyles, resolveValue))"
+      :style="{ ...sectionLayoutInlineStyles, ...sectionCriticalLayoutInlineStyles }"
     >
       <template v-for="child in elementChildren" :key="child.id">
 
@@ -416,7 +491,7 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
       <div
         class="w-full h-full"
         :class="layoutClasses"
-        :style="layoutInlineStyles"
+        :style="{ ...layoutInlineStyles, ...criticalLayoutInlineStyles }"
       >
         <template v-for="child in elementChildren" :key="child.id">
 
@@ -427,7 +502,7 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
               :key="`${child.id}-${itemIndex}`"
               v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
               class="transition-all outline-none"
-              :class="isOutOfFlow(child) ? '' : 'relative w-full'"
+              :class="isOutOfFlow(child) ? '' : 'relative'"
               :style="childWrapperStyles(child)"
             >
               <BlocRenderView
@@ -442,7 +517,7 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
             v-else
             v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
             class="transition-all outline-none"
-            :class="isOutOfFlow(child) ? '' : 'relative w-full'"
+            :class="isOutOfFlow(child) ? '' : 'relative'"
             :style="childWrapperStyles(child)"
           >
             <BlocRenderView
