@@ -10,6 +10,20 @@ export default {
     "./components/**/*.{ts,tsx}",
     "*.{js,ts,jsx,tsx,mdx}",
   ],
+  safelist: [
+    {
+      pattern: /^(flex|grid|hidden|block|inline-block)$/,
+      variants: ['sm', 'md', 'lg', 'xl', '2xl'],
+    },
+    {
+      pattern: /^flex-(row|col|wrap|nowrap)$/,
+      variants: ['sm', 'md', 'lg', 'xl', '2xl'],
+    },
+    {
+      pattern: /^grid-cols-([1-9]|10|11|12)$/,
+      variants: ['sm', 'md', 'lg', 'xl', '2xl'],
+    },
+  ],
   theme: {
     extend: {
       fontFamily: {

@@ -1,44 +1,53 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import type { StaticStyles } from '../../type/component';
-import { buildStyles, buildInlineStyles } from '../../lib/styleProcessor';
+import { computed, inject } from 'vue';
+import type { StaticStyles, AnyComponentInstance } from '../../type/component';
+import { buildImageStyles, buildImageInlineStyles } from '../../lib/style/imageProcessor';
+import { useVariableResolver } from '../../hook/variable';
+import { filterResponsiveClasses } from '../../lib/style/core';
 
 interface Props {
   styles?: StaticStyles;
   data?: {
-    src?: string;
-    alt?: string;
-    width?: number | string;
-    height?: number | string;
-    objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
+    src?: any;
+    alt?: any;
+    objectFit?: any;
   };
+  element?: AnyComponentInstance;
+  children?: AnyComponentInstance[];
 }
 
 const props = defineProps<Props>();
 
+const builderState = inject<{
+  currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' }
+}>('builderState', { currentBreakpoint: { value: 'default' } } as any);
+
+const { resolveValue } = useVariableResolver();
+
 const computedClasses = computed(() => {
-  return buildStyles('static', props.styles as Record<string, unknown>);
+  return filterResponsiveClasses(
+    buildImageStyles(props.styles as Record<string, unknown>, resolveValue),
+    builderState.currentBreakpoint.value
+  );
 });
 
 const computedInlineStyles = computed(() => {
-  return buildInlineStyles('static', props.styles as Record<string, unknown>);
+  const bp = builderState.currentBreakpoint.value;
+  return buildImageInlineStyles(props.styles as Record<string, unknown>, bp, resolveValue);
 });
 
-const imageStyles = computed(() => {
-  const { width, height, objectFit } = props.data || {};
-  return {
-    width: width ? (typeof width === 'number' ? `${width}px` : width) : '100%',
-    height: height ? (typeof height === 'number' ? `${height}px` : height) : 'auto',
-    objectFit: objectFit || 'cover',
-  };
-});
+const imageSrc = computed(() => (resolveValue(props.data?.src) as string) || 'https://via.placeholder.com/400x300?text=Image+Builder');
+const imageAlt = computed(() => (resolveValue(props.data?.alt) as string) || '');
+const objectFit = computed(() => (resolveValue(props.data?.objectFit) as any) || 'cover');
 </script>
 
 <template>
-  <img
-    :src="props.data?.src || 'https://via.placeholder.com/150'"
-    :alt="props.data?.alt || 'Image'"
-    :class="computedClasses"
-    :style="{ ...computedInlineStyles, ...imageStyles }"
-  />
+  <div class="overflow-hidden" :class="computedClasses" :style="computedInlineStyles">
+    <img
+      :src="imageSrc"
+      :alt="imageAlt"
+      class="w-full h-full"
+      :style="{ objectFit: objectFit }"
+    />
+  </div>
 </template>

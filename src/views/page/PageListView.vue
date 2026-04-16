@@ -13,6 +13,9 @@
     import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue'
     import { useHead } from '@vueuse/head'
     import { useGetPages } from '../../hook/page'
+    import { useRouter } from 'vue-router'
+
+    const router = useRouter();
 
     useHead({
         meta: [
@@ -46,16 +49,22 @@
     const columns = [
         { key: 'id', label: 'ID' , class: 'w-6' },
         { key: 'name', label: 'Nom' },
-        { key: 'slug', label: 'Slug' },
+        { key: 'slug', label: 'Url' },
         { key: 'nb_revisions', label: 'Nb. Versions' },
         { key: 'user', label: 'Utilisateur'},
         { key: 'actions', label: 'Actions', class: 'w-10' },
     ]
 
-    const mediaResults = computed(() => pageQuery.data.value?.results || []);
+    const pageResults = computed(() => pageQuery.data.value?.results || []);
     const totalItems = computed(() => pageQuery.data.value?.count || 0);
 
-    const createPage=()=>{}
+    const openAddPage = () => {
+        router.push({ name: 'admin.page-add' });
+    };
+
+    const openEditPage = (id: number) => {
+        router.push({ name: 'admin.page-edit', params: { id } });
+    };
 </script>
 
 <template>
@@ -74,7 +83,7 @@
             <p class="text-background text-sm font-medium">Gérez vos pages visuels avec une précision chirurgicale.</p>
           </div>
           <div class="flex items-center gap-4">
-            <Button class="rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95" @click="createPage">
+            <Button class="rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95" @click="openAddPage">
               <Plus class="w-6 h-6 mr-2" />
               Ajouter
             </Button>
@@ -82,73 +91,78 @@
         </div>
       </template>
     </CompositionPageHeader>
-    <div class="card rounded-none p-6" >
-      <CompositionTable
-        :columns="columns"
-        :data="mediaResults"
-        :total="totalItems"
-        v-model:current-page="currentPage"
-        v-model:limit="limit"
-        searchable
-        v-model:search="search"
-        v-model:loading="pageQuery.isFetching.value"
-      >
 
-        <template #cell-id="{ index }">
-          <p>{{ index + 1 }}</p>
-        </template>
+    <main>
+      <div class="card rounded-none p-6" >
+        <CompositionTable
+          :columns="columns"
+          :data="pageResults"
+          :total="totalItems"
+          v-model:current-page="currentPage"
+          v-model:limit="limit"
+          searchable
+          v-model:search="search"
+          v-model:loading="pageQuery.isFetching.value"
+        >
 
-        <template #cell-name="{ row }">
-          <p>{{ row.name }}</p>
-        </template>
+          <template #cell-id="{ index }">
+            <p>{{ index + 1 }}</p>
+          </template>
 
-        <template #cell-slug="{ row }">
-          <p>{{ row.slug }}</p>
-        </template>
+          <template #cell-name="{ row }">
+            <p>{{ row.name }}</p>
+          </template>
 
-        <template #cell-nb_revisions="{ row }">
-          <p>{{ row.pageRevisions.length }}</p>
-        </template>
+          <template #cell-slug="{ row }">
+            <p>{{ row.slug }}</p>
+          </template>
 
-        <template #cell-user="{ row }">
-          <p>{{ row.user?.full_name }}</p>
-        </template>
+          <template #cell-nb_revisions="{ row }">
+            <p>{{ row.pageRevisions?.length || 0 }}</p>
+          </template>
 
-        <template #cell-actions="{ row }">
-          <DropdownMenu>
-            <DropdownMenuTrigger as-child>
-              <Button variant="ghost" size="icon" @click.stop="">
-                <MoreHorizontal class="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>
-                <button class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110" @click="()=>{$router.push({ name: 'admin.pages.revisions', params: { id: row.id } })}">
-                    <Eye class="w-4 h-4" /> Versionnement
-                </button>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel v-if="row.type === 'image'">
-                <button  @click="$router.push({ name: 'admin.media.update', params: { id: row.id } })" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
-                  <Pencil class="w-4 h-4" /> Modifier
-                </button>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator v-if="row.type === 'image'" />
-              <DropdownMenuLabel>
-                <CompositionConfirmDialog @confirm="deletePage(row.id)" header="Suppression de l'actif" description="Êtes-vous sûr de vouloir supprimer ce média ?" cancelText="Annuler" actionText="Supprimer" >
-                  <template #dialogButton>
-                    <button class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
-                      <X class="w-4 h-4" /> Supprimer
+          <template #cell-user="{ row }">
+            <p>{{ row.user?.full_name || '-' }}</p>
+          </template>
+
+          <template #cell-actions="{ row }">
+            <div class="flex items-center">
+              <DropdownMenu>
+                <DropdownMenuTrigger as-child>
+                  <Button variant="ghost" size="icon" @click.stop="">
+                    <MoreHorizontal class="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>
+                    <button class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110" @click="()=>{router.push({ name: 'admin.pages.revisions', params: { id: row.id } })}">
+                        <Eye class="w-4 h-4" /> Versionnement
                     </button>
-                  </template>
-                </CompositionConfirmDialog>
-              </DropdownMenuLabel>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </template>
-      </CompositionTable>
-    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>
+                    <button @click="openEditPage(row.id)" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
+                      <Pencil class="w-4 h-4" /> Modifier
+                    </button>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>
+                    <CompositionConfirmDialog @confirm="deletePage(row.id)" header="Suppression de l'actif" description="Êtes-vous sûr de vouloir supprimer ce média ?" cancelText="Annuler" actionText="Supprimer" >
+                      <template #dialogButton>
+                        <button class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
+                          <X class="w-4 h-4" /> Supprimer
+                        </button>
+                      </template>
+                    </CompositionConfirmDialog>
+                  </DropdownMenuLabel>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </template>
+        </CompositionTable>
+      </div>
+    </main>
   </div>
 </template>

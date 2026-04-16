@@ -14,6 +14,7 @@ export interface UserProfile {
   id: number;
   full_name: string;
   email: string;
+  role_id?: number;
   role: Role | null ;
   isLoggedIn: boolean;
   initials?: string;

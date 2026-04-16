@@ -2,7 +2,7 @@
 import { ref, reactive, watch, nextTick } from 'vue';
 import { Scissors, RotateCw, Image as ImageIcon, FlipHorizontal, FlipVertical, RotateCcw, Check, ArrowLeft, Loader2 } from 'lucide-vue-next';
 import { useRoute } from 'vue-router';
-import { useGetMedia, useUpdateMedia } from '../../hook/media';
+import { useGetMedia, useEditMedia } from '../../hook/media';
 import router from '../../router';
 import { showToast } from '../../lib/toast';
 import { getErrorMessage } from '../../lib/errorMessage';
@@ -13,13 +13,14 @@ import SelectItem from '../../components/ui/select/SelectItem.vue';
 import type { Media, SaveMediaPayload } from '../../type/media';
 import SelectValue from '../../components/ui/select/SelectValue.vue';
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue';
+import BaseSwitch from '../../components/base/BaseSwitch.vue';
 
 const ASPECT_RATIOS: Record<string, number | null> = { 'free': null, '1:1': 1, '16:9': 16/9, '4:3': 4/3, '3:2': 3/2 };
 
 const route = useRoute();
 const id = Number(route.params.id);
 const { data: mediaData } = useGetMedia(id);
-const { mutate: updateMedia, isPending: isSaving } = useUpdateMedia();
+const { mutate: updateMedia, isPending: isSaving } = useEditMedia();
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const imageElement = ref<HTMLImageElement | null>(null);
@@ -255,11 +256,11 @@ const onSave = () => {
     </CompositionPageHeader>
 
     <div class="flex flex-col max-h-screen overflow-hidden card rounded-none w-fit min-w-full">
-      <header class="border-b px-6 py-3 flex justify-between items-center bg-sidebar z-20 shrink-0">
-        <h1 class="text-lg font-bold tracking-tight text-gray-900">Éditeur</h1>
+      <header class="border-b border-border px-6 py-3 flex justify-between items-center bg-sidebar z-20 shrink-0">
+        <h1 class="text-lg font-bold tracking-tight text-text">Éditeur</h1>
         <div class="flex gap-2">
-          <button @click="router.back()" class="px-4 py-2 text-sm font-medium hover:bg-gray-100 rounded-md text-gray-600">Annuler</button>
-          <button @click="onSave" :disabled="isSaving" class="px-4 py-2 bg-primary text-text text-sm font-medium rounded-md flex items-center gap-2 shadow-sm hover:bg-primary/90 disabled:opacity-50 transition-all">
+          <button @click="router.back()" class="px-4 py-2 text-sm font-medium rounded-md bg-transparent text-text">Annuler</button>
+          <button @click="onSave" :disabled="isSaving" class="px-4 py-2 bg-primary text-text text-sm font-medium rounded-md flex items-center gap-2 shadow-sm hover:bg-primary/90 disabled:opacity-50 transition-all text-white">
             <Loader2 v-if="isSaving" class="w-4 h-4 animate-spin" />
             <Check v-else class="w-4 h-4" />
             Enregistrer
@@ -268,7 +269,7 @@ const onSave = () => {
       </header>
 
       <div class="flex flex-1 overflow-hidden">
-        <aside class="w-72 border-r p-6 overflow-y-auto bg-sidebar space-y-10 shrink-0">
+        <aside class="w-72 border-r border-border p-6 overflow-y-auto bg-sidebar space-y-10 shrink-0">
           <div class="space-y-4">
             <div class="flex items-center gap-2 text-primary">
               <Scissors :size="16" />
@@ -281,7 +282,7 @@ const onSave = () => {
                   v-for="(v, k) in ASPECT_RATIOS"
                   :key="k"
                   :value="k"
-                  class="select-item-custom"
+                  class="select-item-custom [data-selected]:text-white hover:text-white"
                 >{{ k === 'free' ? 'Libre' : k }}</SelectItem>
               </SelectContent>
             </Select>
@@ -293,10 +294,10 @@ const onSave = () => {
               <h2 class="text-xs font-bold capitalize tracking-widest">Orientation</h2>
             </div>
             <div class="grid grid-cols-4 gap-2">
-              <button @click="handleRotate(-90)" class="border h-9 flex items-center justify-center rounded-md hover:bg-gray-50 text-gray-600"><RotateCcw :size="14"/></button>
-              <button @click="handleRotate(90)" class="border h-9 flex items-center justify-center rounded-md hover:bg-gray-50 text-gray-600"><RotateCw :size="14"/></button>
-              <button @click="state.transform.flipH = !state.transform.flipH" :class="['border h-9 flex items-center justify-center rounded-md', state.transform.flipH ? 'bg-primary/10 border-primary text-primary' : '']"><FlipHorizontal :size="14"/></button>
-              <button @click="state.transform.flipV = !state.transform.flipV" :class="['border h-9 flex items-center justify-center rounded-md', state.transform.flipV ? 'bg-primary/10 border-primary text-primary' : '']"><FlipVertical :size="14"/></button>
+              <button @click="handleRotate(-90)" class="border border-border h-9 flex items-center justify-center rounded-md hover:bg-gray-50 text-gray-600"><RotateCcw :size="14"/></button>
+              <button @click="handleRotate(90)" class="border border-border h-9 flex items-center justify-center rounded-md hover:bg-gray-50 text-gray-600"><RotateCw :size="14"/></button>
+              <button @click="state.transform.flipH = !state.transform.flipH" :class="['border border-border h-9 flex items-center justify-center rounded-md', state.transform.flipH ? 'bg-primary/10 border-primary text-primary' : '']"><FlipHorizontal :size="14"/></button>
+              <button @click="state.transform.flipV = !state.transform.flipV" :class="['border border-border h-9 flex items-center justify-center rounded-md', state.transform.flipV ? 'bg-primary/10 border-primary text-primary' : '']"><FlipVertical :size="14"/></button>
             </div>
           </div>
 
@@ -308,11 +309,12 @@ const onSave = () => {
             <div class="space-y-4">
               <div class="space-y-2">
                 <label class="text-[10px] text-gray-400 font-bold">Flou: {{ state.filters.blur }}px</label>
-                <input type="range" v-model.number="state.filters.blur" min="0" max="15" class="w-full h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-primary">
+                <input type="range" v-model.number="state.filters.blur" min="0" max="15" class="w-full h-1.5 bg-border rounded-lg appearance-none cursor-pointer accent-primary">
               </div>
-              <label class="flex items-center justify-between p-3 border border-gray-100 rounded-lg cursor-pointer hover:bg-gray-50">
+              <label class="flex items-center justify-between p-3 border border-border rounded-lg cursor-pointer">
                 <span class="text-xs font-medium">Noir et Blanc</span>
-                <input type="checkbox" v-model="state.filters.grayscale" class="w-4 h-4 rounded text-primary">
+                <BaseSwitch v-model="state.filters.grayscale"/>
+                <!-- <input type="checkbox" v-model="state.filters.grayscale" class="w-4 h-4 rounded text-primary"> -->
               </label>
             </div>
           </div>

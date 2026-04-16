@@ -6,8 +6,6 @@ import MainLayout from '@/layout/MainLayout.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import MediaListView from '@/views/media/MediaListView.vue'
 import MediaUpdateView from '@/views/media/MediaUpdateView.vue'
-// import VariableListView from '../views/variable/VariableListView.vue'
-import TestView from '../views/variable/TestView.vue'
 import { setupAuthGuard } from './authGuard'
 import SettingsView from '@/views/user/SettingsView.vue'
 import ChangePasswordView from '../views/auth/ChangePasswordView.vue'
@@ -29,9 +27,14 @@ import ContentTypeCorbeilleView from '../views/contentType/ContentTypeCorbeilleV
 import TaxonomyCorbeilleView from '../views/Taxonomy/TaxonomyCorbeilleView.vue'
 import BuilderView from '../views/builder/BuilderView.vue'
 import BuilderLayout from '../layout/BuilderLayout.vue'
+import RenderLayout from '../layout/RenderLayout.vue'
 import PageListView from '../views/page/PageListView.vue'
 import PageRevisionListView from '../views/pageRevision/PageRevisionListView.vue'
 import PageRenderView from '../views/renderPage/PageRenderView.vue'
+import UserCreateFormView from '../views/user/UserCreateFormView.vue'
+import UserUpdateFormView from '../views/user/UserUpdateFormView.vue'
+import { setupPermissionGuard } from '../middleware/routerAccessPermission'
+import RenderNotFound from '../views/error/RenderNotFound.vue'
 
 
 const router = createRouter({
@@ -43,9 +46,6 @@ const router = createRouter({
             {
                 path: 'auth',
                 component: DefaultLayout,
-                // Empeche l'accès à la page de login si l'utilisateur est déjà authentifié
-
-
                 children: [
                     {
                         path: 'login',
@@ -68,50 +68,69 @@ const router = createRouter({
                 ]
             },
             {
-                path: '',
+                path: 'dashboard',
                 component: MainLayout,
                 // Permet de proteger les urls (Ici toutes les routes enfants)
                 meta: { requiresAuth: true },
                 children: [
                     {
-                      path: 'dashboard',
+                      path: '',
                       name: 'admin.dashboard',
-                      component: DashboardView
+                      component: DashboardView,
+                      meta: { permissions: 'read_page_admin' }
                     },
                     {
                       path: 'media',
                       name: 'admin.media',
-                      component: MediaListView
+                      component: MediaListView,
+                      meta: { permissions: 'read_media' }
                     },
                     {
                       path: 'media/update/:id',
                       name: 'admin.media.update',
-                      component: MediaUpdateView
-                    },
-                    {
-                      path: 'variable',
-                      name: 'admin.variable',
-                      component: TestView
+                      component: MediaUpdateView,
+                      meta: { permissions: 'update_media' }
                     },
                     {
                       path: 'settings',
                       name: 'admin.settings',
-                      component: SettingsView
+                      component: SettingsView,
+                      meta: { permissions: 'update_user' }
                     },
                     {
-                      path: '',
-                      name: 'admin.users',
-                      component: AdminVue
+                      path: 'users',
+                      children:[
+                        {
+                          path: '',
+                          name: 'admin.users.list',
+                          component: AdminVue,
+                          meta: { permissions: 'read_user' }
+                        },
+                        {
+                          path: 'create',
+                          name: 'admin.users.create',
+                          component: UserCreateFormView,
+                          meta: { permissions: 'create_user' }
+                        },
+                        {
+                          path: 'edit/:id',
+                          name: 'admin.users.edit',
+                          component: UserUpdateFormView,
+                          meta: { permissions: 'update_user' }
+                        },
+                      ]
                     },
                     {
                       path: 'roles-permissions',
                       name: 'admin.roles-permissions',
-                      component: RolesPermissionsView
+                      component: RolesPermissionsView,
+                      meta: { permissions: 'read_role' }
                     },
                     {
                       path: 'parameter',
                       name: 'admin.parameter',
-                      component: ParameterView
+                      component: ParameterView,
+                      meta: { permissions: 'update_parameter' }
                     },
                     {
                       path:"content-types",
@@ -119,22 +138,26 @@ const router = createRouter({
                         {
                           path:"",
                           name:"admin.content-types",
-                          component:ContentTypeListView
+                          component:ContentTypeListView,
+                          meta: { permissions: 'read_content_type' }
                         },
                         {
                           path:"create",
                           name:"admin.content-types.create",
-                          component:ContentTypeFormView
+                          component:ContentTypeFormView,
+                          meta: { permissions: 'create_content_type' }
                         },
                         {
                           path:"edit/:id",
                           name:"admin.content-types.edit",
-                          component:ContentTypeEditView
+                          component:ContentTypeEditView,
+                          meta: { permissions: 'update_content_type' }
                         },
                         {
                           path: 'corbeille',
                           name: 'admin.content-types.corbeille',
-                          component:  ContentTypeCorbeilleView
+                          component:  ContentTypeCorbeilleView,
+                          meta: { permissions: 'read_content_type' }
                         }
                       ]
                     },
@@ -144,27 +167,32 @@ const router = createRouter({
                         {
                           path: 'create/:id',
                           name: 'admin.content-entry.create',
-                          component: ContentEntryCreateFormView
+                          component: ContentEntryCreateFormView,
+                          meta: { permissions: 'create_content_entry' }
                         },
                         {
                           path: 'list/:slug',
                           name: 'admin.content-entry.list',
-                          component: ContentEntryListView
+                          component: ContentEntryListView,
+                          meta: { permissions: 'read_content_entry' }
                         },
                         {
                           path: 'update/:id',
                           name: 'admin.content-entry.update',
-                          component: ContentEntryUpdateFormView
+                          component: ContentEntryUpdateFormView,
+                          meta: { permissions: 'update_content_entry' }
                         },
                         {
                           path: 'preview/:id',
                           name: 'admin.content-entry.preview',
-                          component: ContentEntryPreviewView
+                          component: ContentEntryPreviewView,
+                          meta: { permissions: 'read_content_entry' }
                         },
                         {
                           path: 'corbeille',
                           name: 'admin.content-entry.corbeille',
-                          component: ContentEntryCorbeilleView
+                          component: ContentEntryCorbeilleView,
+                          meta: { permissions: 'read_content_entry' }
                         }
                       ]
                     },
@@ -174,22 +202,26 @@ const router = createRouter({
                         {
                           path: '',
                           name: 'admin.taxonomies',
-                          component: TaxonomyListView
+                          component: TaxonomyListView,
+                          meta: { permissions: 'read_taxonomy' }
                         },
                         {
                           path: 'create',
                           name: 'admin.taxonomies.create',
-                          component: TaxonomyFormView
+                          component: TaxonomyFormView,
+                          meta: { permissions: 'create_taxonomy' }
                         },
                         {
                           path: 'edit/:id',
                           name: 'admin.taxonomies.edit',
-                          component: TaxonomyFormView
+                          component: TaxonomyFormView,
+                          meta: { permissions: 'update_taxonomy' }
                         },
                         {
                           path: 'corbeille',
                           name: 'admin.taxonomies.corbeille',
-                          component: TaxonomyCorbeilleView
+                          component: TaxonomyCorbeilleView,
+                          meta: { permissions: 'read_taxonomy' }
                         }
                       ]
                     },
@@ -199,12 +231,14 @@ const router = createRouter({
                         {
                           path: '',
                           name: 'admin.pages',
-                          component: PageListView
+                          component: PageListView,
+                          meta: { permissions: 'read_page' }
                         },
                         {
                           path: 'page-revisions/:id',
                           name: 'admin.pages.revisions',
                           component: PageRevisionListView,
+                          meta: { permissions: 'read_page' }
                         }
                       ]
                     },
@@ -219,6 +253,12 @@ const router = createRouter({
                   path: 'page-revision/update/:id',
                   name: 'admin.page-revision.update',
                   component: BuilderView,
+                  meta: { permissions: 'update_page' }
+                },
+                {
+                  path: 'notfound',
+                  name: 'builder.notfound',
+                  component: RenderNotFound,
                 }
               ]
             }
@@ -227,7 +267,7 @@ const router = createRouter({
 
     {
         path: '/:slug?',
-        component: BuilderLayout,
+        component: RenderLayout,
         children: [
             {
                 path: '',
@@ -237,7 +277,8 @@ const router = createRouter({
         ]
     },
 
-    {path: '/:pathMatch(.*)*',
+    {
+        path: '/:pathMatch(.*)*',
         component: DefaultLayout,
         children: [
             {
@@ -255,6 +296,8 @@ const router = createRouter({
 
 // Guard global pour la gestion de l'authentification
 setupAuthGuard(router);
+// Guard global pour la gestion des permissions
+setupPermissionGuard(router);
 
 
 

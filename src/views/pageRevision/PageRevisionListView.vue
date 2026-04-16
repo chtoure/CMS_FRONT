@@ -1,5 +1,6 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
-    import { computed, ref, watch } from 'vue'
+    import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
     import CompositionTable from '@/components/composition/CompositionTable.vue'
     import Button from '@/components/ui/button/Button.vue'
     import {ArrowLeft, Eye, MoreHorizontal, Pencil, Plus, Rocket, X } from 'lucide-vue-next'
@@ -16,6 +17,8 @@
     import { useRouter } from 'vue-router'
     import { useGetPageRevisions, useRegisterPageRevision, useUpdatePageRevisionStatus } from '../../hook/page-revision'
     import { useBlockTemplate } from '../../hook/bloc-template'
+    import { useGetPage } from '../../hook/page'
+    import { showToast } from '../../lib/toast'
 
     const router = useRouter();
     useHead({
@@ -42,6 +45,7 @@
     }));
 
     const pageRevisionQuery = useGetPageRevisions(pageId, filterParams);
+    const pageQuery = useGetPage(pageId);
 
     watch([currentPage, limit], () => {
         pageRevisionQuery.refetch();
@@ -69,27 +73,82 @@
         }
     }
 
+    const getStatusLabel = (status: string) => {
+        switch (status) {
+            case 'PUBLISHED': return 'Publiée'
+            case 'DRAFT': return 'Brouillon'
+            case 'ARCHIVED': return 'Archivée'
+            default: return status
+        }
+    }
+
     const mediaResults = computed(() => pageRevisionQuery.data.value?.results || []);
     const totalItems = computed(() => pageRevisionQuery.data.value?.count || 0);
 
+    // Mémoriser la dernière version ouverte pour affichage dynamique du badge "En cours"
+    const lastActiveDraftId = ref<number | null>(null);
+
+    const onStorageCrossTab = (e: StorageEvent) => {
+        if (e.key === `lastActiveDraft_${pageId.value}`) {
+            lastActiveDraftId.value = Number(e.newValue);
+        }
+    };
+
+    onMounted(() => {
+        lastActiveDraftId.value = Number(localStorage.getItem(`lastActiveDraft_${pageId.value}`)) || null;
+        window.addEventListener('storage', onStorageCrossTab);
+    });
+
+    onUnmounted(() => {
+        window.removeEventListener('storage', onStorageCrossTab);
+    });
+
+    const setLastActive = (id: number) => {
+        lastActiveDraftId.value = id;
+        localStorage.setItem(`lastActiveDraft_${pageId.value}`, id.toString());
+    };
+
+    // Le draft actif est celui qu'on a cliqué en dernier, sinon le plus récemment modifié
+    const draftRevision = computed(() => {
+        const drafts = mediaResults.value; // On prend toutes les versions éditables pour être sûr (ou juste DRAFT)
+        if (drafts.length === 0) return null;
+
+        if (lastActiveDraftId.value) {
+            const found = drafts.find((r: any) => r.id === lastActiveDraftId.value);
+            if (found && found.status !== 'PUBLISHED') return found;
+        }
+
+        const draftOnly = drafts.filter((r: any) => r.status === 'DRAFT');
+        if (draftOnly.length === 0) return null;
+
+        return draftOnly.reduce((latest: any, current: any) => {
+            return new Date(current.updatedAt) > new Date(latest.updatedAt) ? current : latest;
+        });
+    });
+
     const pageRevisionRegister = useRegisterPageRevision();
     const pageRevisionStatusUpdate = useUpdatePageRevisionStatus();
-    const { fetchAll, useSyncAll, useDeleteSection, deleteBlockTemplate } = useBlockTemplate();
+    const { fetchAll, useSyncAll, useDeleteSection, useDeleteBlockTemplate } = useBlockTemplate();
+    const deleteBlockTemplateMut = useDeleteBlockTemplate();
 
     const isPublishing = ref<number | null>(null);
 
     const handleCreateRevision = async () => {
         try {
+
+           // On calcule le numéro de la prochaine version de manière sécurisée
+            const nextVersion = Math.max(...mediaResults.value.map((r: any) => r.version)) + 1;
+
+            console.log('nextVersion', nextVersion);
+
             const newRevision = await pageRevisionRegister.mutateAsync({
                 pageId: pageId.value,
-                status: 'DRAFT'
+                status: 'DRAFT',
+                version: nextVersion,
             });
 
             if (newRevision && newRevision.id) {
-                router.push({
-                    name: 'admin.page-revision.update',
-                    params: { id: newRevision.id }
-                });
+                pageRevisionQuery.refetch();
             }
         } catch (error) {
             console.error('Failed to create page revision:', error);
@@ -105,29 +164,35 @@
             // 1. Trouver la version publiée actuelle
             const currentPublished = allRevisions.find(r => r.status === 'PUBLISHED');
 
-            // Fonction récursive pour supprimer les anciens IDs sur tout l'arbre
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const cleanComponentIds = (components: any[]): any[] => {
-                if (!components || !Array.isArray(components)) return [];
-                return components.map(c => ({
-                    ...c,
-                    id: undefined,
-                    blocTemplateId: undefined,
-                    children: cleanComponentIds(c.children)
-                }));
-            };
-
             // 2. Préparer l'arbre complet de la révision cible (celle qu'on veut publier)
             const targetTreeRaw = await fetchAll(targetRevisionId);
             // Copie profonde pour s'assurer qu'absolument aucune référence n'est partagée
             const targetTree = JSON.parse(JSON.stringify(targetTreeRaw || []));
 
-            const treeToClone = targetTree.map((section: any) => ({
-                ...section,
-                id: undefined, // forcer la création d'un nouvel UUID côté frontend
-                sectionId: undefined, // forcer Create au lieu de Update dans useSyncAll
-                children: cleanComponentIds(section.children)
-            }));
+            // PASS 1: Préparation. On nettoie les DB IDs pour forcer la création mais on les garde en 'old'.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const prepareTreeForClone = (components: any[]): any[] => {
+                if (!components || !Array.isArray(components)) return [];
+                return components.map(c => {
+                    return {
+                        ...c,
+                        id: crypto.randomUUID(), 
+                        oldBlocTemplateId: c.blocTemplateId, // Pour mapper plus tard
+                        blocTemplateId: undefined,
+                        children: prepareTreeForClone(c.children)
+                    };
+                });
+            };
+
+            const treeToClone = targetTree.map((section: any) => {
+                return {
+                    ...section,
+                    id: crypto.randomUUID(), 
+                    oldSectionId: section.sectionId, // Pour mapper plus tard
+                    sectionId: undefined, 
+                    children: prepareTreeForClone(section.children)
+                };
+            });
 
             // 3. Passer la révision cible en PUBLISHED
             await pageRevisionStatusUpdate.mutateAsync({
@@ -135,19 +200,19 @@
                 status: 'PUBLISHED'
             });
 
+            // Déterminer où sauvegarder le clône
+            let targetDraftId: number | null = null;
+
             // 4. Gérer le clonage dans une révision DOIT rester en DRAFT (Brouillon)
             if (currentPublished && currentPublished.id !== targetRevisionId) {
                 // S'il y avait déjà une version publiée, on la recycle :
-                // - on la repasse en DRAFT
                 await pageRevisionStatusUpdate.mutateAsync({
                     id: currentPublished.id,
                     status: 'DRAFT'
                 });
 
-                // - on supprime ses anciennes sections (en purgeant d'abord les blocs pour éviter les contraintes de clés étrangères)
                 const oldTree = await fetchAll(currentPublished.id);
 
-                // Fonction pour supprimer tous les blocs récursivement de bas en haut
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const deleteBlocksRecursively = async (nodes: any[]) => {
                     if (!nodes || nodes.length === 0) return;
@@ -156,7 +221,7 @@
                             await deleteBlocksRecursively(node.children);
                         }
                         if (node.blocTemplateId) {
-                            await deleteBlockTemplate(node.blocTemplateId);
+                            await deleteBlockTemplateMut.mutateAsync(node.blocTemplateId);
                         }
                     }
                 };
@@ -171,29 +236,88 @@
                         }
                     }
                 }
-
-                // - on copie les sections de la cible vers cette ancienne révision recyclée
-                if (treeToClone.length > 0) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    await useSyncAll(treeToClone as any, currentPublished.id);
-                }
+                
+                targetDraftId = currentPublished.id;
             } else if (!currentPublished) {
-                // S'il n'y avait AUCUNE version publiée avant (première publication de la page) :
-                // On crée une nouvelle révision Brouillon pour accueillir les futures modifications
                 const maxVersion = allRevisions.reduce((max, r) => Math.max(max, r.version || 0), 0);
                 const newRevision = await pageRevisionRegister.mutateAsync({
                     pageId: pageId.value,
                     status: 'DRAFT',
                     version: maxVersion + 1
                 });
+                
+                if (newRevision && newRevision.id) {
+                    targetDraftId = newRevision.id;
+                }
+            }
 
-                if (newRevision && newRevision.id && treeToClone.length > 0) {
+            // PASS 2: Synchroniser l'arbre brut, MAIS on récupère l'arbre synchronisé (avec les nouveaux DB_IDs)
+            if (targetDraftId && treeToClone.length > 0) {
+                // Première sauvegarde générera les vrais blocTemplateId en DB
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const syncedTree = await useSyncAll(treeToClone as any, targetDraftId);
+                
+                // On construit le map des vrais final DB_ID: old -> new
+                const dbIdMap = new Map<string, string>();
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const populateDbMap = (sections: any[]) => {
+                    for(const sec of sections) {
+                        if (sec.oldSectionId && sec.sectionId) {
+                            dbIdMap.set(sec.oldSectionId.toString(), sec.sectionId.toString());
+                        }
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const traverseNodes = (nodes: any[]) => {
+                            for(const n of nodes) {
+                                if (n.oldBlocTemplateId && n.blocTemplateId) {
+                                    dbIdMap.set(n.oldBlocTemplateId.toString(), n.blocTemplateId.toString());
+                                }
+                                if (n.children) traverseNodes(n.children);
+                            }
+                        };
+                        traverseNodes(sec.children || []);
+                    }
+                };
+                populateDbMap(syncedTree);
+
+                let hasChanges = false;
+
+                // Fonction pour mettre à jour les targetIds des actions avec le nouveau blocTemplateId
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const updateNodesTargets = (components: any[]) => {
+                    if (!components || !Array.isArray(components)) return;
+                    components.forEach(c => {
+                        if (c.data?.cliquable?.action === 'TOGGLE_VISIBILITY' && c.data.cliquable.action_params?.targetId) {
+                            const oldTargetId = c.data.cliquable.action_params.targetId.toString();
+                            if (dbIdMap.has(oldTargetId)) {
+                                c.data.cliquable.action_params.targetId = dbIdMap.get(oldTargetId);
+                                hasChanges = true;
+                            }
+                        }
+                        if (c.children) {
+                           updateNodesTargets(c.children);
+                        }
+                    });
+                };
+
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                syncedTree.forEach((sec: any) => updateNodesTargets(sec.children));
+
+                // Si des cibles ont été mises à jour avec les ID de BDD validés, on refait une synchronisation UPDATE
+                if (hasChanges) {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    await useSyncAll(treeToClone as any, newRevision.id);
+                    await useSyncAll(syncedTree as any, targetDraftId);
                 }
             }
 
             console.log('Revision published and clone processed successfully');
+
+            // Déterminer la version du brouillon de travail pour l'afficher dans le toast
+            const draftVersionToShow = currentPublished
+                ? currentPublished.version
+                : (allRevisions.reduce((max, r) => Math.max(max, r.version || 0), 0) + 1);
+
+            showToast('success', `Publication réussie ! Vous trouverez le contenu de cette page dans le brouillon (Version ${draftVersionToShow}) pour vos futures modifications.`);
+
         } catch (error) {
             console.error('Failed to publish page revision:', error);
             alert("Erreur lors de la publication. Veuillez réessayer.");
@@ -252,22 +376,29 @@
         searchable
         v-model:search="search"
       >
+        <template #extra-header>
+          <div v-if="draftRevision" class="flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-md border border-primary/20">
+            <Pencil class="w-4 h-4" />
+            <span class="text-sm font-medium whitespace-nowrap">Brouillon en cours : Version {{ draftRevision.version }}</span>
+          </div>
+        </template>
+
         <template #cell-id="{ index }">
           <p>{{ index + 1 }}</p>
         </template>
         <template #cell-status="{ row }">
             <span :class="['px-3 py-1 rounded-full text-xs font-bold border', getStatusColor(row.status)]">
-                {{ row.status }}
+                {{ getStatusLabel(row.status) }}
             </span>
         </template>
         <template #cell-version="{ row }">
             <p>{{ row.version }}</p>
         </template>
         <template #cell-sections="{ row }">
-            <p>{{ row.sections.length }}</p>
+            <p>{{ row.sections?.length || 0 }}</p>
         </template>
         <template #cell-user="{ row }">
-            <p>{{ row.user.full_name }}</p>
+            <p>{{ row.user?.full_name || '-' }}</p>
         </template>
         <template #cell-actions="{ row }">
           <DropdownMenu>
@@ -279,10 +410,25 @@
             <DropdownMenuContent>
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuLabel>
-                <button class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
-                  <Eye class="w-4 h-4" /> Visualiser
-                </button>
+              <DropdownMenuLabel v-if="row.status === 'PUBLISHED'">
+                <div class="flex flex-col gap-1">
+                  <a
+                    target="_blank"
+                    :href="pageQuery.data.value?.slug.startsWith('/') ? pageQuery.data.value.slug : '/' + (pageQuery.data.value?.slug || '')"
+                    class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110"
+                  >
+                    <Eye class="w-4 h-4" /> Visualiser
+                  </a>
+                  <a
+                    v-if="draftRevision"
+                    target="_blank"
+                    :href="`${$router.resolve({ name: 'admin.page-revision.update', params: { id: draftRevision.id } }).href}`"
+                    class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110"
+                    @click="setLastActive(draftRevision.id)"
+                  >
+                    <Pencil class="w-4 h-4" /> Modifier (Actuel)
+                  </a>
+                </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuLabel v-if="row.status !== 'PUBLISHED'">
@@ -297,7 +443,12 @@
               </DropdownMenuLabel>
               <DropdownMenuSeparator v-if="row.status !== 'PUBLISHED'" />
               <DropdownMenuLabel v-if="row.status !== 'PUBLISHED'">
-                <a target="_blank" :href="`${$router.resolve({ name: 'admin.page-revision.update', params: { id: row.id } }).href}`" class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110">
+                <a 
+                   target="_blank" 
+                   :href="`${$router.resolve({ name: 'admin.page-revision.update', params: { id: row.id } }).href}`" 
+                   class="text-text p-2 flex items-center gap-2 transition-all hover:scale-110"
+                   @click="setLastActive(row.id)"
+                >
                   <Pencil class="w-4 h-4" /> Modifier
                 </a>
               </DropdownMenuLabel>

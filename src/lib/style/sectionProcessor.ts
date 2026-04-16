@@ -1,0 +1,183 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { resolveValue, resolveValueForBreakpoint, formatColor, formatDimension } from "./core";
+import { VISUAL_MAPPER } from "./shared";
+import { applyPositioningInline } from "./common";
+
+const SECTION_LAYOUT_MAPPER = {
+  direction: (v: any) => {
+    const map: Record<string, string> = { horizontal: 'flex-row', vertical: 'flex-col' };
+    return typeof v === 'string' ? map[v] || '' : '';
+  },
+  justify: (v: any) => {
+    const map: Record<string, string> = { start: 'justify-start', center: 'justify-center', end: 'justify-end', between: 'justify-between', around: 'justify-around', evenly: 'justify-evenly' };
+    return typeof v === 'string' ? map[v] || '' : '';
+  },
+  align: (v: any) => {
+    const map: Record<string, string> = { start: 'items-start', center: 'items-center', end: 'items-end', stretch: 'items-stretch' };
+    return typeof v === 'string' ? map[v] || '' : '';
+  },
+  gap: (v: any) => '', // Gap géré en inline style
+  columns: (v: any) => `grid-cols-${v}`,
+  paddingX: (v: any) => formatDimension('px', v),
+  paddingY: (v: any) => formatDimension('py', v),
+};
+
+export function buildSectionStyles(styles?: Record<string, unknown>, resolver?: (v: unknown) => unknown): string {
+  if (!styles) return '';
+  const classes: string[] = [];
+
+  // Visual (Partial)
+  if (styles.shadow) classes.push(resolveValue(styles.shadow, (v) => v === 'none' ? 'shadow-none' : `shadow-${v}`, resolver));
+
+  return classes.filter(Boolean).join(' ');
+}
+
+export function buildSectionLayoutStyles(styles?: Record<string, unknown>, resolver?: (v: unknown) => unknown): string {
+  if (!styles) return '';
+  const classes: string[] = [];
+
+  // Display
+  if (styles.display !== undefined) {
+    classes.push(resolveValue(styles.display, (v) => v as string, resolver));
+  } else {
+    classes.push('flex'); // Default
+  }
+
+  // Layout
+  (Object.keys(SECTION_LAYOUT_MAPPER) as Array<keyof typeof SECTION_LAYOUT_MAPPER>).forEach(key => {
+    const value = styles[key];
+    if (value !== undefined) {
+      classes.push(resolveValue(value, SECTION_LAYOUT_MAPPER[key], resolver));
+    }
+  });
+
+  return classes.filter(Boolean).join(' ');
+}
+
+export function buildSectionInlineStyles(
+  styles?: Record<string, unknown>,
+  breakpoint: 'default' | 'sm' | 'md' | 'lg' = 'default',
+  resolver?: (v: unknown) => unknown,
+  isBuilderMode: boolean = false
+): Record<string, string> {
+  if (!styles) return {};
+  const inline: Record<string, string> = {};
+
+  const getValue = (val: unknown) => resolveValueForBreakpoint(val, breakpoint, resolver);
+
+  // Background
+  if (styles.bg) {
+    const val = getValue(styles.bg);
+    if (typeof val === 'string') inline.backgroundColor = val.startsWith('#') ? val : `#${val}`;
+  }
+
+  // Background Media (Image)
+  if (styles.bgImage !== undefined) {
+    const val = getValue(styles.bgImage);
+    if (typeof val === 'string') {
+        inline.backgroundImage = `url('${val}')`;
+    } else if (val && typeof val === 'object' && 'url' in val) {
+        inline.backgroundImage = `url('${(val as any).url}')`;
+    }
+  }
+
+  if (styles.bgSize !== undefined) {
+    const val = getValue(styles.bgSize);
+    if (val) inline.backgroundSize = val as string;
+  }
+
+  if (styles.bgPosition !== undefined) {
+    const val = getValue(styles.bgPosition);
+    if (val) inline.backgroundPosition = val as string;
+  }
+
+  if (styles.bgRepeat !== undefined) {
+    const val = getValue(styles.bgRepeat);
+    if (val) inline.backgroundRepeat = val as string;
+  }
+
+  // Padding
+  if (styles.padding !== undefined) {
+    const val = getValue(styles.padding);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.padding = `${val}px`;
+    } else if (typeof val === 'string') {
+      inline.padding = val;
+    }
+  }
+
+  // Padding Horizontal/Vertical
+  if (styles.paddingX !== undefined) {
+    const val = getValue(styles.paddingX);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.paddingLeft = `${val}px`;
+      inline.paddingRight = `${val}px`;
+    }
+  }
+  if (styles.paddingY !== undefined) {
+    const val = getValue(styles.paddingY);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.paddingTop = `${val}px`;
+      inline.paddingBottom = `${val}px`;
+    }
+  }
+
+  // Gap inline (plus fiable que les classes Tailwind arbitraires JIT)
+  if (styles.gap !== undefined) {
+    const val = getValue(styles.gap);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.gap = `${val}px`;
+    }
+  }
+
+  // Justify Content inline
+  const justify = getValue(styles.justify);
+  if (justify) {
+    const justifyMap: Record<string, string> = { start: 'flex-start', center: 'center', end: 'flex-end', between: 'space-between', around: 'space-around', evenly: 'space-evenly' };
+    if (typeof justify === 'string' && justifyMap[justify]) inline.justifyContent = justifyMap[justify];
+  }
+
+  // Align Items inline
+  const align = getValue(styles.align);
+  if (align) {
+    const alignMap: Record<string, string> = { start: 'flex-start', center: 'center', end: 'flex-end', stretch: 'stretch' };
+    if (typeof align === 'string' && alignMap[align]) inline.alignItems = alignMap[align];
+  }
+
+  // Borders
+  if (styles.borderWidth !== undefined) {
+    const val = getValue(styles.borderWidth);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) inline.borderWidth = `${val}px`;
+  }
+  if (styles.borderColor) {
+    const val = getValue(styles.borderColor);
+    if (typeof val === 'string') inline.borderColor = val.startsWith('#') ? val : `#${val}`;
+  }
+  if (styles.borderStyle) {
+    const val = getValue(styles.borderStyle);
+    if (typeof val === 'string') inline.borderStyle = val;
+  }
+
+  // Opacity
+  if (styles.opacity !== undefined) {
+    const val = getValue(styles.opacity);
+    if (val !== undefined) inline.opacity = String(val);
+  }
+
+  // Positioning only (to avoid layout breakage)
+  applyPositioningInline(inline, styles, getValue);
+
+  const positionVal = getValue(styles.position);
+
+  if ((positionVal === 'sticky' || positionVal === 'fixed' || positionVal === 'absolute') && !inline.zIndex) {
+    inline.zIndex = '10';
+  }
+
+  // When position is fixed or absolute, sections normally shrink to content width.
+  // Apply width: 100% by default unless the user has explicitly set a width.
+  if ((positionVal === 'fixed' || positionVal === 'absolute') && !styles.width) {
+    inline.width = '100%';
+  }
+
+  return inline;
+}

@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import api, { handleResponse } from "../api/fetchConfig";
 import type { Permission, permsFilter } from "../type/permission";
-import { unref, type Ref } from "vue";
+import { computed, unref, type Ref } from "vue";
 import type { Pagination } from "../type/pagination";
 
 
@@ -23,7 +23,7 @@ const buildQueryParams = (filter?: Ref<permsFilter> | permsFilter) => {
 
 
 // Hook get permission list avec pagination
-export const useGetPermissions = (filter?: Ref<permsFilter> | permsFilter) => {
+const useGetPermissions = (filter?: Ref<permsFilter> | permsFilter) => {
   return useQuery({
     queryKey: ["permissions",filter],
     queryFn:async () => {
@@ -36,10 +36,32 @@ export const useGetPermissions = (filter?: Ref<permsFilter> | permsFilter) => {
 }
 
 
+const useGetPermissionsByRoleId = (roleId: Ref<number> | number) => {
+  return useQuery({
+    // On s'assure que la clé est réactive si roleId change
+    queryKey: computed(() => ["permissions", unref(roleId)]),
+    
+    queryFn: async () => {
+      const id = unref(roleId)
+      const response = await api(`/permissionsByRoleId/${id}`)
+      return handleResponse<Permission[]>(response)
+    },
+
+    // CONDITION CRUCIALE : 
+    // La requête ne s'exécute que si l'ID est différent de 0
+    enabled: computed(() => unref(roleId) !== 0),
+    
+    // Optionnel : si l'ID est 0, on peut vouloir que 'data' soit un tableau vide
+    // au lieu de 'undefined' pendant que la requête est désactivée.
+    placeholderData: [] as Permission[] 
+  })
+}
+
+
 
 
 // Archiver un permission
-export const useDeletePermission = () => {
+const useDeletePermission = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (idUser: number) => {
@@ -56,7 +78,7 @@ export const useDeletePermission = () => {
 
 
 // Restorer un permission
-export const useRestorePermission = () => {
+const useRestorePermission = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (idUser: number) => {
@@ -70,3 +92,12 @@ export const useRestorePermission = () => {
     }
   });
 };
+
+export {
+  useGetPermissions,
+  useGetPermissionsByRoleId,
+  useDeletePermission,
+  useRestorePermission
+}
+
+

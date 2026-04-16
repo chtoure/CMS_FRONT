@@ -28,7 +28,9 @@
     import HoverCardTrigger from '../ui/hover-card/HoverCardTrigger.vue';
     import HoverCardContent from '../ui/hover-card/HoverCardContent.vue';
     import { useGetContentTypes } from '../../hook/content-type.ts';
+    import { usePermission } from '../../hook/usePermission.ts';
 
+    const { hasPermission } = usePermission();
     const props = defineProps<{
         onToggleSidebar?: () => void
         headerClass?: string,
@@ -147,7 +149,7 @@
         </div>
 
         <div class="flex items-center gap-2">
-            <HoverCard :open-delay="100" :close-delay="200">
+            <HoverCard v-if="hasPermission(['create_content_entry'])" :open-delay="100" :close-delay="200">
               <HoverCardTrigger as-child>
                 <Button
                   variant="ghost"

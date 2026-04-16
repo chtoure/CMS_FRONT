@@ -41,6 +41,7 @@ interface HydratedBlock {
     tag: string;
     family: string;
     styles: Record<string, any>;
+    params?: any[];
     data: Record<string, any>;
     children: HydratedBlock[];
 }
