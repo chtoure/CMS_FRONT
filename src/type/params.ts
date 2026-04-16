@@ -89,5 +89,6 @@ export {
     type IContenusField,
     type IParentField,
     type IPropsSchemaField,
-    type IComponentParams
+    type IComponentParams,
+    type IContenusQuery
 }

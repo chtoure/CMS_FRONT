@@ -223,7 +223,7 @@ const mergeBlocTemplateIds = (
 
   const currentById = new Map();
   const unmatchedCurrents: any[] = [];
-  
+
   for(const cur of currentNodes) {
      if('blocTemplateId' in cur && cur.blocTemplateId) {
         currentById.set(cur.blocTemplateId, cur);
@@ -239,7 +239,7 @@ const mergeBlocTemplateIds = (
     if (!synced) continue;
 
     let current = null;
-    
+
     if ('blocTemplateId' in synced && synced.blocTemplateId && currentById.has(synced.blocTemplateId)) {
        current = currentById.get(synced.blocTemplateId);
     } else if (unmatchedIndex < unmatchedCurrents.length) {
@@ -305,7 +305,7 @@ watch(pageTree, async (newVal) => {
     const jsonBefore = JSON.stringify(pageTree.value);
     mergeBlocTemplateIds(pageTree.value, syncedTree);
     const jsonAfter = JSON.stringify(pageTree.value);
-    
+
     if (history.value[historyIndex.value] !== jsonAfter) {
       history.value[historyIndex.value] = jsonAfter;
     }
@@ -330,7 +330,7 @@ watch(libraryTree, async (newVal) => {
     const jsonBefore = JSON.stringify(libraryTree.value);
     mergeBlocTemplateIds(libraryTree.value, syncedTree);
     const jsonAfter = JSON.stringify(libraryTree.value);
-    
+
     if (jsonBefore !== jsonAfter) {
       history.value[historyIndex.value] = jsonAfter;
     }

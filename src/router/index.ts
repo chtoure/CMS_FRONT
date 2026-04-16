@@ -27,6 +27,7 @@ import ContentTypeCorbeilleView from '../views/contentType/ContentTypeCorbeilleV
 import TaxonomyCorbeilleView from '../views/Taxonomy/TaxonomyCorbeilleView.vue'
 import BuilderView from '../views/builder/BuilderView.vue'
 import BuilderLayout from '../layout/BuilderLayout.vue'
+import RenderLayout from '../layout/RenderLayout.vue'
 import PageListView from '../views/page/PageListView.vue'
 import PageRevisionListView from '../views/pageRevision/PageRevisionListView.vue'
 import PageRenderView from '../views/renderPage/PageRenderView.vue'
@@ -266,7 +267,7 @@ const router = createRouter({
 
     {
         path: '/:slug?',
-        component: BuilderLayout,
+        component: RenderLayout,
         children: [
             {
                 path: '',
