@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { FileText, Plus, MoreHorizontal, Pencil, Trash2, Eye, Lock, Archive } from 'lucide-vue-next'
+import { FileText, Plus, MoreHorizontal, Pencil, Eye, Lock, Archive } from 'lucide-vue-next'
 import { Button } from '../../components/ui/button'
 import { cn } from '../../lib/utils'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
@@ -158,9 +158,9 @@ const navigateToPreview = (entryId: number) => {
     <CompositionPageHeader>
       <template #content>
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-          <div class="flex gap-4 items-center">
-            <div class="p-3 bg-primary/10 rounded-2xl">
-              <FileText class="h-6 w-6" />
+          <div class="flex gap-3 items-center">
+            <div class="p-3 bg-primary rounded-2xl">
+              <FileText stroke-width="1" class="h-8 w-8" />
             </div>
             <div class="space-y-1">
               <h1 class="text-huge font-black tracking-tighter leading-none">
@@ -246,12 +246,6 @@ const navigateToPreview = (entryId: number) => {
                     <Pencil class="w-4 h-4" /> Modifier
                   </button>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator v-if="hasPermission(['delete_content_entry'])" />
-                <DropdownMenuItem v-if="hasPermission(['delete_content_entry'])" class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
-                  <button class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
-                    <Trash2 class="w-4 h-4" /> Supprimer
-                  </button>
-                </DropdownMenuItem>
                 <DropdownMenuSeparator v-if="hasPermission(['update_content_entry'])" />
                 <DropdownMenuItem v-if="hasPermission(['update_content_entry'])" class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
                   <button @click="handleSwitchStatus(row)" class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
@@ -261,7 +255,7 @@ const navigateToPreview = (entryId: number) => {
                 <DropdownMenuSeparator v-if="hasPermission(['delete_content_entry'])"/>
                 <DropdownMenuItem v-if="hasPermission(['delete_content_entry'])" class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
                   <button @click="handleArchiveContentEntry(row)" class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
-                    <Archive class="w-4 h-4" /> Archiver
+                    <Archive class="w-4 h-4" /> Supprimer
                   </button>
                 </DropdownMenuItem>
               </DropdownMenuContent>

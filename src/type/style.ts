@@ -9,7 +9,6 @@ interface BaseStyles {
   paddingX?: VariableProperty<ResponsiveProp<number | string>>;
   paddingY?: VariableProperty<ResponsiveProp<number | string>>;
 
-  
   // Positionnement
   position?: VariableProperty<ResponsiveProp<'static' | 'relative' | 'absolute' | 'fixed' | 'sticky'>>;
   top?: VariableProperty<ResponsiveProp<number | string>>;

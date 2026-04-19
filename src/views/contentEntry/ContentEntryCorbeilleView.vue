@@ -111,8 +111,8 @@ const navigateToPreview = (entryId: number) => {
       <template #content>
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
           <div class="flex gap-4 items-center">
-            <div class="p-3 bg-primary/10 rounded-2xl">
-              <FileText class="h-6 w-6" />
+            <div class="p-3 bg-primary rounded-2xl">
+              <FileText stroke-width="1" class="h-8 w-8" />
             </div>
             <div class="space-y-1">
               <h1 class="text-huge font-black tracking-tighter leading-none">

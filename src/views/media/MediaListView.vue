@@ -15,6 +15,7 @@
     Image as ImageIcon,
     Pen,
     Eye,
+    FolderOpen,
   } from 'lucide-vue-next'
   import { useCreateMedia, useDeleteMedia, useGetMediaList, useUpdateMedia } from '../../hook/media'
   import { showToast } from '../../lib/toast'
@@ -169,9 +170,9 @@ import { usePermission } from '../../hook/usePermission'
     <CompositionPageHeader>
       <template #content>
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div class="flex items-center gap-4">
-            <div class="p-3 pl-0">
-              <img src="/icons/file1.svg" alt="" class="w-8 h-8" />
+          <div class="flex items-center gap-3">
+            <div class="p-3 bg-primary rounded-2xl">
+              <FolderOpen stroke-width="1" class="w-8 h-8"/>
             </div>
             <div>
               <h1 class="text-3xl font-black tracking-tighter leading-none">

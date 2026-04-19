@@ -132,7 +132,7 @@ const useToggleArchive = () => {
   return useMutation({
     mutationFn: async ({ id, archive }: { id: number, archive: boolean }) => {
       return handleResponse<IContentEntry>(
-        await api(`/content-entries/${id}/archive`, {
+        await api(`/content-entries-archive/${id}`, {
           method: "PUT",
           body: JSON.stringify({ archive })
         })
