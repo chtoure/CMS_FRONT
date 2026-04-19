@@ -143,7 +143,7 @@ const filteredVariables = computed(() => {
   return allVarsFromScope
 })
 
-const handleUpdate = async (id: number, field: "name" | "value", newValue: string | number | boolean, type?: VariableType) => {
+const handleUpdate = async (id: number, field: "name" | "value", newValue: string | number | boolean, type?: VariableType, keepEditing: boolean = false) => {
   const stringValue = String(newValue);
   const cleanValue = stringValue.trim();
 
@@ -161,7 +161,9 @@ const handleUpdate = async (id: number, field: "name" | "value", newValue: strin
     }
   }
 
-  editingCell.value = null;
+  if (!keepEditing) {
+    editingCell.value = null;
+  }
 
   updateVar({ id, data: { [field]: cleanValue } }, {
     onSuccess: () => {
@@ -175,10 +177,10 @@ const handleUpdate = async (id: number, field: "name" | "value", newValue: strin
   });
 }
 
-const handleColorChange = (newColor: string) => {
+const handleColorChange = (newColor: string, type?: VariableType) => {
   if (editingCell.value?.id) {
     const hex = newColor.replace('#', '')
-    handleUpdate(editingCell.value.id, 'value', hex)
+    handleUpdate(editingCell.value.id, 'value', hex, type, true)
   }
 }
 
@@ -388,7 +390,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
                         :is-open="colorPickerOpen && editingCell?.id === v.id"
                         :initial-color="v.value"
                         @close="colorPickerOpen = false; editingCell = null"
-                        @color-change="handleColorChange">
+                        @color-change="(c: string) => handleColorChange(c, v.type)">
                         <template #trigger>
                           <div class="flex items-center gap-3 cursor-pointer" @click="startEditing(v, 'value'); colorPickerOpen = true">
                             <div class="w-6 h-6 rounded border border-border shadow-sm" :style="{ backgroundColor: `#${v.value}` }" />
