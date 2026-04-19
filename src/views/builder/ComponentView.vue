@@ -95,11 +95,9 @@ const onCloneCustom = (block: BlocTemplate, isTopLevel = true): AnyComponentInst
     family: block.component?.family || 'container',
     supportedActions: block.component?.supportedActions || [],
     componentDefinitionId: block.componentId,
-    // modelId uniquement sur le nœud RACINE de l'instance.
-    // Les enfants n'ont pas de modelId pour que le backend sauvegarde
-    // leurs props indépendamment (sinon il les traite comme des références
-    // et ignore leurs props → rechargement avec contenu vide).
-    modelId: isTopLevel ? (block.modelId || block.id) : undefined,
+    // On conserve le modelId sur tous les nœuds pour permettre
+    // le merge de style complet récursif en base.
+    modelId: block.modelId || block.id,
     blocTemplateId: undefined, // Nouvelle instance sur la page
     styles: { ...(block.props?.styles || initialStyles) },
     data: { ...(block.props?.data || {}) },

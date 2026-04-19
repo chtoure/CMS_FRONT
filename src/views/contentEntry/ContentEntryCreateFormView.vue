@@ -104,10 +104,10 @@ const handleSubmit = (status: EntryStatus) => {
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
           <div class="flex gap-4 items-center">
             <div
-              class="hover:cursor-pointer hover:text-primary"
+              class="hover:cursor-pointer p-3 bg-primary rounded-2xl"
               @click="$router.back()"
             >
-              <ArrowLeft />
+              <ArrowLeft stroke-width="1" class="w-8 h-8" />
             </div>
             <div class="space-y-2">
               <h1 class="text-huge font-black tracking-tighter leading-none"> <span class="text-primary italic">Création de contenu</span></h1>
