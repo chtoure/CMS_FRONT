@@ -72,11 +72,11 @@ const getDataValue = (val: any): any => {
         </div>
         <div class="grid grid-cols-2 gap-2">
            <div class="flex items-center space-x-2">
-              <Checkbox id="slider-pagination" :checked="getDataValue(element.data.showPagination) !== false" @update:checked="(val: any) => updateData('showPagination', !!val)" />
+              <Checkbox id="slider-pagination" :checked="getDataValue(element.data.showPagination) === true" @update:checked="(val: any) => updateData('showPagination', !!val)" />
               <label for="slider-pagination" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Pagination</label>
            </div>
            <div class="flex items-center space-x-2">
-              <Checkbox id="slider-arrows" :checked="getDataValue(element.data.showArrows) !== false" @update:checked="(val: any) => updateData('showArrows', !!val)" />
+              <Checkbox id="slider-arrows" :checked="getDataValue(element.data.showArrows) === true" @update:checked="(val: any) => updateData('showArrows', !!val)" />
               <label for="slider-arrows" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Flèches</label>
            </div>
         </div>

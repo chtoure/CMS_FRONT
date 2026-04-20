@@ -500,6 +500,7 @@ function resolveChildForInheritedBg(child: HydratedBlock): HydratedBlock {
     :is="componentToRender"
     :styles="normalizedElementStyles"
     :data="finalData"
+    :children="element.tag === 'SliderBuilder' ? elementChildren : undefined"
     class="relative isolate h-full transition-all duration-200"
   >
     <!-- Background Video -->

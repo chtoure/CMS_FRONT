@@ -68,11 +68,11 @@ const sliderConfig = computed(() => {
     slidesPerView: resolveValue((props.styles as any)?.slidesPerView) ?? resolveValue(props.data?.slidesPerView) ?? config.slidesPerView,
     transitionDuration: resolveValue(props.data?.transitionDuration) ?? config.transitionDuration,
     transitionEase: resolveValue(props.data?.transitionEase) ?? config.transitionEase,
-    autoplay: resolveValue(props.data?.autoPlay) ?? config.autoplay,
+    autoplay: resolveValue(props.data?.autoPlay) === true,
     autoplaySpeed: resolveValue(props.data?.speed) ?? config.autoplaySpeed,
     showPagination: resolveValue(props.data?.showPagination) === true,
     showArrows: resolveValue(props.data?.showArrows) === true,
-    loop: resolveValue(props.data?.loop) !== false,
+    loop: resolveValue(props.data?.loop) === true,
   };
 });
 
@@ -137,7 +137,12 @@ const isHovered = ref(false);
 const autoplayInterval = ref<any>(null);
 
 const startAutoplay = () => {
-  if (!sliderConfig.value.autoplay || isAnySelected.value) return;
+  // En mode builder : bloquer l'autoplay seulement si un ENFANT est sélectionné (pas le slider lui-même)
+  // En mode rendu : bloquer si n'importe quel élément du slider est sélectionné
+  const blockAutoplay = isBuilder
+    ? (builderState?.selectedId?.value !== props.element?.id && isAnySelected.value)
+    : isAnySelected.value;
+  if (!sliderConfig.value.autoplay || blockAutoplay) return;
   stopAutoplay();
   autoplayInterval.value = setInterval(() => {
     if (!isHovered.value) {
@@ -195,15 +200,15 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
   </div>
 
     <!-- Flèches et pagination : désactivées par défaut, affichées si activées dans les params -->
-    <button v-show="sliderConfig.showArrows && slidesCount > slidesPerView && !builderState.isDragging?.value" @click.stop="prevSlide" :style="arrowStyles" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover/slider:opacity-100 z-10 flex items-center justify-center pointer-events-auto">
+    <button v-show="sliderConfig.showArrows && (isBuilder || (slidesCount > slidesPerView && !builderState.isDragging?.value))" @click.stop="prevSlide" :style="arrowStyles" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all z-10 flex items-center justify-center pointer-events-auto" :class="isBuilder ? 'opacity-80 hover:opacity-100' : 'opacity-0 group-hover/slider:opacity-100'">
       <ChevronLeft class="w-6 h-6" :style="{ color: paginationStyles.color }" />
     </button>
-    <button v-show="sliderConfig.showArrows && slidesCount > slidesPerView && !builderState.isDragging?.value" @click.stop="nextSlide" :style="arrowStyles" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover/slider:opacity-100 z-10 flex items-center justify-center pointer-events-auto">
+    <button v-show="sliderConfig.showArrows && (isBuilder || (slidesCount > slidesPerView && !builderState.isDragging?.value))" @click.stop="nextSlide" :style="arrowStyles" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all z-10 flex items-center justify-center pointer-events-auto" :class="isBuilder ? 'opacity-80 hover:opacity-100' : 'opacity-0 group-hover/slider:opacity-100'">
       <ChevronRight class="w-6 h-6" :style="{ color: paginationStyles.color }" />
     </button>
 
     <!-- Pagination -->
-    <div v-show="slidesCount > slidesPerView && sliderConfig.showPagination && !builderState.isDragging?.value" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10 pointer-events-auto">
+    <div v-show="sliderConfig.showPagination && (isBuilder || (slidesCount > slidesPerView && !builderState.isDragging?.value))" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10 pointer-events-auto">
       <button
         v-for="(_, index) in (maxSlideIndex + 1)"
         :key="index"
