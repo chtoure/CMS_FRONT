@@ -259,7 +259,15 @@ onMounted(async () => {
 // Retourne les items de la liste pour un enfant lié à une query
 const getIteratedItems = (child: AnyComponentInstance) => {
   const paramName = (child.data as any)?.linkedQueryParamName;
-  if (!paramName || !builderState?.cmsCache.value) return [];
+  if (!paramName) return [];
+
+  // Cascade : l'enfant est lié à la requête héritée du parent
+  if (paramName === '_inherited_query') {
+    const inheritedItem = (props.element.data as any)?._inherited_item;
+    return inheritedItem ? [inheritedItem] : [];
+  }
+
+  if (!builderState?.cmsCache.value) return [];
   const list = builderState.cmsCache.value[paramName];
   return Array.isArray(list) ? list : [];
 };
@@ -277,6 +285,25 @@ const applyBgImageToContainer = (child: AnyComponentInstance, item: any): AnyCom
       bgImage: { type: 'media', url: rawUrl, value: { url: rawUrl } } as any
     }
   };
+};
+
+// Pour les enfants standard (non itérés), si un child container
+// hérite via _inherited_query, applique le bon fond depuis _inherited_item
+const resolveChildForInheritedBg = (child: AnyComponentInstance): AnyComponentInstance => {
+  const linkedQueryName = (child.data as any)?.linkedQueryParamName;
+  if (linkedQueryName === '_inherited_query') {
+    const inheritedItem = (props.element.data as any)?._inherited_item;
+    if (inheritedItem) {
+      return applyBgImageToContainer(
+        {
+          ...child,
+          children: applyItemToChildren(child.children || [], inheritedItem, [])
+        },
+        inheritedItem
+      );
+    }
+  }
+  return child;
 };
 
 
@@ -410,20 +437,24 @@ const applyItemToChildren = (
         <template v-if="isClone">
           <div
             class="w-full h-full"
-            :class="element.tag !== 'SliderBuilder' ? [layoutClasses, 'pb-10'] : ''"
+            :class="[
+              element.tag !== 'SliderBuilder' ? [layoutClasses, 'pb-10'] : '',
+              element.tag === 'SliderBuilder' ? 'slider-flex-container' : ''
+            ]"
             :style="element.tag !== 'SliderBuilder' ? layoutInlineStyles : {}"
           >
             <div
               v-for="child in childrenModel"
               :key="child.id"
               class="relative"
+              :class="[element.tag === 'SliderBuilder' ? 'slider-slide' : '']"
               :style="{
                 width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
                 height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
                 ...(isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
               }"
             >
-              <BlocRender :element="child" :is-clone="true" :style="!isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {}" />
+              <BlocRender :element="resolveChildForInheritedBg(child)" :is-clone="true" :style="!isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {}" />
             </div>
           </div>
         </template>
@@ -434,6 +465,7 @@ const applyItemToChildren = (
             class="w-full h-full transition-all duration-300 relative"
             :class="[
               element.tag !== 'SliderBuilder' ? layoutClasses : '',
+              element.tag === 'SliderBuilder' ? 'slider-flex-container' : '',
               {
                 'p-4 min-h-[60px]': !childrenModel || childrenModel.length === 0,
                 'blueprint-target': true,
@@ -449,7 +481,8 @@ const applyItemToChildren = (
               class="transition-all"
               :class="[
                  iteratedWrapperLayoutClasses(child),
-                 isOutOfFlow(child) ? '' : 'relative'
+                 isOutOfFlow(child) ? '' : 'relative',
+                 element.tag === 'SliderBuilder' ? 'slider-slide' : ''
               ]"
               :style="{
                 width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),

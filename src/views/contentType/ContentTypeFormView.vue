@@ -512,7 +512,7 @@ const handleCancel = () => {
             </div>
             <div class="space-y-1">
               <h1 class="text-huge font-black tracking-tighter leading-none">
-                <span class="text-primary italic">Créer un type de contenu</span>
+                <span class="text-primary italic">Créer un type d'article</span>
               </h1>
               <p class="text-background opacity-80 text-lg font-medium">Définissez la structure et les champs de vos données.</p>
             </div>
@@ -547,7 +547,7 @@ const handleCancel = () => {
           <div class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div class="space-y-2">
-                <Label for="name" class="text-sm font-bold  text-text px-1">Nom du Type</Label>
+                <Label for="name" class="text-sm font-bold  text-text px-1">Type de Contenu</Label>
                 <Input
                   id="name"
                   v-model="form.name"
@@ -624,8 +624,8 @@ const handleCancel = () => {
           <!-- Header de la "table" -->
         <div class="grid grid-cols-[80px_1fr_1fr_1fr] px-6 py-3 bg-muted/20 border-b border-border text-xs font-bold text-text">
           <div>N°</div>
-          <div>Libellé</div>
-          <div>Placeholder</div>
+          <div>Intitulé du champ</div>
+          <div>Texte indicatif</div>
           <div>Type</div>
         </div>
 
@@ -656,7 +656,7 @@ const handleCancel = () => {
                 <span
                   class="font-bold text-primary hover:underline"
                 >
-                  {{ field.label || '(aucun libellé)' }}
+                  {{ field.label || '(aucun intitulé)' }}
                 </span>
 
                 <!-- Mini actions au survol ou si déplié -->
@@ -724,12 +724,12 @@ const handleCancel = () => {
                     <!-- Libellé & Nom -->
                     <div class="col-span-1 space-y-4">
                       <div class="space-y-2">
-                        <Label class="text-xs font-medium text-text">Libellé du champ</Label>
+                        <Label class="text-xs font-medium text-text">Intitulé du champ</Label>
                         <Input v-model="field.label" placeholder="Texte affiché à l'utilisateur" class="input-custom" />
                         <span v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</span>
                       </div>
                       <div class="space-y-2">
-                        <Label class="text-xs font-medium text-text"> Placeholder </Label>
+                        <Label class="text-xs font-medium text-text"> Texte indicatif </Label>
                         <Input v-model="field.placeholder" placeholder="Texte affiché en exemple" class="input-custom"/>
                       </div>
                     </div>
@@ -933,7 +933,7 @@ const handleCancel = () => {
                                 >
                                   <span class="truncate text-center mx-8">
                                     {{ field.allowedTypes.length > 0
-                                        ? `${field.allowedTypes.length} type(s) de fichier selectionée(s)`
+                                        ? `${field.allowedTypes.length} type(s) selectionée(s) : ${field.allowedTypes.join(', ')}`
                                         : "Choisir les types de fichiers..."
                                     }}
                                   </span>

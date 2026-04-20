@@ -70,8 +70,8 @@ const sliderConfig = computed(() => {
     transitionEase: resolveValue(props.data?.transitionEase) ?? config.transitionEase,
     autoplay: resolveValue(props.data?.autoPlay) ?? config.autoplay,
     autoplaySpeed: resolveValue(props.data?.speed) ?? config.autoplaySpeed,
-    showPagination: resolveValue(props.data?.showPagination) !== false,
-    showArrows: resolveValue(props.data?.showArrows) !== false,
+    showPagination: resolveValue(props.data?.showPagination) === true,
+    showArrows: resolveValue(props.data?.showArrows) === true,
     loop: resolveValue(props.data?.loop) !== false,
   };
 });
@@ -118,7 +118,7 @@ const prevSlide = () => {
 const goToSlide = (index: number) => { currentSlide.value = index; };
 
 const isAnySelected = computed(() => {
-  const selectedId = builderState.selectedId.value;
+  const selectedId = builderState?.selectedId?.value;
   if (!selectedId) return false;
   if (selectedId === props.element?.id) return true;
 
@@ -167,9 +167,9 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
 </script>
 
 <template>
-  <div 
-    class="relative group/slider w-full" 
-    :class="[computedClasses, builderState.isDragging?.value ? 'overflow-visible' : 'overflow-hidden']" 
+  <div
+    class="relative group/slider w-full"
+    :class="[computedClasses, builderState.isDragging?.value ? 'overflow-visible' : 'overflow-hidden']"
     :style="computedInlineStyles"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
@@ -177,14 +177,10 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
     <!-- Viewport : toujours overflow-visible pour que SortableJS détecte correctement les drops -->
     <div class="w-full h-full overflow-visible">
       <!-- Slider-track : overflow-hidden pour clipper les slides dans la zone de contenu (hors padding) -->
-      <!-- overflow-visible seulement pendant le drag pour ne pas gêner le ghost SortableJS -->
+      <!-- Slider-track : l'élément qui translade. Il doit ABSOLUMENT être en overflow-visible -->
       <div
-        class="slider-track ease-in-out h-full w-full"
-        :class="[
-          isBuilder ? '' : 'transition-transform',
-          builderState.isDragging?.value ? 'overflow-visible' : 'overflow-hidden'
-        ]"
-        :style="isBuilder ? {} : {
+        class="slider-track ease-in-out h-full w-full transition-transform overflow-visible"
+        :style="{
           transform: builderState.isDragging?.value ? 'none' : 'translateX(-' + (currentSlide * (100 / slidesPerView)) + '%)',
           transitionDuration: sliderConfig.transitionDuration + 'ms',
           transitionTimingFunction: sliderConfig.transitionEase
@@ -197,19 +193,19 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
       </slot>
     </div>
   </div>
-    
-    <!-- Flèches et pagination : masquées dans le builder (slides visibles à plat) -->
-    <button v-show="!isBuilder && slidesCount > slidesPerView && !builderState.isDragging?.value" @click.stop="prevSlide" :style="arrowStyles" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover/slider:opacity-100 z-10 flex items-center justify-center">
+
+    <!-- Flèches et pagination : désactivées par défaut, affichées si activées dans les params -->
+    <button v-show="sliderConfig.showArrows && slidesCount > slidesPerView && !builderState.isDragging?.value" @click.stop="prevSlide" :style="arrowStyles" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover/slider:opacity-100 z-10 flex items-center justify-center pointer-events-auto">
       <ChevronLeft class="w-6 h-6" :style="{ color: paginationStyles.color }" />
     </button>
-    <button v-show="!isBuilder && slidesCount > slidesPerView && !builderState.isDragging?.value" @click.stop="nextSlide" :style="arrowStyles" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover/slider:opacity-100 z-10 flex items-center justify-center">
+    <button v-show="sliderConfig.showArrows && slidesCount > slidesPerView && !builderState.isDragging?.value" @click.stop="nextSlide" :style="arrowStyles" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover/slider:opacity-100 z-10 flex items-center justify-center pointer-events-auto">
       <ChevronRight class="w-6 h-6" :style="{ color: paginationStyles.color }" />
     </button>
 
     <!-- Pagination -->
-    <div v-show="slidesCount > slidesPerView && sliderConfig.showPagination && !builderState.isDragging?.value" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-      <button 
-        v-for="(_, index) in (maxSlideIndex + 1)" 
+    <div v-show="slidesCount > slidesPerView && sliderConfig.showPagination && !builderState.isDragging?.value" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10 pointer-events-auto">
+      <button
+        v-for="(_, index) in (maxSlideIndex + 1)"
         :key="index"
         @click.stop="goToSlide(index)"
         class="transition-all duration-300"
@@ -234,8 +230,8 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
    height: 100%;
 }
 
-/* Le VueDraggable (div 131 dans BlocRender) */
-.slider-track :deep(> div > div) {
+/* Le conteneur Flex (inséré par BlocRender / BlocRenderView) */
+.slider-track :deep(.slider-flex-container) {
    display: flex !important;
    flex-direction: row !important;
    flex-wrap: nowrap !important;
@@ -246,8 +242,8 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
    gap: 0 !important;
 }
 
-/* Les slides réels (div 149 dans BlocRender) */
-.slider-track :deep(> div > div > div) {
+/* Les slides réels */
+.slider-track :deep(.slider-slide) {
    min-width: calc(100% / v-bind(slidesPerView)) !important;
    max-width: calc(100% / v-bind(slidesPerView)) !important;
    height: 100% !important;

@@ -13,8 +13,15 @@ const emit = defineEmits(['update-data']);
 const updateData = (key: string, value: any) => emit('update-data', key, value);
 
 const getDataValue = (val: any): any => {
-  if (val && typeof val === 'object' && 'value' in val) return val.value;
-  return val;
+  const resolved = (val && typeof val === 'object' && 'value' in val) ? val.value : val;
+  return resolved;
+};
+
+// Résout la valeur de l'icône en s'assurant qu'elle est bien une string ou null
+const getIconValue = (val: any): string | null => {
+  const resolved = getDataValue(val);
+  if (typeof resolved === 'string') return resolved;
+  return null;
 };
 </script>
 
@@ -25,7 +32,7 @@ const getDataValue = (val: any): any => {
         <div class="space-y-1">
           <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Icône</label>
           <IconPicker
-            :model-value="(getDataValue(element.data.icon) as string | null)"
+            :model-value="getIconValue(element.data.icon)"
             @update:model-value="(val) => updateData('icon', val)"
           />
         </div>
