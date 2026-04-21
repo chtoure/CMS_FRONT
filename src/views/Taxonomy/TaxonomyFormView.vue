@@ -139,15 +139,15 @@ const handleCancel = () => {
     <CompositionPageHeader>
       <template #content>
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-          <div class="flex items-center gap-4">
-            <div class="p-4 bg-primary/10 rounded-2xl">
-              <Tags class="h-8 w-8 text-primary" />
+          <div class="flex gap-4 items-center">
+            <div class="p-3 bg-primary rounded-2xl">
+                <Tags stroke-width="1" class="w-8 h-8" />
             </div>
-            <div class="space-y-1">
-              <h1 class="text-huge font-black tracking-tighter leading-none">
-                <span class="text-primary italic">{{ isEditing ? 'Modifier la Catégorie' : 'Créer une Catégorie' }}</span>
-              </h1>
-              <p class="text-background opacity-80 text-lg font-medium">Organiser vos groupes de catégories pour trier vos contenus</p>
+            <div>
+                <h1 class="text-3xl font-black tracking-tighter leading-none">
+                    <span class="text-primary italic">{{ isEditing ? 'Modifier la Catégorie' : 'Créer une Catégorie' }}</span>
+                </h1>
+                <p class="text-muted-foreground text-sm font-medium mt-1 italic">Organiser vos groupes de catégories pour trier vos contenus</p>
             </div>
           </div>
 

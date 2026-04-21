@@ -41,15 +41,14 @@ const handleSubmit = (user? : AddUserData) => {
         <CompositionPageHeader>
             <template #content>
                 <div class="flex gap-4 items-center">
-                    <div
-                        class="hover:cursor-pointer hover:text-primary"
-                        @click="$router.back()"
-                    >
-                        <ArrowLeft />
+                    <div class="hover:cursor-pointer p-3 bg-primary rounded-2xl" @click="$router.back()">
+                        <ArrowLeft stroke-width="1" class="w-8 h-8" />
                     </div>
-                    <div class="space-y-2">
-                        <h1 class="text-huge font-black tracking-tighter leading-none"> <span class="text-primary italic">Ajouter un utilisateur</span></h1>
-                        <p class="text-background text-sm font-medium">Ajoutez un nouvel utilisateur avec précision.</p>
+                    <div>
+                        <h1 class="text-3xl font-black tracking-tighter leading-none">
+                            <span class="text-primary italic">Ajouter un utilisateur</span>
+                        </h1>
+                        <p class="text-muted-foreground text-sm font-medium mt-1 italic">Ajoutez un nouvel utilisateur avec précision.</p>
                     </div>
                 </div>
             </template>

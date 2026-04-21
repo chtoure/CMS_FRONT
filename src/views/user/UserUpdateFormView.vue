@@ -48,18 +48,17 @@ const handleSubmit = (profileData?: UpdateProfileData) => {
     <div v-else class="animate-in fade-in slide-in-from-bottom-4 space-y-10">
         <CompositionPageHeader>
             <template #content>
-                <div class="flex gap-4 items-center">
-                    <div
-                        class="hover:cursor-pointer hover:text-primary"
-                        @click="$router.back()"
-                    >
-                        <ArrowLeft />
-                    </div>
-                    <div class="space-y-2">
-                        <h1 class="text-huge font-black tracking-tighter leading-none"> <span class="text-primary italic">Modifier l'utilisateur</span></h1>
-                        <p class="text-background text-sm font-medium">Modifiez les informations de l'utilisateur avec précision.</p>
-                    </div>
-                </div>
+              <div class="flex gap-4 items-center">
+                  <div class="hover:cursor-pointer p-3 bg-primary rounded-2xl" @click="$router.back()">
+                      <ArrowLeft stroke-width="1" class="w-8 h-8" />
+                  </div>
+                  <div>
+                      <h1 class="text-3xl font-black tracking-tighter leading-none">
+                          <span class="text-primary italic">Modifier un utilisateur</span>
+                      </h1>
+                      <p class="text-muted-foreground text-sm font-medium mt-1 italic">Modifiez les informations de l'utilisateur avec précision.</p>
+                  </div>
+              </div>
             </template>
         </CompositionPageHeader>
         <UserFormView

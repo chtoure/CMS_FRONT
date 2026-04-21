@@ -178,7 +178,7 @@ import { usePermission } from '../../hook/usePermission'
               <h1 class="text-3xl font-black tracking-tighter leading-none">
                 <span class="text-primary italic">Médiathèque</span> Galerie
               </h1>
-              <p class="text-muted-foreground text-sm font-medium mt-1">Gérez vos contenus avec une précision chirurgicale.</p>
+              <p class="text-muted-foreground text-sm font-medium mt-1 italic">Gérez vos contenus avec une précision chirurgicale.</p>
             </div>
           </div>
           
