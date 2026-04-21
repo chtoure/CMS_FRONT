@@ -61,6 +61,8 @@ function isOutOfFlow(element: HydratedBlock): boolean {
   return p === 'fixed' || p === 'absolute';
 }
 
+
+
 /**
  * Retourne true si l'élément est en position sticky.
  * Miroir de isSticky() dans SectionBuilder.vue et BlocRender.vue.
@@ -386,6 +388,22 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
   return [];
 };
 
+/**
+ * Pour les enfants en affichage standard (non itéré), si un child container
+ * a linkedQueryParamName === '_inherited_query' avec un linkedBgImageKey,
+ * on applique le bon fond depuis l'_inherited_item courant.
+ */
+function resolveChildForInheritedBg(child: HydratedBlock): HydratedBlock {
+  const linkedQueryName = (child.data as any)?.linkedQueryParamName;
+  if (linkedQueryName === '_inherited_query') {
+    const inheritedItem = (finalData.value as any)?._inherited_item;
+    if (inheritedItem) {
+      return applyBgImageToContainer(child, inheritedItem);
+    }
+  }
+  return child;
+}
+
 </script>
 
 <template>
@@ -419,7 +437,10 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
     <!-- Miroir du VueDraggable dans SectionBuilder.vue                              -->
     <div
       class="w-full flex-1"
-      :class="cleanClasses(buildSectionLayoutStyles(normalizedElementStyles, resolveValue))"
+      :class="[
+        cleanClasses(buildSectionLayoutStyles(normalizedElementStyles, resolveValue)),
+        element.tag === 'SliderBuilder' ? 'slider-flex-container' : ''
+      ]"
       :style="{ ...sectionLayoutInlineStyles, ...sectionCriticalLayoutInlineStyles }"
     >
       <template v-for="child in elementChildren" :key="child.id">
@@ -431,7 +452,10 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
             :key="`${child.id}-${itemIndex}`"
             v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
             class="transition-all outline-none"
-            :class="isOutOfFlow(child) ? '' : 'relative'"
+            :class="[
+              isOutOfFlow(child) ? '' : 'relative',
+              element.tag === 'SliderBuilder' ? 'slider-slide' : ''
+            ]"
             :style="childWrapperStyles(child, '100%')"
           >
             <!--
@@ -447,16 +471,19 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
           </div>
         </template>
 
-        <!-- ── Cas 1b : Affichage standard ────────────────────────────────── -->
+        <!-- ── Cas 1b : Affichage standard ──────────────────────────────────── -->
         <div
           v-else
           v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
           class="transition-all outline-none"
-          :class="isOutOfFlow(child) ? '' : 'relative'"
+          :class="[
+            isOutOfFlow(child) ? '' : 'relative',
+            element.tag === 'SliderBuilder' ? 'slider-slide' : ''
+          ]"
           :style="childWrapperStyles(child, '100%')"
         >
           <BlocRenderView
-            :element="child"
+            :element="resolveChildForInheritedBg(child)"
             :parent-data="finalData"
           />
         </div>
@@ -475,6 +502,7 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
     :is="componentToRender"
     :styles="normalizedElementStyles"
     :data="finalData"
+    :children="element.tag === 'SliderBuilder' ? elementChildren : undefined"
     class="relative isolate h-full transition-all duration-200"
   >
     <!-- Background Video -->
@@ -490,7 +518,7 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
     <template v-if="canHaveChildren && element.children">
       <div
         class="w-full h-full"
-        :class="layoutClasses"
+        :class="[layoutClasses, element.tag === 'SliderBuilder' ? 'slider-flex-container' : '']"
         :style="{ ...layoutInlineStyles, ...criticalLayoutInlineStyles }"
       >
         <template v-for="child in elementChildren" :key="child.id">
@@ -502,7 +530,10 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
               :key="`${child.id}-${itemIndex}`"
               v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
               class="transition-all outline-none"
-              :class="isOutOfFlow(child) ? '' : 'relative'"
+              :class="[
+                isOutOfFlow(child) ? '' : 'relative',
+                element.tag === 'SliderBuilder' ? 'slider-slide' : ''
+              ]"
               :style="childWrapperStyles(child)"
             >
               <BlocRenderView
@@ -512,16 +543,19 @@ const getItemsForChild = (child: HydratedBlock): any[] => {
             </div>
           </template>
 
-          <!-- ── Cas 2b : Standard ──────────────────────────────────────────── -->
+          <!-- ── Cas 2b : Standard ──────────────────────────────────────────────── -->
           <div
             v-else
             v-show="builderState.isVisible(child.id, (child as any).blocTemplateId)"
             class="transition-all outline-none"
-            :class="isOutOfFlow(child) ? '' : 'relative'"
+            :class="[
+              isOutOfFlow(child) ? '' : 'relative',
+              element.tag === 'SliderBuilder' ? 'slider-slide' : ''
+            ]"
             :style="childWrapperStyles(child)"
           >
             <BlocRenderView
-              :element="child"
+              :element="resolveChildForInheritedBg(child)"
               :parent-data="finalData"
             />
           </div>

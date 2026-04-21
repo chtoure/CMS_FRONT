@@ -59,9 +59,13 @@ const getCompatibleCMSFields = (parentParamName: string | undefined, childParam:
     const childNode = findChild(props.element.children || []);
     const linkedQuery = (childNode?.data as any)?.linkedQueryParamName;
     if (linkedQuery) {
-      const parentParam = params.find(p => p.name === linkedQuery);
-      if (parentParam?.type.source === ValueSource.CONTENUS) {
-        contentTypeId = parentParam.type.contentTypeId;
+      if (linkedQuery === '_inherited_query') {
+        contentTypeId = (props.element.data as any).linkedQueryContentTypeId;
+      } else {
+        const parentParam = params.find(p => p.name === linkedQuery);
+        if (parentParam?.type.source === ValueSource.CONTENUS) {
+          contentTypeId = parentParam.type.contentTypeId;
+        }
       }
     }
   }
@@ -93,10 +97,16 @@ const getMediaCMSFields = (child: AnyComponentInstance) => {
   const linkedQueryName = (child.data as any).linkedQueryParamName;
   if (!linkedQueryName) return [];
 
-  const parentParam = props.element.params?.find(p => p.name === linkedQueryName);
-  const contentTypeId = parentParam?.type.source === ValueSource.CONTENUS
-    ? parentParam.type.contentTypeId
-    : undefined;
+  let contentTypeId: number | undefined;
+
+  if (linkedQueryName === '_inherited_query') {
+    contentTypeId = (props.element.data as any).linkedQueryContentTypeId;
+  } else {
+    const parentParam = props.element.params?.find(p => p.name === linkedQueryName);
+    contentTypeId = parentParam?.type.source === ValueSource.CONTENUS
+      ? parentParam.type.contentTypeId
+      : undefined;
+  }
 
   if (!contentTypeId) return [];
   const contentType = contentTypeOptions.value?.results?.find((ct: any) => ct.id === contentTypeId);
@@ -137,7 +147,13 @@ const getMediaCMSFields = (child: AnyComponentInstance) => {
                       <span class="text-[9px]">Aucune</span>
                     </SelectItem>
                     <SelectItem
-                      v-for="p in element.params.filter(p => p.type.source === ValueSource.CONTENUS && (p.type as IContenusField).config.mode === 'query')"
+                      v-if="(element.data as any).linkedQueryContentTypeId"
+                      value="_inherited_query"
+                    >
+                      <span class="text-[9px]">Requête Héritée du parent</span>
+                    </SelectItem>
+                    <SelectItem
+                      v-for="p in element.params.filter(p => p.type.source === ValueSource.CONTENUS && ( (p.type as IContenusField).config.mode === 'query' || (p.type as IContenusField).config.mode === 'single'))"
                       :key="p.name"
                       :value="p.name"
                     >

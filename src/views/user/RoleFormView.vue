@@ -1,7 +1,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import {  ShieldCheck, Save, ChevronsUpDown, Check, Shield, PencilLine } from 'lucide-vue-next';
+import {  ShieldCheck, Save, ChevronsUpDown, Check, Shield, PencilLine, X } from 'lucide-vue-next';
 import { Button } from '../../components/ui/button';
 import CompositionLoading from '../../components/composition/CompositionLoading.vue';
 // import CompositionError from '../../components/composition/CompositionError.vue';
@@ -23,6 +23,7 @@ import CompositionError from '../../components/composition/CompositionError.vue'
 import type { Permission } from '../../type/permission';
 import { handleError } from '../../lib/error';
 import { useGetPermissions } from '../../hook/permission';
+import Badge from '../../components/ui/badge/Badge.vue';
 
 
 
@@ -208,6 +209,25 @@ const handleCancel = () =>{
                     </PopoverContent>
                   </Popover>
                   <p v-if="errorMessage" class="text-xs text-destructive mt-1">{{ errorMessage }}</p>
+
+                  <!-- Afficher les permissions sélectionnées -->
+                  <div v-if="value && value.length > 0" class="flex flex-wrap gap-2 mt-4 p-4 border rounded-lg bg-muted/20">
+                    <div class="w-full text-xs font-semibold text-muted-foreground mb-2">
+                      Permissions sélectionnées ({{ value.length }})
+                    </div>
+                    <Badge
+                      v-for="p in resultsPermissions.filter(perp => value.includes(perp.id))"
+                      :key="p.id"
+                      variant="secondary"
+                      class="flex items-center gap-1.5 py-1 px-2.5"
+                    >
+                      {{ p.name }}
+                      <X
+                        class="size-3.5 cursor-pointer hover:bg-destructive hover:text-white rounded-full p-0.5 transition-colors"
+                        @click="mutipleschoices(value, p, handleChange)"
+                      />
+                    </Badge>
+                  </div>
                 </Field>
 
               </div>

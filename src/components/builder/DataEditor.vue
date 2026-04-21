@@ -98,6 +98,14 @@ const hasLinkedChildren = computed(() => {
   return hasLinkedContainer || hasLinkedLeaf;
 });
 
+// Vérifie que le composant a LUI-MÊME défini au moins un paramètre de type query
+// (et non juste hérité via _inherited_query d'un parent)
+const hasDirectQueryParams = computed(() => {
+  return (props.element.params || []).some(
+    p => p.type.source === ValueSource.CONTENUS && (p.type as IContenusField).config.mode === 'query'
+  );
+});
+
 const filteredSourceOptions = computed(() => {
   return sourceOptions.filter(opt => allowedSources.value.includes(opt.value as ValueSource));
 });
@@ -304,9 +312,14 @@ const propagateValueToChildren = (children: AnyComponentInstance[], parentParamN
     if (updatedChild.family === 'container') {
       const linkedBgKey = (updatedChild.data as any).linkedBgImageKey;
       const linkedQueryName = (updatedChild.data as any).linkedQueryParamName;
-      if (linkedBgKey && linkedQueryName === parentParamName && parentIsQuery) {
-        const list = blockCMSData.value[parentParamName];
-        const firstItem = Array.isArray(list) ? list[0] : null;
+      if (linkedBgKey && linkedQueryName === parentParamName && (parentIsQuery || parentParamName === '_inherited_query')) {
+        let firstItem: any = null;
+        if (parentParamName === '_inherited_query') {
+          firstItem = newValue;
+        } else {
+          const list = blockCMSData.value[parentParamName];
+          firstItem = Array.isArray(list) ? list[0] : null;
+        }
         const rawUrl = firstItem ? firstItem[linkedBgKey] : undefined;
         const newBgImage = rawUrl
           ? ({ type: 'media', url: rawUrl, value: { url: rawUrl } } as any)
@@ -456,8 +469,14 @@ const updateChildLinkedQuery = (childId: string, queryParamName: string | null) 
           ...node,
           children: node.children.map(child => {
             if (child.id === childId) {
-               const parentParam = props.element.params.find(p => p.name === queryParamName);
-               const contentTypeId = parentParam?.type.source === ValueSource.CONTENUS ? parentParam.type.contentTypeId : undefined;
+               let contentTypeId: number | undefined;
+               
+               if (queryParamName === '_inherited_query') {
+                 contentTypeId = (props.element.data as any).linkedQueryContentTypeId;
+               } else {
+                 const parentParam = props.element.params.find(p => p.name === queryParamName);
+                 contentTypeId = parentParam?.type.source === ValueSource.CONTENUS ? parentParam.type.contentTypeId : undefined;
+               }
 
                const updated = {
                  ...child,
@@ -468,8 +487,12 @@ const updateChildLinkedQuery = (childId: string, queryParamName: string | null) 
                  }
                };
 
-               if (queryParamName && blockCMSData.value[queryParamName]?.length > 0) {
-                 (updated.data as any)._inherited_item = blockCMSData.value[queryParamName][0];
+               if (queryParamName) {
+                 if (queryParamName === '_inherited_query') {
+                   (updated.data as any)._inherited_item = (props.element.data as any)._inherited_item;
+                 } else if (blockCMSData.value[queryParamName]?.length > 0) {
+                   (updated.data as any)._inherited_item = blockCMSData.value[queryParamName][0];
+                 }
                }
                return updated;
             }
@@ -500,8 +523,13 @@ const updateChildBgImageKey = (childId: string, fieldKey: string | null) => {
             let newBgImage: any = undefined;
 
             if (fieldKey && linkedQueryName) {
-              const list = blockCMSData.value[linkedQueryName];
-              const firstItem = Array.isArray(list) ? list[0] : null;
+              let firstItem: any = null;
+              if (linkedQueryName === '_inherited_query') {
+                firstItem = (props.element.data as any)._inherited_item;
+              } else {
+                const list = blockCMSData.value[linkedQueryName];
+                firstItem = Array.isArray(list) ? list[0] : null;
+              }
               const rawUrl = firstItem ? firstItem[fieldKey] : undefined;
               if (rawUrl) {
                 newBgImage = { type: 'media', url: rawUrl, value: { url: rawUrl } } as any;
@@ -659,7 +687,7 @@ const getCompatibleParentParams = (childParam: IComponentParams, childElement?: 
 <template>
   <div class="space-y-6 pb-20 p-1">
     <IterationModeEditor
-      v-if="paramDynamic && hasLinkedChildren"
+      v-if="paramDynamic && hasLinkedChildren && hasDirectQueryParams"
       :element="element"
       @update-data="updateData"
     />
