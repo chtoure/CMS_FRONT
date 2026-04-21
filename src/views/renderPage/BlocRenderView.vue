@@ -61,6 +61,7 @@ function isOutOfFlow(element: HydratedBlock): boolean {
   return p === 'fixed' || p === 'absolute';
 }
 
+
 /**
  * Retourne true si l'élément est en position sticky.
  * Miroir de isSticky() dans SectionBuilder.vue et BlocRender.vue.
