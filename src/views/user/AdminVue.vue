@@ -218,10 +218,14 @@ const convertDateInTemps = (dateInput: Date | string | null | undefined) => {
       <template #content>
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
           <div class="flex items-center gap-4">
-            <Users class="h-6 w-6" />
-            <div class="space-y-2">
-              <h1 class="text-huge font-black tracking-tighter leading-none"> <span class="text-primary italic">Gestion des utilisateurs</span></h1>
-              <p class="text-background opacity-80 text-lg font-medium">Gérez vos utilisateurs avec une précision chirurgicale.</p>
+            <div class="p-3 bg-primary rounded-2xl">
+              <Users stroke-width="1" class="w-8 h-8"/>
+            </div>
+            <div>
+              <h1 class="text-3xl font-black tracking-tighter leading-none">
+                <span class="text-primary italic">Gestion des utilisateurs</span>
+              </h1>
+              <p class="text-muted-foreground text-sm font-medium mt-1 italic">Gérez vos utilisateurs avec une précision chirurgicale.</p>
             </div>
           </div>
 

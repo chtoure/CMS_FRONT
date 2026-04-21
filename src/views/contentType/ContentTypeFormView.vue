@@ -19,7 +19,8 @@ import {
   Save,
   Undo2,
   ChevronsUpDown,
-  Check
+  Check,
+  ArrowLeft
 } from 'lucide-vue-next'
 import {
   FieldType,
@@ -507,8 +508,11 @@ const handleCancel = () => {
       <template #content>
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div class="flex items-center gap-4">
-            <div class="p-4 bg-primary/10 rounded-2xl">
-              <Settings2 class="h-8 w-8 text-primary" />
+            <div
+              class="hover:cursor-pointer p-3 bg-primary rounded-2xl"
+              @click="$router.back()"
+            >
+              <ArrowLeft stroke-width="1" class="w-8 h-8" />
             </div>
             <div class="space-y-1">
               <h1 class="text-huge font-black tracking-tighter leading-none">

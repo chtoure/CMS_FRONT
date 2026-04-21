@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { FileText, MoreHorizontal, Trash2, Eye, RefreshCw } from 'lucide-vue-next'
+import { MoreHorizontal, Trash2, Eye, RefreshCw, ArchiveRestore } from 'lucide-vue-next'
 import { Button } from '../../components/ui/button'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
 import CompositionTable from '../../components/composition/CompositionTable.vue'
@@ -110,15 +110,16 @@ const navigateToPreview = (entryId: number) => {
     <CompositionPageHeader>
       <template #content>
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+
           <div class="flex gap-4 items-center">
             <div class="p-3 bg-primary rounded-2xl">
-              <FileText stroke-width="1" class="h-8 w-8" />
+                <ArchiveRestore stroke-width="1" class="w-8 h-8" />
             </div>
-            <div class="space-y-1">
-              <h1 class="text-huge font-black tracking-tighter leading-none">
-                <span class="text-primary italic">Corbeille des contenus </span>
-              </h1>
-              <p class="text-background text-sm font-medium">Gérez l'ensemble de vos contenus supprimés.</p>
+            <div>
+                <h1 class="text-3xl font-black tracking-tighter leading-none">
+                    <span class="text-primary italic">Corbeille des articles</span>
+                </h1>
+                <p class="text-muted-foreground text-sm font-medium mt-1 italic">Gérez les articles supprimés.</p>
             </div>
           </div>
 
