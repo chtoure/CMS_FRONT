@@ -30,6 +30,7 @@ const builderState = inject<{
   xRayMode: { value: false }
 } as any);
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const isXRayMode = computed(() => builderState?.xRayMode?.value ?? false);
 const isBuilder = inject('isBuilder', false) as boolean;
 
@@ -137,13 +138,18 @@ const isHovered = ref(false);
 const autoplayInterval = ref<any>(null);
 
 const startAutoplay = () => {
+  // Toujours effacer l'intervalle précédent avant de relancer ou d'évaluer la condition
+  stopAutoplay();
+
   // En mode builder : bloquer l'autoplay seulement si un ENFANT est sélectionné (pas le slider lui-même)
   // En mode rendu : bloquer si n'importe quel élément du slider est sélectionné
   const blockAutoplay = isBuilder
     ? (builderState?.selectedId?.value !== props.element?.id && isAnySelected.value)
     : isAnySelected.value;
+
+  // Si on a décoché l'autoplay ou qu'on édite un élément interne, on ne relance pas
   if (!sliderConfig.value.autoplay || blockAutoplay) return;
-  stopAutoplay();
+
   autoplayInterval.value = setInterval(() => {
     if (!isHovered.value) {
       nextSlide();
