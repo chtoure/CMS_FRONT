@@ -92,8 +92,8 @@ const fields = ref<any[]>([
   {
     type: FieldType.TEXT,
     name: 'title',
-    label: 'Identifiant',
-    placeholder: 'Saisir l\'identifiant',
+    label: 'Texte Indicateur',
+    placeholder: 'Ex: Titre ou un texte indicateur de l\'article',
     required: true
   }
 ])

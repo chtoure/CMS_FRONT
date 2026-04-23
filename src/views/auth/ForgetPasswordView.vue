@@ -30,6 +30,8 @@
   const router = useRouter()
 
   const roleId= ref<number>(0)
+  const userId = ref<number | null>(null);
+  const userEmail = ref<string>('');
 
   const { 
     data: permissions,
@@ -145,11 +147,9 @@ const onSubmitSendCode = () => {
         async onSuccess(data) {
           sendEmail.value = true;
 
-          roleId.value = data.user?.role?.id || data.user?.role_id || 0
-
-          await refetchPermissions()
+          userId.value = data.user?.id;
+          userEmail.value = data.user?.email || email.value;
           
-          storeUser.setUserInfo({...data.user, initials:initials(data.user.full_name) }, permissions.value || []);
           startTimer(600); // Démarre le timer à l'envoi réussi
         },
         onError(error) {
@@ -163,14 +163,14 @@ const onSubmitSendCode = () => {
 // Soumission du formulaire verify code
 const onSubmitVerifyCode = () => {
 
-  if (!storeUser.userInfo?.id) {
+  if (!userId.value) {
     console.error('ID utilisateur non défini.');
     return;
   }
 
   verifyCode(
     {
-      id: storeUser.userInfo?.id,
+      id: userId.value,
       code: code.value
     },
     {
@@ -212,20 +212,20 @@ const onSubmitResetPassword = () => {
 
 
 
-  if (!storeUser.userInfo?.id) {
+  if (!userId.value) {
     console.error('ID utilisateur non défini.');
     return;
   }
   // donnée a envoyer
   const Data = {
-    email: storeUser.userInfo?.email,
+    email: userEmail.value,
     password: new_password.value,
   };
 
   resetPassword(
     {
      resetData: Data,
-      id: storeUser.userInfo?.id
+      id: userId.value
     },
     {
       async onSuccess(data) {

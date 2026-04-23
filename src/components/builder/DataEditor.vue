@@ -312,10 +312,12 @@ const propagateValueToChildren = (children: AnyComponentInstance[], parentParamN
     if (updatedChild.family === 'container') {
       const linkedBgKey = (updatedChild.data as any).linkedBgImageKey;
       const linkedQueryName = (updatedChild.data as any).linkedQueryParamName;
-      if (linkedBgKey && linkedQueryName === parentParamName && (parentIsQuery || parentParamName === '_inherited_query')) {
+      if (linkedBgKey && linkedQueryName === parentParamName) {
         let firstItem: any = null;
         if (parentParamName === '_inherited_query') {
           firstItem = newValue;
+        } else if (!parentIsQuery && isCMS) {
+          firstItem = entryData;
         } else {
           const list = blockCMSData.value[parentParamName];
           firstItem = Array.isArray(list) ? list[0] : null;
@@ -331,7 +333,13 @@ const propagateValueToChildren = (children: AnyComponentInstance[], parentParamN
       }
     }
 
-    if (updatedChild.children && updatedChild.children.length > 0) {
+    if (updatedChild.family === 'container' && (updatedChild.data as any).linkedQueryParamName === parentParamName) {
+      const linkedItem = parentIsQuery ? (blockCMSData.value[parentParamName]?.[0] || null) : entryData;
+      (updatedChild.data as any)._inherited_item = linkedItem;
+      if (updatedChild.children && updatedChild.children.length > 0) {
+        updatedChild.children = propagateValueToChildren(updatedChild.children, '_inherited_query', linkedItem);
+      }
+    } else if (updatedChild.children && updatedChild.children.length > 0) {
       updatedChild.children = propagateValueToChildren(updatedChild.children, parentParamName, newValue);
     }
 
@@ -490,8 +498,15 @@ const updateChildLinkedQuery = (childId: string, queryParamName: string | null) 
                if (queryParamName) {
                  if (queryParamName === '_inherited_query') {
                    (updated.data as any)._inherited_item = (props.element.data as any)._inherited_item;
-                 } else if (blockCMSData.value[queryParamName]?.length > 0) {
-                   (updated.data as any)._inherited_item = blockCMSData.value[queryParamName][0];
+                 } else {
+                   const parentParam = props.element.params.find(p => p.name === queryParamName);
+                   const isSingle = parentParam?.type.source === ValueSource.CONTENUS && (parentParam.type as IContenusField).config.mode === 'single';
+                   if (isSingle) {
+                     const entryId = props.element.data[queryParamName];
+                     (updated.data as any)._inherited_item = blockCMSData.value[entryId as number];
+                   } else if (blockCMSData.value[queryParamName]?.length > 0) {
+                     (updated.data as any)._inherited_item = blockCMSData.value[queryParamName][0];
+                   }
                  }
                }
                return updated;
@@ -527,8 +542,15 @@ const updateChildBgImageKey = (childId: string, fieldKey: string | null) => {
               if (linkedQueryName === '_inherited_query') {
                 firstItem = (props.element.data as any)._inherited_item;
               } else {
-                const list = blockCMSData.value[linkedQueryName];
-                firstItem = Array.isArray(list) ? list[0] : null;
+                const parentParam = props.element.params.find(p => p.name === linkedQueryName);
+                const isSingle = parentParam?.type.source === ValueSource.CONTENUS && (parentParam.type as IContenusField).config.mode === 'single';
+                if (isSingle) {
+                  const entryId = props.element.data[linkedQueryName];
+                  firstItem = blockCMSData.value[entryId as number];
+                } else {
+                  const list = blockCMSData.value[linkedQueryName];
+                  firstItem = Array.isArray(list) ? list[0] : null;
+                }
               }
               const rawUrl = firstItem ? firstItem[fieldKey] : undefined;
               if (rawUrl) {

@@ -3,7 +3,8 @@ import type { Component } from 'vue';
 
 interface Props {
   label: string;
-  modelValue?: string | number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  modelValue?: string | number | Record<string, any> | null;
   type?: string;
   placeholder?: string;
   min?: number;
@@ -57,7 +58,7 @@ const emit = defineEmits<{
       />
 
       <!-- Variable/Action Slot -->
-      
+
     </div>
   </div>
 </template>

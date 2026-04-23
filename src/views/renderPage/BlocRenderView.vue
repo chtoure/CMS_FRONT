@@ -271,7 +271,12 @@ const finalData = computed(() => {
       const params = props.element.params || [];
       params.forEach((p: any) => {
         if (p.type?.source === 'parent' && p.type?.parentKey && props.parentData[p.type.parentParamName] !== undefined) {
-          data[p.name] = props.parentData[p.type.parentParamName];
+          const parentVal = props.parentData[p.type.parentParamName];
+          if (parentVal && typeof parentVal === 'object') {
+            data[p.name] = parentVal[p.type.parentKey];
+          } else if (parentVal !== undefined && typeof parentVal !== 'object' && data[p.name] === undefined) {
+            data[p.name] = parentVal;
+          }
         }
       });
     }
