@@ -33,6 +33,7 @@ coverage
 # Cypress
 /cypress/videos/
 /cypress/screenshots/
+/rapport
 
 # Vitest
 __screenshots__/
