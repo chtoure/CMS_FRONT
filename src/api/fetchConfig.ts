@@ -139,7 +139,13 @@ const api = async (endpoint: string, options: RequestInit = {}) => {
     } catch (error) {
       const storeUser = userStore();
       storeUser.setUserInfo(null, []);
-      router.push({ name: 'auth.login' });
+      
+      // On ne redirige vers le login que si la page actuelle l'exige
+      const requiresAuth = router.currentRoute.value.matched.some(record => record.meta.requiresAuth);
+      if (requiresAuth) {
+        router.push({ name: 'auth.login' });
+      }
+
       return Promise.reject(error);
     }
   }

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, inject } from 'vue';
 
 interface Props {
   label: string;
-  modelValue?: string | number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  modelValue?: string | number | Record<string, any> | null;
 }
 
 const props = defineProps<Props>();
@@ -11,6 +12,9 @@ const props = defineProps<Props>();
 const emit = defineEmits<{
   'update:modelValue': [value: string | number | undefined]
 }>();
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const builderState = inject<any>('builderState');
 
 const predefinedOptions = [
   { value: '', label: 'Par défaut (Hériter)' },
@@ -32,14 +36,29 @@ const localNumberValue = ref<number | ''>('');
 
 // Initialisation et synchronisation externe
 watch(() => props.modelValue, (newVal) => {
-  if (newVal === undefined || newVal === null || newVal === '') {
+  let valToProcess = newVal;
+
+  if (typeof newVal === 'object' && newVal !== null) {
+    const bp = builderState?.currentBreakpoint?.value || 'default';
+    if (newVal[bp] !== undefined) {
+      valToProcess = newVal[bp];
+    } else if (bp === 'lg' && newVal.md !== undefined) {
+      valToProcess = newVal.md;
+    } else if ((bp === 'lg' || bp === 'md') && newVal.sm !== undefined) {
+      valToProcess = newVal.sm;
+    } else {
+      valToProcess = newVal.default;
+    }
+  }
+
+  if (valToProcess === undefined || valToProcess === null || valToProcess === '') {
     isCustom.value = false;
     localSelectValue.value = ''; // Valeur par défaut correspondant à "Par défaut"
     localNumberValue.value = '';
     return;
   }
 
-  const strVal = String(newVal);
+  const strVal = String(valToProcess);
 
   // Vérifier si la valeur correspond à une option prédéfinie
   if (PREDEFINED_VALUES.includes(strVal)) {
@@ -50,7 +69,7 @@ watch(() => props.modelValue, (newVal) => {
     // C'est une valeur personnalisée
     isCustom.value = true;
     localSelectValue.value = 'custom';
-    
+
     // Essayer de parser la valeur comme un nombre pour l'input
     const num = parseInt(strVal);
     localNumberValue.value = isNaN(num) ? '' : num;
@@ -61,7 +80,7 @@ watch(() => props.modelValue, (newVal) => {
 const handleSelectChange = (e: Event) => {
   const target = e.target as HTMLSelectElement;
   const val = target.value;
-  
+
   if (val === 'custom') {
     isCustom.value = true;
     // On ne déclenche pas d'update tout de suite si l'utilisateur vient de passer en mode "Valeur exacte"
@@ -79,10 +98,10 @@ const handleSelectChange = (e: Event) => {
 const handleNumberInput = (e: Event) => {
   const target = e.target as HTMLInputElement;
   const val = target.value;
-  
+
   if (val === '') {
      localNumberValue.value = '';
-     emit('update:modelValue', undefined); 
+     emit('update:modelValue', undefined);
   } else {
      const num = parseInt(val);
      localNumberValue.value = isNaN(num) ? '' : num;
@@ -101,7 +120,7 @@ const handleNumberInput = (e: Event) => {
         <span class="text-[9px] font-bold font-mono tracking-tight text-builder-bar-text/70">{{ label }}</span>
       </label>
       <div class="shrink-0 flex items-center justify-end gap-1 z-30">
-        <select 
+        <select
           :value="isCustom ? 'custom' : localSelectValue"
           @change="handleSelectChange"
           class="bg-transparent border border-builder-bar-border hover:bg-white/5 rounded px-1 py-0.5 text-[9px] text-builder-bar-text/80 outline-none cursor-pointer w-16 truncate transition-colors appearance-none text-right"
@@ -116,7 +135,7 @@ const handleNumberInput = (e: Event) => {
       </div>
     </div>
     <div v-show="isCustom" class="grid grid-cols-10 items-center justify-between h-7 px-1 bg-builder-input-bg border border-builder-bar-border rounded hover:border-builder-bar-border transition-all focus-within:border-primary group relative">
-      
+
       <!-- Input Area -->
       <div class="col-span-10 flex items-center w-full h-full relative">
         <!-- Champ de saisie numérique (visible uniquement si 'custom') -->

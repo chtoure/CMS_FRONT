@@ -126,18 +126,17 @@ const handleEditingTypeChange = (val: unknown) => {
 
 const previewImage = ref('');
 
-const changeMediaEditor = (id: number) => {
-  if (!editingParam.value || id === null || id === undefined) return;
-  const url = mediaQuery?.data.value?.results?.find((m) => m.id === id)?.file_path || '';
-  (editingParam.value.type as IImageField).src = url;
-  (editingParam.value.type as IImageField).id = id;
+const changeMediaEditor = (media: any) => {
+  if (!editingParam.value || !media) return;
+  (editingParam.value.type as IImageField).src = media.file_path || '';
+  (editingParam.value.type as IImageField).id = media.id;
 };
 
-const changeMediaAdd = (id: number) => {
-  if (!newParam.value || id === null || id === undefined) return;
-  previewImage.value = mediaQuery?.data.value?.results?.find((m) => m.id === id)?.file_path || '';
+const changeMediaAdd = (media: any) => {
+  if (!newParam.value || !media) return;
+  previewImage.value = media.file_path || '';
   (newParam.value.type as IImageField).src = previewImage.value;
-  (newParam.value.type as IImageField).id = id;
+  (newParam.value.type as IImageField).id = media.id;
 };
 
 const toggleParam = (name: string) => {
@@ -258,7 +257,7 @@ const saveParameterEdit = () => {
             <CompositionMediaPicker
               :model-value="(newParam.type as any).id"
               :allowed-types="['image']"
-              @update:model-value="changeMediaAdd($event)"
+              @media-selected="changeMediaAdd($event)"
             />
           </div>
         </div>
@@ -383,7 +382,7 @@ const saveParameterEdit = () => {
                   <CompositionMediaPicker
                     :model-value="(editingParam.type as any).id"
                     :allowed-types="['image']"
-                    @update:model-value="changeMediaEditor($event)"
+                    @media-selected="changeMediaEditor($event)"
                   />
                 </div>
               </div>

@@ -1,3 +1,4 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
 import { computed, inject } from 'vue';
 import type { StaticStyles, AnyComponentInstance } from '../../type/component';
@@ -36,7 +37,7 @@ const computedInlineStyles = computed(() => {
   return buildImageInlineStyles(props.styles as Record<string, unknown>, bp, resolveValue);
 });
 
-const imageSrc = computed(() => (resolveValue(props.data?.src) as string) || 'https://via.placeholder.com/400x300?text=Image+Builder');
+const imageSrc = computed(() => (resolveValue(props.data?.src) as string) || 'https://placehold.co/400x300?text=Image+Builder');
 const imageAlt = computed(() => (resolveValue(props.data?.alt) as string) || '');
 const objectFit = computed(() => (resolveValue(props.data?.objectFit) as any) || 'cover');
 </script>

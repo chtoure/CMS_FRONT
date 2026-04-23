@@ -109,6 +109,11 @@ watchEffect(() => {
   }
 });
 
+const sortedLayout = computed(() => {
+  if (!page.value?.layout) return [];
+  return [...page.value.layout].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+});
+
 // Gestion responsive
 const currentBreakpoint = ref<'default' | 'sm' | 'md' | 'lg'>('default');
 
@@ -176,7 +181,7 @@ provide('siteParams', siteParams);
 
     <div v-else-if="page && page.layout">
       <BlocRenderView
-        v-for="section in page.layout"
+        v-for="section in sortedLayout"
         :key="section.id"
         :element="section"
       />
