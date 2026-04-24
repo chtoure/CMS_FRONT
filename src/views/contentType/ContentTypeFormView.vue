@@ -514,11 +514,9 @@ const handleCancel = () => {
             >
               <ArrowLeft stroke-width="1" class="w-8 h-8" />
             </div>
-            <div class="space-y-1">
-              <h1 class="text-huge font-black tracking-tighter leading-none">
-                <span class="text-primary italic">Créer un type d'article</span>
-              </h1>
-              <p class="text-background opacity-80 text-lg font-medium">Définissez la structure et les champs de vos données.</p>
+            <div class="space-y-2">
+              <h1 class="text-3xl font-black tracking-tighter leading-none"> <span class="text-primary italic">Créer un type d'article</span></h1>
+              <p class="text-muted-foreground text-sm font-medium mt-1 italic">Définissez la structure et les champs de vos données.</p>
             </div>
           </div>
 

@@ -432,7 +432,7 @@ const applyItemToChildren = (
 
     <!-- Zone de drop pour conteneurs -->
     <template v-if="canHaveChildren">
-      <div class="relative w-full h-full">
+      <div class="relative w-full h-full text-[16px]">
         <!-- Mode Clone : pas de drag & drop, rendu simple des enfants -->
         <template v-if="isClone">
           <div
