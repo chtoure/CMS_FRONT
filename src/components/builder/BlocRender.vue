@@ -71,54 +71,7 @@ const layoutInlineStyles = computed(() => {
   return buildBlocLayoutInlineStyles(props.element.styles as Record<string, unknown>, bp, resolveValue, true);
 });
 
-// Calcul dynamique du layout (classes) uniquement pour la <div> de boucle si on a des clones
-const iteratedWrapperLayoutClasses = computed(() => {
-  return (child: any) => {
-    // CONDITION STRICTE : Si ce n'est pas un enfant en mode itération avec des clones, on ne fait rien
-    const isIteratedChild = props.element.data?.isIterated &&
-      ((child.data as any)?.linkedQueryParamName || getLeafQueryItems(child).length > 0);
 
-    if (!isIteratedChild) return '';
-
-    // oxlint-disable-next-line no-useless-fallback-in-spread
-    const stylesObj = { ...((props.element.styles as Record<string, unknown>) || {}) };
-    delete stylesObj.padding; // Ne pas hériter le padding du parent
-
-    const classes = filterResponsiveClasses(
-      buildBlocLayoutStyles(stylesObj, resolveValue),
-      builderState?.currentBreakpoint.value || 'default'
-    );
-
-    // Reproduction de la structure CSS du parent
-    if (classes.includes('grid')) {
-      return `w-full ${classes}`;
-    } else if (classes.includes('flex')) {
-      return `w-full ${classes} ${stylesObj.direction === 'horizontal' ? 'flex-wrap' : ''}`;
-    } else if (stylesObj.direction) {
-      return `w-full flex ${classes} ${stylesObj.direction === 'horizontal' ? 'flex-wrap' : ''}`;
-    }
-
-    // Aucun réglage : comportement naturel en block
-    return 'w-full block';
-  };
-});
-
-// Pareil pour les styles inline (marge etc)
-const iteratedWrapperInlineStyles = computed(() => {
-  return (child: any) => {
-    const isIteratedChild = props.element.data?.isIterated &&
-      ((child.data as any)?.linkedQueryParamName || getLeafQueryItems(child).length > 0);
-
-    if (!isIteratedChild) return {};
-
-    const bp = builderState?.currentBreakpoint.value || 'default';
-    // oxlint-disable-next-line no-useless-fallback-in-spread
-    const stylesObj = { ...((props.element.styles as Record<string, unknown>) || {}) };
-    delete stylesObj.padding;
-
-    return buildBlocLayoutInlineStyles(stylesObj, bp, resolveValue, true);
-  };
-});
 
 // Helper pour extraire l'URL depuis la propriété bgVideo (qui est enveloppée en { type:'static', value: {...} })
 const bgVideoUrl = computed((): string | null => {
@@ -432,7 +385,7 @@ const applyItemToChildren = (
 
     <!-- Zone de drop pour conteneurs -->
     <template v-if="canHaveChildren">
-      <div class="relative w-full h-full">
+      <div class="relative w-full h-full text-[16px]">
         <!-- Mode Clone : pas de drag & drop, rendu simple des enfants -->
         <template v-if="isClone">
           <div
@@ -475,62 +428,62 @@ const applyItemToChildren = (
             ]"
             :style="element.tag !== 'SliderBuilder' ? layoutInlineStyles : {}"
           >
-            <div
-              v-for="(child, index) in childrenModel"
-              :key="child.id"
-              class="transition-all"
-              :class="[
-                 iteratedWrapperLayoutClasses(child),
-                 isOutOfFlow(child) ? '' : 'relative',
-                 element.tag === 'SliderBuilder' ? 'slider-slide' : ''
-              ]"
-              :style="{
-                width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
-                height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
-                ...(isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {}),
-                ...iteratedWrapperInlineStyles(child)
-              }"
-              @click.stop="builderState?.selectComponent(child.id)"
-            >
-              <!-- Mode Itération CONTAINER : répète le container enfant pour chaque item de la liste -->
+            <template v-for="(child, index) in childrenModel" :key="child.id">
+
+              <!-- ====== CAS 1 : CONTAINER ITÉRÉ ====== -->
               <template v-if="element.data?.isIterated && (child.data as any)?.linkedQueryParamName">
 
-                <!-- Premier item (index 0) : Éditable + Sélectionnable -->
-                <ResizerWrapper
-                  :element="child"
-                  :active="builderState?.selectedId.value === child.id"
-                  :depth="(props.depth ?? 0) + 1"
-                  @update:element="(newChild: AnyComponentInstance) => {
-                    const { _inherited_item, ...cleanData } = newChild.data as any;
-                    handleChildUpdate(index, { ...newChild, data: cleanData });
+                <!-- Original (index 0) : Éditable + Sélectionnable -->
+                <div
+                  class="transition-all"
+                  :class="[
+                    isOutOfFlow(child) ? '' : 'relative',
+                    element.tag === 'SliderBuilder' ? 'slider-slide' : ''
+                  ]"
+                  :style="{
+                    width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
+                    height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
+                    ...(isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
                   }"
-                  @resizing="isResizingItem = $event"
-                  :style="!isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {}"
+                  @click.stop="builderState?.selectComponent(child.id)"
                 >
-                  <BlocRender
-                    :element="applyBgImageToContainer({
-                      ...child,
-                      data: { ...child.data, _inherited_item: getIteratedItems(child)[0] },
-                      children: applyItemToChildren(
-                        child.children || [],
-                        getIteratedItems(child)[0],
-                        (element.params || []).filter((p: any) =>
-                          p.type?.source === 'contenus' && p.type?.config?.mode === 'query'
-                        ).map((p: any) => p.name)
-                      )
-                    }, getIteratedItems(child)[0])"
+                  <ResizerWrapper
+                    :element="child"
+                    :active="builderState?.selectedId.value === child.id"
+                    :depth="(props.depth ?? 0) + 1"
                     @update:element="(newChild: AnyComponentInstance) => {
                       const { _inherited_item, ...cleanData } = newChild.data as any;
                       handleChildUpdate(index, { ...newChild, data: cleanData });
                     }"
-                  />
-                </ResizerWrapper>
+                    @resizing="isResizingItem = $event"
+                    :style="!isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {}"
+                  >
+                    <BlocRender
+                      :element="applyBgImageToContainer({
+                        ...child,
+                        data: { ...child.data, _inherited_item: getIteratedItems(child)[0] },
+                        children: applyItemToChildren(
+                          child.children || [],
+                          getIteratedItems(child)[0],
+                          (element.params || []).filter((p: any) =>
+                            p.type?.source === 'contenus' && p.type?.config?.mode === 'query'
+                          ).map((p: any) => p.name)
+                        )
+                      }, getIteratedItems(child)[0])"
+                      @update:element="(newChild: AnyComponentInstance) => {
+                        const { _inherited_item, ...cleanData } = newChild.data as any;
+                        handleChildUpdate(index, { ...newChild, data: cleanData });
+                      }"
+                    />
+                  </ResizerWrapper>
+                </div>
 
-                <!-- Clones (index 1..N) : Lecture seule, rendu récursif complet -->
+                <!-- Clones (index 1..N) : frères directs, lecture seule -->
                 <div
                   v-for="(item, cloneIndex) in getIteratedItems(child).slice(1)"
                   :key="`clone-${child.id}-${cloneIndex}`"
-                  class="pointer-events-none"
+                  class="relative pointer-events-none"
+                  :class="element.tag === 'SliderBuilder' ? 'slider-slide' : ''"
                   :style="{
                     width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
                     height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue)
@@ -551,28 +504,40 @@ const applyItemToChildren = (
                     :is-clone="true"
                   />
                 </div>
+
               </template>
 
-              <!-- Mode Itération FEUILLE : répète le composant feuille pour chaque item de la liste -->
+              <!-- ====== CAS 2 : FEUILLE ITÉRÉE ====== -->
               <template v-else-if="element.data?.isIterated && getLeafQueryItems(child).length > 0">
 
-                <!-- Premier item : éditable -->
-                <ResizerWrapper
-                  :element="child"
-                  :active="builderState?.selectedId.value === child.id"
-                  @update:element="(newChild: AnyComponentInstance) => handleChildUpdate(index, newChild)"
+                <!-- Original (index 0) : éditable -->
+                <div
+                  class="relative transition-all"
+                  :class="element.tag === 'SliderBuilder' ? 'slider-slide' : ''"
+                  :style="{
+                    width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
+                    height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue)
+                  }"
+                  @click.stop="builderState?.selectComponent(child.id)"
                 >
-                  <BlocRender
-                    :element="{ ...child, data: applyQueryItemToLeaf(child, getLeafQueryItems(child)[0]) }"
+                  <ResizerWrapper
+                    :element="child"
+                    :active="builderState?.selectedId.value === child.id"
                     @update:element="(newChild: AnyComponentInstance) => handleChildUpdate(index, newChild)"
-                  />
-                </ResizerWrapper>
+                  >
+                    <BlocRender
+                      :element="{ ...child, data: applyQueryItemToLeaf(child, getLeafQueryItems(child)[0]) }"
+                      @update:element="(newChild: AnyComponentInstance) => handleChildUpdate(index, newChild)"
+                    />
+                  </ResizerWrapper>
+                </div>
 
-                <!-- Clones (index 1..N) : lecture seule -->
+                <!-- Clones (index 1..N) : frères directs, lecture seule -->
                 <div
                   v-for="(item, cloneIndex) in getLeafQueryItems(child).slice(1)"
                   :key="`leaf-clone-${child.id}-${cloneIndex}`"
-                  class="pointer-events-none"
+                  class="relative pointer-events-none"
+                  :class="element.tag === 'SliderBuilder' ? 'slider-slide' : ''"
                   :style="{
                     width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
                     height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue)
@@ -583,23 +548,40 @@ const applyItemToChildren = (
                     :is-clone="true"
                   />
                 </div>
+
               </template>
 
-              <ResizerWrapper
+              <!-- ====== CAS 3 : NORMAL (non itéré) ====== -->
+              <div
                 v-else
-                :element="child"
-                :active="builderState?.selectedId.value === child.id"
-                :depth="(props.depth ?? 0) + 1"
-                @update:element="(newChild) => handleChildUpdate(index, newChild)"
-                @resizing="isResizingItem = $event"
-                :style="!isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {}"
+                class="transition-all"
+                :class="[
+                  isOutOfFlow(child) ? '' : 'relative',
+                  element.tag === 'SliderBuilder' ? 'slider-slide' : ''
+                ]"
+                :style="{
+                  width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
+                  height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
+                  ...(isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
+                }"
+                @click.stop="builderState?.selectComponent(child.id)"
               >
-                <BlocRender
+                <ResizerWrapper
                   :element="child"
+                  :active="builderState?.selectedId.value === child.id"
+                  :depth="(props.depth ?? 0) + 1"
                   @update:element="(newChild) => handleChildUpdate(index, newChild)"
-                />
-              </ResizerWrapper>
-            </div>
+                  @resizing="isResizingItem = $event"
+                  :style="!isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {}"
+                >
+                  <BlocRender
+                    :element="child"
+                    @update:element="(newChild) => handleChildUpdate(index, newChild)"
+                  />
+                </ResizerWrapper>
+              </div>
+
+            </template>
           </div>
         </template>
       </div>

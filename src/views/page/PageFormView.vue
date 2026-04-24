@@ -142,15 +142,16 @@ const handleCancel = () => {
     <CompositionPageHeader>
       <template #content>
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-          <div class="space-y-2">
-            <h1 class="text-huge font-black tracking-tighter leading-none"> <span class="text-primary italic">{{ isEditing ? 'Modifier la page' : 'Créer une nouvelle page' }}</span></h1>
-            <p class="text-background text-sm font-medium">{{ isEditing ? 'Modifiez les informations de la page' : 'Créez une nouvelle page pour votre site' }}</p>
-          </div>
-          <div class="flex items-center gap-4">
-            <Button class="rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 text-white font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95" @click="handleCancel">
-              <ArrowLeft class="w-6 h-6 mr-2" />
-              Retour
-            </Button>
+          <div class="flex gap-4 items-center">
+            <div class="hover:cursor-pointer p-3 bg-primary rounded-2xl" @click="$router.back()">
+              <ArrowLeft stroke-width="1" class="w-8 h-8" />
+            </div>
+            <div>
+              <h1 class="text-3xl font-black tracking-tighter leading-none">
+                <span class="text-primary italic">{{ isEditing ? 'Modifier la page' : 'Créer une nouvelle page' }}</span>
+              </h1>
+              <p class="text-muted-foreground text-sm font-medium mt-1 italic">{{ isEditing ? 'Modifiez les informations de la page' : 'Créez une nouvelle page pour votre site' }}</p>
+            </div>
           </div>
         </div>
       </template>
@@ -158,20 +159,6 @@ const handleCancel = () => {
 
     <main>
        <div class="card rounded-none p-6">
-          <div class="mb-8 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <button
-                @click="handleCancel"
-                class="flex items-center gap-2 text-text hover:text-primary transition-colors"
-              >
-                <ArrowLeft class="size-4" />
-              </button>
-              <p class="large font-bold text-text">
-                {{ isEditing ? 'Modifier la page' : 'Créer une nouvelle page' }}
-              </p>
-            </div>
-          </div>
-
           <form @submit.prevent="handleSubmit" class="space-y-8">
             <div class="space-y-6">
               <p class="huge font-semibold text-primary tracking-wider">Configuration De Base</p>

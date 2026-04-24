@@ -111,7 +111,7 @@ interface ContentEntryStub {
 // 1. Colonnes de la table
 const columns = [
   { key: 'id', label: 'ID', class: 'w-16' },
-  { key: 'title', label: 'Titre' , class: 'w-1/2'},
+  { key: 'title', label: 'Texte Indicateur' , class: 'w-1/2'},
   { key: 'user', label: 'Auteur', class: 'w-1/4' },
   { key: 'status', label: 'Statut', class: 'w-1/4' },
   { key: 'actions', label: 'Actions', class: 'w-1/4' },
@@ -162,11 +162,9 @@ const navigateToPreview = (entryId: number) => {
             <div class="p-3 bg-primary rounded-2xl">
               <FileText stroke-width="1" class="h-8 w-8" />
             </div>
-            <div class="space-y-1">
-              <h1 class="text-huge font-black tracking-tighter leading-none">
-                <span class="text-primary italic">Entrées de contenu {{ contentType?.name }}</span>
-              </h1>
-              <p class="text-background text-sm font-medium">Gérez l'ensemble de vos contenus dynamiques.</p>
+            <div class="space-y-2">
+              <h1 class="text-3xl font-black tracking-tighter leading-none"> <span class="text-primary italic">Entrées de contenu {{ contentType?.name }}</span></h1>
+              <p class="text-muted-foreground text-sm font-medium mt-1 italic">Gérez l'ensemble de vos contenus dynamiques.</p>
             </div>
           </div>
           <div v-if="hasPermission(['create_content_entry'])" class="flex items-center gap-4">

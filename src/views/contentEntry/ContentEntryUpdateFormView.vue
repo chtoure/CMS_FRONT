@@ -94,14 +94,14 @@ const handleSubmit = (status: EntryStatus) => {
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
           <div class="flex gap-4 items-center">
             <div
-              class="hover:cursor-pointer hover:text-primary"
+              class="hover:cursor-pointer p-3 bg-primary rounded-2xl"
               @click="$router.back()"
             >
-              <ArrowLeft />
+              <ArrowLeft stroke-width="1" class="w-8 h-8" />
             </div>
             <div class="space-y-2">
-              <h1 class="text-huge font-black tracking-tighter leading-none"> <span class="text-primary italic">Modification de contenu {{ contentEntry?.data_json.title }}</span></h1>
-              <p class="text-background opacity-80 text-lg font-medium">Modifier une entrée de contenu existante.</p>
+              <h1 class="text-3xl font-black tracking-tighter leading-none"> <span class="text-primary italic">Gestionnaire de types d'article</span></h1>
+              <p class="text-muted-foreground text-sm font-medium mt-1 italic">Gérez l'ensemble de vos types d'article.</p>
             </div>
           </div>
         </div>

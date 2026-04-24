@@ -578,14 +578,12 @@ const confirmChange = () => {
       <template #content>
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div class="flex items-center gap-4">
-            <div class="p-4 bg-primary/10 rounded-2xl">
-              <Settings2 class="h-8 w-8 text-primary" />
+            <div class="p-3 bg-primary rounded-2xl">
+              <Settings2 stroke-width="1" class="w-8 h-8" />
             </div>
-            <div class="space-y-1">
-              <h1 class="text-huge font-black tracking-tighter leading-none">
-                <span class="text-primary italic">Modifier le type d'article</span>
-              </h1>
-              <p class="text-background opacity-80 text-lg font-medium">Modifiez la structure et les champs de votre article.</p>
+            <div class="space-y-2">
+              <h1 class="text-3xl font-black tracking-tighter leading-none"> <span class="text-primary italic">Créer un type d'article</span></h1>
+              <p class="text-muted-foreground text-sm font-medium mt-1 italic">Définissez la structure et les champs de vos données.</p>
             </div>
           </div>
 

@@ -115,11 +115,9 @@ const handleCreate = () => {
             >
               <ClipboardList stroke-width="1" class="w-8 h-8" />
             </div>
-            <div class="space-y-1">
-              <h1 class="text-huge font-black tracking-tighter leading-none">
-                <span class="text-primary italic">Gestion des types d'article</span>
-              </h1>
-              <p class="text-background text-sm font-medium">Gérez l'ensemble de vos types d'article.</p>
+            <div class="space-y-2">
+              <h1 class="text-3xl font-black tracking-tighter leading-none"> <span class="text-primary italic">Gestionnaire de types d'article</span></h1>
+              <p class="text-muted-foreground text-sm font-medium mt-1 italic">Gérez l'ensemble de vos types d'article.</p>
             </div>
           </div>
 
