@@ -261,20 +261,22 @@ const handleCancel = () => {
                 Les termes sont les valeurs possibles pour cette categorie (ex: pour "vehicule", les termes pourraient être "voiture", "moto", "camion", etc).
               </p>
             </div>
+
+            <div class="flex justify-between gap-4 pb-10">
+              <Button variant="outline" @click="handleCancel" class="rounded-xl h-12 px-4 font-bold bg-destructive hover:bg-destructive hover:text-white text-white">
+                Annuler
+              </Button>
+              <Button @click="handleSubmit" class="rounded-xl h-12 px-4 bg-primary text-white font-bold shadow-lg">
+                <Save class="w-4 h-4 mr-2" />
+                {{ isEditing ? 'Mettre à jour' : 'Créer la categorie' }}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Action Footer (Mobile version / duplication) -->
-      <div class="flex justify-end gap-4 pb-10">
-        <Button variant="outline" @click="handleCancel" class="rounded-xl h-12 px-8 font-bold bg-destructive hover:bg-destructive hover:text-white text-white">
-          Annuler
-        </Button>
-        <Button @click="handleSubmit" class="rounded-xl h-12 px-10 bg-primary text-white font-bold shadow-lg">
-          <Save class="w-4 h-4 mr-2" />
-          {{ isEditing ? 'Mettre à jour' : 'Créer la categorie' }}
-        </Button>
-      </div>
+      
     </div>
   </div>
 </template>
