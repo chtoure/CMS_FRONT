@@ -47,6 +47,7 @@ const COMPONENT_SOURCE_MAPPING: Record<string, ValueSource[]> = {
   'InputBuilder': [ValueSource.STATIC],
   'ImageBuilder': [ValueSource.STATIC, ValueSource.IMAGE],
   'CardBuilder': [ValueSource.STATIC, ValueSource.IMAGE, ValueSource.CONTENUS],
+  'SliderBuilder': [ValueSource.STATIC, ValueSource.IMAGE, ValueSource.CONTENUS],
 };
 
 const sourceOptions = [
@@ -69,7 +70,7 @@ const modeOptions = [
 
 const allowedSources = computed(() => COMPONENT_SOURCE_MAPPING[props.element.tag] || []);
 const canAddParams = computed(() => allowedSources.value.length > 0);
-const paramDynamic = computed(() => props.element.family === 'container');
+const paramDynamic = computed(() => props.element.family === 'container' || props.element.tag === 'SliderBuilder');
 const hasLinkedChildren = computed(() => {
   if (!props.element.children) return false;
 
@@ -478,7 +479,7 @@ const updateChildLinkedQuery = (childId: string, queryParamName: string | null) 
           children: node.children.map(child => {
             if (child.id === childId) {
                let contentTypeId: number | undefined;
-               
+
                if (queryParamName === '_inherited_query') {
                  contentTypeId = (props.element.data as any).linkedQueryContentTypeId;
                } else {

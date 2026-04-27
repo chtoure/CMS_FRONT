@@ -411,6 +411,24 @@ function resolveChildForInheritedBg(child: HydratedBlock): HydratedBlock {
   return child;
 }
 
+// ─── Calcul du nombre réel de slides pour SliderBuilder (original + clones CMS) ───
+// Miroir exact de totalSlidesCount dans BlocRender.vue
+const totalSlidesCount = computed(() => {
+  if (props.element.tag !== 'SliderBuilder' || !elementChildren.value.length) {
+    return undefined;
+  }
+  let count = 0;
+  for (const child of elementChildren.value) {
+    if (isLeafLinkedToQuery(child)) {
+      const items = getItemsForChild(child);
+      count += items.length > 0 ? items.length : 1;
+    } else {
+      count += 1;
+    }
+  }
+  return count;
+});
+
 </script>
 
 <template>
@@ -510,6 +528,7 @@ function resolveChildForInheritedBg(child: HydratedBlock): HydratedBlock {
     :styles="normalizedElementStyles"
     :data="finalData"
     :children="element.tag === 'SliderBuilder' ? elementChildren : undefined"
+    v-bind="element.tag === 'SliderBuilder' && totalSlidesCount !== undefined ? { totalSlidesCount } : {}"
     class="relative isolate h-full transition-all duration-200"
   >
     <!-- Background Video -->

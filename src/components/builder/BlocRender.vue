@@ -335,6 +335,25 @@ const applyItemToChildren = (
 };
 
 
+// Calcule le nombre réel de slides pour le SliderBuilder :
+// chaque enfant "itéré" compte pour N items CMS, et les enfants normaux comptent pour 1.
+const totalSlidesCount = computed(() => {
+  if (props.element.tag !== 'SliderBuilder' || !childrenModel.value.length) {
+    return undefined;
+  }
+  let count = 0;
+  for (const child of childrenModel.value) {
+    if (props.element.data?.isIterated && (child.data as any)?.linkedQueryParamName) {
+      count += getIteratedItems(child).length;
+    } else if (props.element.data?.isIterated && getLeafQueryItems(child).length > 0) {
+      count += getLeafQueryItems(child).length;
+    } else {
+      count += 1;
+    }
+  }
+  return count;
+});
+
 </script>
 
 <template>
@@ -345,6 +364,7 @@ const applyItemToChildren = (
     :data="element.data"
     :element="element"
     :children="element.children"
+    v-bind="element.tag === 'SliderBuilder' && totalSlidesCount !== undefined ? { totalSlidesCount } : {}"
     class="relative isolate h-full group/renderer transition-all duration-200"
     :class="{
       'ring-1 ring-blue-500 ring-inset z-10': isSelected,

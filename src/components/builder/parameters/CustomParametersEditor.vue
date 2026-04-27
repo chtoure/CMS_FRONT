@@ -18,7 +18,7 @@ import CompositionMediaPicker from '../../composition/CompositionMediaPicker.vue
 // Hooks
 import { useGetContentTypes } from '../../../hook/content-type';
 import { useGetContentEntriesBySlug } from '../../../hook/content-entry';
-import { useGetMediaList } from '../../../hook/media';
+// import { useGetMediaList } from '../../../hook/media';
 import type { ContentType } from '../../../type/content-type';
 
 const props = defineProps<{
@@ -37,7 +37,7 @@ const builderState = inject<{
 }>('builderState');
 
 const { data: contentTypeOptions } = useGetContentTypes();
-const mediaQuery = useGetMediaList({});
+// const mediaQuery = useGetMediaList({});
 
 const expandedParam = ref<string | null>(null);
 const showAddForm = ref(false);
