@@ -123,7 +123,7 @@ const getMediaCMSFields = (child: AnyComponentInstance) => {
 </script>
 
 <template>
-  <div v-if="element.family === 'container' && element.children && element.children.length > 0 && (element.params?.some(p => p.type.source === ValueSource.CONTENUS) || !!(element.data as any).linkedQueryParamName)" class="pt-4 border-t border-builder-bar-border/30">
+  <div v-if="(element.family === 'container' || element.tag === 'SliderBuilder') && element.children && element.children.length > 0 && (element.params?.some(p => p.type.source === ValueSource.CONTENUS) || !!(element.data as any).linkedQueryParamName)" class="pt-4 border-t border-builder-bar-border/30">
     <PropertyGroup title="Liaison Enfants" :icon="LinkIcon" :open="true">
       <div class="space-y-4">
         <div v-for="child in element.children" :key="child.id" class="p-3 bg-builder-bar-background/30 rounded border border-builder-bar-border/50 space-y-3 mb-2">

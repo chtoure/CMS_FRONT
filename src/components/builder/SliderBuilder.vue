@@ -14,6 +14,7 @@ interface Props {
   data?: Record<string, any>;
   element?: AnyComponentInstance;
   children?: AnyComponentInstance[];
+  totalSlidesCount?: number; // Nombre réel de slides incluant les clones dynamiques CMS
 }
 
 const props = defineProps<Props>();
@@ -66,7 +67,8 @@ const sliderConfig = computed(() => {
 
   return {
     ...config,
-    slidesPerView: resolveValue((props.styles as any)?.slidesPerView) ?? resolveValue(props.data?.slidesPerView) ?? config.slidesPerView,
+    // slidesPerView est déjà résolu correctement par buildSliderConfig (resolveValueForBreakpoint + parseInt)
+    // On ne le surcharge PAS ici pour ne pas casser la résolution par breakpoint.
     transitionDuration: resolveValue(props.data?.transitionDuration) ?? config.transitionDuration,
     transitionEase: resolveValue(props.data?.transitionEase) ?? config.transitionEase,
     autoplay: resolveValue(props.data?.autoPlay) === true,
@@ -88,35 +90,59 @@ const paginationStyles = computed(() => {
 });
 
 const slidesPerView = computed(() => {
-  return sliderConfig.value.slidesPerView || 1;
+  const v = Number(sliderConfig.value.slidesPerView);
+  return (Number.isFinite(v) && v > 0) ? v : 1;
 });
 
 const slidesCount = computed(() => {
+  // Si le parent a calculé le vrai total (original + clones CMS), on l'utilise.
+  // Sinon, on retombe sur le nombre d'enfants statiques.
+  if (props.totalSlidesCount !== undefined && props.totalSlidesCount > 0) {
+    return props.totalSlidesCount;
+  }
   return props.children ? props.children.length : 0;
 });
 
+// Nombre de pages = ceil(slides / par page)
+const totalPages = computed(() => {
+  const count = slidesCount.value || 0;
+  const perView = slidesPerView.value || 1;
+  return Math.max(1, Math.ceil(count / perView));
+});
+
+// Index MAX que peut prendre currentSlide = (totalPages - 1) * slidesPerView
+// = l'indice du premier élément de la dernière page
 const maxSlideIndex = computed(() => {
-  return Math.max(0, slidesCount.value - slidesPerView.value);
+  return (totalPages.value - 1) * slidesPerView.value;
+});
+
+// Indice de page courant (0-based)
+const currentPage = computed(() => {
+  return Math.floor(currentSlide.value / slidesPerView.value);
 });
 
 const nextSlide = () => {
   if (slidesCount.value <= slidesPerView.value) return;
-  if (currentSlide.value >= maxSlideIndex.value) {
+  if (currentPage.value >= totalPages.value - 1) {
     if (sliderConfig.value.loop) currentSlide.value = 0;
   } else {
-    currentSlide.value++;
+    currentSlide.value = Math.min(maxSlideIndex.value, currentSlide.value + slidesPerView.value);
   }
 };
 
 const prevSlide = () => {
   if (slidesCount.value <= slidesPerView.value) return;
-  if (currentSlide.value <= 0) {
+  if (currentPage.value <= 0) {
     if (sliderConfig.value.loop) currentSlide.value = maxSlideIndex.value;
   } else {
-    currentSlide.value--;
+    currentSlide.value = Math.max(0, currentSlide.value - slidesPerView.value);
   }
 };
-const goToSlide = (index: number) => { currentSlide.value = index; };
+
+// goToSlide reçoit un index de PAGE (0, 1, 2...) et le convertit en indice d'élément
+const goToSlide = (pageIndex: number) => {
+  currentSlide.value = Math.min(maxSlideIndex.value, pageIndex * slidesPerView.value);
+};
 
 const isAnySelected = computed(() => {
   const selectedId = builderState?.selectedId?.value;
@@ -216,7 +242,7 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
     <!-- Pagination -->
     <div v-show="sliderConfig.showPagination && (isBuilder || (slidesCount > slidesPerView && !builderState.isDragging?.value))" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10 pointer-events-auto">
       <button
-        v-for="(_, index) in (maxSlideIndex + 1)"
+        v-for="(_, index) in Math.max(1, maxSlideIndex + 1)"
         :key="index"
         @click.stop="goToSlide(index)"
         class="transition-all duration-300"
