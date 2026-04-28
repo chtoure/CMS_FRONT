@@ -21,6 +21,7 @@ defineOptions({
 interface Props {
   element: AnyComponentInstance;
   isClone?: boolean; // Si true, ce bloc est un clone non-éditable (itération)
+
   depth?: number;    // Profondeur dans l'arbre pour le mode Blueprint
 }
 

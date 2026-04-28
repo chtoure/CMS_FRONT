@@ -33,11 +33,20 @@ const props = defineProps<{
 
 const builderState = inject<{
   pageTree: { value: AnyComponentInstance[] };
+  libraryTree: { value: AnyComponentInstance[] };
   selectedId: { value: string | null };
   builderMode: { value: 'page' | 'library' };
   selectComponent: (id: string | null) => void;
   cmsCache: { value: Record<string, any> };
 }>('builderState');
+
+// Sélectionne dynamiquement le bon arbre selon le mode actif
+// Cela permet à DataEditor de fonctionner aussi bien en mode Page qu'en mode Bibliothèque (Modèles)
+const activeTree = computed(() =>
+  builderState?.builderMode.value === 'library'
+    ? builderState.libraryTree
+    : builderState?.pageTree
+);
 
 const { data: contentTypeOptions, refetch: refetchContentTypes } = useGetContentTypes();
 const mediaQuery = useGetMediaList({});
@@ -367,7 +376,7 @@ const updateData = (key: string, value: string | number | boolean | object) => {
       return node;
     });
   };
-  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  if (activeTree.value) activeTree.value.value = updateNode(activeTree.value.value);
 };
 
 const updateDataAndParam = (key: string, value: string) => {
@@ -391,7 +400,7 @@ const updateDataAndParam = (key: string, value: string) => {
       return node;
     });
   };
-  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  if (activeTree.value) activeTree.value.value = updateNode(activeTree.value.value);
 };
 
 const updateChildParamSource = (childId: string, paramName: string, source: ValueSource, parentParamName?: string, parentKey?: string) => {
@@ -465,7 +474,7 @@ const updateChildParamSource = (childId: string, paramName: string, source: Valu
       return node;
     });
   };
-  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  if (activeTree.value) activeTree.value.value = updateNode(activeTree.value.value);
 };
 
 const updateChildLinkedQuery = (childId: string, queryParamName: string | null) => {
@@ -520,8 +529,7 @@ const updateChildLinkedQuery = (childId: string, queryParamName: string | null) 
       return node;
     });
   };
-
-  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  if (activeTree.value) activeTree.value.value = updateNode(activeTree.value.value);
 };
 
 const updateChildBgImageKey = (childId: string, fieldKey: string | null) => {
@@ -574,8 +582,7 @@ const updateChildBgImageKey = (childId: string, fieldKey: string | null) => {
       return node;
     });
   };
-
-  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  if (activeTree.value) activeTree.value.value = updateNode(activeTree.value.value);
 };
 
 const saveParameterEdit = (editingParam: IComponentParams) => {
@@ -613,8 +620,7 @@ const saveParameterEdit = (editingParam: IComponentParams) => {
       return node;
     });
   };
-
-  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  if (activeTree.value) activeTree.value.value = updateNode(activeTree.value.value);
 };
 
 const addParameter = (param: IComponentParams, name: string) => {
@@ -639,8 +645,7 @@ const addParameter = (param: IComponentParams, name: string) => {
       return node;
     });
   };
-
-  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  if (activeTree.value) activeTree.value.value = updateNode(activeTree.value.value);
 };
 
 const removeParameter = (name: string) => {
@@ -662,8 +667,7 @@ const removeParameter = (name: string) => {
       return node;
     });
   };
-
-  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  if (activeTree.value) activeTree.value.value = updateNode(activeTree.value.value);
 };
 
 const getCompatibleParentParams = (childParam: IComponentParams, childElement?: AnyComponentInstance) => {
