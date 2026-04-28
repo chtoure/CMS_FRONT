@@ -27,14 +27,24 @@ Le schéma d'un Content Type peut inclure des champs des types suivants :
 - **Media** : Référence à un fichier de la Médiathèque
 - **Relation** : Lien vers une entrée d'un autre Content Type
 
-## 3. Architecture Technique
+## 3. Architecture Technique : Shadow Mirroring
 
-Les types de contenus sont définis et stockés côté backend, mais le frontend (`ContentTypeListView.vue` et l'éditeur associé) permet de les créer, modifier et supprimer via l'interface d'administration.
+Les types de contenus sont définis dynamiquement via un schéma JSON (`fields_schema`). Cependant, pour garantir la performance et l'intégrité relationnelle, Compositor utilise une architecture de **Shadow Mirroring**.
 
-- Chaque Content Type possède un `slug` unique utilisé comme identifiant stable dans les requêtes API.
-- La liste des Content Types est consommée par le builder lors de la configuration d'un composant itérable (Conteneur en mode CMS), permettant de définir quelle collection de données alimentera la répétition des blocs enfants.
+1. **Slug Unique** : Utilisé comme identifiant stable dans les requêtes API.
+2. **Tables Pivots SQL** : Chaque relation définie dans le JSON est automatiquement "mise en miroir" dans la table SQL `ContentTypeRelation`. Cela permet d'effectuer des jointures SQL natives et de protéger l'intégrité des données (ex: empêcher la suppression d'un type référencé).
 
-## 4. Contrôle d'Accès
+---
+
+## 4. Migration de Schéma (`logiqueModContentType`)
+
+Lorsqu'un schéma de Content Type est modifié (ajout, suppression ou modification de type d'un champ), le système applique une **migration asynchrone** sur les entrées existantes :
+- **Suppression** : Les données des champs supprimés sont retirées du JSON des entrées.
+- **Normalisation** : Si un type change (ex: texte vers relation), la valeur est réinitialisée à `null` pour éviter les erreurs de typage au rendu.
+
+---
+
+## 5. Contrôle d'Accès
 
 | Permission | Effet |
 | :--- | :--- |
@@ -43,6 +53,8 @@ Les types de contenus sont définis et stockés côté backend, mais le frontend
 | `update_content_type` | Modification d'un schéma existant |
 | `delete_content_type` | Suppression d'un schéma (et potentiellement de ses entrées) |
 
-## 5. Relation avec le Builder (Itération)
+---
+
+## 6. Relation avec le Builder (Itération)
 
 Quand un conteneur (Section ou BlocRender) est configuré en mode **Itération** (`isIterated: true`), l'utilisateur sélectionne le Content Type source. Le builder génère alors dynamiquement les blocs enfants pour chaque entrée (ContentEntry) associée à ce type, permettant de construire des listes, des grilles ou des carrousels de contenu dynamique.

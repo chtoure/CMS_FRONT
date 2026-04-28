@@ -5,10 +5,7 @@ Le module Collections/Variables permet de gérer des **valeurs réutilisables ty
 ## 1. Concepts Clés
 
 ### Collection
-Une **Collection** est un groupe logique de variables partageant le **même type de donnée**. Par exemple :
-- Collection `"Palette de couleurs"` → Type `COLOR`
-- Collection `"Configuration Site"` → Type `STRING`
-- Collection `"Flags"` → Type `BOOLEAN`
+Une **Collection** est un groupe logique de variables partageant le **même type de donnée**. Ce typage est **strict** (Enum `VariableType` : COLOR, NUMBER, STRING, BOOLEAN).
 
 ### Variable
 Une **Variable** est une entrée unique dans une collection, définie par :
@@ -16,14 +13,22 @@ Une **Variable** est une entrée unique dans une collection, définie par :
 - `value` : la valeur stockée comme chaîne de caractères
 - `type` : hérité de la collection parente
 
-## 2. Types de Variables Supportés
+---
 
-| Type | Description | Interface d'édition |
+## 2. Validation & Typage Fort
+
+Le système garantit l'intégrité du Design System via une double validation :
+1. **Frontend** : L'interface s'adapte au type (Color Picker pour `COLOR`, Toggle pour `BOOLEAN`).
+2. **Backend** : Le `VariableController` rejette toute tentative d'enregistrer une valeur dont le format ne correspond pas au type de la collection (ex: refuser un texte dans une collection `COLOR`).
+
+| Type | Description | Format attendu |
 | :--- | :--- | :--- |
-| `COLOR` | Couleur hexadécimale (ex: `#3B82F6`) | Color Picker visuel |
-| `STRING` | Texte libre (titre, slogan, URL) | Champ texte |
-| `NUMBER` | Valeur numérique | Champ numérique |
-| `BOOLEAN` | Commutateur vrai/faux | Bouton toggle |
+| `COLOR` | Couleur hexadécimale | HEX sans # (ex: `3B82F6`) |
+| `STRING` | Texte libre | Chaîne UTF-8 |
+| `NUMBER` | Valeur numérique | Nombre entier ou flottant |
+| `BOOLEAN` | Commutateur | `"true"` ou `"false"` |
+
+---
 
 ## 3. Interface Utilisateur (`VariableListView.vue`)
 

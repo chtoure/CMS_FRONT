@@ -38,12 +38,31 @@ DRAFT (Brouillon) → PUBLISHED (Publié) → ARCHIVED (Archivé)
 - Boutons de sauvegarde et de changement de statut directement dans le formulaire
 
 ### Corbeille (`ContentEntryCorbeilleView.vue`)
-- Liste des entrées supprimées (suppression douce)
+- Liste des entrées supprimées (suppression douce).
+- **Logique de Dépendance** : Un élément ne peut être restauré si ses dépendances (ex: son auteur, sa catégorie) sont encore dans la corbeille.
 - Actions disponibles :
-  - **Restaurer** : Replace l'entrée en statut Brouillon
-  - **Supprimer définitivement** : Destruction permanente
+  - **Restaurer** : Replace l'entrée en statut Brouillon.
+  - **Supprimer définitivement** : Destruction permanente.
 
-## 3. Contrôle d'Accès
+---
+
+## 3. Intégrité Relationnelle & Tables Pivots
+
+Contrairement au stockage JSON classique, Compositor utilise une table pivot `ContentEntryRelation` pour indexer les liens entre entrées.
+
+### Protection contre la Suppression
+Le système vérifie systématiquement si une entrée est "utilisée" avant de permettre sa suppression :
+- **Verrouillage** : Si l'entrée A est référencée dans le champ relation de l'entrée B, la suppression de A est bloquée avec un message d'erreur listant les dépendances.
+- **Miroir SQL** : Cette vérification est instantanée grâce à l'indexation dans la table pivot, évitant de parcourir tous les fichiers JSON du serveur.
+
+### Dépendances d'Archivage
+Le cycle de vie est protégé pour éviter les liens brisés sur le site public :
+- On ne peut pas archiver un élément (ex: une Catégorie) si des contenus **publiés** y font référence.
+- On ne peut pas désarchiver un contenu si les éléments auxquels il est lié sont encore archivés.
+
+---
+
+## 4. Contrôle d'Accès
 
 | Permission | Effet |
 | :--- | :--- |
@@ -52,14 +71,9 @@ DRAFT (Brouillon) → PUBLISHED (Publié) → ARCHIVED (Archivé)
 | `update_content_entry` | Accès à la modification, changement de statut, restauration |
 | `delete_content_entry` | Archivage, suppression et suppression définitive |
 
-```html
-<!-- Exemple : Bouton "Créer" conditionnel -->
-<div v-if="hasPermission(['create_content_entry'])" class="flex items-center gap-4">
-  <Button @click="navigateToCreate">Nouveau Contenu</Button>
-</div>
-```
+---
 
-## 4. Intégration avec le Builder (Rendu Dynamique)
+## 5. Intégration avec le Builder (Rendu Dynamique)
 
 En mode **Itération**, le moteur de rendu (`BlocRenderView.vue`) consomme les entrées d'un Content Type pour répéter dynamiquement les blocs enfants. Chaque item (`_inherited_item`) est injecté via `parentData` et les paramètres du bloc font le mapping entre les champs de l'entrée et les emplacements visuels :
 

@@ -8,6 +8,9 @@ export function buildSliderConfig(styles?: Record<string, unknown>, breakpoint: 
   const getValue = (val: unknown) => resolveValueForBreakpoint<any>(val, breakpoint, resolver);
 
   const slidesPerView = parseInt(getValue(styles.slidesPerView) as string) || 1;
+  const gapRaw = getValue(styles.gap);
+  const gapValue = parseInt(gapRaw as string) || 0;
+  const gap = `${gapValue}px`;
   const transitionDuration = parseInt(getValue(styles.transitionDuration) as string) || 500;
   const transitionEase = getValue(styles.transitionEase) as string || 'ease-in-out';
   const autoplay = getValue(styles.autoplay) === true;
@@ -15,6 +18,7 @@ export function buildSliderConfig(styles?: Record<string, unknown>, breakpoint: 
 
   return {
     slidesPerView,
+    gap,
     transitionDuration,
     transitionEase,
     autoplay,
