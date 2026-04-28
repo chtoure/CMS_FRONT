@@ -36,18 +36,28 @@ Les actions de la Médiathèque sont conditionnées par le hook `usePermission()
 | Permission | Effet |
 | :--- | :--- |
 | `upload_media` | Affiche le bouton d'import et le sélecteur de fichiers |
-| `update_media` | Affiche le champ de modification du texte alternatif (`alt`) |
+| `update_media` | Affiche le champ de modification du texte alternatif (`alt`) et l'accès à l'éditeur |
 | `delete_media` | Affiche le bouton "Supprimer" dans le panneau de détail |
 
-```html
-<!-- Exemple : Le bouton d'upload n'apparaît que si l'utilisateur a la permission -->
-<div v-if="hasPermission(['upload_media'])" class="flex items-center gap-3">
-  <input ref="fileInput" type="file" multiple @change="handleFileUpload" />
-  <Button @click="triggerFileInput">Importer</Button>
-</div>
-```
+---
 
-## 5. Utilisation dans le Builder
+## 5. Éditeur d'Image (Sharp Integration)
+
+L'éditeur d'image (`src/views/media/MediaUpdateView.vue`) permet de modifier physiquement les images sans altérer l'original (création d'une nouvelle version).
+
+### Pipeline de Transformation (Backend)
+Le traitement est effectué côté serveur via la bibliothèque **Sharp**. L'ordre d'application est critique pour garantir la cohérence :
+1. **Auto-rotation** : Basée sur les métadonnées EXIF.
+2. **Recadrage (Crop)** : Extraction basée sur les coordonnées transmises par le front.
+3. **Rotation manuelle** : Application des pivots demandés.
+4. **Filtres** : Niveaux de gris, flou, etc.
+
+### Mapping des Coordonnées (Frontend)
+Pour assurer la précision du recadrage, le frontend convertit les coordonnées du canvas (visuel) en pixels réels (image originale) via la logique `updateRealCoords`. Cela prend en compte l'échelle de l'image affichée et sa rotation actuelle.
+
+---
+
+## 6. Utilisation dans le Builder
 
 Les médias de la Médiathèque sont accessibles depuis le Builder via le composant `CompositionMediaPicker.vue`. Lors de l'édition d'un composant Image ou d'une propriété de fond (`bgImage`), l'utilisateur peut parcourir et sélectionner directement un fichier depuis la Médiathèque.
 

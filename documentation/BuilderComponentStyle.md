@@ -19,7 +19,23 @@ Une propriété stylistique (ex: `fontSize`) peut prendre une valeur simple (`14
 ```
 L'analyseur applique une **cascade Mobile-First**. Cela signifie que si `sm` est absent, il hérite de `default`. Si `lg` est absent, il hérite de `md`, conformément à l'approche de Tailwind CSS.
 
-## 3. Map de Résolution (Visual Mapper / Format)
+---
+
+## 3. Normalisation des Styles (Consistency Logic)
+
+Afin d'éviter les régressions visuelles lors du passage d'un breakpoint à l'autre (ex: Desktop vers Mobile), le Builder intègre une logique de **normalisation systématique**.
+
+### Problématique de la Cascade Destructive
+Sans normalisation, modifier une valeur sur le breakpoint `md` risquerait d'écraser les valeurs spécifiques définies sur `lg` ou de propager des valeurs indésirables vers le bas.
+
+### Solution appliquée (`core.ts`)
+Toutes les propriétés sont passées dans un processeur qui :
+1. **Remplit les lacunes** : Si une propriété est définie sur `lg` mais pas sur `md`, le processeur s'assure que le rendu `md` utilise la valeur `default` (ou la valeur héritée du parent immédiat) sans altérer la définition `lg`.
+2. **Gestion des Variables** : Si une variable de design est utilisée, le processeur vérifie son type avant de l'injecter dans la classe CSS générée.
+
+---
+
+## 4. Map de Résolution (Visual Mapper / Format)
 
 Le constructeur n'injecte pas brutalement des balises style. Il s'appuie sur une bibliothèque de parseurs localisée dans `src/lib/style/`.
 
