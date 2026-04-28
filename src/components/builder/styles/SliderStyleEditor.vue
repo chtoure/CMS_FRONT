@@ -50,6 +50,13 @@ const shapeOptions = [
           @update:model-value="(val) => updateStyle('slidesPerView', parseInt(val.toString()) || 1)"
           placeholder="1"
         />
+        <PropertyInput
+          label="Espacement (Gap px)"
+          type="number"
+          :model-value="getRawValue(styles.gap || 0)"
+          @update:model-value="(val) => updateStyle('gap', parseInt(val.toString()) || 0)"
+          placeholder="0"
+        />
       </div>
     </PropertyGroup>
 

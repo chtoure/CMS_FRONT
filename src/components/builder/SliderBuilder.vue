@@ -1,6 +1,6 @@
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
-import { computed, inject, ref, onMounted, onUnmounted, watch } from 'vue';
+import { computed, inject, provide, ref, onMounted, onUnmounted, watch } from 'vue';
 import type { ContainerStyles, AnyComponentInstance } from '../../type/component';
 import { buildBlocLayoutStyles, buildBlocLayoutInlineStyles } from '../../lib/style/blocProcessor';
 import { buildSliderConfig, buildSliderArrowStyles, buildSliderPaginationStyles } from '../../lib/style/sliderProcessor';
@@ -67,6 +67,7 @@ const sliderConfig = computed(() => {
 
   return {
     ...config,
+    gap: resolveValue(props.data?.gap) ?? config.gap,
     // slidesPerView est déjà résolu correctement par buildSliderConfig (resolveValueForBreakpoint + parseInt)
     // On ne le surcharge PAS ici pour ne pas casser la résolution par breakpoint.
     transitionDuration: resolveValue(props.data?.transitionDuration) ?? config.transitionDuration,
@@ -160,6 +161,30 @@ const isAnySelected = computed(() => {
   return checkChildren(props.children || []);
 });
 
+const slideWidthCSS = computed(() => {
+  const items = slidesPerView.value;
+  const gapValue = parseInt(String(sliderConfig.value.gap)) || 0;
+  return `calc((100% - ${(items - 1) * gapValue}px) / ${items})`;
+});
+
+const slideTransformCSS = computed(() => {
+  const items = slidesPerView.value;
+  const gapValue = parseInt(String(sliderConfig.value.gap)) || 0;
+  const current = currentSlide.value;
+  if (current === 0) return 'translateX(0px)';
+  return `translateX(calc(-${current} * (100% + ${gapValue}px) / ${items}))`;
+});
+
+const sliderCSSVars = computed(() => {
+  return {
+    '--slider-gap': `${parseInt(String(sliderConfig.value.gap)) || 0}px`,
+    '--slide-width': slideWidthCSS.value
+  };
+});
+
+// Transmettre la largeur aux wrappers .slider-slide dans BlocRender via inject
+provide('sliderSlideWidth', slideWidthCSS);
+
 const isHovered = ref(false);
 const autoplayInterval = ref<any>(null);
 
@@ -206,19 +231,19 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
 <template>
   <div
     class="relative group/slider w-full"
-    :class="[computedClasses, builderState.isDragging?.value ? 'overflow-visible' : 'overflow-hidden']"
-    :style="computedInlineStyles"
+    :class="[computedClasses]"
+    :style="{ ...computedInlineStyles, ...sliderCSSVars }"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
   >
-    <!-- Viewport : toujours overflow-visible pour que SortableJS détecte correctement les drops -->
-    <div class="w-full h-full overflow-visible">
+    <!-- Viewport : overflow-hidden ici pour clipper à la content-box (hors padding du parent) -->
+    <div class="w-full h-full" :class="builderState.isDragging?.value ? 'overflow-visible' : 'overflow-hidden'">
       <!-- Slider-track : overflow-hidden pour clipper les slides dans la zone de contenu (hors padding) -->
       <!-- Slider-track : l'élément qui translade. Il doit ABSOLUMENT être en overflow-visible -->
       <div
         class="slider-track ease-in-out h-full w-full transition-transform overflow-visible"
         :style="{
-          transform: builderState.isDragging?.value ? 'none' : 'translateX(-' + (currentSlide * (100 / slidesPerView)) + '%)',
+          transform: builderState.isDragging?.value ? 'none' : slideTransformCSS,
           transitionDuration: sliderConfig.transitionDuration + 'ms',
           transitionTimingFunction: sliderConfig.transitionEase
         }"
@@ -242,7 +267,7 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
     <!-- Pagination -->
     <div v-show="sliderConfig.showPagination && (isBuilder || (slidesCount > slidesPerView && !builderState.isDragging?.value))" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10 pointer-events-auto">
       <button
-        v-for="(_, index) in Math.max(1, maxSlideIndex + 1)"
+        v-for="(_, index) in totalPages"
         :key="index"
         @click.stop="goToSlide(index)"
         class="transition-all duration-300"
@@ -252,8 +277,8 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
           paginationStyles.shape === 'square' ? 'w-2 h-2 rounded-sm' : ''
         ]"
         :style="{
-          backgroundColor: currentSlide === index ? paginationStyles.activeColor : paginationStyles.color,
-          opacity: currentSlide === index ? 1 : 0.5
+          backgroundColor: currentPage === index ? paginationStyles.activeColor : paginationStyles.color,
+          opacity: currentPage === index ? 1 : 0.5
         }"
       />
     </div>
@@ -276,14 +301,18 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
    height: 100%;
    padding: 0 !important;
    margin: 0 !important;
-   gap: 0 !important;
+   gap: var(--slider-gap) !important;
 }
 
 /* Les slides réels */
 .slider-track :deep(.slider-slide) {
-   min-width: calc(100% / v-bind(slidesPerView)) !important;
-   max-width: calc(100% / v-bind(slidesPerView)) !important;
-   height: 100% !important;
    flex-shrink: 0 !important;
+   flex-grow: 0 !important;
+   width: var(--slide-width) !important;
+   min-width: var(--slide-width) !important;
+   max-width: var(--slide-width) !important;
+   height: 100% !important;
+   overflow: hidden !important;
+   margin: 0 !important;
 }
 </style>
