@@ -1,6 +1,13 @@
 # Rôles et Permissions
 
-Compositor implémente un système granulaire de contrôle d'accès basé sur les permissions. Plutôt que de limiter l'accès par "Rôles" (Admin, Editeur, etc.), l'interface réagit directement aux "**Permissions**" accordées à l'utilisateur ciblé (ex: `create_media`, `read_collection`).
+Compositor implémente un système de contrôle d'accès basé sur les rôles (**RBAC - Role-Based Access Control**). Ce système est géré en base de données via Prisma avec une structure hiérarchique :
+- **Utilisateurs** (`User`) : Liés à un ou plusieurs rôles.
+- **Rôles** (`Role`) : Groupes de permissions (ex: "Admin", "Éditeur").
+- **Permissions** (`Permission`) : Actions atomiques (ex: `create_media`, `read_collection`).
+
+L'interface réagit directement aux **Permissions** accordées à l'utilisateur, ce qui permet une granularité totale sans changer le code si les rôles évoluent.
+
+---
 
 ## 1. Récupération des Permissions
 

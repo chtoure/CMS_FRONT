@@ -9,18 +9,18 @@ La documentation de ce projet est découpée en plusieurs fichiers thématiques 
 
 ### Vue d'Ensemble & Accès
 - [README.md](./README.md) : Lisez-moi (ce fichier)
-- [Auth.md](./Auth.md) : Gestion de l'authentification et interception API
-- [RolePermission.md](./RolePermission.md) : Système de Permissions (`hasPermission`) et protection de l'UI
+- [Auth.md](./Auth.md) : Authentification JWT, intercepteurs Axios et gestion de session
+- [RolePermission.md](./RolePermission.md) : Système RBAC (Roles/Permissions) et protection granulaire de l'UI
 
 ### Le Constructeur (Builder)
-- [BuilderComponentStyle.md](./BuilderComponentStyle.md) : Modélisation CSS statique, dynamique et responsive
-- [BuilderDataParameter.md](./BuilderDataParameter.md) : Injection de texte, images, et variables dans les blocs
+- [BuilderComponentStyle.md](./BuilderComponentStyle.md) : Moteur de style, cascade Mobile-First et normalisation de cohérence
+- [BuilderDataParameter.md](./BuilderDataParameter.md) : Injection de données, mapping parent/enfant et variables
 
 ### Contenus & Média
-- [Mediatheque.md](./Mediatheque.md) : Gestion asynchrone des fichiers et de leurs métadonnées
-- [CollectionVariable.md](./CollectionVariable.md) : Typage et création de variables réutilisables
-- [ContentType.md](./ContentType.md) : Définitions et modèles des schémas de données structurées
-- [ContentEntry.md](./ContentEntry.md) : Création et gestion du cycle de vie des entrées de contenu
+- [Mediatheque.md](./Mediatheque.md) : Gestion des fichiers et Éditeur d'Image intégré (Sharp)
+- [CollectionVariable.md](./CollectionVariable.md) : Design Tokens, typage strict et validation dynamique
+- [ContentType.md](./ContentType.md) : Schémas dynamiques, Shadow Mirroring (SQL) et migrations
+- [ContentEntry.md](./ContentEntry.md) : Cycle de vie des entrées, intégrité relationnelle et corbeille
 
 ### Moteur de Rendu
 - [Templating.md](./Templating.md) : Composition visuelle des modèles de blocs et de sections
@@ -108,4 +108,4 @@ Les routes sont définies dans `src/router/index.ts`. Voici les principaux accè
 | `npm run type-check` | Vérifie les types TypeScript sans compiler. |
 
 ---
-*Documentation générée automatiquement le 25/12/2025.*
+*Documentation mise à jour en Avril 2026.*

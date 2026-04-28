@@ -26,10 +26,23 @@ Dans le fichier `src/router/index.ts`, un mécanisme de **Navigation Guard** (`r
 - **Routes Publiques** : Les pages comme le `/login` sont accessibles à tous.
 - **Routes Privées (`/site/admin/...`)** : Le routeur vérifie le getter `isAuthenticated`. Si l'utilisateur n'est pas connecté, il est instantanément redirigé vers `/site/admin/auth/login`.
 
-## 4. Intercepteurs Axios (Requêtes API)
+## 4. Intercepteurs Axios (Gestion des Sessions)
 
-Afin que le backend puisse identifier l'utilisateur à chaque requête, un **intercepteur Axios** injecte automatiquement le token dans le header `Authorization` de toutes les requêtes HTTP sortantes.
+Afin d'assurer une communication sécurisée et fluide, un **intercepteur Axios** (`src/Utils/axios.ts`) gère automatiquement les requêtes et les réponses :
 
-En cas de réponse `401 Unauthorized` du serveur (ex: token expiré), l'intercepteur :
-1. Déconnecte l'utilisateur localement via le Store Pinia.
-2. Déclenche une redirection vers l'écran de Login pour forcer une nouvelle connexion.
+### Requêtes (Authorization Header)
+Toutes les requêtes sortantes vers l'API incluent automatiquement le token JWT dans le header `Authorization` :
+```typescript
+config.headers.Authorization = `Bearer ${token}`;
+```
+
+### Réponses (Gestion du 401)
+Si le serveur retourne une erreur **401 (Unauthorized)**, cela signifie que le token est expiré ou invalide. L'intercepteur réagit immédiatement :
+1. **Nettoyage** : Il vide le store Pinia (`auth.ts`) pour supprimer le token expiré.
+2. **Redirection** : Il redirige l'utilisateur vers `/site/admin/auth/login`.
+3. **Information** : Il peut afficher une notification Toast informant l'utilisateur que sa session a expiré pour des raisons de sécurité.
+
+---
+
+## 5. Sécurité des Mots de Passe
+Bien que géré principalement par le backend (Hachage Argon2/BCrypt), le frontend impose des validations de complexité lors de la création ou du changement de mot de passe afin de prévenir les attaques par force brute.
