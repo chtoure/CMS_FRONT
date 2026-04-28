@@ -47,6 +47,29 @@ const builderState = inject<{
 
 const { resolveValue } = useVariableResolver();
 
+// Largeur injectée depuis SliderBuilder (via provide) pour les wrappers .slider-slide
+// SliderBuilder fait provide('sliderSlideWidth', slideWidthCSS) où slideWidthCSS est un ComputedRef<string>
+const sliderSlideWidth = inject<{ value: string } | null>('sliderSlideWidth', null);
+
+// Helper pour le style d'un wrapper .slider-slide
+const slideWrapperStyle = (child: AnyComponentInstance, extra: Record<string, string> = {}) => {
+  const w = sliderSlideWidth?.value;
+  if (w) {
+    return {
+      width: w,
+      minWidth: w,
+      maxWidth: w,
+      height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
+      ...extra
+    };
+  }
+  return {
+    width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
+    height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
+    ...extra
+  };
+};
+
 // Computed réactifs
 const isSelected = computed(() => builderState?.selectedId.value === props.element.id);
 const isDraggingOver = computed(() => builderState?.isDragging?.value ?? false);
@@ -421,11 +444,13 @@ const totalSlidesCount = computed(() => {
               :key="child.id"
               class="relative"
               :class="[element.tag === 'SliderBuilder' ? 'slider-slide' : '']"
-              :style="{
-                width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
-                height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
-                ...(isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
-              }"
+              :style="element.tag === 'SliderBuilder'
+                ? slideWrapperStyle(child, isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
+                : {
+                  width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
+                  height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
+                  ...(isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
+                }"
             >
               <BlocRender :element="resolveChildForInheritedBg(child)" :is-clone="true" :style="!isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {}" />
             </div>
@@ -460,11 +485,13 @@ const totalSlidesCount = computed(() => {
                     isOutOfFlow(child) ? '' : 'relative',
                     element.tag === 'SliderBuilder' ? 'slider-slide' : ''
                   ]"
-                  :style="{
-                    width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
-                    height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
-                    ...(isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
-                  }"
+                  :style="element.tag === 'SliderBuilder'
+                    ? slideWrapperStyle(child, isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
+                    : {
+                      width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
+                      height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
+                      ...(isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
+                    }"
                   @click.stop="builderState?.selectComponent(child.id)"
                 >
                   <ResizerWrapper
@@ -504,10 +531,12 @@ const totalSlidesCount = computed(() => {
                   :key="`clone-${child.id}-${cloneIndex}`"
                   class="relative pointer-events-none"
                   :class="element.tag === 'SliderBuilder' ? 'slider-slide' : ''"
-                  :style="{
-                    width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
-                    height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue)
-                  }"
+                  :style="element.tag === 'SliderBuilder'
+                    ? slideWrapperStyle(child)
+                    : {
+                      width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
+                      height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue)
+                    }"
                 >
                   <BlocRender
                     :element="applyBgImageToContainer({
@@ -534,10 +563,12 @@ const totalSlidesCount = computed(() => {
                 <div
                   class="relative transition-all"
                   :class="element.tag === 'SliderBuilder' ? 'slider-slide' : ''"
-                  :style="{
-                    width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
-                    height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue)
-                  }"
+                  :style="element.tag === 'SliderBuilder'
+                    ? slideWrapperStyle(child)
+                    : {
+                      width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
+                      height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue)
+                    }"
                   @click.stop="builderState?.selectComponent(child.id)"
                 >
                   <ResizerWrapper
@@ -558,10 +589,12 @@ const totalSlidesCount = computed(() => {
                   :key="`leaf-clone-${child.id}-${cloneIndex}`"
                   class="relative pointer-events-none"
                   :class="element.tag === 'SliderBuilder' ? 'slider-slide' : ''"
-                  :style="{
-                    width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
-                    height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue)
-                  }"
+                  :style="element.tag === 'SliderBuilder'
+                    ? slideWrapperStyle(child)
+                    : {
+                      width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
+                      height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue)
+                    }"
                 >
                   <BlocRender
                     :element="{ ...child, data: applyQueryItemToLeaf(child, item) }"
@@ -579,11 +612,13 @@ const totalSlidesCount = computed(() => {
                   isOutOfFlow(child) ? '' : 'relative',
                   element.tag === 'SliderBuilder' ? 'slider-slide' : ''
                 ]"
-                :style="{
-                  width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
-                  height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
-                  ...(isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
-                }"
+                :style="element.tag === 'SliderBuilder'
+                  ? slideWrapperStyle(child, isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
+                  : {
+                    width: formatSize(child.styles?.width, builderState?.currentBreakpoint.value, resolveValue),
+                    height: formatSize(child.styles?.height, builderState?.currentBreakpoint.value, resolveValue),
+                    ...(isSticky(child) ? getWrapperPositionStyles(child.styles as Record<string, unknown>, builderState?.currentBreakpoint.value || 'default', resolveValue) : {})
+                  }"
                 @click.stop="builderState?.selectComponent(child.id)"
               >
                 <ResizerWrapper
