@@ -3,15 +3,9 @@
 import type { AnyComponentInstance } from '../../../type/component';
 import PropertyGroup from '../ui/PropertyGroup.vue';
 import PropertyInput from '../ui/PropertyInput.vue';
-import Select from '../../../components/ui/select/Select.vue';
-import SelectTrigger from '../../../components/ui/select/SelectTrigger.vue';
-import SelectValue from '../../../components/ui/select/SelectValue.vue';
-import SelectContent from '../../../components/ui/select/SelectContent.vue';
-import SelectItem from '../../../components/ui/select/SelectItem.vue';
 import { Checkbox } from '../../../components/ui/checkbox';
 import { Layout } from 'lucide-vue-next';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const props = defineProps<{ element: AnyComponentInstance; }>();
 const emit = defineEmits(['update-data']);
 
@@ -49,7 +43,7 @@ const getDataValue = (val: any): any => {
       <div class="space-y-4">
         <div class="grid grid-cols-2 gap-2">
           <div class="space-y-1 flex flex-col">
-            <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Pause Autoplay</label>
+            <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Pause Autoplay</label>
             <PropertyInput
               type="number"
               label=""
@@ -58,7 +52,7 @@ const getDataValue = (val: any): any => {
             />
           </div>
           <div class="space-y-1 flex flex-col">
-            <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Durée transition</label>
+            <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Durée transition</label>
             <PropertyInput
               type="number"
               label=""
@@ -69,37 +63,36 @@ const getDataValue = (val: any): any => {
         </div>
         <div class="grid grid-cols-1 gap-2">
           <div class="space-y-1 flex flex-col">
-            <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Lissage</label>
-            <Select :model-value="getDataValue(element.data.transitionEase) || 'ease-in-out'" @update:model-value="(val) => val && updateData('transitionEase', val as string)">
-              <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
-                <SelectValue placeholder="Ease" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="opt in easeOptions" :key="opt.value" :value="opt.value">
-                  <span class="text-[10px]">{{ opt.label }}</span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Lissage</label>
+            <select
+              :value="getDataValue(element.data.transitionEase) || 'ease-in-out'"
+              @change="(e) => updateData('transitionEase', (e.target as HTMLSelectElement).value)"
+              class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary"
+            >
+              <option v-for="opt in easeOptions" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
           </div>
         </div>
         <div class="grid grid-cols-2 gap-2">
            <div class="flex items-center space-x-2">
               <Checkbox id="slider-autoplay" :model-value="!!getDataValue(element.data.autoPlay)" @update:model-value="(val: any) => updateData('autoPlay', !!val)" />
-              <label for="slider-autoplay" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Autoplay</label>
+              <label for="slider-autoplay" class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter cursor-pointer">Autoplay</label>
            </div>
            <div class="flex items-center space-x-2">
               <Checkbox id="slider-loop" :model-value="!!getDataValue(element.data.loop)" @update:model-value="(val: any) => updateData('loop', !!val)" />
-              <label for="slider-loop" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Boucle</label>
+              <label for="slider-loop" class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter cursor-pointer">Boucle</label>
            </div>
         </div>
         <div class="grid grid-cols-2 gap-2">
            <div class="flex items-center space-x-2">
               <Checkbox id="slider-pagination" :model-value="getDataValue(element.data.showPagination) === true" @update:model-value="(val: any) => updateData('showPagination', !!val)" />
-              <label for="slider-pagination" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Pagination</label>
+              <label for="slider-pagination" class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter cursor-pointer">Pagination</label>
            </div>
            <div class="flex items-center space-x-2">
               <Checkbox id="slider-arrows" :model-value="getDataValue(element.data.showArrows) === true" @update:model-value="(val: any) => updateData('showArrows', !!val)" />
-              <label for="slider-arrows" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Flèches</label>
+              <label for="slider-arrows" class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter cursor-pointer">Flèches</label>
            </div>
         </div>
       </div>

@@ -30,7 +30,7 @@ const emit = defineEmits<{
   <div :class="['property-input', compact ? 'compact' : '']">
     <div class="flex items-center justify-between">
       <label for="">
-        <span class="text-[9px] font-bold font-mono tracking-tight">{{ label }}</span>
+        <span class="text-[10px] font-bold font-mono uppercase tracking-tighter text-builder-bar-text/40 ml-1">{{ label }}</span>
       </label>
       <div class="shrink-0 col-span-1">
         <slot name="action" />

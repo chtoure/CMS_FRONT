@@ -30,12 +30,12 @@ const getDataValue = (val: any): any => {
           @update:model-value="(val) => updateData('title', val.toString())"
         />
         <div class="space-y-1 flex flex-col">
-          <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Contenu / Réponse</label>
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Contenu / Réponse</label>
           <textarea
             :value="getDataValue(element.data.content ?? element.data.reponse ?? element.data.response ?? element.data.description) || ''"
             @input="(e: Event) => updateData('content', (e.target as HTMLTextAreaElement).value)"
             rows="4"
-            class="w-full text-[10px] px-2 py-1.5 bg-builder-input-bg border border-builder-bar-border rounded text-builder-bar-text/80 placeholder-builder-bar-text/30 resize-none focus:outline-none focus:border-primary/50 leading-relaxed font-medium"
+            class="w-full text-[10px] px-2 py-1.5 bg-builder-input-bg border border-builder-bar-border rounded text-builder-bar-text placeholder-builder-bar-text/30 resize-none focus:outline-none focus:border-primary transition-colors leading-relaxed font-mono"
             placeholder="Entrez le contenu ici..."
           />
         </div>
@@ -48,7 +48,7 @@ const getDataValue = (val: any): any => {
           />
           <div class="flex items-center space-x-2 pb-1.5">
             <Checkbox id="accordion-open" :checked="!!getDataValue(element.data.isOpen)" @update:checked="(val: any) => updateData('isOpen', !!val)" />
-            <label for="accordion-open" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Ouvert</label>
+            <label for="accordion-open" class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter cursor-pointer">Ouvert</label>
           </div>
         </div>
       </div>

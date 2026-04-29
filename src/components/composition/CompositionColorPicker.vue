@@ -127,33 +127,33 @@ const handleAlphaChange = (e: Event) => {
     <DropdownMenuContent
       align="start"
       :side-offset="8"
-      class="p-3 w-60 bg-popover border border-border shadow-2xl rounded-md z-50"
+      class="p-3 w-60 bg-builder-bar-background border border-builder-bar-border shadow-2xl rounded-md z-50"
       @pointer-down-outside="emit('close')"
     >
       <div class="flex items-center justify-between mb-3">
-        <div class="flex bg-muted/50 p-0.5 rounded-md">
+        <div class="flex bg-builder-input-bg p-0.5 rounded">
           <button
             @click="activeTab = 'custom'"
-            :class="['px-2 py-0.5 text-[11px] font-medium rounded-sm transition', activeTab === 'custom' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground']"
+            :class="['px-2 py-0.5 text-[9px] font-mono font-bold uppercase tracking-tighter rounded-sm transition', activeTab === 'custom' ? 'bg-primary text-black' : 'text-builder-bar-text/40 hover:text-builder-bar-text']"
           >
             Custom
           </button>
           <button
             @click="activeTab = 'libraries'"
-            :class="['px-2 py-0.5 text-[11px] font-medium rounded-sm transition', activeTab === 'libraries' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground']"
+            :class="['px-2 py-0.5 text-[9px] font-mono font-bold uppercase tracking-tighter rounded-sm transition', activeTab === 'libraries' ? 'bg-primary text-black' : 'text-builder-bar-text/40 hover:text-builder-bar-text']"
           >
             Libraries
           </button>
         </div>
-        <button @click="emit('close')" class="text-muted-foreground hover:text-foreground transition">
-          <X :size="14" />
+        <button @click="emit('close')" class="text-builder-bar-text/40 hover:text-builder-bar-text transition">
+          <X :size="12" />
         </button>
       </div>
 
       <div v-if="activeTab === 'custom'" class="space-y-3">
         <div
           @mousedown="handleSaturationChange"
-          class="relative w-full h-32 rounded-sm cursor-crosshair border border-border overflow-hidden"
+          class="relative w-full h-32 rounded-sm cursor-crosshair border border-builder-bar-border overflow-hidden"
           :style="{ background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${hsv.h}, 100%, 50%))` }"
         >
           <div
@@ -175,7 +175,7 @@ const handleAlphaChange = (e: Event) => {
           </div>
 
           <!-- Alpha Slider -->
-          <div class="relative w-full h-2 rounded-full checkerboard bg-white ring-1 ring-border/50">
+          <div class="relative w-full h-2 rounded-full checkerboard bg-white ring-1 ring-builder-bar-border/50">
             <input
               type="range"
               min="0" max="1" step="0.01"
@@ -188,17 +188,17 @@ const handleAlphaChange = (e: Event) => {
         </div>
 
         <div class="flex items-center gap-2">
-          <div class="flex-1 flex items-center bg-muted/30 border border-input rounded px-1.5 py-1 text-xs">
-            <span class="text-[10px] text-muted-foreground uppercase pr-1 mr-1 border-r border-border">Hex</span>
+          <div class="flex-1 flex items-center bg-builder-input-bg border border-builder-bar-border rounded px-1.5 py-1 text-[10px]">
+            <span class="text-[9px] text-builder-bar-text/40 font-mono font-bold uppercase pr-1 mr-1 border-r border-builder-bar-border">Hex</span>
             <input
               type="text"
               :value="hexInput"
               @input="handleHexInput(($event.target as HTMLInputElement).value)"
-              class="w-full bg-transparent text-foreground font-mono focus:outline-none"
+              class="w-full bg-transparent text-builder-bar-text font-mono focus:outline-none uppercase"
             />
           </div>
           <div
-            class="w-6 h-6 rounded-sm border border-border flex-shrink-0"
+            class="w-6 h-6 rounded-sm border border-builder-bar-border flex-shrink-0"
             :style="{ backgroundColor: `#${hexInput}` }"
           />
         </div>

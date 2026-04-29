@@ -2,11 +2,6 @@
 <script setup lang="ts">
 import type { AnyComponentInstance } from '../../../type/component';
 import PropertyGroup from '../ui/PropertyGroup.vue';
-import Select from '../../../components/ui/select/Select.vue';
-import SelectTrigger from '../../../components/ui/select/SelectTrigger.vue';
-import SelectValue from '../../../components/ui/select/SelectValue.vue';
-import SelectContent from '../../../components/ui/select/SelectContent.vue';
-import SelectItem from '../../../components/ui/select/SelectItem.vue';
 import { Checkbox } from '../../../components/ui/checkbox';
 import { MousePointer2 } from 'lucide-vue-next';
 
@@ -37,21 +32,20 @@ const inputTypeOptions = [
       <div class="space-y-4">
         <div class="grid grid-cols-2 gap-3">
           <div class="space-y-1 flex flex-col">
-            <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Type de saisie</label>
-            <Select :model-value="getDataValue(element.data.type)" :modal="false" @update:model-value="(val) => val && updateData('type', val as string)">
-              <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="opt in inputTypeOptions" :key="opt.value" :value="opt.value">
-                  <span class="text-[10px]">{{ opt.label }}</span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Type de saisie</label>
+            <select
+              :value="getDataValue(element.data.type) || 'text'"
+              @change="(e) => updateData('type', (e.target as HTMLSelectElement).value)"
+              class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary"
+            >
+              <option v-for="opt in inputTypeOptions" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
           </div>
           <div class="flex items-center space-x-2 pt-4">
             <Checkbox id="required-sys" :checked="!!getDataValue(element.data.required)" @update:checked="(val: boolean | 'indeterminate') => updateData('required', !!val)" />
-            <label for="required-sys" class="text-[10px] font-mono font-bold text-builder-bar-text/60 uppercase tracking-tighter cursor-pointer">Requis</label>
+            <label for="required-sys" class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter cursor-pointer">Requis</label>
           </div>
         </div>
       </div>

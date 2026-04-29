@@ -120,19 +120,19 @@ function detachVariable() {
         </button>
       </DropdownMenuTrigger>
       
-      <DropdownMenuContent align="end" class="min-w-[180px] bg-builder-bar-background border-builder-bar-border text-builder-bar-text shadow-xl p-1">
-        <DropdownMenuLabel class="text-[10px] tracking-widest text-builder-bar-text px-2 py-1.5 italic">
+      <DropdownMenuContent align="end" class="min-w-[180px] bg-builder-bar-background border-builder-bar-border text-builder-bar-text shadow-2xl p-1 rounded-md">
+        <DropdownMenuLabel class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-widest px-2 py-1.5">
           {{ isVariableMode ? 'Variable liée' : 'Connecter une variable' }}
         </DropdownMenuLabel>
         
-        <div v-if="isVariableMode" class="p-1 mb-1 border border-primary rounded-[3px]">
+        <div v-if="isVariableMode" class="p-1 mb-1 bg-primary/5 border border-primary/20 rounded-sm mx-1">
           <div class="flex items-center justify-between gap-3">
-             <div class="flex items-center gap-2 overflow-hidden">
-               <Webhook :size="12" class="text-primary shrink-0" />
-               <span class="text-xs font-medium truncate text-primary italic">{{ variableName }}</span>
+             <div class="flex items-center gap-2 overflow-hidden px-1">
+               <Webhook :size="10" class="text-primary shrink-0" />
+               <span class="text-[10px] font-mono font-bold text-primary truncate uppercase tracking-tighter">{{ variableName }}</span>
              </div>
-             <button @click="detachVariable" class="text-secondary hover:text-accent transition-colors">
-               <Link2Off :size="12" />
+             <button @click="detachVariable" class="text-builder-bar-text/40 hover:text-red-500 transition-colors p-1">
+               <Link2Off :size="10" />
              </button>
           </div>
         </div>
@@ -146,13 +146,12 @@ function detachVariable() {
               v-for="variable in filteredVariables" 
               :key="variable.id" 
               @click="selectVariable(variable.id)"
-              class="flex items-center gap-2 px-2 py-1.5 rounded-none cursor-pointer hover:!bg-gray-500 !p-1 italic"
+              class="flex items-center gap-2 px-2 py-1.5 rounded-none cursor-pointer hover:!bg-primary/20 hover:!text-primary transition-colors !p-1"
             >
-              <div v-if="variable.collection?.type == 'COLOR'"  class="w-2 h-2 rounded-full" :style="{ backgroundColor: variable.collection?.type === 'COLOR' ? `#${variable.value}` : 'transparent', border: variable.collection?.type === 'COLOR' ? '1px solid rgba(255,255,255,0.1)' : 'none' }">
-                <div v-if="variable.collection?.type !== 'COLOR'" class="w-full h-full bg-primary/40 rounded-full" />
-              </div>
-              <span class="text-[9px] flex-1 truncate">{{ variable.name }}</span>
-              <span class="text-[9px] text-builder-bar-text/30 group-hover:text-builder-bar-text/60 font-mono">{{ variable.value }}</span>
+              <div v-if="variable.collection?.type == 'COLOR'"  class="w-2 h-2 rounded-full shrink-0" :style="{ backgroundColor: variable.collection?.type === 'COLOR' ? `#${variable.value}` : 'transparent', border: variable.collection?.type === 'COLOR' ? '1px solid rgba(255,255,255,0.1)' : 'none' }"></div>
+              <div v-else class="w-2 h-2 rounded-full bg-builder-bar-text/20 shrink-0" />
+              <span class="text-[10px] flex-1 truncate font-mono">{{ variable.name }}</span>
+              <span class="text-[8px] text-builder-bar-text/30 font-mono italic">{{ variable.value }}</span>
             </DropdownMenuItem>
 
             <div v-if="!isLoading && filteredVariables.length === 0" class="text-[10px] text-center py-4 text-builder-bar-text/30">

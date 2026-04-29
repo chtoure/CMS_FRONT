@@ -5,11 +5,11 @@ import type { AnyComponentInstance } from '../../../type/component';
 import { ValueSource, type IComponentParams, type IContenusField, type IImageField, type IPropsSchemaField } from '../../../type/params';
 import PropertyGroup from '../ui/PropertyGroup.vue';
 import PropertyInput from '../ui/PropertyInput.vue';
-import Select from '../../../components/ui/select/Select.vue';
-import SelectTrigger from '../../../components/ui/select/SelectTrigger.vue';
-import SelectValue from '../../../components/ui/select/SelectValue.vue';
-import SelectContent from '../../../components/ui/select/SelectContent.vue';
-import SelectItem from '../../../components/ui/select/SelectItem.vue';
+// import Select from '../../../components/ui/select/Select.vue';
+// import SelectTrigger from '../../../components/ui/select/SelectTrigger.vue';
+// import SelectValue from '../../../components/ui/select/SelectValue.vue';
+// import SelectContent from '../../../components/ui/select/SelectContent.vue';
+// import SelectItem from '../../../components/ui/select/SelectItem.vue';
 import { Button } from '../../../components/ui/button';
 import { Checkbox } from '../../../components/ui/checkbox';
 import { Plus, Trash2, ChevronDown, Type, Image as ImageIcon, Database } from 'lucide-vue-next';
@@ -218,20 +218,16 @@ const saveParameterEdit = () => {
           />
           <div class="grid grid-cols-2 gap-2">
             <div class="space-y-1.5 flex flex-col">
-              <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Source</label>
-              <Select v-model="(newParam.type as any).source" :modal="false">
-                 <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
-                    <SelectValue placeholder="Source" />
-                 </SelectTrigger>
-                 <SelectContent>
-                    <SelectItem v-for="opt in filteredSourceOptions" :key="opt.value" :value="opt.value">
-                      <div class="flex items-center gap-2">
-                        <component :is="opt.icon" class="h-3 w-3" />
-                        <span class="text-[10px]">{{ opt.label }}</span>
-                      </div>
-                    </SelectItem>
-                 </SelectContent>
-              </Select>
+              <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Source</label>
+              <select
+                :value="(newParam.type as any).source"
+                @change="(e) => (newParam.type as any).source = (e.target as HTMLSelectElement).value"
+                class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary"
+              >
+                <option v-for="opt in filteredSourceOptions" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </option>
+              </select>
             </div>
             <div class="flex items-end pb-0.5 justify-center bg-builder-input-bg border border-builder-bar-border rounded h-7 mt-auto">
                 <div class="flex items-center space-x-2">
@@ -251,9 +247,9 @@ const saveParameterEdit = () => {
           />
         </div>
 
-        <div v-if="(newParam.type as any).source === 'image'" class="space-y-1.5">
-          <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Choisir une image</label>
-          <div class="flex flex-row items-end gap-6 bg-builder-input-bg border border-builder-bar-border rounded p-2">
+        <div v-if="(newParam.type as any).source === 'image'" class="space-y-1.5 min-w-0">
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Choisir une image</label>
+          <div class="w-full overflow-hidden">
             <CompositionMediaPicker
               :model-value="(newParam.type as any).id"
               :allowed-types="['image']"
@@ -265,51 +261,46 @@ const saveParameterEdit = () => {
         <div v-if="(newParam.type as any).source === 'contenus'" class="space-y-4">
           <div class="grid grid-cols-2 gap-2">
             <div class="space-y-1 flex flex-col">
-              <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Contenu</label>
-              <Select :model-value="(newParam.type as any).contentTypeId" :modal="false" @update:model-value="(val) => handleSelectChange(val)">
-                <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
-                  <SelectValue placeholder="Choisir..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="opt in contentTypeOptions?.results" :key="opt.id" :value="opt.id">
-                    <span class="text-[10px]">{{ opt.name }}</span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Contenu</label>
+              <select
+                :value="(newParam.type as any).contentTypeId"
+                @change="(e) => handleSelectChange((e.target as HTMLSelectElement).value)"
+                class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary"
+              >
+                <option value="0" disabled>Choisir...</option>
+                <option v-for="opt in contentTypeOptions?.results" :key="opt.id" :value="opt.id">
+                  {{ opt.name }}
+                </option>
+              </select>
             </div>
             <div class="space-y-1 flex flex-col">
-              <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Mode</label>
-              <Select :model-value="(newParam.type as any).config.mode" :modal="false" @update:model-value="(val) => (newParam.type as any).config.mode = val">
-                <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
-                  <SelectValue placeholder="Mode" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="mode in modeOptions" :key="mode.value" :value="mode.value">
-                    <span class="text-[10px]">{{ mode.label }}</span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Mode</label>
+              <select
+                :value="(newParam.type as any).config.mode"
+                @change="(e) => (newParam.type as any).config.mode = (e.target as HTMLSelectElement).value"
+                class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary"
+              >
+                <option v-for="mode in modeOptions" :key="mode.value" :value="mode.value">
+                  {{ mode.label }}
+                </option>
+              </select>
             </div>
           </div>
 
           <!-- Mode: Single -->
           <div v-if="(newParam.type as any).config.mode === 'single'" class="space-y-1 flex flex-col">
-            <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Entrée</label>
-            <Select
-              :model-value="(newParam.type as any).config.entryId"
-              :modal="false"
-              @update:model-value="(val) => (newParam.type as any).config.entryId = val"
+            <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Entrée</label>
+            <select
+              :value="(newParam.type as any).config.entryId"
+              @change="(e) => (newParam.type as any).config.entryId = Number((e.target as HTMLSelectElement).value)"
               :disabled="!isContentTypeSelected"
+              class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary disabled:opacity-50"
             >
-              <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
-                <SelectValue placeholder="Choisir..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="entry in newContentEntries?.results" :key="entry.id" :value="entry.id">
-                  <span class="text-[10px]">{{ entry.id }} - {{ (entry.data_json as any).title || 'Sans titre' }}</span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+              <option value="0" disabled>Choisir...</option>
+              <option v-for="entry in newContentEntries?.results" :key="entry.id" :value="entry.id">
+                {{ entry.id }} - {{ (entry.data_json as any).title || 'Sans titre' }}
+              </option>
+            </select>
           </div>
 
           <!-- Mode: Query -->
@@ -327,20 +318,16 @@ const saveParameterEdit = () => {
                 placeholder="Champ"
               />
               <div class="space-y-1 flex flex-col">
-                <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Ordre</label>
-                <Select
-                  v-model="(newParam.type as any).config.order"
-                  :modal="false"
-                >
-                  <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
-                    <SelectValue placeholder="Ordre" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem v-for="opt in orderOptions" :key="opt.value" :value="opt.value">
-                      <span class="text-[10px]">{{ opt.label }}</span>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+              <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Ordre</label>
+              <select
+                :value="(newParam.type as any).config.order"
+                @change="(e) => (newParam.type as any).config.order = (e.target as HTMLSelectElement).value"
+                class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary"
+              >
+                <option v-for="opt in orderOptions" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </option>
+              </select>
               </div>
             </div>
           </div>
@@ -376,9 +363,9 @@ const saveParameterEdit = () => {
               </div>
 
               <!-- Image Configuration -->
-              <div v-if="editingParam.type.source === 'image'" class="space-y-2">
-                <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Image</label>
-                <div class="flex flex-row items-end gap-6 bg-builder-input-bg border border-builder-bar-border rounded p-2">
+              <div v-if="editingParam.type.source === 'image'" class="space-y-2 min-w-0">
+                <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Image</label>
+                <div class="w-full overflow-hidden">
                   <CompositionMediaPicker
                     :model-value="(editingParam.type as any).id"
                     :allowed-types="['image']"
@@ -391,53 +378,46 @@ const saveParameterEdit = () => {
               <div v-if="editingParam.type.source === 'contenus'" class="space-y-3">
                 <div class="grid grid-cols-2 gap-2">
                   <div class="space-y-1 flex flex-col">
-                    <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Contenu</label>
-                    <Select :model-value="(editingParam.type as any).contentTypeId" :modal="false" @update:model-value="handleEditingTypeChange">
-                      <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
-                        <SelectValue placeholder="Choisir..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem v-for="opt in contentTypeOptions?.results" :key="opt.id" :value="opt.id">
-                          <span class="text-[10px]">{{ opt.name }}</span>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Contenu</label>
+                    <select
+                      :value="(editingParam.type as any).contentTypeId"
+                      @change="(e) => handleEditingTypeChange((e.target as HTMLSelectElement).value)"
+                      class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary"
+                    >
+                      <option value="0" disabled>Choisir...</option>
+                      <option v-for="opt in contentTypeOptions?.results" :key="opt.id" :value="opt.id">
+                        {{ opt.name }}
+                      </option>
+                    </select>
                   </div>
                   <div class="space-y-1 flex flex-col">
-                    <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Mode</label>
-                    <Select :model-value="(editingParam.type as any).config.mode" :modal="false" @update:model-value="(val) => (editingParam!.type as any).config.mode = val">
-                      <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
-                        <SelectValue placeholder="Mode" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem v-for="mode in modeOptions" :key="mode.value" :value="mode.value">
-                          <span class="text-[10px]">{{ mode.label }}</span>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Mode</label>
+                    <select
+                      :value="(editingParam.type as any).config.mode"
+                      @change="(e) => (editingParam!.type as any).config.mode = (e.target as HTMLSelectElement).value"
+                      class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary"
+                    >
+                      <option v-for="mode in modeOptions" :key="mode.value" :value="mode.value">
+                        {{ mode.label }}
+                      </option>
+                    </select>
                   </div>
                 </div>
 
                 <!-- Mode: Single -->
                 <div v-if="(editingParam.type as any).config.mode === 'single'" class="space-y-1 flex flex-col">
-                  <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Entrée</label>
-                  <Select
-                    :model-value="(editingParam.type as any).config.entryId"
-                    :modal="false"
-                    @update:model-value="(val) => {
-                      (editingParam!.type as any).config.entryId = val;
-                    }"
+                  <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Entrée</label>
+                  <select
+                    :value="(editingParam.type as any).config.entryId"
+                    @change="(e) => (editingParam!.type as any).config.entryId = Number((e.target as HTMLSelectElement).value)"
                     :disabled="!isEditingContentTypeSelected"
+                    class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary disabled:opacity-50"
                   >
-                    <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
-                      <SelectValue placeholder="Choisir..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem v-for="entry in editingContentEntries?.results" :key="entry.id" :value="entry.id">
-                        <span class="text-[10px]">{{ entry.id }} - {{ (entry.data_json as any).title || 'Sans titre' }}</span>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <option value="0" disabled>Choisir...</option>
+                    <option v-for="entry in editingContentEntries?.results" :key="entry.id" :value="entry.id">
+                      {{ entry.id }} - {{ (entry.data_json as any).title || 'Sans titre' }}
+                    </option>
+                  </select>
                 </div>
 
                 <!-- Mode: Query -->
@@ -455,20 +435,16 @@ const saveParameterEdit = () => {
                       placeholder="Champ"
                     />
                     <div class="space-y-1 flex flex-col">
-                      <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Ordre</label>
-                      <Select
-                        v-model="(editingParam.type as any).config.order"
-                        :modal="false"
+                      <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Ordre</label>
+                      <select
+                        :value="(editingParam.type as any).config.order"
+                        @change="(e) => (editingParam!.type as any).config.order = (e.target as HTMLSelectElement).value"
+                        class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary"
                       >
-                        <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
-                          <SelectValue placeholder="Ordre" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem v-for="opt in orderOptions" :key="opt.value" :value="opt.value">
-                            <span class="text-[10px]">{{ opt.label }}</span>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                        <option v-for="opt in orderOptions" :key="opt.value" :value="opt.value">
+                          {{ opt.label }}
+                        </option>
+                      </select>
                     </div>
                   </div>
                 </div>

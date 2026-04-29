@@ -12,7 +12,7 @@ const emit = defineEmits(['update:modelValue']);
 </script>
 
 <template>
-  <div class="flex bg-builder-input-bg border border-builder-bar-border rounded overflow-hidden p-0.5 w-full">
+  <div class="flex bg-builder-input-bg border border-border rounded overflow-hidden p-0.5 w-full">
     <button
       v-for="opt in options"
       :key="String(opt.value)"

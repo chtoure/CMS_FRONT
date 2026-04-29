@@ -2,11 +2,6 @@
 <script setup lang="ts">
 import type { AnyComponentInstance } from '../../../type/component';
 import PropertyGroup from '../ui/PropertyGroup.vue';
-import Select from '../../../components/ui/select/Select.vue';
-import SelectTrigger from '../../../components/ui/select/SelectTrigger.vue';
-import SelectValue from '../../../components/ui/select/SelectValue.vue';
-import SelectContent from '../../../components/ui/select/SelectContent.vue';
-import SelectItem from '../../../components/ui/select/SelectItem.vue';
 import { Button } from '../../../components/ui/button';
 import { Link as LinkIcon } from 'lucide-vue-next';
 import { ValueSource, type IContenusField, type IParentField } from '../../../type/params';
@@ -133,63 +128,47 @@ const getMediaCMSFields = (child: AnyComponentInstance) => {
               <span class="text-[10px] font-mono font-bold text-builder-bar-text/80 uppercase tracking-tighter">{{ child.name }}</span>
             </div>
             <div v-if="child.family === 'container'" class="flex items-center gap-2">
-               <Select
-                  :model-value="(child.data as any).linkedQueryParamName"
-                  :modal="false"
-                  @update:model-value="(val) => emit('update-child-linked-query', child.id, val as string)"
-                  @update:open="(val) => emit('force-aria-hidden', val)"
+               <select
+                  :value="(child.data as any).linkedQueryParamName"
+                  @change="(e) => emit('update-child-linked-query', child.id, (e.target as HTMLSelectElement).value)"
+                  class="h-6 text-[9px] bg-builder-input-bg border border-builder-bar-border rounded w-28 outline-none focus:border-primary"
                >
-                  <SelectTrigger class="h-6 text-[9px] bg-builder-input-bg border-builder-bar-border w-28">
-                    <SelectValue placeholder="Lier liste..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem :value="null">
-                      <span class="text-[9px]">Aucune</span>
-                    </SelectItem>
-                    <SelectItem
-                      v-if="(element.data as any).linkedQueryContentTypeId"
-                      value="_inherited_query"
-                    >
-                      <span class="text-[9px]">Requête Héritée du parent</span>
-                    </SelectItem>
-                    <SelectItem
-                      v-for="p in element.params.filter(p => p.type.source === ValueSource.CONTENUS && ( (p.type as IContenusField).config.mode === 'query' || (p.type as IContenusField).config.mode === 'single'))"
-                      :key="p.name"
-                      :value="p.name"
-                    >
-                      <span class="text-[9px]">{{ p.label }}</span>
-                    </SelectItem>
-                  </SelectContent>
-               </Select>
+                  <option :value="null">Aucune</option>
+                  <option
+                    v-if="(element.data as any).linkedQueryContentTypeId"
+                    value="_inherited_query"
+                  >
+                    Requête Héritée
+                  </option>
+                  <option
+                    v-for="p in element.params.filter(p => p.type.source === ValueSource.CONTENUS && ( (p.type as IContenusField).config.mode === 'query' || (p.type as IContenusField).config.mode === 'single'))"
+                    :key="p.name"
+                    :value="p.name"
+                  >
+                    {{ p.label }}
+                  </option>
+               </select>
             </div>
           </div>
 
           <!-- Liaison Arrière-plan pour containers avec CMS query lié -->
           <div v-if="child.family === 'container' && (child.data as any).linkedQueryParamName && getMediaCMSFields(child).length > 0" class="space-y-1 flex flex-col">
-            <label class="text-[8px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Arrière-plan (champ CMS)</label>
-            <Select
-              :model-value="(child.data as any).linkedBgImageKey || null"
-              :modal="false"
-              @update:model-value="(val) => emit('update-child-bg-image-key', child.id, val as string)"
-              @update:open="(val) => emit('force-aria-hidden', val)"
+            <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Arrière-plan (champ CMS)</label>
+            <select
+              :value="(child.data as any).linkedBgImageKey || null"
+              @change="(e) => emit('update-child-bg-image-key', child.id, (e.target as HTMLSelectElement).value)"
+              class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary"
             >
-              <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
-                <SelectValue placeholder="Choisir un champ image..." />
-              </SelectTrigger>
-              <SelectContent :modal="false">
-                <SelectItem :value="null">
-                  <span class="text-[9px]">Aucun</span>
-                </SelectItem>
-                <SelectItem v-for="f in getMediaCMSFields(child)" :key="f.value" :value="f.value">
-                  <span class="text-[9px]">{{ f.label }}</span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+              <option :value="null">Aucun</option>
+              <option v-for="f in getMediaCMSFields(child)" :key="f.value" :value="f.value">
+                {{ f.label }}
+              </option>
+            </select>
           </div>
 
           <div v-for="p in child.params" :key="p.name" class="space-y-2">
             <div class="flex items-center justify-between">
-              <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">{{ p.label }}</label>
+              <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">{{ p.label }}</label>
               <Button
                 size="sm"
                 variant="ghost"
@@ -206,47 +185,35 @@ const getMediaCMSFields = (child: AnyComponentInstance) => {
 
             <div v-if="p.type.source === 'parent'" :key="`link-${child.id}-${p.name}`" class="pl-2 border-l border-primary/30 space-y-3 pt-1">
               <div class="space-y-1 flex flex-col">
-                <label class="text-[8px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Paramètre Parent</label>
-                <Select
-                    :model-value="(p.type as IParentField).parentParamName"
-                    :modal="false"
-                    @update:model-value="(val) => emit('update-child-param-source', child.id, p.name, ValueSource.PARENT, val as string)"
-                    @update:open="(val) => emit('force-aria-hidden', val)"
+                <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Paramètre Parent</label>
+                <select
+                    :value="(p.type as IParentField).parentParamName"
+                    @change="(e) => emit('update-child-param-source', child.id, p.name, ValueSource.PARENT, (e.target as HTMLSelectElement).value)"
+                    class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary"
                  >
-                    <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
-                      <SelectValue placeholder="Choisir..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem v-for="pp in getCompatibleParentParams(p, child)" :key="pp.name" :value="pp.name">
-                        <span class="text-[10px]">{{ pp.label }}</span>
-                      </SelectItem>
-                    </SelectContent>
-                </Select>
+                    <option value="" disabled>Choisir...</option>
+                    <option v-for="pp in getCompatibleParentParams(p, child)" :key="pp.name" :value="pp.name">
+                      {{ pp.label }}
+                    </option>
+                </select>
               </div>
 
               <div v-if="(p.type as IParentField).parentParamName && (
                 (p.type as IParentField).parentParamName === '_inherited_query' ||
                 element.params.find(pp => pp.name === (p.type as IParentField).parentParamName)?.type.source === ValueSource.CONTENUS
               )" class="space-y-1 flex flex-col">
-                <label class="text-[8px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Champ Source (CMS)</label>
-                 <Select
-                  :model-value="(p.type as IParentField).parentKey"
-                  :modal="false"
-                  @update:model-value="(val) => emit('update-child-param-source', child.id, p.name, ValueSource.PARENT, (p.type as IParentField).parentParamName, val as string)"
-                  @update:open="(val) => emit('force-aria-hidden', val)"
+                <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Champ Source (CMS)</label>
+                <select
+                  :value="(p.type as IParentField).parentKey"
+                  @change="(e) => emit('update-child-param-source', child.id, p.name, ValueSource.PARENT, (p.type as IParentField).parentParamName, (e.target as HTMLSelectElement).value)"
+                  class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary"
+                  :class="{ 'border-red-500/50': !(p.type as IParentField).parentKey }"
                 >
-                  <SelectTrigger
-                    class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border"
-                    :class="{ 'border-red-500/50': !(p.type as IParentField).parentKey }"
-                  >
-                    <SelectValue placeholder="Choisir le champ..." />
-                  </SelectTrigger>
-                  <SelectContent :modal="false">
-                    <SelectItem v-for="cf in getCompatibleCMSFields((p.type as IParentField).parentParamName, p, child.id)" :key="cf.value" :value="cf.value">
-                      <span class="text-[10px]">{{ cf.label }}</span>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                  <option value="" disabled>Choisir le champ...</option>
+                  <option v-for="cf in getCompatibleCMSFields((p.type as IParentField).parentParamName, p, child.id)" :key="cf.value" :value="cf.value">
+                    {{ cf.label }}
+                  </option>
+                </select>
                 <p v-if="!(p.type as IParentField).parentKey" class="text-[8px] text-red-400 italic font-medium">Sélectionnez un champ pour activer la liaison</p>
               </div>
             </div>

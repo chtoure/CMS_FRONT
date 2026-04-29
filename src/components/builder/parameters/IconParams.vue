@@ -30,7 +30,7 @@ const getIconValue = (val: any): string | null => {
     <PropertyGroup title="Système Icône" :icon="Type" :open="true">
       <div class="space-y-4">
         <div class="space-y-1">
-          <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Icône</label>
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Icône</label>
           <IconPicker
             :model-value="getIconValue(element.data.icon)"
             @update:model-value="(val) => updateData('icon', val)"
