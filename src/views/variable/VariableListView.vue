@@ -356,7 +356,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
 
       <div class="flex-1 overflow-y-auto custom-scrollbar">
         <div v-if="isCollectionsError" class="flex justify-center p-8">
-          <CompositionError :error="collectionsError" />
+          <CompositionError :error="collectionsError?.message" />
         </div>
 
         <table v-else-if="filteredVariables.length > 0" class="w-full border-collapse">

@@ -76,6 +76,9 @@ const initials = ((full_name:string) => {
         async onSuccess(data) {
           console.log(data);
 
+          // Sauvegarde les tokens pour le fallback Bearer (si cookies bloqués en HTTP cross-site)
+          storeUser.setTokens(data.accessToken ?? null, data.refreshToken ?? null);
+
           roleId.value = data.user?.role?.id || data.user?.role_id || 0
 
           await refetchPermissions()

@@ -18,6 +18,8 @@ export interface UserProfile {
   role: Role | null ;
   isLoggedIn: boolean;
   initials?: string;
+  access_token?:string;
+  refresh_token?:string;
   archive: boolean;
 }
 
@@ -48,7 +50,10 @@ export interface userFilter {
 export interface AuthResponse {
   message: string;
   user: UserProfile;
+  accessToken?: string;   // Renvoyé par le backend pour le fallback Bearer (HTTP cross-site)
+  refreshToken?: string;  // Renvoyé par le backend pour le refresh manuel si cookie bloqué
 }
+
 
 
 // New interfaces for update profile

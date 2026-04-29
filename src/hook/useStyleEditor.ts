@@ -111,7 +111,7 @@ export function useStyleEditor(initialElement: AnyComponentInstance | AnySection
     }
 
     if (typeof nodeToProcess === 'object' && nodeToProcess !== null && 'type' in nodeToProcess && 'value' in nodeToProcess) {
-      return nodeToProcess.value;
+      return nodeToProcess.value as string | number | undefined;
     }
 
     return (typeof nodeToProcess === 'string' || typeof nodeToProcess === 'number') ? nodeToProcess : undefined;
