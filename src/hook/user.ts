@@ -5,6 +5,7 @@ import api, { handleResponse } from "../api/fetchConfig";
 import type { LoginCredentials, AuthResponse, AddUserData, ChangePasswordData,UpdateProfileData, VerifyCode, userFilter, User } from "../type/user";
 import { unref, type Ref } from "vue";
 import type { Pagination } from "../type/pagination";
+import { userStore } from "@/stores/user";
 
 
 
@@ -60,6 +61,7 @@ const useLogin = () => {
 //Hook personnalisé pour la mutation de déconnexion
 const useLogout = () =>{
   const queryClient = useQueryClient();
+  const storeUser = userStore();
   return useMutation({
     mutationFn: async () =>{
       await api('/logout', {
@@ -69,9 +71,13 @@ const useLogout = () =>{
     },
     onSuccess(){
       queryClient.clear();
+      storeUser.clearTokens();
+      storeUser.setUserInfo(null, []);
     },
     onError(){
       queryClient.clear();
+      storeUser.clearTokens();
+      storeUser.setUserInfo(null, []);
     }
   })
 }
