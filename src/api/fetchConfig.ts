@@ -58,7 +58,7 @@ import router from "../router";
 import { userStore } from "../stores/user";
 import { ApiError, type ApiErrorData } from "./apiError";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 
 

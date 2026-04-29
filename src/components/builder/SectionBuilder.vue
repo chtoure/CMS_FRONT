@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue';
 import type { AnySectionInstance } from '../../type/section';
+import type { AnyComponentInstance } from '../../type/component';
 import BlocRender from './BlocRender.vue';
 import ResizerWrapper from './ResizerWrapper.vue';
 import { formatSize, resolveValueForBreakpoint, filterResponsiveClasses } from '../../lib/style/core';
@@ -34,7 +35,7 @@ const builderState = inject<{
 const { resolveValue } = useVariableResolver();
 
 // Computed réactifs
-const isDraggingOver = computed(() => builderState?.isDragging?.value ?? false);
+// const isDraggingOver = computed(() => builderState?.isDragging?.value ?? false);
 const isXRayMode = computed(() => builderState?.xRayMode?.value ?? false);
 
 // Handlers
@@ -104,6 +105,7 @@ const sectionVisualStyles = computed(() => {
   const bp = builderState?.currentBreakpoint.value || 'default';
   const all = buildSectionInlineStyles(props.section.styles as Record<string, unknown>, bp, resolveValue);
   // On retire les propriétés de layout qui doivent aller sur le VueDraggable
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { gap, justifyContent, alignItems, ...visual } = all;
   return visual;
 });

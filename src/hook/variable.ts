@@ -133,7 +133,7 @@ const useVariableResolver = () => {
        const varProp = prop as VariableProperty<any>;
        if (varProp.type === 'variable') {
          // lookup value inside the map
-         return variableMap.value[String(varProp.value)] ?? varProp.value;
+         return (variableMap.value[String(varProp.value)] ?? varProp.value) as T | string;
        }
        // Récursion si la valeur interne est elle-même un wrapper (ex: { type: 'static', value: { type: 'variable' } })
        if (typeof varProp.value === 'object' && varProp.value !== null && 'type' in varProp.value) {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { AnyComponentInstance } from '../type/component';
 
 import type { AnySectionInstance } from '../type/section';
@@ -125,9 +126,9 @@ export function moveInTree(
   if (rootIndex !== -1) {
     const tempTree = [...tree];
     if (direction === 'up' && rootIndex > 0) {
-      [tempTree[rootIndex - 1], tempTree[rootIndex]] = [tempTree[rootIndex], tempTree[rootIndex - 1]];
+      [tempTree[rootIndex - 1], tempTree[rootIndex]] = [tempTree[rootIndex]!, tempTree[rootIndex - 1]!];
     } else if (direction === 'down' && rootIndex < tempTree.length - 1) {
-      [tempTree[rootIndex + 1], tempTree[rootIndex]] = [tempTree[rootIndex], tempTree[rootIndex + 1]];
+      [tempTree[rootIndex + 1], tempTree[rootIndex]] = [tempTree[rootIndex]!, tempTree[rootIndex + 1]!];
     }
     return tempTree;
   }
@@ -138,9 +139,9 @@ export function moveInTree(
       if (childIndex !== -1) {
         const newChildren = [...(node.children as any[])];
         if (direction === 'up' && childIndex > 0) {
-          [newChildren[childIndex - 1], newChildren[childIndex]] = [newChildren[childIndex], newChildren[childIndex - 1]];
+          [newChildren[childIndex - 1], newChildren[childIndex]] = [newChildren[childIndex]!, newChildren[childIndex - 1]!];
         } else if (direction === 'down' && childIndex < newChildren.length - 1) {
-          [newChildren[childIndex + 1], newChildren[childIndex]] = [newChildren[childIndex], newChildren[childIndex + 1]];
+          [newChildren[childIndex + 1], newChildren[childIndex]] = [newChildren[childIndex]!, newChildren[childIndex + 1]!];
         }
         return {
           ...node,
