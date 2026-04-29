@@ -49,7 +49,7 @@ export function normalizeResponsiveProp<T>(
 ): { default: T; sm: T; md: T; lg: T } | null {
   if (val === undefined || val === null) return null;
 
-  let processedVal = val;
+  let processedVal: any = val;
 
   // Déballer VariableProperty via le resolver (niveau racine)
   if (typeof val === 'object' && val !== null && 'type' in val && 'value' in val) {

@@ -3,7 +3,7 @@ import * as Icons from 'lucide-vue-next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import CompositionDarkMode from '../../components/composition/CompositionDarkMode.vue';
 import { useGetBlocTemplatesComponentCustom, useGetComponents } from '../../hook/component';
-import { computed, type ComponentInstance, type Component as VueComponent } from 'vue';
+import { computed, type Component as VueComponent } from 'vue';
 import type { AllStyles, AnyComponentInstance, Component, BaseStyles } from '../../type/component';
 import type { BlocTemplate } from '../../type/bloc-template';
 
@@ -57,7 +57,7 @@ const deepCloneInstance = (node: AnyComponentInstance): AnyComponentInstance => 
   };
 };
 
-const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<T> => {
+const onClone = <T extends AllStyles>(element: Component<T>): AnyComponentInstance => {
   const instance = {
     id: crypto.randomUUID(),
     name: element.name,
@@ -75,9 +75,10 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
   };
   console.log('Cloning component:', element.tag, 'with children:', instance.children.length);
   // console.log('Created instance:', instance);
-  return instance as ComponentInstance<T>;
+  return instance as AnyComponentInstance;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const onCloneCustom = (block: BlocTemplate, isTopLevel = true): AnyComponentInstance => {
   // Extraire les dimensions si elles existent pour un pré-rendu fluide
   const initialStyles: BaseStyles = {};
