@@ -1,5 +1,7 @@
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
+import { generateUUID } from '@/lib/utils';
+
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
@@ -252,7 +254,7 @@ const fieldTypes = [
 
 const generateUniqueName = (baseName: string) => {
   // Génère une chaîne aléatoire complexe (ex: field_8f9d2b1a)
-  return `${baseName}_${crypto.randomUUID().split('-')[0]}`;
+  return `${baseName}_${generateUUID().split('-')[0]}`;
 };
 
 // Ajouter un nouveau champ

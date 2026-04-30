@@ -1,5 +1,7 @@
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script lang="ts" setup>
+import { generateUUID } from '@/lib/utils';
+
 import { ref, watch, provide, computed } from 'vue';
 import CanvaView from './CanvaView.vue';
 import ComponentView from './ComponentView.vue';
@@ -67,7 +69,7 @@ const selectComponent = (id: string | null) => {
          let newEntry: any = item;
          if ('tag' in item) {
            newEntry = {
-             id: crypto.randomUUID(),
+             id: generateUUID(),
              order: pageTree.value.length,
              family: 'section',
              styles: {},
@@ -179,7 +181,7 @@ import { onMounted, onUnmounted } from 'vue';
 const deepCloneWithNewIds = (node: any): any => {
   return {
     ...node,
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     blocTemplateId: undefined,
     modelId: undefined,
     children: node.children ? node.children.map((child: any) => deepCloneWithNewIds(child)) : []
