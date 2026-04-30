@@ -1,5 +1,7 @@
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script lang="ts" setup>
+import { generateUUID } from '@/lib/utils';
+
 import { ref, computed, inject, onMounted, onUnmounted } from 'vue';
 import { ZoomIn, ZoomOut, Maximize, MousePointer2 } from 'lucide-vue-next';
 import SectionBuilder from '../../components/builder/SectionBuilder.vue';
@@ -107,7 +109,7 @@ const deselect = () => {
 //     let newEntry: any = item;
 //     if ('tag' in item) { // Wrapped into section auto
 //       newEntry = {
-//         id: crypto.randomUUID(),
+//         id: generateUUID(),
 //         order: index,
 //         family: 'section',
 //         styles: {},

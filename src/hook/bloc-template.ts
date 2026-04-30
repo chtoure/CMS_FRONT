@@ -1,3 +1,4 @@
+import { generateUUID } from '@/lib/utils';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ref } from 'vue';
 import { type AnyComponentInstance } from '../type/component';
@@ -387,7 +388,7 @@ export function useBlockTemplate() {
         if (!def) continue;
 
         const node: AnyComponentInstance = {
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           blocTemplateId: t.id,
           componentDefinitionId: t.componentId,
           name: t.name || def.name,
@@ -476,7 +477,7 @@ export function useBlockTemplate() {
       for (const s of sections) {
           const rootNodes = await fetchTree(s.id);
           syncedSections.push({
-              id: crypto.randomUUID(),
+              id: generateUUID(),
               sectionId: s.id,
               order: s.order,
               family: 'section',

@@ -1,5 +1,7 @@
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
+import { generateUUID } from '@/lib/utils';
+
     import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
     import CompositionTable from '@/components/composition/CompositionTable.vue'
     import Button from '@/components/ui/button/Button.vue'
@@ -176,7 +178,7 @@
                 return components.map(c => {
                     return {
                         ...c,
-                        id: crypto.randomUUID(), 
+                        id: generateUUID(), 
                         oldBlocTemplateId: c.blocTemplateId, // Pour mapper plus tard
                         blocTemplateId: undefined,
                         children: prepareTreeForClone(c.children)
@@ -187,7 +189,7 @@
             const treeToClone = targetTree.map((section: any) => {
                 return {
                     ...section,
-                    id: crypto.randomUUID(), 
+                    id: generateUUID(), 
                     oldSectionId: section.sectionId, // Pour mapper plus tard
                     sectionId: undefined, 
                     children: prepareTreeForClone(section.children)

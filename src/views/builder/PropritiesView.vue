@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { generateUUID } from '@/lib/utils';
+
 import { computed, inject } from 'vue';
 import Tabs from '../../components/ui/tabs/Tabs.vue';
 import TabsContent from '../../components/ui/tabs/TabsContent.vue';
@@ -69,7 +71,7 @@ const handleCut = () => {
 const deepCloneWithNewIds = (node: any): any => {
     return {
         ...node,
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         // Effacer les IDs backend pour forcer la création d'un nouveau nœud
         blocTemplateId: undefined,
         modelId: undefined,

@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { generateUUID } from '@/lib/utils';
+
 import * as Icons from 'lucide-vue-next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import CompositionDarkMode from '../../components/composition/CompositionDarkMode.vue';
@@ -51,7 +53,7 @@ const deepCloneInstance = (node: AnyComponentInstance): AnyComponentInstance => 
 
   return {
     ...node,
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     componentDefinitionId: definitionId,
     children: node.children ? node.children.map(deepCloneInstance) : []
   };
@@ -59,7 +61,7 @@ const deepCloneInstance = (node: AnyComponentInstance): AnyComponentInstance => 
 
 const onClone = <T extends AllStyles>(element: Component<T>): AnyComponentInstance => {
   const instance = {
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     name: element.name,
     tag: element.tag,
     icon: element.icon,
@@ -89,7 +91,7 @@ const onCloneCustom = (block: BlocTemplate, isTopLevel = true): AnyComponentInst
   const backendChildren = (block as BlocTemplate & { children?: BlocTemplate[] }).children || block.customBlocTemplates || [];
 
   const instance: AnyComponentInstance = {
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     name: block.name || block.component?.name || 'Composant',
     tag: block.component?.tag || 'div',
     icon: block.component?.icon || 'Package',
