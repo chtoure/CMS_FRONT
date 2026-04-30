@@ -10,7 +10,7 @@ import PropertyRow from '../ui/PropertyRow.vue';
 import PropertyInput from '../ui/PropertyInput.vue';
 import ButtonGroup from '../ui/ButtonGroup.vue';
 import CompositionColorPicker from '../../composition/CompositionColorPicker.vue';
-import VariableInputControl from '../../../type/VariableInputControl.vue';
+import VariableInputControl from '../ui/VariableInputControl.vue';
 import {
   ChevronRight,
   MoreHorizontal,
@@ -49,6 +49,13 @@ const shapeOptions = [
           :model-value="getRawValue(styles.slidesPerView)"
           @update:model-value="(val) => updateStyle('slidesPerView', parseInt(val.toString()) || 1)"
           placeholder="1"
+        />
+        <PropertyInput
+          label="Espacement (Gap px)"
+          type="number"
+          :model-value="getRawValue(styles.gap || 0)"
+          @update:model-value="(val) => updateStyle('gap', parseInt(val.toString()) || 0)"
+          placeholder="0"
         />
       </div>
     </PropertyGroup>

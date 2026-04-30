@@ -33,11 +33,20 @@ const props = defineProps<{
 
 const builderState = inject<{
   pageTree: { value: AnyComponentInstance[] };
+  libraryTree: { value: AnyComponentInstance[] };
   selectedId: { value: string | null };
   builderMode: { value: 'page' | 'library' };
   selectComponent: (id: string | null) => void;
   cmsCache: { value: Record<string, any> };
 }>('builderState');
+
+// Sélectionne dynamiquement le bon arbre selon le mode actif
+// Cela permet à DataEditor de fonctionner aussi bien en mode Page qu'en mode Bibliothèque (Modèles)
+const activeTree = computed(() =>
+  builderState?.builderMode.value === 'library'
+    ? builderState.libraryTree
+    : builderState?.pageTree
+);
 
 const { data: contentTypeOptions, refetch: refetchContentTypes } = useGetContentTypes();
 const mediaQuery = useGetMediaList({});
@@ -47,6 +56,7 @@ const COMPONENT_SOURCE_MAPPING: Record<string, ValueSource[]> = {
   'InputBuilder': [ValueSource.STATIC],
   'ImageBuilder': [ValueSource.STATIC, ValueSource.IMAGE],
   'CardBuilder': [ValueSource.STATIC, ValueSource.IMAGE, ValueSource.CONTENUS],
+  'SliderBuilder': [ValueSource.STATIC, ValueSource.IMAGE, ValueSource.CONTENUS],
 };
 
 const sourceOptions = [
@@ -69,7 +79,7 @@ const modeOptions = [
 
 const allowedSources = computed(() => COMPONENT_SOURCE_MAPPING[props.element.tag] || []);
 const canAddParams = computed(() => allowedSources.value.length > 0);
-const paramDynamic = computed(() => props.element.family === 'container');
+const paramDynamic = computed(() => props.element.family === 'container' || props.element.tag === 'SliderBuilder');
 const hasLinkedChildren = computed(() => {
   if (!props.element.children) return false;
 
@@ -96,6 +106,14 @@ const hasLinkedChildren = computed(() => {
   });
 
   return hasLinkedContainer || hasLinkedLeaf;
+});
+
+// Vérifie que le composant a LUI-MÊME défini au moins un paramètre de type query
+// (et non juste hérité via _inherited_query d'un parent)
+const hasDirectQueryParams = computed(() => {
+  return (props.element.params || []).some(
+    p => p.type.source === ValueSource.CONTENUS && (p.type as IContenusField).config.mode === 'query'
+  );
 });
 
 const filteredSourceOptions = computed(() => {
@@ -304,9 +322,16 @@ const propagateValueToChildren = (children: AnyComponentInstance[], parentParamN
     if (updatedChild.family === 'container') {
       const linkedBgKey = (updatedChild.data as any).linkedBgImageKey;
       const linkedQueryName = (updatedChild.data as any).linkedQueryParamName;
-      if (linkedBgKey && linkedQueryName === parentParamName && parentIsQuery) {
-        const list = blockCMSData.value[parentParamName];
-        const firstItem = Array.isArray(list) ? list[0] : null;
+      if (linkedBgKey && linkedQueryName === parentParamName) {
+        let firstItem: any = null;
+        if (parentParamName === '_inherited_query') {
+          firstItem = newValue;
+        } else if (!parentIsQuery && isCMS) {
+          firstItem = entryData;
+        } else {
+          const list = blockCMSData.value[parentParamName];
+          firstItem = Array.isArray(list) ? list[0] : null;
+        }
         const rawUrl = firstItem ? firstItem[linkedBgKey] : undefined;
         const newBgImage = rawUrl
           ? ({ type: 'media', url: rawUrl, value: { url: rawUrl } } as any)
@@ -318,7 +343,13 @@ const propagateValueToChildren = (children: AnyComponentInstance[], parentParamN
       }
     }
 
-    if (updatedChild.children && updatedChild.children.length > 0) {
+    if (updatedChild.family === 'container' && (updatedChild.data as any).linkedQueryParamName === parentParamName) {
+      const linkedItem = parentIsQuery ? (blockCMSData.value[parentParamName]?.[0] || null) : entryData;
+      (updatedChild.data as any)._inherited_item = linkedItem;
+      if (updatedChild.children && updatedChild.children.length > 0) {
+        updatedChild.children = propagateValueToChildren(updatedChild.children, '_inherited_query', linkedItem);
+      }
+    } else if (updatedChild.children && updatedChild.children.length > 0) {
       updatedChild.children = propagateValueToChildren(updatedChild.children, parentParamName, newValue);
     }
 
@@ -345,7 +376,7 @@ const updateData = (key: string, value: string | number | boolean | object) => {
       return node;
     });
   };
-  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  if (activeTree.value) activeTree.value.value = updateNode(activeTree.value.value);
 };
 
 const updateDataAndParam = (key: string, value: string) => {
@@ -369,7 +400,7 @@ const updateDataAndParam = (key: string, value: string) => {
       return node;
     });
   };
-  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  if (activeTree.value) activeTree.value.value = updateNode(activeTree.value.value);
 };
 
 const updateChildParamSource = (childId: string, paramName: string, source: ValueSource, parentParamName?: string, parentKey?: string) => {
@@ -443,7 +474,7 @@ const updateChildParamSource = (childId: string, paramName: string, source: Valu
       return node;
     });
   };
-  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  if (activeTree.value) activeTree.value.value = updateNode(activeTree.value.value);
 };
 
 const updateChildLinkedQuery = (childId: string, queryParamName: string | null) => {
@@ -456,8 +487,14 @@ const updateChildLinkedQuery = (childId: string, queryParamName: string | null) 
           ...node,
           children: node.children.map(child => {
             if (child.id === childId) {
-               const parentParam = props.element.params.find(p => p.name === queryParamName);
-               const contentTypeId = parentParam?.type.source === ValueSource.CONTENUS ? parentParam.type.contentTypeId : undefined;
+               let contentTypeId: number | undefined;
+
+               if (queryParamName === '_inherited_query') {
+                 contentTypeId = (props.element.data as any).linkedQueryContentTypeId;
+               } else {
+                 const parentParam = props.element.params.find(p => p.name === queryParamName);
+                 contentTypeId = parentParam?.type.source === ValueSource.CONTENUS ? parentParam.type.contentTypeId : undefined;
+               }
 
                const updated = {
                  ...child,
@@ -468,8 +505,19 @@ const updateChildLinkedQuery = (childId: string, queryParamName: string | null) 
                  }
                };
 
-               if (queryParamName && blockCMSData.value[queryParamName]?.length > 0) {
-                 (updated.data as any)._inherited_item = blockCMSData.value[queryParamName][0];
+               if (queryParamName) {
+                 if (queryParamName === '_inherited_query') {
+                   (updated.data as any)._inherited_item = (props.element.data as any)._inherited_item;
+                 } else {
+                   const parentParam = props.element.params.find(p => p.name === queryParamName);
+                   const isSingle = parentParam?.type.source === ValueSource.CONTENUS && (parentParam.type as IContenusField).config.mode === 'single';
+                   if (isSingle) {
+                     const entryId = props.element.data[queryParamName];
+                     (updated.data as any)._inherited_item = blockCMSData.value[entryId as number];
+                   } else if (blockCMSData.value[queryParamName]?.length > 0) {
+                     (updated.data as any)._inherited_item = blockCMSData.value[queryParamName][0];
+                   }
+                 }
                }
                return updated;
             }
@@ -481,8 +529,7 @@ const updateChildLinkedQuery = (childId: string, queryParamName: string | null) 
       return node;
     });
   };
-
-  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  if (activeTree.value) activeTree.value.value = updateNode(activeTree.value.value);
 };
 
 const updateChildBgImageKey = (childId: string, fieldKey: string | null) => {
@@ -500,8 +547,20 @@ const updateChildBgImageKey = (childId: string, fieldKey: string | null) => {
             let newBgImage: any = undefined;
 
             if (fieldKey && linkedQueryName) {
-              const list = blockCMSData.value[linkedQueryName];
-              const firstItem = Array.isArray(list) ? list[0] : null;
+              let firstItem: any = null;
+              if (linkedQueryName === '_inherited_query') {
+                firstItem = (props.element.data as any)._inherited_item;
+              } else {
+                const parentParam = props.element.params.find(p => p.name === linkedQueryName);
+                const isSingle = parentParam?.type.source === ValueSource.CONTENUS && (parentParam.type as IContenusField).config.mode === 'single';
+                if (isSingle) {
+                  const entryId = props.element.data[linkedQueryName];
+                  firstItem = blockCMSData.value[entryId as number];
+                } else {
+                  const list = blockCMSData.value[linkedQueryName];
+                  firstItem = Array.isArray(list) ? list[0] : null;
+                }
+              }
               const rawUrl = firstItem ? firstItem[fieldKey] : undefined;
               if (rawUrl) {
                 newBgImage = { type: 'media', url: rawUrl, value: { url: rawUrl } } as any;
@@ -523,8 +582,7 @@ const updateChildBgImageKey = (childId: string, fieldKey: string | null) => {
       return node;
     });
   };
-
-  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  if (activeTree.value) activeTree.value.value = updateNode(activeTree.value.value);
 };
 
 const saveParameterEdit = (editingParam: IComponentParams) => {
@@ -562,8 +620,7 @@ const saveParameterEdit = (editingParam: IComponentParams) => {
       return node;
     });
   };
-
-  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  if (activeTree.value) activeTree.value.value = updateNode(activeTree.value.value);
 };
 
 const addParameter = (param: IComponentParams, name: string) => {
@@ -588,8 +645,7 @@ const addParameter = (param: IComponentParams, name: string) => {
       return node;
     });
   };
-
-  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  if (activeTree.value) activeTree.value.value = updateNode(activeTree.value.value);
 };
 
 const removeParameter = (name: string) => {
@@ -611,8 +667,7 @@ const removeParameter = (name: string) => {
       return node;
     });
   };
-
-  builderState.pageTree.value = updateNode(builderState.pageTree.value);
+  if (activeTree.value) activeTree.value.value = updateNode(activeTree.value.value);
 };
 
 const getCompatibleParentParams = (childParam: IComponentParams, childElement?: AnyComponentInstance) => {
@@ -659,7 +714,7 @@ const getCompatibleParentParams = (childParam: IComponentParams, childElement?: 
 <template>
   <div class="space-y-6 pb-20 p-1">
     <IterationModeEditor
-      v-if="paramDynamic && hasLinkedChildren"
+      v-if="paramDynamic && hasLinkedChildren && hasDirectQueryParams"
       :element="element"
       @update-data="updateData"
     />

@@ -11,14 +11,14 @@ const emit = defineEmits(['update-data']);
 </script>
 
 <template>
-  <div class="flex items-center justify-between bg-primary/10 border border-primary/20 rounded-lg p-3 mb-6 shadow-sm">
+  <div class="flex items-center justify-between bg-builder-input-bg border border-builder-bar-border/20 rounded-md p-2 mb-6">
     <div class="flex items-center gap-2">
-      <div class="p-1.5 bg-primary/20 rounded-md">
-        <Repeat class="h-4 w-4 text-primary" />
+      <div class="p-1.5 bg-primary/10 rounded">
+        <Repeat class="h-3.5 w-3.5 text-primary" />
       </div>
       <div>
-        <p class="text-[10px] font-mono font-bold text-primary uppercase tracking-tighter">Mode Itération</p>
-        <p class="text-[10px] text-primary/70 font-medium">Répéter ce bloc pour chaque item de la liste</p>
+        <p class="text-[10px] font-mono font-bold text-builder-bar-text/80 uppercase tracking-tighter">Mode Itération</p>
+        <p class="text-[9px] text-builder-bar-text/40 font-mono">Répéter ce bloc par item</p>
       </div>
     </div>
     <Button

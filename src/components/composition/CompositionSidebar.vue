@@ -102,11 +102,11 @@ const isParentActive = (item: NavItem) => {
 const navItems = computed<NavItem[]>(() =>{
 
   const baseItems: NavItem[]= [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: 'admin.dashboard', hasPermission: true },
-    { id: 'media', label: 'Media', icon: FolderOpen, href: 'admin.media', hasPermission: hasPermission('read_media') },
+    { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard, href: 'admin.dashboard', hasPermission: true },
+    { id: 'media', label: 'Mediatheque', icon: FolderOpen, href: 'admin.media', hasPermission: hasPermission('read_media') },
     {
       id: 'admin',
-      label: 'Admin',
+      label: 'Administration',
       icon: UserStar,
       hasPermission: hasPermission('read_user') || hasPermission('read_role'),
       children: [
@@ -115,7 +115,7 @@ const navItems = computed<NavItem[]>(() =>{
       ]
     },{
       id: 'content-types',
-      label: 'Content Types',
+      label: 'Types d\'articles',
       icon: ClipboardList,
       href: 'admin.content-types',
       hasPermission: hasPermission('read_content_type')
@@ -133,14 +133,14 @@ const navItems = computed<NavItem[]>(() =>{
       children: [
         {
           id: 'corbeille-contentEntry',
-          label: 'Corbeille des contenus',
+          label: 'Corbeille des Articles',
           icon: Trash2,
           href: 'admin.content-entry.corbeille',
           hasPermission: hasPermission('read_content_entry')
         },
         {
           id: 'corbeille-contentType',
-          label: 'Corbeille types contenu',
+          label: 'Corbeille des Types d\'articles',
           icon: ClipboardList,
           href: 'admin.content-types.corbeille',
           hasPermission: hasPermission('read_content_type')

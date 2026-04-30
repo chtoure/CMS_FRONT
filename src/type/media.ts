@@ -77,9 +77,13 @@ interface SaveMediaPayload {
       };
     };
     adjustments?: {
-      blur: number;
-      grayscale: boolean;
+      blur?: number;
+      grayscale?: boolean;
+      brightness?: number;
+      contrast?: number;
+      saturation?: number;
     };
+    bgRemoved?: boolean;
     metadata?: {
       alt?: string | null;
     };

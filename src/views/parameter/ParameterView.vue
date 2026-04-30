@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {Save, Loader2, ChevronsUpDown, Check } from 'lucide-vue-next'
 import Button from '@/components/ui/button/Button.vue'
-import { computed, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useForm, Field } from 'vee-validate'
 import { useGetParameters, useUpdateParameters } from '../../hook/parameter'
 import { showToast } from '../../lib/toast'
@@ -9,7 +9,6 @@ import CompositionLoading from '@/components/composition/CompositionLoading.vue'
 import { getErrorMessage } from '../../lib/errorMessage'
 import CompositionError from '@/components/composition/CompositionError.vue'
 import { parameterSchema } from '../../validation/parameterValidate'
-import { useGetMediaList } from '../../hook/media'
 import CompositionMediaPicker from '../../components/composition/CompositionMediaPicker.vue'
 import Popover from '../../components/ui/popover/Popover.vue'
 import PopoverTrigger from '../../components/ui/popover/PopoverTrigger.vue'
@@ -24,7 +23,6 @@ import { cn } from '../../lib/utils'
 
 
 const media = ref<number>();
-const mediaQuery = useGetMediaList({});
 const open = ref(false)
 
 const {handleSubmit, setValues, setFieldValue } = useForm({
@@ -60,13 +58,17 @@ const previewImage = ref('')
 const changeMedia = (id: number) => {
   media.value = id
   setFieldValue('mediaId', id)
-  previewImage.value = mediaQuery?.data.value?.results?.find((m) => m.id === id)?.file_path || ''
 }
 
-const mediaType = computed(() => {
-  return mediaQuery?.data.value?.results?.find((m) => m.id === media.value)?.type;
-})
+const mediaType = ref<string>('')
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const onMediaSelected = (selectedMedia: any) => {
+  if (selectedMedia) {
+    previewImage.value = selectedMedia.file_path || ''
+    mediaType.value = selectedMedia.type || ''
+  }
+}
 
 watch(params, (newParams) => {
   if (newParams) {
@@ -79,6 +81,7 @@ watch(params, (newParams) => {
     })
     media.value = newParams.media?.id
     previewImage.value = newParams.media?.file_path || ''
+    mediaType.value = newParams.media?.type || ''
   }
 }, { immediate: true })
 
@@ -122,6 +125,7 @@ const onSave = handleSubmit(async (values) => {
                     :model-value="media"
                     :allowed-types="['image', 'video']"
                     @update:model-value="changeMedia"
+                    @media-selected="onMediaSelected"
                   />
                 </div>
                 <p v-if="errorMessage" class="text-xs text-destructive font-medium italic">{{ errorMessage }}</p>

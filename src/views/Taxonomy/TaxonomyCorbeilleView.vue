@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import CompositionTable from '@/components/composition/CompositionTable.vue'
 import Button from '@/components/ui/button/Button.vue'
-import { ArchiveRestore, Tags, MoreHorizontal, Plus, Trash2 } from 'lucide-vue-next'
+import { ArchiveRestore, MoreHorizontal, Plus, Trash2 } from 'lucide-vue-next'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
 import CompositionConfirmDialog from '../../components/composition/CompositionConfirmDialog.vue'
 import DropdownMenu from '../../components/ui/dropdown-menu/DropdownMenu.vue'
@@ -108,11 +108,16 @@ const handleCreate = () => {
     <CompositionPageHeader>
       <template #content>
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-          <div class="flex items-center gap-4">
-            <Tags class="h-6 w-6" />
-            <div class="space-y-2">
-              <h1 class="text-huge font-black tracking-tighter leading-none"> <span class="text-primary italic">Corbeille des Catégories</span></h1>
-              <p class="text-background opacity-80 text-lg font-medium">Gérez vos catégories supprimées.</p>
+
+          <div class="flex gap-4 items-center">
+            <div class="p-3 bg-primary rounded-2xl">
+                <ArchiveRestore stroke-width="1" class="w-8 h-8" />
+            </div>
+            <div>
+                <h1 class="text-3xl font-black tracking-tighter leading-none">
+                    <span class="text-primary italic">Corbeille des Catégories</span>
+                </h1>
+                <p class="text-muted-foreground text-sm font-medium mt-1 italic">Gérez vos catégories supprimées.</p>
             </div>
           </div>
 

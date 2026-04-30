@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { generateUUID } from '@/lib/utils';
+
 import { ref, watch, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
@@ -19,7 +21,8 @@ import {
   Save,
   Undo2,
   ChevronsUpDown,
-  Check
+  Check,
+  ArrowLeft
 } from 'lucide-vue-next'
 import {
   FieldType,
@@ -91,8 +94,8 @@ const fields = ref<any[]>([
   {
     type: FieldType.TEXT,
     name: 'title',
-    label: 'Identifiant',
-    placeholder: 'Saisir l\'identifiant',
+    label: 'Texte Indicateur',
+    placeholder: 'Ex: Titre ou un texte indicateur de l\'article',
     required: true
   }
 ])
@@ -213,7 +216,7 @@ const fieldTypes = [
 
 const generateUniqueName = (baseName: string) => {
   // Génère une chaîne aléatoire complexe (ex: field_8f9d2b1a)
-  return `${baseName}_${crypto.randomUUID().split('-')[0]}`;
+  return `${baseName}_${generateUUID().split('-')[0]}`;
 };
 
 
@@ -507,14 +510,15 @@ const handleCancel = () => {
       <template #content>
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div class="flex items-center gap-4">
-            <div class="p-4 bg-primary/10 rounded-2xl">
-              <Settings2 class="h-8 w-8 text-primary" />
+            <div
+              class="hover:cursor-pointer p-3 bg-primary rounded-2xl"
+              @click="$router.back()"
+            >
+              <ArrowLeft stroke-width="1" class="w-8 h-8" />
             </div>
-            <div class="space-y-1">
-              <h1 class="text-huge font-black tracking-tighter leading-none">
-                <span class="text-primary italic">Créer un type de contenu</span>
-              </h1>
-              <p class="text-background opacity-80 text-lg font-medium">Définissez la structure et les champs de vos données.</p>
+            <div class="space-y-2">
+              <h1 class="text-3xl font-black tracking-tighter leading-none"> <span class="text-primary italic">Créer un type d'article</span></h1>
+              <p class="text-muted-foreground text-sm font-medium mt-1 italic">Définissez la structure et les champs de vos données.</p>
             </div>
           </div>
 
@@ -547,7 +551,7 @@ const handleCancel = () => {
           <div class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div class="space-y-2">
-                <Label for="name" class="text-sm font-bold  text-text px-1">Nom du Type</Label>
+                <Label for="name" class="text-sm font-bold  text-text px-1">Type de Contenu</Label>
                 <Input
                   id="name"
                   v-model="form.name"
@@ -624,8 +628,8 @@ const handleCancel = () => {
           <!-- Header de la "table" -->
         <div class="grid grid-cols-[80px_1fr_1fr_1fr] px-6 py-3 bg-muted/20 border-b border-border text-xs font-bold text-text">
           <div>N°</div>
-          <div>Libellé</div>
-          <div>Placeholder</div>
+          <div>Intitulé du champ</div>
+          <div>Texte indicatif</div>
           <div>Type</div>
         </div>
 
@@ -656,7 +660,7 @@ const handleCancel = () => {
                 <span
                   class="font-bold text-primary hover:underline"
                 >
-                  {{ field.label || '(aucun libellé)' }}
+                  {{ field.label || '(aucun intitulé)' }}
                 </span>
 
                 <!-- Mini actions au survol ou si déplié -->
@@ -724,12 +728,12 @@ const handleCancel = () => {
                     <!-- Libellé & Nom -->
                     <div class="col-span-1 space-y-4">
                       <div class="space-y-2">
-                        <Label class="text-xs font-medium text-text">Libellé du champ</Label>
+                        <Label class="text-xs font-medium text-text">Intitulé du champ</Label>
                         <Input v-model="field.label" placeholder="Texte affiché à l'utilisateur" class="input-custom" />
                         <span v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</span>
                       </div>
                       <div class="space-y-2">
-                        <Label class="text-xs font-medium text-text"> Placeholder </Label>
+                        <Label class="text-xs font-medium text-text"> Texte indicatif </Label>
                         <Input v-model="field.placeholder" placeholder="Texte affiché en exemple" class="input-custom"/>
                       </div>
                     </div>
@@ -933,7 +937,7 @@ const handleCancel = () => {
                                 >
                                   <span class="truncate text-center mx-8">
                                     {{ field.allowedTypes.length > 0
-                                        ? `${field.allowedTypes.length} type(s) de fichier selectionée(s)`
+                                        ? `${field.allowedTypes.length} type(s) selectionée(s) : ${field.allowedTypes.join(', ')}`
                                         : "Choisir les types de fichiers..."
                                     }}
                                   </span>

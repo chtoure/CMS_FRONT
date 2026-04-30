@@ -4,11 +4,16 @@ import { applyPositioningInline } from "./common";
 
 const BLOC_LAYOUT_MAPPER = {
   columns: (v: any) => `grid-cols-${v}`,
-  gap: (v: any) => formatDimension('gap', v),
-  direction: (v: any) => v === 'horizontal' ? 'flex-row' : 'flex-col',
-  justify: (v: any) => `justify-${v}`,
-  align: (v: any) => `items-${v}`,
+  gap: (v: any) => '', // Géré en inline style (plus fiable)
+  direction: (v: any) => {
+    const map: Record<string, string> = { horizontal: 'flex-row', vertical: 'flex-col' };
+    return typeof v === 'string' ? map[v] || '' : '';
+  },
+  justify: (v: any) => '', // Géré en inline style
+  align: (v: any) => '',   // Géré en inline style
   padding: (v: any) => formatDimension('p', v),
+  paddingX: (v: any) => formatDimension('px', v),
+  paddingY: (v: any) => formatDimension('py', v),
 };
 
 export function buildBlocLayoutStyles(styles?: Record<string, unknown>, resolver?: (v: unknown) => unknown): string {
@@ -20,7 +25,7 @@ export function buildBlocLayoutStyles(styles?: Record<string, unknown>, resolver
     classes.push(resolveValue(styles.display, (v) => v as string, resolver));
   }
 
-  // Layout Properties
+  // Layout Properties (direction only from class mapper)
   (Object.keys(BLOC_LAYOUT_MAPPER) as Array<keyof typeof BLOC_LAYOUT_MAPPER>).forEach(key => {
     const value = styles[key];
     if (value !== undefined) {
@@ -34,7 +39,8 @@ export function buildBlocLayoutStyles(styles?: Record<string, unknown>, resolver
 export function buildBlocLayoutInlineStyles(
   styles?: Record<string, unknown>,
   breakpoint: 'default' | 'sm' | 'md' | 'lg' = 'default',
-  resolver?: (v: unknown) => unknown
+  resolver?: (v: unknown) => unknown,
+  isBuilderMode: boolean = false
 ): Record<string, string> {
   if (!styles) return {};
   const inline: Record<string, string> = {};
@@ -49,7 +55,23 @@ export function buildBlocLayoutInlineStyles(
     }
   }
 
-  // Gap
+  // Padding Horizontal/Vertical
+  if (styles.paddingX !== undefined) {
+    const val = getValue(styles.paddingX);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.paddingLeft = `${val}px`;
+      inline.paddingRight = `${val}px`;
+    }
+  }
+  if (styles.paddingY !== undefined) {
+    const val = getValue(styles.paddingY);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.paddingTop = `${val}px`;
+      inline.paddingBottom = `${val}px`;
+    }
+  }
+
+  // Gap inline (les classes arbitraires Tailwind ne fonctionnent pas avec valeurs dynamiques)
   if (styles.gap !== undefined) {
     const val = getValue(styles.gap);
     if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
@@ -57,34 +79,41 @@ export function buildBlocLayoutInlineStyles(
     }
   }
 
-  // Grid
-  if (styles.display === 'grid' || getValue(styles.display) === 'grid') {
-    const cols = getValue(styles.columns);
-    if (typeof cols === 'number' && cols > 0) {
-      inline.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
-      inline.display = 'grid';
+  // Comportement exclusif au Builder pour outrepasser les classes Tailwind non-compilées ou les queries de largeur d'écran physique
+  if (isBuilderMode) {
+    const displayVal = getValue(styles.display);
+    if (displayVal !== undefined && displayVal !== null && displayVal !== '') {
+      inline.display = displayVal === 'hidden' ? 'none' : (displayVal as string);
+    }
+    
+    const directionVal = getValue(styles.direction);
+    if (directionVal) {
+      inline.flexDirection = directionVal === 'horizontal' ? 'row' : 'column';
+    }
+
+    const columnsVal = getValue(styles.columns);
+    if (columnsVal && !isNaN(Number(columnsVal))) {
+      inline.gridTemplateColumns = `repeat(${columnsVal}, minmax(0, 1fr))`;
     }
   }
 
-  // Flex Direction
-  const dir = getValue(styles.direction);
-  if (dir) {
-    inline.display = inline.display || 'flex';
-    inline.flexDirection = dir === 'horizontal' ? 'row' : 'column';
-    if (dir === 'horizontal') inline.flexWrap = 'wrap';
-  }
-
-  // Justify & Align
+  // Justify Content inline
   const justify = getValue(styles.justify);
   if (justify) {
-    const map: Record<string, string> = { start: 'flex-start', center: 'center', end: 'flex-end', between: 'space-between' };
-    if (typeof justify === 'string' && map[justify]) inline.justifyContent = map[justify];
+    const justifyMap: Record<string, string> = {
+      start: 'flex-start', center: 'center', end: 'flex-end',
+      between: 'space-between', around: 'space-around', evenly: 'space-evenly'
+    };
+    if (typeof justify === 'string' && justifyMap[justify]) inline.justifyContent = justifyMap[justify];
   }
-  
+
+  // Align Items inline
   const align = getValue(styles.align);
   if (align) {
-    const map: Record<string, string> = { start: 'flex-start', center: 'center', end: 'flex-end', stretch: 'stretch' };
-    if (typeof align === 'string' && map[align]) inline.alignItems = map[align];
+    const alignMap: Record<string, string> = {
+      start: 'flex-start', center: 'center', end: 'flex-end', stretch: 'stretch'
+    };
+    if (typeof align === 'string' && alignMap[align]) inline.alignItems = alignMap[align];
   }
 
   if (styles.bgRepeat) {

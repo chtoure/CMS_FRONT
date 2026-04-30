@@ -47,6 +47,8 @@ const useGetPage = (id: number | Ref<number>) => {
 
 
 const UseRenderPage = (slug: string | Ref<string>) => {
+  console.log("Renndu de page",slug);
+
   return useQuery({
     queryKey: ["renderPage", slug],
     queryFn: async () => {

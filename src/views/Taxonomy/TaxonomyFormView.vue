@@ -139,15 +139,15 @@ const handleCancel = () => {
     <CompositionPageHeader>
       <template #content>
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-          <div class="flex items-center gap-4">
-            <div class="p-4 bg-primary/10 rounded-2xl">
-              <Tags class="h-8 w-8 text-primary" />
+          <div class="flex gap-4 items-center">
+            <div class="p-3 bg-primary rounded-2xl">
+                <Tags stroke-width="1" class="w-8 h-8" />
             </div>
-            <div class="space-y-1">
-              <h1 class="text-huge font-black tracking-tighter leading-none">
-                <span class="text-primary italic">{{ isEditing ? 'Modifier la Catégorie' : 'Créer une Catégorie' }}</span>
-              </h1>
-              <p class="text-background opacity-80 text-lg font-medium">Organiser vos groupes de catégories pour trier vos contenus</p>
+            <div>
+                <h1 class="text-3xl font-black tracking-tighter leading-none">
+                    <span class="text-primary italic">{{ isEditing ? 'Modifier la Catégorie' : 'Créer une Catégorie' }}</span>
+                </h1>
+                <p class="text-muted-foreground text-sm font-medium mt-1 italic">Organiser vos groupes de catégories pour trier vos contenus</p>
             </div>
           </div>
 
@@ -261,20 +261,22 @@ const handleCancel = () => {
                 Les termes sont les valeurs possibles pour cette categorie (ex: pour "vehicule", les termes pourraient être "voiture", "moto", "camion", etc).
               </p>
             </div>
+
+            <div class="flex justify-between gap-4 pb-10">
+              <Button variant="outline" @click="handleCancel" class="rounded-xl h-12 px-4 font-bold bg-destructive hover:bg-destructive hover:text-white text-white">
+                Annuler
+              </Button>
+              <Button @click="handleSubmit" class="rounded-xl h-12 px-4 bg-primary text-white font-bold shadow-lg">
+                <Save class="w-4 h-4 mr-2" />
+                {{ isEditing ? 'Mettre à jour' : 'Créer la categorie' }}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Action Footer (Mobile version / duplication) -->
-      <div class="flex justify-end gap-4 pb-10">
-        <Button variant="outline" @click="handleCancel" class="rounded-xl h-12 px-8 font-bold bg-destructive hover:bg-destructive hover:text-white text-white">
-          Annuler
-        </Button>
-        <Button @click="handleSubmit" class="rounded-xl h-12 px-10 bg-primary text-white font-bold shadow-lg">
-          <Save class="w-4 h-4 mr-2" />
-          {{ isEditing ? 'Mettre à jour' : 'Créer la categorie' }}
-        </Button>
-      </div>
+      
     </div>
   </div>
 </template>

@@ -143,7 +143,7 @@ const filteredVariables = computed(() => {
   return allVarsFromScope
 })
 
-const handleUpdate = async (id: number, field: "name" | "value", newValue: string | number | boolean, type?: VariableType) => {
+const handleUpdate = async (id: number, field: "name" | "value", newValue: string | number | boolean, type?: VariableType, keepEditing: boolean = false) => {
   const stringValue = String(newValue);
   const cleanValue = stringValue.trim();
 
@@ -161,7 +161,9 @@ const handleUpdate = async (id: number, field: "name" | "value", newValue: strin
     }
   }
 
-  editingCell.value = null;
+  if (!keepEditing) {
+    editingCell.value = null;
+  }
 
   updateVar({ id, data: { [field]: cleanValue } }, {
     onSuccess: () => {
@@ -175,10 +177,10 @@ const handleUpdate = async (id: number, field: "name" | "value", newValue: strin
   });
 }
 
-const handleColorChange = (newColor: string) => {
+const handleColorChange = (newColor: string, type?: VariableType) => {
   if (editingCell.value?.id) {
     const hex = newColor.replace('#', '')
-    handleUpdate(editingCell.value.id, 'value', hex)
+    handleUpdate(editingCell.value.id, 'value', hex, type, true)
   }
 }
 
@@ -261,7 +263,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
     <aside v-if="sidebarOpen" class="w-72 h-full sticky top-0 flex-shrink-0 border-r border-border flex flex-col bg-background">
       <div class="p-6 space-y-6 pl-0">
         <div class="flex items-center justify-between">
-          <h2 class="p12 font-bold uppercase tracking-widest text-muted-foreground">Collections</h2>
+          <h2 class="p12 font-bold tracking-widest text-muted-foreground">Collections</h2>
 
           <DropdownMenu v-if="hasPermission(['create_collection'])">
             <DropdownMenuTrigger as-child>
@@ -270,10 +272,10 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent class="border-border p14 font-mono">
-              <DropdownMenuItem class="hover:!bg-primary hover:!text-white" @click="prepareNewCollection('COLOR')"><Palette :size="14" class="mr-2 text-orange-500" :stroke-width="1.2"/> Color</DropdownMenuItem>
-              <DropdownMenuItem class="hover:!bg-primary hover:!text-white" @click="prepareNewCollection('NUMBER')"><Hash :size="14" class="mr-2 text-blue-500" :stroke-width="1.2" /> Number</DropdownMenuItem>
-              <DropdownMenuItem class="hover:!bg-primary hover:!text-white" @click="prepareNewCollection('STRING')"><Type :size="14" class="mr-2 text-green-500" :stroke-width="1.2" /> String</DropdownMenuItem>
-              <DropdownMenuItem class="hover:!bg-primary hover:!text-white" @click="prepareNewCollection('BOOLEAN')"><ToggleLeft :size="14" class="mr-2 text-purple-500" :stroke-width="1.2" /> Boolean</DropdownMenuItem>
+              <DropdownMenuItem class="hover:!bg-primary hover:!text-white" @click="prepareNewCollection('COLOR')"><Palette :size="14" class="mr-2 text-orange-500" :stroke-width="1.2"/> Couleur</DropdownMenuItem>
+              <DropdownMenuItem class="hover:!bg-primary hover:!text-white" @click="prepareNewCollection('NUMBER')"><Hash :size="14" class="mr-2 text-blue-500" :stroke-width="1.2" /> Nombre</DropdownMenuItem>
+              <DropdownMenuItem class="hover:!bg-primary hover:!text-white" @click="prepareNewCollection('STRING')"><Type :size="14" class="mr-2 text-green-500" :stroke-width="1.2" /> Texte</DropdownMenuItem>
+              <DropdownMenuItem class="hover:!bg-primary hover:!text-white" @click="prepareNewCollection('BOOLEAN')"><ToggleLeft :size="14" class="mr-2 text-purple-500" :stroke-width="1.2" /> Vrai/Faux</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -305,15 +307,15 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
                     :class="['flex items-center justify-between px-3 py-1.5 rounded cursor-pointer transition-all font-mono',
                       selectedCollectionId === collection.id ? 'bg-primary text-white' : 'hover:bg-muted']"
                   >
-                    <span class="p14 truncate">{{ collection.name }}</span>
+                    <span class="p14 capitalize truncate">{{ collection.name }}</span>
                     <span class="p11 opacity-60">{{ collection.variables.length }} ({{ collection.type }})</span>
                   </div>
                 </ContextMenuTrigger>
 
                 <ContextMenuContent class="w-auto border-border font-mono">
-                  <ContextMenuItem @click="selectedCollectionId = collection.id"><Edit3 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Open</ContextMenuItem>
+                  <ContextMenuItem @click="selectedCollectionId = collection.id"><Edit3 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Ouvrir</ContextMenuItem>
                   <ContextMenuItem @click="deleteCollection(collection.id)" class="text-destructive">
-                    <Trash2 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Delete
+                    <Trash2 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Supprimer
                   </ContextMenuItem>
                 </ContextMenuContent>
               </ContextMenu>
@@ -354,14 +356,14 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
 
       <div class="flex-1 overflow-y-auto custom-scrollbar">
         <div v-if="isCollectionsError" class="flex justify-center p-8">
-          <CompositionError :error="collectionsError" />
+          <CompositionError :error="collectionsError?.message" />
         </div>
 
         <table v-else-if="filteredVariables.length > 0" class="w-full border-collapse">
-          <thead class="sticky top-0 z-10 bg-background opacity-100 border-b border-border text-muted-foreground p11 uppercase tracking-widest">
+          <thead class="sticky top-0 z-10 bg-background opacity-100 border-b border-border text-muted-foreground p11 tracking-widest">
             <tr>
-              <th class="px-8 py-3 text-left">Name</th>
-              <th class="px-8 py-3 text-left">Value</th>
+              <th class="px-8 py-3 text-left">Nom</th>
+              <th class="px-8 py-3 text-left">Valeur</th>
               <th v-if="searchQuery || selectedCollectionId === 0" class="px-8 py-3 text-left">Collection</th>
               <th v-if="searchQuery || selectedCollectionId === 0" class="px-8 py-3 text-left">Type</th>
             </tr>
@@ -388,7 +390,7 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
                         :is-open="colorPickerOpen && editingCell?.id === v.id"
                         :initial-color="v.value"
                         @close="colorPickerOpen = false; editingCell = null"
-                        @color-change="handleColorChange">
+                        @color-change="(c: string) => handleColorChange(c, v.type)">
                         <template #trigger>
                           <div class="flex items-center gap-3 cursor-pointer" @click="startEditing(v, 'value'); colorPickerOpen = true">
                             <div class="w-6 h-6 rounded border border-border shadow-sm" :style="{ backgroundColor: `#${v.value}` }" />
@@ -440,14 +442,14 @@ const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
 
               <ContextMenuContent class="w-auto border-border font-mono">
                 <ContextMenuItem @click="editingCell = { id: v.id, field: 'name' }">
-                  <Edit3 class="mr-2 h-4 w-4" :stroke-width="1.2"/> Rename
+                  <Edit3 class="mr-2 h-4 w-4" :stroke-width="1.2"/> Renommer
                 </ContextMenuItem>
                 <ContextMenuItem @click="copyToClipboard(v.value)">
                   <Copy class="mr-2 h-4 w-4" :stroke-width="1.2" /> Copier
                 </ContextMenuItem>
                 <ContextMenuSeparator />
                 <ContextMenuItem @click="deleteVariable(v.id)" class="text-destructive">
-                  <Trash2 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Delete
+                  <Trash2 class="mr-2 h-4 w-4" :stroke-width="1.2" /> Supprimer
                 </ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>

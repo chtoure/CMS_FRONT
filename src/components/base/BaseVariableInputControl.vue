@@ -41,17 +41,30 @@ const filteredVariables = computed(() => {
   );
 });
 
-function selectVariable(variableName: string) {
-  emit('update:modelValue', { type: 'variable', value: variableName });
+function selectVariable(variableId: number) {
+  emit('update:modelValue', { type: 'variable', value: variableId });
 }
 
 function detachVariable() {
   // En détachant, on repasse en mode statique.
   // On émet une valeur vide ou par défaut. Le composant parent (via le hook useStyleEditor)
   // gérera la valeur par défaut si nécessaire.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   emit('update:modelValue', { type: 'static', value: '' as any });
 }
 
+const variableName = computed(() => {
+  if (isVariableMode.value) {
+    const val = props.modelValue.value;
+    if (variables.value) {
+        // Recherche strictement par ID
+        const found = variables.value.find(v => Number(v.id) === Number(val));
+        if (found) return found.name;
+    }
+    return val;
+  }
+  return null;
+});
 </script>
 
 <template>
@@ -73,7 +86,7 @@ function detachVariable() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" class="bg-builder-bar-background border-border text-builder-bar-text z-50">
         <DropdownMenuLabel class="text-xs">
-          {{ isVariableMode ? `Lié à : ${modelValue.value}` : 'Non lié' }}
+          {{ isVariableMode ? `Lié à : ${variableName}` : 'Non lié' }}
         </DropdownMenuLabel>
         <DropdownMenuSeparator class="bg-border" />
         
@@ -84,7 +97,7 @@ function detachVariable() {
         <DropdownMenuLabel class="text-xs text-gray-400 pt-2">Lier à...</DropdownMenuLabel>
         <div class="max-h-48 overflow-y-auto">
             <DropdownMenuItem v-if="isLoading" disabled class="select-item-custom">Chargement...</DropdownMenuItem>
-            <DropdownMenuItem v-for="variable in filteredVariables" :key="variable.id" @click="selectVariable(variable.name)" class="select-item-custom cursor-pointer">
+            <DropdownMenuItem v-for="variable in filteredVariables" :key="variable.id" @click="selectVariable(variable.id)" class="select-item-custom cursor-pointer">
               {{ variable.name }}
             </DropdownMenuItem>
             <DropdownMenuItem v-if="!isLoading && filteredVariables.length === 0" disabled class="select-item-custom">

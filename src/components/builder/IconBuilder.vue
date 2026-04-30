@@ -3,6 +3,7 @@ import { computed, inject } from 'vue';
 import type { StaticStyles, AnyComponentInstance } from '../../type/component';
 import { buildIconStyles, buildIconInlineStyles } from '../../lib/style/iconProcessor';
 import { useVariableResolver } from '../../hook/variable';
+import { resolveValueForBreakpoint } from '../../lib/style/core';
 import * as LucideIcons from 'lucide-vue-next';
 
 interface Props {
@@ -43,10 +44,25 @@ const LucideIcon = computed(() => {
 });
 
 const size = computed(() => (resolveValue(props.data?.size) as number) || 24);
+
 const color = computed(() => {
-  const styleColor = resolveValue((props.styles as Record<string, unknown>)?.color) as string;
-  const dataColor = resolveValue(props.data?.color) as string;
-  return styleColor ? (styleColor.startsWith('#') || styleColor.startsWith('rgb') || styleColor.startsWith('hsl') || ['currentColor', 'transparent', 'inherit'].includes(styleColor) ? styleColor : `#${styleColor}`) : (dataColor || 'currentColor');
+  const bp = builderState.currentBreakpoint.value;
+  // Utiliser resolveValueForBreakpoint (comme iconProcessor.ts) pour gérer les valeurs
+  // responsives {default:'#xxx', sm:'#yyy'} ET les VariableProperty {type, value}.
+  const rawColor = (props.styles as Record<string, unknown>)?.color;
+  const styleColor = resolveValueForBreakpoint<string>(rawColor, bp, resolveValue);
+  const dataColor = resolveValue(props.data?.color);
+
+  if (typeof styleColor === 'string') {
+    return (
+      styleColor.startsWith('#') ||
+      styleColor.startsWith('rgb') ||
+      styleColor.startsWith('hsl') ||
+      ['currentColor', 'transparent', 'inherit'].includes(styleColor)
+    ) ? styleColor : `#${styleColor}`;
+  }
+  if (typeof dataColor === 'string') return dataColor;
+  return 'currentColor';
 });
 </script>
 

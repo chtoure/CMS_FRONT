@@ -1,7 +1,147 @@
+<script setup lang="ts">
 
+  import BasePasswordForceInput from '../../components/base/BasePasswordForceInput.vue';
+  import { ref , computed, watch  } from 'vue';
+  import { userStore } from '../../stores/user';
+  import { useUpdateProfile } from '../../hook/user';
+  import CompositionLoading from '@/components/composition/CompositionLoading.vue';
+  import CompositionError from '@/components/composition/CompositionError.vue';
+  import { showToast } from "../../lib/toast"
+  import { validationSchemaProfile } from '../../validation/profileValidate';
+  import { Field, useForm } from 'vee-validate';
+  import { handleError } from '../../lib/error';
+
+
+
+
+
+const store = userStore();
+
+// 1. Initialisation du Formulaire
+const { values, resetForm, handleSubmit } = useForm({
+  validationSchema: validationSchemaProfile,
+  initialValues: {
+    full_name: store.userInfo?.full_name || "",
+    email: store.userInfo?.email || "",
+    password: undefined
+  }
+});
+
+
+
+// États pour la confirmation de mot de passe
+const confirm_new_password = ref(undefined);
+const messageError = ref('');
+
+// Computed pour vérifier la correspondance instantanément (Logique pure)
+const isPasswordMismatch = computed(() => {
+    if (values.password != undefined && confirm_new_password.value  != undefined) {
+      if (values.password == confirm_new_password.value) {
+        return true;
+      }
+      return false;
+    }
+    if (values.password == confirm_new_password.value ) {
+      return true;
+    }
+    return false;
+});
+
+// Surveillance pour mettre à jour le message d'erreur (UI)
+// On surveille les deux champs pour afficher/masquer l'erreur dynamiquement
+watch([() => values.password, confirm_new_password], ([newPass, confirmPass]) => {
+  if (newPass === undefined && confirmPass === undefined) {
+    messageError.value = ''; // Cache l'erreur si tout est vidé (Reset)
+  } else if (confirmPass !== undefined && newPass !== confirmPass) {
+    messageError.value = "Les mots de passe ne correspondent pas.";
+  } else {
+    messageError.value = ''; // Cache l'erreur si ça correspond
+  }
+});
+
+// 4. Calcul des initiales
+const getInitials = (name: string) => {
+  return name
+    .split(' ')
+    .filter(part => part)
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || '?';
+};
+
+const { mutate: updateProfile, isPending: isUpdating ,isError:isUpdateError,error:updateError} = useUpdateProfile();
+// const { data: permissionsRole , isLoading:loadingPerms } = useGetPermissionsRole(store.userInfo?.id || 0)
+
+
+// 5. Logique de soumission
+const onSubmit = handleSubmit((formValues) => {
+  // Sécurité finale
+  console.log(isPasswordMismatch.value);
+
+  if (!isPasswordMismatch.value) {
+    messageError.value = "Les mots de passe ne correspondent pas.";
+    return;
+  }
+
+  const updateData = {
+    full_name: formValues.full_name,
+    email: formValues.email,
+    password: formValues.password || undefined
+  };
+
+  updateProfile(
+    { profileData: updateData, id: store.userInfo?.id || 0 },
+    {
+      onSuccess(data) {
+        const updatedUser = {
+          ...data.user,
+          initials: getInitials(data.user.full_name)
+        };
+
+        console.log('Les données a enregistrer:', updatedUser );
+
+        store.setUserInfo(updatedUser, store.userPermissions || []);
+
+        // Vide les champs Vee-Validate (password devient "")
+        resetForm({ values: { ...formValues, password: "" } });
+
+        // Vide le champ de confirmation local
+        confirm_new_password.value = undefined;
+
+        // Vide explicitement le message d'erreur
+        messageError.value = "";
+
+        showToast('success', 'Profil mis à jour avec succès!');
+      },
+      onError(updateError) {
+        handleError(updateError)
+      }
+    }
+  );
+});
+
+
+const handleCancel = () => {
+
+  // Réinitialise Vee-Validate aux valeurs initiales (userInfo)
+  resetForm({
+    values: {
+      full_name: store.userInfo?.full_name || "",
+      email: store.userInfo?.email || "",
+      password: undefined
+    }
+  });
+
+  // Réinitialise les variables locales que Vee-Validate ne voit pas
+  confirm_new_password.value = undefined;
+  messageError.value = "";
+};
+
+</script>
 
 <template>
-  <CompositionLoading v-if="isUpdating || loadingPerms" />
+  <CompositionLoading v-if="isUpdating" />
   <CompositionError v-else-if="isUpdateError" :error="updateError?.message"/>
 
   <!-- <form v-else @submit.prevent="handleSubmit" class="w-full"> -->
@@ -70,7 +210,7 @@
             <label class=" text-sm/6 font-semibold text-text">Rôle actuel</label>
             <div class="mt-2">
               <span v-if="store.userInfo?.role" class="inline-flex items-center rounded-md bg-background px-3 py-1.5 text-sm font-medium text-primary ring-1 ring-ring">
-                {{ store.userInfo?.role }}
+                {{ store.userInfo?.role.name }}
               </span>
             </div>
           </div>
@@ -79,7 +219,7 @@
             <label class="text-sm/6 font-semibold text-text">Permissions accordées</label>
             <div class="mt-3 flex flex-wrap gap-2">
               <span
-                v-for="perm in permissionsRole"
+                v-for="perm in store.userPermissions"
                 :key="perm.id"
                 class="inline-flex items-center rounded-md bg-background px-2.5 py-1 text-xs font-medium text-primary ring-1 ring-ring"
               >
@@ -111,145 +251,4 @@
   <!-- </form> -->
 </template>
 
-<script setup lang="ts">
 
-  import BasePasswordForceInput from '../../components/base/BasePasswordForceInput.vue';
-  import { ref , computed, watch  } from 'vue';
-  import { userStore } from '../../stores/user';
-  import { useUpdateProfile } from '../../hook/user';
-  import CompositionLoading from '@/components/composition/CompositionLoading.vue';
-  import CompositionError from '@/components/composition/CompositionError.vue';
-  import { showToast } from "../../lib/toast"
-  import { validationSchemaProfile } from '../../validation/profileValidate';
-  import { Field, useForm } from 'vee-validate';
-  import { useGetPermissionsRole } from '../../hook/role';
-import { handleError } from '../../lib/error';
-
-
-
-
-
-const store = userStore();
-
-// 1. Initialisation du Formulaire
-const { values, resetForm, handleSubmit } = useForm({
-  validationSchema: validationSchemaProfile,
-  initialValues: {
-    full_name: store.userInfo?.full_name || "",
-    email: store.userInfo?.email || "",
-    password: undefined
-  }
-});
-
-
-
-// États pour la confirmation de mot de passe
-const confirm_new_password = ref(undefined);
-const messageError = ref('');
-
-// Computed pour vérifier la correspondance instantanément (Logique pure)
-const isPasswordMismatch = computed(() => {
-    if (values.password != undefined && confirm_new_password.value  != undefined) {
-      if (values.password == confirm_new_password.value) {
-        return true;
-      }
-      return false;
-    }
-    if (values.password == confirm_new_password.value ) {
-      return true;
-    }
-    return false;
-});
-
-// Surveillance pour mettre à jour le message d'erreur (UI)
-// On surveille les deux champs pour afficher/masquer l'erreur dynamiquement
-watch([() => values.password, confirm_new_password], ([newPass, confirmPass]) => {
-  if (newPass === undefined && confirmPass === undefined) {
-    messageError.value = ''; // Cache l'erreur si tout est vidé (Reset)
-  } else if (confirmPass !== undefined && newPass !== confirmPass) {
-    messageError.value = "Les mots de passe ne correspondent pas.";
-  } else {
-    messageError.value = ''; // Cache l'erreur si ça correspond
-  }
-});
-
-// 4. Calcul des initiales
-const getInitials = (name: string) => {
-  return name
-    .split(' ')
-    .filter(part => part)
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) || '?';
-};
-
-const { mutate: updateProfile, isPending: isUpdating ,isError:isUpdateError,error:updateError} = useUpdateProfile();
-const { data: permissionsRole , isLoading:loadingPerms } = useGetPermissionsRole(store.userInfo?.id || 0)
-
-
-// 5. Logique de soumission
-const onSubmit = handleSubmit((formValues) => {
-  // Sécurité finale
-  console.log(isPasswordMismatch.value);
-
-  if (!isPasswordMismatch.value) {
-    messageError.value = "Les mots de passe ne correspondent pas.";
-    return;
-  }
-
-  const updateData = {
-    full_name: formValues.full_name,
-    email: formValues.email,
-    password: formValues.password || undefined
-  };
-
-  updateProfile(
-    { profileData: updateData, id: store.userInfo?.id || 0 },
-    {
-      onSuccess(data) {
-        const updatedUser = {
-          ...data.user,
-          initials: getInitials(data.user.full_name)
-        };
-
-        console.log('Les données a enregistrer:', updatedUser );
-
-        store.setUserInfo(updatedUser);
-
-        // Vide les champs Vee-Validate (password devient "")
-        resetForm({ values: { ...formValues, password: "" } });
-
-        // Vide le champ de confirmation local
-        confirm_new_password.value = undefined;
-
-        // Vide explicitement le message d'erreur
-        messageError.value = "";
-
-        showToast('success', 'Profil mis à jour avec succès!');
-      },
-      onError(updateError) {
-        handleError(updateError)
-      }
-    }
-  );
-});
-
-
-const handleCancel = () => {
-
-  // Réinitialise Vee-Validate aux valeurs initiales (userInfo)
-  resetForm({
-    values: {
-      full_name: store.userInfo?.full_name || "",
-      email: store.userInfo?.email || "",
-      password: undefined
-    }
-  });
-
-  // Réinitialise les variables locales que Vee-Validate ne voit pas
-  confirm_new_password.value = undefined;
-  messageError.value = "";
-};
-
-</script>

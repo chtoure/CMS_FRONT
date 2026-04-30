@@ -108,11 +108,16 @@ const handleCreate = () => {
     <CompositionPageHeader>
       <template #content>
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+
           <div class="flex items-center gap-4">
-            <ClipboardList class="h-6 w-6" />
+            <div
+              class="p-3 bg-primary rounded-2xl"
+            >
+              <ClipboardList stroke-width="1" class="w-8 h-8" />
+            </div>
             <div class="space-y-2">
-              <h1 class="text-huge font-black tracking-tighter leading-none"> <span class="text-primary italic">Gestion des types de contenus</span></h1>
-              <p class="text-background opacity-80 text-lg font-medium">Gérez la structure de vos contenus.</p>
+              <h1 class="text-3xl font-black tracking-tighter leading-none"> <span class="text-primary italic">Gestionnaire de types d'article</span></h1>
+              <p class="text-muted-foreground text-sm font-medium mt-1 italic">Gérez l'ensemble de vos types d'article.</p>
             </div>
           </div>
 

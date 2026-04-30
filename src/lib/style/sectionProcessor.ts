@@ -4,11 +4,22 @@ import { VISUAL_MAPPER } from "./shared";
 import { applyPositioningInline } from "./common";
 
 const SECTION_LAYOUT_MAPPER = {
-  direction: (v: any) => v === 'vertical' ? 'flex-col' : 'flex-row',
-  justify: (v: any) => `justify-${v}`,
-  align: (v: any) => `items-${v}`,
-  gap: (v: any) => formatDimension('gap', v),
+  direction: (v: any) => {
+    const map: Record<string, string> = { horizontal: 'flex-row', vertical: 'flex-col' };
+    return typeof v === 'string' ? map[v] || '' : '';
+  },
+  justify: (v: any) => {
+    const map: Record<string, string> = { start: 'justify-start', center: 'justify-center', end: 'justify-end', between: 'justify-between', around: 'justify-around', evenly: 'justify-evenly' };
+    return typeof v === 'string' ? map[v] || '' : '';
+  },
+  align: (v: any) => {
+    const map: Record<string, string> = { start: 'items-start', center: 'items-center', end: 'items-end', stretch: 'items-stretch' };
+    return typeof v === 'string' ? map[v] || '' : '';
+  },
+  gap: (v: any) => '', // Gap géré en inline style
   columns: (v: any) => `grid-cols-${v}`,
+  paddingX: (v: any) => formatDimension('px', v),
+  paddingY: (v: any) => formatDimension('py', v),
 };
 
 export function buildSectionStyles(styles?: Record<string, unknown>, resolver?: (v: unknown) => unknown): string {
@@ -46,7 +57,8 @@ export function buildSectionLayoutStyles(styles?: Record<string, unknown>, resol
 export function buildSectionInlineStyles(
   styles?: Record<string, unknown>,
   breakpoint: 'default' | 'sm' | 'md' | 'lg' = 'default',
-  resolver?: (v: unknown) => unknown
+  resolver?: (v: unknown) => unknown,
+  isBuilderMode: boolean = false
 ): Record<string, string> {
   if (!styles) return {};
   const inline: Record<string, string> = {};
@@ -94,7 +106,23 @@ export function buildSectionInlineStyles(
     }
   }
 
-  // Gap
+  // Padding Horizontal/Vertical
+  if (styles.paddingX !== undefined) {
+    const val = getValue(styles.paddingX);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.paddingLeft = `${val}px`;
+      inline.paddingRight = `${val}px`;
+    }
+  }
+  if (styles.paddingY !== undefined) {
+    const val = getValue(styles.paddingY);
+    if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
+      inline.paddingTop = `${val}px`;
+      inline.paddingBottom = `${val}px`;
+    }
+  }
+
+  // Gap inline (plus fiable que les classes Tailwind arbitraires JIT)
   if (styles.gap !== undefined) {
     const val = getValue(styles.gap);
     if (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) {
@@ -102,12 +130,18 @@ export function buildSectionInlineStyles(
     }
   }
 
-  // Grid
-  if (styles.display === 'grid' || getValue(styles.display) === 'grid') {
-    const cols = getValue(styles.columns);
-    if (typeof cols === 'number' && cols > 0) {
-      inline.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
-    }
+  // Justify Content inline
+  const justify = getValue(styles.justify);
+  if (justify) {
+    const justifyMap: Record<string, string> = { start: 'flex-start', center: 'center', end: 'flex-end', between: 'space-between', around: 'space-around', evenly: 'space-evenly' };
+    if (typeof justify === 'string' && justifyMap[justify]) inline.justifyContent = justifyMap[justify];
+  }
+
+  // Align Items inline
+  const align = getValue(styles.align);
+  if (align) {
+    const alignMap: Record<string, string> = { start: 'flex-start', center: 'center', end: 'flex-end', stretch: 'stretch' };
+    if (typeof align === 'string' && alignMap[align]) inline.alignItems = alignMap[align];
   }
 
   // Borders

@@ -34,7 +34,8 @@ const useCreateVariable = () => {
       }));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['variables', 'collections'] });
+      queryClient.invalidateQueries({ queryKey: ['variables'] });
+      queryClient.invalidateQueries({ queryKey: ['collections'] });
     }
   });
 };
@@ -49,7 +50,8 @@ const useUpdateVariable = () => {
       }));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['variables', 'collections'] });
+      queryClient.invalidateQueries({ queryKey: ['variables'] });
+      queryClient.invalidateQueries({ queryKey: ['collections'] });
     }
   });
 };
@@ -69,7 +71,8 @@ const useDeleteVariable = () => {
       }));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['variables', 'collections'] });
+      queryClient.invalidateQueries({ queryKey: ['variables'] });
+      queryClient.invalidateQueries({ queryKey: ['collections'] });
     }
   });
 };
@@ -113,8 +116,12 @@ const useVariableResolver = () => {
   const { data: variables, isLoading } = useGetVariables();
 
   const variableMap = computed(() => {
-    if (!variables.value) return new Map<string, string>();
-    return new Map(variables.value.map(v => [v.name, v.value]));
+    if (!variables.value) return Object.create(null) as Record<string, string>;
+    return variables.value.reduce<Record<string, string>>((acc, v) => {
+      // Indexer uniquement par ID
+      acc[String(v.id)] = v.value;
+      return acc;
+    }, {});
   });
 
   const resolveValue = <T>(prop: VariableProperty<T> | T | undefined): T | string | undefined => {
@@ -122,9 +129,15 @@ const useVariableResolver = () => {
 
     // Si c'est une VariableProperty
     if (typeof prop === 'object' && prop !== null && 'type' in prop && 'value' in prop) {
-       const varProp = prop as VariableProperty<T>;
+       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       const varProp = prop as VariableProperty<any>;
        if (varProp.type === 'variable') {
-         return variableMap.value.get(varProp.value) ?? varProp.value;
+         // lookup value inside the map
+         return (variableMap.value[String(varProp.value)] ?? varProp.value) as T | string;
+       }
+       // Récursion si la valeur interne est elle-même un wrapper (ex: { type: 'static', value: { type: 'variable' } })
+       if (typeof varProp.value === 'object' && varProp.value !== null && 'type' in varProp.value) {
+         return resolveValue(varProp.value);
        }
        return varProp.value;
     }

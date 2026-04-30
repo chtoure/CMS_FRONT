@@ -1,3 +1,4 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router';
 import { computed, watchEffect, ref, onMounted, onUnmounted, provide } from 'vue';
@@ -61,6 +62,10 @@ watchEffect(() => {
   if (p.family_name) {
     loadGoogleFont(p.family_name);
     document.body.style.fontFamily = `'${p.family_name}', sans-serif`;
+    const renderRoot = document.getElementById('site-render-root');
+    if (renderRoot) {
+      renderRoot.style.fontFamily = `'${p.family_name}', sans-serif`;
+    }
   }
 
   // ── Meta SEO ─────────────────────────────────────────────────────
@@ -103,6 +108,11 @@ watchEffect(() => {
   if (page.value === null || (getError.value instanceof ApiError && getError.value.status === 404)) {
     router.push({ name: 'builder.notfound' });
   }
+});
+
+const sortedLayout = computed(() => {
+  if (!page.value?.layout) return [];
+  return [...page.value.layout].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
 });
 
 // Gestion responsive
@@ -172,7 +182,7 @@ provide('siteParams', siteParams);
 
     <div v-else-if="page && page.layout">
       <BlocRenderView
-        v-for="section in page.layout"
+        v-for="section in sortedLayout"
         :key="section.id"
         :element="section"
       />

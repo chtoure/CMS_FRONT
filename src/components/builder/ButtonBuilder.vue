@@ -132,9 +132,19 @@ const commitEdit = () => {
   isEditing.value = false;
   const newContent = editorRef.value?.innerText?.trim() ?? '';
   if (newContent !== content.value) {
+    // Mettre à jour data.content ET params[].type.value pour que la valeur
+    // soit correctement sauvegardée (le rendu lit depuis params lors du rechargement)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const newParams = (props.element.params || []).map((p: any) => {
+      if (p.name === 'content' && p.type?.source === 'static') {
+        return { ...p, type: { ...p.type, value: newContent } };
+      }
+      return p;
+    });
     emit('update:element', {
       ...props.element,
-      data: { ...props.element.data, content: newContent }
+      data: { ...props.element.data, content: newContent },
+      params: newParams
     });
   }
 };

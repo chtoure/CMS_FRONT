@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { FileText, Plus, MoreHorizontal, Pencil, Trash2, Eye, Lock, Archive } from 'lucide-vue-next'
+import { FileText, Plus, MoreHorizontal, Pencil, Eye, Lock, Archive } from 'lucide-vue-next'
 import { Button } from '../../components/ui/button'
 import { cn } from '../../lib/utils'
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
@@ -111,7 +111,7 @@ interface ContentEntryStub {
 // 1. Colonnes de la table
 const columns = [
   { key: 'id', label: 'ID', class: 'w-16' },
-  { key: 'title', label: 'Titre' , class: 'w-1/2'},
+  { key: 'title', label: 'Texte Indicateur' , class: 'w-1/2'},
   { key: 'user', label: 'Auteur', class: 'w-1/4' },
   { key: 'status', label: 'Statut', class: 'w-1/4' },
   { key: 'actions', label: 'Actions', class: 'w-1/4' },
@@ -158,15 +158,13 @@ const navigateToPreview = (entryId: number) => {
     <CompositionPageHeader>
       <template #content>
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-          <div class="flex gap-4 items-center">
-            <div class="p-3 bg-primary/10 rounded-2xl">
-              <FileText class="h-6 w-6" />
+          <div class="flex gap-3 items-center">
+            <div class="p-3 bg-primary rounded-2xl">
+              <FileText stroke-width="1" class="h-8 w-8" />
             </div>
-            <div class="space-y-1">
-              <h1 class="text-huge font-black tracking-tighter leading-none">
-                <span class="text-primary italic">Entrées de contenu {{ contentType?.name }}</span>
-              </h1>
-              <p class="text-background text-sm font-medium">Gérez l'ensemble de vos contenus dynamiques.</p>
+            <div class="space-y-2">
+              <h1 class="text-3xl font-black tracking-tighter leading-none"> <span class="text-primary italic">Entrées de contenu {{ contentType?.name }}</span></h1>
+              <p class="text-muted-foreground text-sm font-medium mt-1 italic">Gérez l'ensemble de vos contenus dynamiques.</p>
             </div>
           </div>
           <div v-if="hasPermission(['create_content_entry'])" class="flex items-center gap-4">
@@ -246,12 +244,6 @@ const navigateToPreview = (entryId: number) => {
                     <Pencil class="w-4 h-4" /> Modifier
                   </button>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator v-if="hasPermission(['delete_content_entry'])" />
-                <DropdownMenuItem v-if="hasPermission(['delete_content_entry'])" class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
-                  <button class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
-                    <Trash2 class="w-4 h-4" /> Supprimer
-                  </button>
-                </DropdownMenuItem>
                 <DropdownMenuSeparator v-if="hasPermission(['update_content_entry'])" />
                 <DropdownMenuItem v-if="hasPermission(['update_content_entry'])" class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
                   <button @click="handleSwitchStatus(row)" class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
@@ -261,7 +253,7 @@ const navigateToPreview = (entryId: number) => {
                 <DropdownMenuSeparator v-if="hasPermission(['delete_content_entry'])"/>
                 <DropdownMenuItem v-if="hasPermission(['delete_content_entry'])" class="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors focus:bg-destructive/10 focus:text-destructive">
                   <button @click="handleArchiveContentEntry(row)" class="text-text hover:text-primary p-2 flex items-center gap-2 transition-all hover:scale-110">
-                    <Archive class="w-4 h-4" /> Archiver
+                    <Archive class="w-4 h-4" /> Supprimer
                   </button>
                 </DropdownMenuItem>
               </DropdownMenuContent>

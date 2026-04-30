@@ -30,35 +30,51 @@ export function useStyleEditor(initialElement: AnyComponentInstance | AnySection
     const bp = builderState.currentBreakpoint.value;
 
     Object.entries(updates).forEach(([key, value]) => {
-      let finalValue;
-
-      if (typeof value === 'object' && value !== null && 'type' in value && 'value' in value) {
-        finalValue = value;
-      } else {
-        const currentProp = (initialElement.styles as any)[key] as VariableProperty<any> | undefined;
-        if (currentProp?.type === 'variable') {
-            console.warn(`Cannot apply responsive edit to a property linked to a variable.`);
-            return;
-        }
-
-        const currentStaticValue = currentProp?.value;
-
-        if (bp === 'default') {
-          if (typeof currentStaticValue === 'object' && currentStaticValue !== null && 'default' in currentStaticValue) {
-            finalValue = { type: 'static', value: { ...currentStaticValue, default: value } };
-          } else {
-            finalValue = { type: 'static', value: value };
-          }
+      // Lire la valeur actuelle existante (le wrapper VariableProperty/static)
+      const currentWrapper = (initialElement.styles as any)[key] as { type: string; value: any } | undefined;
+      
+      // Extraire la valeur "interne" si c'est un wrapper statique, sinon la valeur brute
+      let currentInnerValue: any;
+      if (currentWrapper && typeof currentWrapper === 'object' && 'type' in currentWrapper && 'value' in currentWrapper) {
+        if (currentWrapper.type === 'static') {
+          currentInnerValue = currentWrapper.value;
         } else {
-          let newResponsiveValue;
-          if (typeof currentStaticValue === 'object' && currentStaticValue !== null && 'default' in currentStaticValue) {
-            newResponsiveValue = { ...currentStaticValue, [bp]: value };
-          } else {
-            newResponsiveValue = { default: currentStaticValue, [bp]: value };
-          }
-          finalValue = { type: 'static', value: newResponsiveValue };
+          // C'est une variable racine - on la remplace entièrement
+          currentInnerValue = undefined;
+        }
+      } else {
+        // Valeur legacy ou undefined
+        currentInnerValue = currentWrapper;
+      }
+
+      // Déterminer si la valeur interne est un objet responsif
+      const isResponsiveObj = typeof currentInnerValue === 'object' && currentInnerValue !== null && 
+                              ('default' in currentInnerValue || 'sm' in currentInnerValue || 'md' in currentInnerValue || 'lg' in currentInnerValue);
+
+      let finalValue: any;
+
+      if (bp === 'default') {
+        if (isResponsiveObj) {
+          // Mettre à jour la clé 'default' en conservant les autres breakpoints
+          finalValue = { type: 'static', value: { ...currentInnerValue, default: value } };
+        } else {
+          // Première affectation ou valeur scalaire simple
+          finalValue = { type: 'static', value: value };
+        }
+      } else {
+        if (isResponsiveObj) {
+          // Ajouter/mettre à jour le breakpoint spécifique sans toucher aux autres
+          finalValue = { type: 'static', value: { ...currentInnerValue, [bp]: value } };
+        } else if (currentInnerValue !== undefined) {
+          // On avait une valeur scalaire 'default', on crée un objet responsif
+          finalValue = { type: 'static', value: { default: currentInnerValue, [bp]: value } };
+        } else {
+          // Aucune valeur précédente: on stocke SEULEMENT pour ce breakpoint,
+          // sans créer de clé 'default: undefined' qui polluerait la cascade
+          finalValue = { type: 'static', value: { [bp]: value } };
         }
       }
+
       (initialElement.styles as any)[key] = finalValue;
     });
   };
@@ -81,15 +97,49 @@ export function useStyleEditor(initialElement: AnyComponentInstance | AnySection
     }
 
     const bp = builderState?.currentBreakpoint.value || 'default';
-    if (typeof valueToProcess === 'object' && valueToProcess !== null && 'default' in valueToProcess) {
+    const isResponsiveObj = typeof valueToProcess === 'object' && valueToProcess !== null && 
+                            ('default' in valueToProcess || 'sm' in valueToProcess || 'md' in valueToProcess || 'lg' in valueToProcess);
+
+    let nodeToProcess = valueToProcess;
+
+    if (isResponsiveObj) {
       const res = valueToProcess as any;
-      if (res[bp] !== undefined) return res[bp];
-      if (bp === 'lg' && res.md !== undefined) return res.md;
-      if ((bp === 'lg' || bp === 'md') && res.sm !== undefined) return res.sm;
-      return res.default;
+      if (res[bp] !== undefined) nodeToProcess = res[bp];
+      else if (bp === 'lg' && res.md !== undefined) nodeToProcess = res.md;
+      else if ((bp === 'lg' || bp === 'md') && res.sm !== undefined) nodeToProcess = res.sm;
+      else nodeToProcess = res.default;
     }
 
-    return (typeof valueToProcess === 'string' || typeof valueToProcess === 'number') ? valueToProcess : undefined;
+    if (typeof nodeToProcess === 'object' && nodeToProcess !== null && 'type' in nodeToProcess && 'value' in nodeToProcess) {
+      return nodeToProcess.value as string | number | undefined;
+    }
+
+    return (typeof nodeToProcess === 'string' || typeof nodeToProcess === 'number') ? nodeToProcess : undefined;
+  };
+
+  const getRawNode = (prop: unknown): any => {
+    if (!prop) return undefined;
+    let valueToProcess = prop;
+    if (typeof prop === 'object' && prop !== null && 'type' in prop && 'value' in prop) {
+        const varProp = prop as VariableProperty<any>;
+        if (varProp.type === 'variable') return varProp;
+        valueToProcess = varProp.value;
+    }
+    const bp = builderState?.currentBreakpoint.value || 'default';
+    const isResponsiveObj = typeof valueToProcess === 'object' && valueToProcess !== null && 
+                            ('default' in valueToProcess || 'sm' in valueToProcess || 'md' in valueToProcess || 'lg' in valueToProcess);
+
+    let nodeToProcess = valueToProcess;
+    
+    if (isResponsiveObj) {
+      const res = valueToProcess as any;
+      if (res[bp] !== undefined) nodeToProcess = res[bp];
+      else if (bp === 'lg' && res.md !== undefined) nodeToProcess = res.md;
+      else if ((bp === 'lg' || bp === 'md') && res.sm !== undefined) nodeToProcess = res.sm;
+      else nodeToProcess = res.default;
+    }
+
+    return nodeToProcess;
   };
 
   const getResolvedValue = (prop: unknown): any => {
@@ -120,6 +170,7 @@ export function useStyleEditor(initialElement: AnyComponentInstance | AnySection
 
   return {
     builderState,
+    getRawNode,
     getRawValue,
     getResolvedValue,
     getHexValue,

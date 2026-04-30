@@ -3,11 +3,7 @@ import { ref, computed, inject } from 'vue';
 import type { AnyComponentInstance, CliquableAction } from '../../../type/component';
 import PropertyGroup from '../ui/PropertyGroup.vue';
 import PropertyInput from '../ui/PropertyInput.vue';
-import Select from '../../../components/ui/select/Select.vue';
-import SelectTrigger from '../../../components/ui/select/SelectTrigger.vue';
-import SelectValue from '../../../components/ui/select/SelectValue.vue';
-import SelectContent from '../../../components/ui/select/SelectContent.vue';
-import SelectItem from '../../../components/ui/select/SelectItem.vue';
+import CompositionMediaPicker from '../../composition/CompositionMediaPicker.vue';
 import Popover from '../../../components/ui/popover/Popover.vue';
 import PopoverTrigger from '../../../components/ui/popover/PopoverTrigger.vue';
 import PopoverContent from '../../../components/ui/popover/PopoverContent.vue';
@@ -63,27 +59,21 @@ const allComponents = computed(() => {
     <PropertyGroup title="Actions & Liens" :icon="MousePointer2" :open="true">
       <div v-if="element.data.cliquable && typeof element.data.cliquable === 'object'" class="space-y-4">
         <div class="space-y-1 flex flex-col">
-          <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Action au clic</label>
-          <Select :model-value="((element.data.cliquable as CliquableAction).action)" @update:model-value="(val) => val && updateData('cliquable', { ...(element.data.cliquable as object), action: val as CliquableAction['action'] })">
-            <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
-              <SelectValue placeholder="Action" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="NAVIGATE_TO">
-                <span class="text-[10px]">Naviguer vers URL</span>
-              </SelectItem>
-              <SelectItem value="SHOW_ALERT">
-                <span class="text-[10px]">Afficher Alerte</span>
-              </SelectItem>
-              <SelectItem value="TOGGLE_VISIBILITY">
-                <span class="text-[10px]">Toggle Visibilité</span>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Action au clic</label>
+          <select
+            :value="((element.data.cliquable as CliquableAction).action)"
+            @change="(e) => updateData('cliquable', { ...(element.data.cliquable as object), action: (e.target as HTMLSelectElement).value as CliquableAction['action'] })"
+            class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary"
+          >
+            <option value="NAVIGATE_TO">Naviguer vers URL</option>
+            <option value="SHOW_ALERT">Afficher Alerte</option>
+            <option value="DOWNLOAD_MEDIA">Télécharger Média</option>
+            <option value="TOGGLE_VISIBILITY">Toggle Visibilité</option>
+          </select>
         </div>
 
         <div v-if="(element.data.cliquable as CliquableAction).action === 'NAVIGATE_TO'" class="space-y-1">
-          <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">URL de destination</label>
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">URL de destination</label>
           <div class="relative">
             <Popover v-model:open="urlSearchOpen">
               <PopoverTrigger as-child>
@@ -91,7 +81,7 @@ const allComponents = computed(() => {
                   ref="urlSearchRef"
                   variant="outline"
                   role="combobox"
-                  class="input-custom justify-between w-full font-normal h-8 text-[10px] bg-builder-input-bg border-builder-bar-border"
+                  class="input-custom justify-between w-full font-normal h-7 px-2 text-[10px] bg-builder-input-bg border-builder-bar-border !text-builder-bar-text hover:!border-primary transition-colors"
                 >
                   <span class="truncate">
                     {{ (element.data.cliquable as any).action_params?.url || "Saisir ou choisir une page..." }}
@@ -102,14 +92,14 @@ const allComponents = computed(() => {
               <PopoverContent :style="{ width: `${urlSearchWidth}px` }" class="p-0 border-builder-bar-border bg-builder-bar-background shadow-2xl">
                 <Command class="bg-builder-bar-background">
                   <CommandInput placeholder="Rechercher une page..." class="h-8 text-[10px] text-builder-bar-text" />
-                  <CommandEmpty class="py-2 text-[10px] text-center text-builder-bar-text/40">Aucune page trouvée.</CommandEmpty>
-                  <CommandList class="custom-scrollbar max-h-[200px] overflow-y-auto">
-                    <CommandGroup heading="Pages existantes" class="text-[9px] text-primary uppercase font-bold px-2 py-1">
+                  <CommandEmpty class="py-2 text-[10px] text-center text-builder-bar-text/40 italic">Aucune page trouvée.</CommandEmpty>
+                  <CommandList class="custom-scrollbar max-h-[200px] overflow-y-auto p-1">
+                    <CommandGroup heading="Pages existantes" class="text-[9px] text-primary uppercase font-bold px-1 py-1 tracking-widest">
                       <CommandItem
                         v-for="item in navItemsResults"
                         :key="item.value"
                         :value="item.label"
-                        class="text-[10px] text-builder-bar-text hover:bg-primary hover:text-white cursor-pointer px-2 py-1.5 flex items-center gap-2"
+                        class="text-[10px] text-builder-bar-text hover:bg-primary/20 hover:text-primary cursor-pointer px-2 py-1.5 flex items-center gap-2 rounded-none transition-colors"
                         @select="() => {
                           updateData('cliquable', { ...(element.data.cliquable as object), action_params: { url: item.value } });
                           urlSearchOpen = false;
@@ -126,17 +116,16 @@ const allComponents = computed(() => {
                       </CommandItem>
                     </CommandGroup>
 
-                    <CommandSeparator class="bg-builder-bar-border/30" />
-
-                    <CommandGroup heading="Saisie personnalisée" class="text-[9px] text-primary uppercase font-bold px-2 py-1">
+                    <CommandSeparator class="bg-builder-bar-border/30 mx-1" />
+                    <CommandGroup heading="Saisie personnalisée" class="text-[9px] text-primary uppercase font-bold px-1 py-1 tracking-widest">
                        <div class="p-2">
                          <input
                            type="text"
                            :value="(element.data.cliquable as any).action_params?.url"
                            @input="(e) => updateData('cliquable', { ...(element.data.cliquable as object), action_params: { url: (e.target as HTMLInputElement).value } })"
-                           @keydown.enter="urlSearchOpen = false"
+                           @keydown.enter="(e) => { (e.target as HTMLInputElement).blur(); updateData('cliquable', { ...(element.data.cliquable as object), action_params: { url: (e.target as HTMLInputElement).value } }); urlSearchOpen = false }"
                            placeholder="Ex: https://google.com"
-                           class="w-full bg-builder-bar-background border border-builder-bar-border rounded px-2 py-1 text-[10px] focus:outline-none focus:border-primary"
+                           class="w-full bg-builder-input-bg border border-builder-bar-border rounded px-2 py-1.5 text-[10px] text-builder-bar-text focus:outline-none focus:border-primary transition-colors font-mono"
                          />
                        </div>
                     </CommandGroup>
@@ -144,6 +133,25 @@ const allComponents = computed(() => {
                 </Command>
               </PopoverContent>
             </Popover>
+          </div>
+        </div>
+
+        <div v-if="(element.data.cliquable as CliquableAction).action === 'DOWNLOAD_MEDIA'" class="space-y-2">
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Fichier à télécharger</label>
+          <div class="flex flex-col gap-2">
+            <span v-if="(element.data.cliquable as any).action_params?.filename" class="text-[10px] text-green-500 font-medium truncate px-1">
+              Fichier lié : {{ (element.data.cliquable as any).action_params?.filename }}
+            </span>
+            <div class="w-full overflow-hidden">
+              <CompositionMediaPicker
+                :model-value="undefined"
+                @media-selected="(media) => updateData('cliquable', {
+                  ...(element.data.cliquable as object),
+                  action_params: { url: media.file_path, filename: media.file_name || 'download' }
+                })"
+                trigger-text="Sélectionner un média..."
+              />
+            </div>
           </div>
         </div>
 
@@ -157,29 +165,22 @@ const allComponents = computed(() => {
         </div>
 
         <div v-if="(element.data.cliquable as CliquableAction).action === 'TOGGLE_VISIBILITY'" class="space-y-1 flex flex-col">
-          <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Composant cible</label>
-          <Select
-            :model-value="((element.data.cliquable as Extract<CliquableAction, { action: 'TOGGLE_VISIBILITY' }>).action_params?.targetId)"
-            @update:model-value="(val) => val && updateData('cliquable', { ...(element.data.cliquable as object), action_params: { targetId: val } })"
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Composant cible</label>
+          <select
+            :value="((element.data.cliquable as Extract<CliquableAction, { action: 'TOGGLE_VISIBILITY' }>).action_params?.targetId)"
+            @change="(e) => updateData('cliquable', { ...(element.data.cliquable as object), action_params: { targetId: (e.target as HTMLSelectElement).value } })"
+            class="w-full h-7 bg-builder-input-bg border border-builder-bar-border rounded text-[10px] px-2 outline-none focus:border-primary"
           >
-            <SelectTrigger class="h-7 text-[10px] bg-builder-input-bg border-builder-bar-border">
-              <SelectValue placeholder="Choisir un composant..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem v-if="allComponents.length === 0" disabled value="none">
-                <span class="text-[10px]">Aucun trouvé</span>
-              </SelectItem>
-              <SelectItem
-                v-for="comp in allComponents"
-                :key="comp.stableId"
-                :value="comp.stableId"
-              >
-                <div class="flex flex-col gap-0.5">
-                  <span class="text-[10px] font-medium">{{ comp.name || comp.tag }}</span>
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+            <option v-if="allComponents.length === 0" disabled value="">Aucun trouvé</option>
+            <option v-else value="" disabled>Choisir un composant...</option>
+            <option
+              v-for="comp in allComponents"
+              :key="comp.stableId"
+              :value="comp.stableId"
+            >
+              {{ comp.name || comp.tag }}
+            </option>
+          </select>
         </div>
       </div>
     </PropertyGroup>

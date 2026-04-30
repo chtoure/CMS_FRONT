@@ -1,18 +1,20 @@
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
-import { computed, inject, ref, onMounted, onUnmounted, watch } from 'vue';
+import { computed, inject, provide, ref, onMounted, onUnmounted, watch } from 'vue';
 import type { ContainerStyles, AnyComponentInstance } from '../../type/component';
 import { buildBlocLayoutStyles, buildBlocLayoutInlineStyles } from '../../lib/style/blocProcessor';
 import { buildSliderConfig, buildSliderArrowStyles, buildSliderPaginationStyles } from '../../lib/style/sliderProcessor';
 import { applyVisualInline } from '../../lib/style/common';
-import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { filterResponsiveClasses } from '../../lib/style/core';
 import { useVariableResolver } from '../../hook/variable';
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 
 interface Props {
   styles?: ContainerStyles;
   data?: Record<string, any>;
   element?: AnyComponentInstance;
   children?: AnyComponentInstance[];
+  totalSlidesCount?: number; // Nombre réel de slides incluant les clones dynamiques CMS
 }
 
 const props = defineProps<Props>();
@@ -21,18 +23,27 @@ const builderState = inject<{
   currentBreakpoint: { value: 'default' | 'sm' | 'md' | 'lg' };
   isDragging: { value: boolean };
   selectedId: { value: string | null };
+  xRayMode: { value: boolean };
 }>('builderState', {
   currentBreakpoint: { value: 'default' },
   isDragging: { value: false },
-  selectedId: { value: null }
+  selectedId: { value: null },
+  xRayMode: { value: false }
 } as any);
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const isXRayMode = computed(() => builderState?.xRayMode?.value ?? false);
+const isBuilder = inject('isBuilder', false) as boolean;
 
 const { resolveValue } = useVariableResolver();
 
 const currentSlide = ref(0);
 
 const computedClasses = computed(() => {
-  return buildBlocLayoutStyles(props.styles as Record<string, unknown>, resolveValue);
+  return filterResponsiveClasses(
+    buildBlocLayoutStyles(props.styles as Record<string, unknown>, resolveValue),
+    builderState.currentBreakpoint.value
+  );
 });
 
 const computedInlineStyles = computed(() => {
@@ -40,7 +51,7 @@ const computedInlineStyles = computed(() => {
   const styles = props.styles as Record<string, unknown> || {};
 
   const inline = {
-    ...buildBlocLayoutInlineStyles(styles, bp, resolveValue)
+    ...buildBlocLayoutInlineStyles(styles, bp, resolveValue, true)
   };
 
   // Appliquer les styles visuels (fond, bordures, arrondis, ombres)
@@ -56,14 +67,16 @@ const sliderConfig = computed(() => {
 
   return {
     ...config,
-    slidesPerView: resolveValue((props.styles as any)?.slidesPerView) ?? resolveValue(props.data?.slidesPerView) ?? config.slidesPerView,
+    gap: resolveValue(props.data?.gap) ?? config.gap,
+    // slidesPerView est déjà résolu correctement par buildSliderConfig (resolveValueForBreakpoint + parseInt)
+    // On ne le surcharge PAS ici pour ne pas casser la résolution par breakpoint.
     transitionDuration: resolveValue(props.data?.transitionDuration) ?? config.transitionDuration,
     transitionEase: resolveValue(props.data?.transitionEase) ?? config.transitionEase,
-    autoplay: resolveValue(props.data?.autoPlay) ?? config.autoplay,
+    autoplay: resolveValue(props.data?.autoPlay) === true,
     autoplaySpeed: resolveValue(props.data?.speed) ?? config.autoplaySpeed,
-    showPagination: resolveValue(props.data?.showPagination) !== false,
-    showArrows: resolveValue(props.data?.showArrows) !== false,
-    loop: resolveValue(props.data?.loop) !== false,
+    showPagination: resolveValue(props.data?.showPagination) === true,
+    showArrows: resolveValue(props.data?.showArrows) === true,
+    loop: resolveValue(props.data?.loop) === true,
   };
 });
 
@@ -78,38 +91,62 @@ const paginationStyles = computed(() => {
 });
 
 const slidesPerView = computed(() => {
-  return sliderConfig.value.slidesPerView || 1;
+  const v = Number(sliderConfig.value.slidesPerView);
+  return (Number.isFinite(v) && v > 0) ? v : 1;
 });
 
 const slidesCount = computed(() => {
+  // Si le parent a calculé le vrai total (original + clones CMS), on l'utilise.
+  // Sinon, on retombe sur le nombre d'enfants statiques.
+  if (props.totalSlidesCount !== undefined && props.totalSlidesCount > 0) {
+    return props.totalSlidesCount;
+  }
   return props.children ? props.children.length : 0;
 });
 
+// Nombre de pages = ceil(slides / par page)
+const totalPages = computed(() => {
+  const count = slidesCount.value || 0;
+  const perView = slidesPerView.value || 1;
+  return Math.max(1, Math.ceil(count / perView));
+});
+
+// Index MAX que peut prendre currentSlide = (totalPages - 1) * slidesPerView
+// = l'indice du premier élément de la dernière page
 const maxSlideIndex = computed(() => {
-  return Math.max(0, slidesCount.value - slidesPerView.value);
+  return (totalPages.value - 1) * slidesPerView.value;
+});
+
+// Indice de page courant (0-based)
+const currentPage = computed(() => {
+  return Math.floor(currentSlide.value / slidesPerView.value);
 });
 
 const nextSlide = () => {
   if (slidesCount.value <= slidesPerView.value) return;
-  if (currentSlide.value >= maxSlideIndex.value) {
+  if (currentPage.value >= totalPages.value - 1) {
     if (sliderConfig.value.loop) currentSlide.value = 0;
   } else {
-    currentSlide.value++;
+    currentSlide.value = Math.min(maxSlideIndex.value, currentSlide.value + slidesPerView.value);
   }
 };
 
 const prevSlide = () => {
   if (slidesCount.value <= slidesPerView.value) return;
-  if (currentSlide.value <= 0) {
+  if (currentPage.value <= 0) {
     if (sliderConfig.value.loop) currentSlide.value = maxSlideIndex.value;
   } else {
-    currentSlide.value--;
+    currentSlide.value = Math.max(0, currentSlide.value - slidesPerView.value);
   }
 };
-const goToSlide = (index: number) => { currentSlide.value = index; };
+
+// goToSlide reçoit un index de PAGE (0, 1, 2...) et le convertit en indice d'élément
+const goToSlide = (pageIndex: number) => {
+  currentSlide.value = Math.min(maxSlideIndex.value, pageIndex * slidesPerView.value);
+};
 
 const isAnySelected = computed(() => {
-  const selectedId = builderState.selectedId.value;
+  const selectedId = builderState?.selectedId?.value;
   if (!selectedId) return false;
   if (selectedId === props.element?.id) return true;
 
@@ -124,12 +161,46 @@ const isAnySelected = computed(() => {
   return checkChildren(props.children || []);
 });
 
+const slideWidthCSS = computed(() => {
+  const items = slidesPerView.value;
+  const gapValue = parseInt(String(sliderConfig.value.gap)) || 0;
+  return `calc((100% - ${(items - 1) * gapValue}px) / ${items})`;
+});
+
+const slideTransformCSS = computed(() => {
+  const items = slidesPerView.value;
+  const gapValue = parseInt(String(sliderConfig.value.gap)) || 0;
+  const current = currentSlide.value;
+  if (current === 0) return 'translateX(0px)';
+  return `translateX(calc(-${current} * (100% + ${gapValue}px) / ${items}))`;
+});
+
+const sliderCSSVars = computed(() => {
+  return {
+    '--slider-gap': `${parseInt(String(sliderConfig.value.gap)) || 0}px`,
+    '--slide-width': slideWidthCSS.value
+  };
+});
+
+// Transmettre la largeur aux wrappers .slider-slide dans BlocRender via inject
+provide('sliderSlideWidth', slideWidthCSS);
+
 const isHovered = ref(false);
 const autoplayInterval = ref<any>(null);
 
 const startAutoplay = () => {
-  if (!sliderConfig.value.autoplay || isAnySelected.value) return;
+  // Toujours effacer l'intervalle précédent avant de relancer ou d'évaluer la condition
   stopAutoplay();
+
+  // En mode builder : bloquer l'autoplay seulement si un ENFANT est sélectionné (pas le slider lui-même)
+  // En mode rendu : bloquer si n'importe quel élément du slider est sélectionné
+  const blockAutoplay = isBuilder
+    ? (builderState?.selectedId?.value !== props.element?.id && isAnySelected.value)
+    : isAnySelected.value;
+
+  // Si on a décoché l'autoplay ou qu'on édite un élément interne, on ne relance pas
+  if (!sliderConfig.value.autoplay || blockAutoplay) return;
+
   autoplayInterval.value = setInterval(() => {
     if (!isHovered.value) {
       nextSlide();
@@ -158,26 +229,25 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
 </script>
 
 <template>
-  <div 
-    class="relative group/slider w-full" 
-    :class="computedClasses" 
-    :style="computedInlineStyles"
+  <div
+    class="relative group/slider w-full"
+    :class="[computedClasses]"
+    :style="{ ...computedInlineStyles, ...sliderCSSVars }"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
   >
-    <!-- Viewport Container (clips content to padding area) -->
-    <div 
-      class="w-full h-full transition-all"
-      :class="builderState.isDragging?.value ? 'overflow-visible' : 'overflow-hidden'"
-    >
+    <!-- Viewport : overflow-hidden ici pour clipper à la content-box (hors padding du parent) -->
+    <div class="w-full h-full" :class="builderState.isDragging?.value ? 'overflow-visible' : 'overflow-hidden'">
+      <!-- Slider-track : overflow-hidden pour clipper les slides dans la zone de contenu (hors padding) -->
+      <!-- Slider-track : l'élément qui translade. Il doit ABSOLUMENT être en overflow-visible -->
       <div
-        class="slider-track transition-transform ease-in-out h-full w-full"
-      :style="{
-        transform: builderState.isDragging?.value ? 'none' : 'translateX(-' + (currentSlide * (100 / slidesPerView)) + '%)',
-        transitionDuration: builderState.isDragging?.value ? '0ms' : sliderConfig.transitionDuration + 'ms',
-        transitionTimingFunction: sliderConfig.transitionEase
-      }"
-    >
+        class="slider-track ease-in-out h-full w-full transition-transform overflow-visible"
+        :style="{
+          transform: builderState.isDragging?.value ? 'none' : slideTransformCSS,
+          transitionDuration: sliderConfig.transitionDuration + 'ms',
+          transitionTimingFunction: sliderConfig.transitionEase
+        }"
+      >
       <slot>
         <div v-if="slidesCount === 0" class="w-full h-full flex flex-col items-center justify-center text-builder-bar-text/50 border-2 border-dashed border-builder-bar-border rounded-lg m-4 min-h-[100px]">
            <span class="text-sm font-medium">Déposez des slides ici</span>
@@ -185,18 +255,19 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
       </slot>
     </div>
   </div>
-    
-    <button v-show="slidesCount > slidesPerView && !builderState.isDragging?.value" @click.stop="prevSlide" :style="arrowStyles" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover/slider:opacity-100 z-10 flex items-center justify-center">
+
+    <!-- Flèches et pagination : désactivées par défaut, affichées si activées dans les params -->
+    <button v-show="sliderConfig.showArrows && (isBuilder || (slidesCount > slidesPerView && !builderState.isDragging?.value))" @click.stop="prevSlide" :style="arrowStyles" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all z-10 flex items-center justify-center pointer-events-auto" :class="isBuilder ? 'opacity-80 hover:opacity-100' : 'opacity-0 group-hover/slider:opacity-100'">
       <ChevronLeft class="w-6 h-6" :style="{ color: paginationStyles.color }" />
     </button>
-    <button v-show="slidesCount > slidesPerView && !builderState.isDragging?.value" @click.stop="nextSlide" :style="arrowStyles" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all opacity-0 group-hover/slider:opacity-100 z-10 flex items-center justify-center">
+    <button v-show="sliderConfig.showArrows && (isBuilder || (slidesCount > slidesPerView && !builderState.isDragging?.value))" @click.stop="nextSlide" :style="arrowStyles" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-md transition-all z-10 flex items-center justify-center pointer-events-auto" :class="isBuilder ? 'opacity-80 hover:opacity-100' : 'opacity-0 group-hover/slider:opacity-100'">
       <ChevronRight class="w-6 h-6" :style="{ color: paginationStyles.color }" />
     </button>
 
     <!-- Pagination -->
-    <div v-show="slidesCount > slidesPerView && sliderConfig.showPagination && !builderState.isDragging?.value" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-      <button 
-        v-for="(_, index) in (maxSlideIndex + 1)" 
+    <div v-show="sliderConfig.showPagination && (isBuilder || (slidesCount > slidesPerView && !builderState.isDragging?.value))" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10 pointer-events-auto">
+      <button
+        v-for="(_, index) in totalPages"
         :key="index"
         @click.stop="goToSlide(index)"
         class="transition-all duration-300"
@@ -206,8 +277,8 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
           paginationStyles.shape === 'square' ? 'w-2 h-2 rounded-sm' : ''
         ]"
         :style="{
-          backgroundColor: currentSlide === index ? paginationStyles.activeColor : paginationStyles.color,
-          opacity: currentSlide === index ? 1 : 0.5
+          backgroundColor: currentPage === index ? paginationStyles.activeColor : paginationStyles.color,
+          opacity: currentPage === index ? 1 : 0.5
         }"
       />
     </div>
@@ -221,8 +292,8 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
    height: 100%;
 }
 
-/* Le VueDraggable (div 131 dans BlocRender) */
-.slider-track :deep(> div > div) {
+/* Le conteneur Flex (inséré par BlocRender / BlocRenderView) */
+.slider-track :deep(.slider-flex-container) {
    display: flex !important;
    flex-direction: row !important;
    flex-wrap: nowrap !important;
@@ -230,14 +301,18 @@ watch(() => [sliderConfig.value, isAnySelected.value], () => {
    height: 100%;
    padding: 0 !important;
    margin: 0 !important;
-   gap: 0 !important;
+   gap: var(--slider-gap) !important;
 }
 
-/* Les slides réels (div 149 dans BlocRender) */
-.slider-track :deep(> div > div > div) {
-   min-width: calc(100% / v-bind(slidesPerView)) !important;
-   max-width: calc(100% / v-bind(slidesPerView)) !important;
-   height: 100% !important;
+/* Les slides réels */
+.slider-track :deep(.slider-slide) {
    flex-shrink: 0 !important;
+   flex-grow: 0 !important;
+   width: var(--slide-width) !important;
+   min-width: var(--slide-width) !important;
+   max-width: var(--slide-width) !important;
+   height: 100% !important;
+   overflow: hidden !important;
+   margin: 0 !important;
 }
 </style>

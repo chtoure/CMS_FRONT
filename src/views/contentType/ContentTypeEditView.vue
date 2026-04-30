@@ -1,5 +1,7 @@
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
+import { generateUUID } from '@/lib/utils';
+
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
@@ -252,7 +254,7 @@ const fieldTypes = [
 
 const generateUniqueName = (baseName: string) => {
   // Génère une chaîne aléatoire complexe (ex: field_8f9d2b1a)
-  return `${baseName}_${crypto.randomUUID().split('-')[0]}`;
+  return `${baseName}_${generateUUID().split('-')[0]}`;
 };
 
 // Ajouter un nouveau champ
@@ -578,14 +580,12 @@ const confirmChange = () => {
       <template #content>
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div class="flex items-center gap-4">
-            <div class="p-4 bg-primary/10 rounded-2xl">
-              <Settings2 class="h-8 w-8 text-primary" />
+            <div class="p-3 bg-primary rounded-2xl">
+              <Settings2 stroke-width="1" class="w-8 h-8" />
             </div>
-            <div class="space-y-1">
-              <h1 class="text-huge font-black tracking-tighter leading-none">
-                <span class="text-primary italic">Modifier le type de contenu</span>
-              </h1>
-              <p class="text-background opacity-80 text-lg font-medium">Modifiez la structure et les champs de votre contenu.</p>
+            <div class="space-y-2">
+              <h1 class="text-3xl font-black tracking-tighter leading-none"> <span class="text-primary italic">Créer un type d'article</span></h1>
+              <p class="text-muted-foreground text-sm font-medium mt-1 italic">Définissez la structure et les champs de vos données.</p>
             </div>
           </div>
 
@@ -619,7 +619,7 @@ const confirmChange = () => {
           <div class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div class="space-y-2">
-                <Label for="name" class="text-sm font-bold text-text px-1">Nom du Type</Label>
+                <Label for="name" class="text-sm font-bold text-text px-1">Type de contenu</Label>
                 <Input
                   id="name"
                   v-model="form.name"
@@ -694,8 +694,8 @@ const confirmChange = () => {
         <div v-show="isFieldsExpanded">
           <div class="grid grid-cols-[80px_1fr_1fr_1fr] px-6 py-3 bg-muted/20 border-b border-border text-xs font-bold text-text">
             <div>N°</div>
-            <div>Libellé</div>
-            <div>Placeholder</div>
+            <div>intitulé du champ</div>
+            <div>Texte indicatif</div>
             <div>Type</div>
           </div>
 
@@ -720,7 +720,7 @@ const confirmChange = () => {
 
                 <div class="flex flex-col">
                   <span class="font-bold text-primary hover:underline">
-                    {{ field.label || '(aucun libellé)' }}
+                    {{ field.label || '(aucun intitulé)' }}
                   </span>
                   <div v-if="expandedFieldIndex === fields.indexOf(field)" class="flex items-center gap-3 mt-1 text-[10px] font-bold text-primary animate-in fade-in slide-in-from-left-1">
                      <button @click.stop="duplicateField(fields.indexOf(field))" class="hover:text-primary/70">Dupliquer</button>
@@ -800,12 +800,12 @@ const confirmChange = () => {
 
                       <div class="col-span-1 space-y-4">
                         <div class="space-y-2">
-                          <Label class="text-xs font-medium text-text">Libellé du champ</Label>
+                          <Label class="text-xs font-medium text-text">Intitulé du champ</Label>
                           <Input v-model="field.label" placeholder="Texte affiché à l'utilisateur" class="input-custom" />
                           <span v-if="messageErrorTypeChamp" class="text-xs text-destructive italic font-medium">{{ messageErrorTypeChamp }}</span>
                         </div>
                         <div class="space-y-2">
-                          <Label class="text-xs font-medium text-text"> Placeholder </Label>
+                          <Label class="text-xs font-medium text-text"> Texte indicatif </Label>
                           <Input v-model="field.placeholder" placeholder="Texte affiché en exemple" class="input-custom"/>
                         </div>
                       </div>
@@ -1011,7 +1011,7 @@ const confirmChange = () => {
                                 >
                                   <span class="truncate text-center mx-8">
                                     {{ field.allowedTypes.length > 0
-                                        ? `${field.allowedTypes.length} type(s) de fichier selectionée(s)`
+                                        ? `${field.allowedTypes.length} type(s) selectionée(s) : ${field.allowedTypes.join(', ')}`
                                         : "Choisir les types de fichiers..."
                                     }}
                                   </span>

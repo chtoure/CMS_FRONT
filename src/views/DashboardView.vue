@@ -4,9 +4,7 @@ import {
   FolderOpen,
   Plus,
   ArrowUpRight,
-  Clock,
   Zap,
-  FileText,
   Tags
 } from 'lucide-vue-next'
 import Button from '@/components/ui/button/Button.vue'
@@ -50,7 +48,7 @@ const stats = computed(() => [
     title: 'Contenus',
     value: totalContentType.value,
     icon: '/icons/folder1.svg',
-    description: 'Types de contenu dédiés',
+    description: 'Types d\'articles dédiés',
     hasPermission: hasPermission('read_content_type')
   },
   {
@@ -68,18 +66,18 @@ const stats = computed(() => [
     hasPermission: hasPermission('read_variable')
   },
   {
-    title: 'Taxonomies',
+    title: 'Catégories',
     value: totalTaxonomy.value,
     icon: '/icons/tag1.svg',
-    description: 'Vocabulaires gérés',
+    description: 'Catégories d\'articles',
     hasPermission: hasPermission('read_taxonomy')
   }
 ])
 
 const quickActions = [
-  { label: 'Nouveau Contenu', icon: Plus, href: 'admin.content-type', color: 'bg-primary', hasPermission: hasPermission('create_content_type') },
+  { label: 'Nouveau Type d\'article', icon: Plus, href: 'admin.content-types.create', color: 'bg-primary', hasPermission: hasPermission('create_content_type') },
   { label: 'Importer Média', icon: FolderOpen, href: 'admin.media', color: 'bg-slate-900', hasPermission: hasPermission('upload_media') },
-  { label: 'Gérer Taxonomies', icon: Tags, href: 'admin.taxonomy', color: 'bg-accent', hasPermission: hasPermission('create_taxonomy') },
+  { label: 'Gérer Catégories', icon: Tags, href: 'admin.taxonomies', color: 'bg-accent', hasPermission: hasPermission('create_taxonomy') },
 ]
 
 const now = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -133,10 +131,10 @@ const now = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'nume
         <!-- Types de Contenu (Accès Rapide) -->
         <div class="space-y-6">
           <div class="flex items-center justify-between">
-            <h2 class="text-2xl font-black tracking-tight flex items-center gap-2">
-              <FileText class="w-6 h-6 text-primary" />
-              Types de Contenu
-            </h2>
+            <p class="text-2xl font-black tracking-tight flex items-center gap-2">
+              <img src="/icons/file3.png" alt="" class="w-10 h-10" />
+              Types d'articles
+            </p>
             <Button v-if="hasPermission('read_content_entry')" variant="ghost" class="text-primary font-bold hover:bg-primary/5" @click="$router.push({ name: 'admin.content-types' })">
               Gérer <ArrowUpRight class="w-4 h-4 ml-1" />
             </Button>
@@ -160,7 +158,7 @@ const now = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'nume
             <div v-if="recentContentTypes.length === 0" class="col-span-2 card p-12 text-center border-dashed flex flex-col items-center gap-3">
               <!-- <FileText class="w-10 h-10 text-muted-foreground/20" /> -->
               <img src="/icons/folder1.svg" alt="" class="w-12 h-12" />
-              <p class="text-muted-foreground font-medium">Aucun type de contenu créé.</p>
+              <p class="text-muted-foreground font-medium">Aucun type d'article créé.</p>
               <Button variant="ghost" v-if="hasPermission('create_content_type')" size="sm" @click="$router.push({ name: 'admin.content-types.create' })" class="!text-primary">Créer un Type</Button>
             </div>
           </div>
@@ -169,10 +167,10 @@ const now = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'nume
         <!-- Médias Récents -->
         <div v-if="hasPermission('read_media')" class="space-y-6">
           <div class="flex items-center justify-between">
-            <h2 class="text-2xl font-black tracking-tight flex items-center gap-2">
-              <Clock class="w-6 h-6 text-primary" />
+            <p class="text-2xl font-black tracking-tight flex items-center gap-2">
+              <img src="/icons/media1.png" alt="" class="w-10 h-10">
               Médias Récents
-            </h2>
+            </p>
             <Button variant="ghost" class="text-primary font-bold hover:bg-primary/5" @click="$router.push({ name: 'admin.media' })">
               Médiathèque <ArrowUpRight class="w-4 h-4 ml-1" />
             </Button>

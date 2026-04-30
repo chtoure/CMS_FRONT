@@ -94,6 +94,28 @@ export function applyLayoutInline(
     else if (val) inline.padding = val as string;
   }
 
+  if (styles.paddingX !== undefined) {
+    const val = getValue(styles.paddingX);
+    if (isNumeric(val)) {
+      inline.paddingLeft = `${val}px`;
+      inline.paddingRight = `${val}px`;
+    } else if (val) {
+      inline.paddingLeft = val as string;
+      inline.paddingRight = val as string;
+    }
+  }
+
+  if (styles.paddingY !== undefined) {
+    const val = getValue(styles.paddingY);
+    if (isNumeric(val)) {
+      inline.paddingTop = `${val}px`;
+      inline.paddingBottom = `${val}px`;
+    } else if (val) {
+      inline.paddingTop = val as string;
+      inline.paddingBottom = val as string;
+    }
+  }
+
   if (styles.marginTop !== undefined) {
     const val = getValue(styles.marginTop);
     if (isNumeric(val)) inline.marginTop = `${val}px`;

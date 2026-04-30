@@ -54,11 +54,11 @@
 
 
 
+import { userStore } from "@/stores/user";
 import router from "../router";
-import { userStore } from "../stores/user";
 import { ApiError, type ApiErrorData } from "./apiError";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 
 
@@ -98,40 +98,71 @@ export async function handleResponse<T>(response: Response): Promise<T> {
 // }
 
 /**
- * Wrapper API personnalisé
+ * Wrapper API personnalisé — Stratégie hybride Cookie + Bearer Token
+ * - Cookie HttpOnly : utilisé automatiquement si HTTPS (credentials: "include")
+ * - Bearer Token   : fallback automatique si cookies bloqués (HTTP cross-site)
  */
 const api = async (endpoint: string, options: RequestInit = {}) => {
   const url = `${BASE_URL}${endpoint}`;
 
   // Gestion dynamique du Content-Type
-  // Si on envoie du FormData (pour les images), on laisse le navigateur gérer le header
   const isFormData = options.body instanceof FormData;
+
+  // Fallback Bearer : injecte le header Authorization si un token est stocké
+  const store = userStore();
+  const bearerToken = store.accessToken;
+  const bearerHeader: Record<string, string> = bearerToken
+    ? { 'Authorization': `Bearer ${bearerToken}` }
+    : {};
 
   const defaultOptions: RequestInit = {
     ...options,
     headers: {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      ...options.headers,
+      ...bearerHeader,      // Header Bearer injecté si cookie absent
+      ...options.headers,   // Les headers de l'appelant ont toujours la priorité
     },
-    credentials: "include",
+    credentials: "include", // Toujours tenter les cookies (fonctionne si HTTPS)
   };
 
   const response = await fetch(url, defaultOptions);
 
-  // Interception 401 (Refresh Token)
+  // Interception 401 → tentative de refresh automatique
   if (response.status === 401) {
     if (endpoint.includes('/refresh-token') || endpoint.includes('/login')) {
       return response;
     }
 
     try {
+      // Fallback Bearer : envoie le refreshToken dans le body si cookie bloqué
+      const storedRefreshToken = store.refreshToken;
+      const refreshBody = storedRefreshToken
+        ? JSON.stringify({ refreshToken: storedRefreshToken })
+        : undefined;
+
       const refreshResponse = await fetch(`${BASE_URL}/refresh-token`, {
         method: "POST",
         credentials: "include",
+        headers: refreshBody ? { 'Content-Type': 'application/json' } : {},
+        body: refreshBody,
       });
 
+
       if (refreshResponse.ok) {
-        // Rejeu de la requête
+        // Si le backend renvoie un nouveau accessToken dans le JSON → le stocker
+        try {
+          const refreshData = await refreshResponse.clone().json();
+          if (refreshData.accessToken) {
+            store.setTokens(refreshData.accessToken, store.refreshToken);
+            // Mettre à jour le header Bearer pour rejouer la requête
+            if (defaultOptions.headers && typeof defaultOptions.headers === 'object') {
+              (defaultOptions.headers as Record<string, string>)['Authorization'] =
+                `Bearer ${refreshData.accessToken}`;
+            }
+          }
+        } catch { /* Mode cookie-only : pas de token dans le body, c'est normal */ }
+
+        // Rejeu de la requête originale avec les nouveaux credentials
         return await fetch(url, defaultOptions);
       } else {
         throw new Error("Refresh token expiré");
@@ -139,7 +170,14 @@ const api = async (endpoint: string, options: RequestInit = {}) => {
     } catch (error) {
       const storeUser = userStore();
       storeUser.setUserInfo(null, []);
-      router.push({ name: 'auth.login' });
+      storeUser.clearTokens(); // Nettoyage des tokens Bearer
+
+      // On ne redirige vers le login que si la page actuelle l'exige
+      const requiresAuth = router.currentRoute.value.matched.some(record => record.meta.requiresAuth);
+      if (requiresAuth) {
+        router.push({ name: 'auth.login' });
+      }
+
       return Promise.reject(error);
     }
   }

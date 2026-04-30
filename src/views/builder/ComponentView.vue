@@ -1,10 +1,11 @@
 <script lang="ts" setup>
+import { generateUUID } from '@/lib/utils';
+
 import * as Icons from 'lucide-vue-next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import CompositionDarkMode from '../../components/composition/CompositionDarkMode.vue';
 import { useGetBlocTemplatesComponentCustom, useGetComponents } from '../../hook/component';
-import { computed, type ComponentInstance, type Component as VueComponent } from 'vue';
-import { VueDraggable } from 'vue-draggable-plus';
+import { computed, type Component as VueComponent } from 'vue';
 import type { AllStyles, AnyComponentInstance, Component, BaseStyles } from '../../type/component';
 import type { BlocTemplate } from '../../type/bloc-template';
 
@@ -14,7 +15,8 @@ const { data: customComponents, isLoading: isLoadingCustom } = useGetBlocTemplat
 
 import { inject } from 'vue';
 const builderState = inject<{
-  setIsDragging: (val: boolean) => void;
+  setClipboard: (item: AnyComponentInstance | null) => void;
+  clipboard: { value: AnyComponentInstance | null };
 }>('builderState');
 
 
@@ -51,15 +53,15 @@ const deepCloneInstance = (node: AnyComponentInstance): AnyComponentInstance => 
 
   return {
     ...node,
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     componentDefinitionId: definitionId,
     children: node.children ? node.children.map(deepCloneInstance) : []
   };
 };
 
-const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<T> => {
+const onClone = <T extends AllStyles>(element: Component<T>): AnyComponentInstance => {
   const instance = {
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     name: element.name,
     tag: element.tag,
     icon: element.icon,
@@ -75,10 +77,11 @@ const onClone = <T extends AllStyles>(element: Component<T>): ComponentInstance<
   };
   console.log('Cloning component:', element.tag, 'with children:', instance.children.length);
   // console.log('Created instance:', instance);
-  return instance as ComponentInstance<T>;
+  return instance as AnyComponentInstance;
 };
 
-const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const onCloneCustom = (block: BlocTemplate, isTopLevel = true): AnyComponentInstance => {
   // Extraire les dimensions si elles existent pour un pré-rendu fluide
   const initialStyles: BaseStyles = {};
   if (block.props?.styles?.width) initialStyles.width = block.props.styles.width;
@@ -88,21 +91,37 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
   const backendChildren = (block as BlocTemplate & { children?: BlocTemplate[] }).children || block.customBlocTemplates || [];
 
   const instance: AnyComponentInstance = {
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     name: block.name || block.component?.name || 'Composant',
     tag: block.component?.tag || 'div',
     icon: block.component?.icon || 'Package',
     family: block.component?.family || 'container',
     supportedActions: block.component?.supportedActions || [],
     componentDefinitionId: block.componentId,
-    modelId: block.modelId || block.id, // Liaison avec le modèle
+    // On conserve le modelId sur tous les nœuds pour permettre
+    // le merge de style complet récursif en base.
+    modelId: block.modelId || block.id,
     blocTemplateId: undefined, // Nouvelle instance sur la page
     styles: { ...(block.props?.styles || initialStyles) },
     data: { ...(block.props?.data || {}) },
     params: block.props?.params ? [...block.props.params] : [],
-    children: Array.isArray(backendChildren) ? backendChildren.map(onCloneCustom) : []
+    children: Array.isArray(backendChildren) ? backendChildren.map(child => onCloneCustom(child, false)) : []
   };
   return instance;
+};
+
+const selectToPlace = (comp: Component<AllStyles>) => {
+  const cloned = onClone(comp);
+  builderState?.setClipboard(cloned);
+};
+
+const selectCustomToPlace = (block: BlocTemplate) => {
+  const cloned = onCloneCustom(block);
+  builderState?.setClipboard(cloned);
+};
+
+const cancelPlace = () => {
+  builderState?.setClipboard(null);
 };
 </script>
 
@@ -130,21 +149,21 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
               <Icons.Loader2 class="animate-spin text-primary" />
             </div>
 
-            <div v-else >
-              <VueDraggable
-                v-model="allComponents"
-                :animation="150"
-                :group="{ name: 'blocks', pull: 'clone', put: false }"
-                :sort="false"
-                :clone="onClone"
-                @start="builderState?.setIsDragging(true)"
-                @end="builderState?.setIsDragging(false)"
-                class="grid grid-cols-2 gap-2"
-              >
+            <div v-else>
+              <!-- Info ClipBoard -->
+              <div v-if="builderState?.clipboard.value" class="mb-4 bg-primary/10 border border-primary/20 text-primary p-2 rounded text-xs text-center flex flex-col items-center gap-1">
+                <span class="font-bold tracking-wider uppercase text-[9px]">{{ builderState.clipboard.value.name }} sélect.</span>
+                <span class="text-[10px] opacity-80">Cliquez sur (+) pour le déposer</span>
+                <button @click="cancelPlace" class="mt-1 bg-red-500/10 text-red-500 hover:bg-red-500/20 px-2 py-0.5 rounded uppercase text-[8px] tracking-wider font-bold transition-colors">Annuler</button>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
                 <div
                   v-for="comp in allComponents"
                   :key="comp.tag"
-                  class="flex flex-col items-center justify-center p-3 border border-builder-bar-border rounded cursor-grab hover:-translate-y-1"
+                  @click="selectToPlace(comp)"
+                  class="flex flex-col items-center justify-center p-3 border border-builder-bar-border rounded cursor-pointer transition-all hover:-translate-y-1"
+                  :class="{ 'ring-2 ring-primary ring-offset-2 ring-offset-builder-bar-background': builderState?.clipboard.value?.componentDefinitionId === comp.id && !builderState?.clipboard.value?.modelId }"
                 >
                   <component
                     :is="getIcon(comp.icon)"
@@ -155,8 +174,7 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
                     {{ comp.name }}
                   </span>
                 </div>
-              </VueDraggable>
-
+              </div>
             </div>
           </TabsContent>
 
@@ -168,21 +186,21 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
               <Icons.Package class="w-8 h-8 mx-auto mb-2" stroke-width="1" />
               <p class="text-[10px] tracking-widest font-bold">Aucun composant</p>
             </div>
-            <div v-else class="grid grid-cols-2 gap-2">
-               <VueDraggable
-                v-model="customComponents"
-                :animation="150"
-                :group="{ name: 'blocks', pull: 'clone', put: false }"
-                :sort="false"
-                :clone="onCloneCustom"
-                @start="builderState?.setIsDragging(true)"
-                @end="builderState?.setIsDragging(false)"
-                class="grid grid-cols-2 gap-2 col-span-2"
-              >
+            <div v-else class="flex flex-col gap-2">
+              <!-- Info ClipBoard Custom -->
+              <div v-if="builderState?.clipboard.value" class="mb-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 p-2 rounded text-xs text-center flex flex-col items-center gap-1">
+                <span class="font-bold tracking-wider uppercase text-[9px]">{{ builderState.clipboard.value.name }} sélect.</span>
+                <span class="text-[10px] opacity-80">Cliquez sur (+) pour le déposer</span>
+                <button @click="cancelPlace" class="mt-1 bg-red-500/10 text-red-500 hover:bg-red-500/20 px-2 py-0.5 rounded uppercase text-[8px] tracking-wider font-bold transition-colors">Annuler</button>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 col-span-2">
                 <div
                   v-for="block in customComponents"
                   :key="block.id"
-                  class="flex flex-col items-center justify-center p-3 border border-builder-bar-border rounded cursor-grab hover:-translate-y-1"
+                  @click="selectCustomToPlace(block)"
+                  class="flex flex-col items-center justify-center p-3 border border-builder-bar-border rounded cursor-pointer transition-all hover:-translate-y-1"
+                  :class="{ 'ring-2 ring-blue-500 ring-offset-2 ring-offset-builder-bar-background': builderState?.clipboard.value?.modelId === (block.modelId || block.id) }"
                 >
                   <component
                     :is="getIcon(block.component?.icon || 'Package')"
@@ -193,7 +211,7 @@ const onCloneCustom = (block: BlocTemplate): AnyComponentInstance => {
                     {{ block.name }}
                   </span>
                 </div>
-              </VueDraggable>
+              </div>
             </div>
           </TabsContent>
         </Tabs>

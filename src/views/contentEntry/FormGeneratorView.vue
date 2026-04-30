@@ -1,20 +1,22 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <script setup lang="ts">
 import { ref, computed, watchEffect } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { buildZodSchema } from '../../validation/fieldsValidate'
 import FormGenerator from '../../components/fields/FormGenerator.vue'
 import { Button } from '../../components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card'
 import { useGetContentType } from '../../hook/content-type'
 import { useCreateContentEntry } from '../../hook/content-entry'
-import { userStore } from '../../stores/user'
+
 import CompositionPageHeader from '../../components/composition/CompositionPageHeader.vue'
 import { ArrowLeft, Save, Loader2 } from 'lucide-vue-next'
-import type { IContentData } from '../../type/content-entry'
+import { type IContentData } from '../../type/content-entry'
 
-const { data: contentTypes } = useGetContentType()
+const route = useRoute()
+const { data: contentTypes } = useGetContentType(Number(route.params.id))
 const { mutate: createEntry, isPending: isCreating } = useCreateContentEntry()
-const store = userStore()
+
 const router = useRouter()
 
 // 2. État du formulaire
@@ -58,9 +60,12 @@ const handleSubmit = () => {
   }
 
   createEntry({
-    contentTypeId: contentTypes.value.id,
-    userId: store.userInfo?.id || 0,
-    data_json: result.data
+    slug: contentTypes.value.slug,
+    data: {
+      contentTypeId: contentTypes.value.id,
+      status: 'PUBLISHED' as any, // assuming EntryStatus string for now, or import it
+      data_json: result.data as any
+    }
   }, {
     onSuccess: () => {
       console.log('Contenu créé avec succès')

@@ -59,11 +59,19 @@ const showGrid = computed(() => getRawValue(styles.value.display) === 'grid');
 
         <div v-if="showGrid" class="space-y-1.5">
           <PropertyInput 
-            label="Colonnes" 
-            type="number" 
-            :model-value="getRawValue(styles.columns)" 
-            @update:model-value="(val) => updateStyle('columns', parseInt(val.toString()))"
-            :icon="GripHorizontal"
+             label="Colonnes" 
+             type="number" 
+             :model-value="getRawValue(styles.columns)" 
+             @update:model-value="(val) => updateStyle('columns', parseInt(val.toString()))"
+             :icon="GripHorizontal"
+          />
+          <PropertyInput 
+             label="Espacement (Gap)" 
+             type="number" 
+             :model-value="getRawValue(styles.gap)" 
+             @update:model-value="(val) => updateStyle('gap', val)"
+             :icon="Maximize2"
+             placeholder="0"
           />
         </div>
       </div>
@@ -119,7 +127,7 @@ const showGrid = computed(() => getRawValue(styles.value.display) === 'grid');
           <button 
             @click="updateStyle('justify', getRawValue(styles.justify) === 'between' ? 'start' : 'between')"
             :class="[
-              'w-full h-7 px-2 flex items-center justify-center rounded text-[10px] font-bold border transition-all',
+              'w-full h-7 px-2 flex items-center justify-center rounded text-[10px] font-bold border',
               getRawValue(styles.justify) === 'between'
                 ? 'bg-primary border-primary text-white'
                 : 'bg-builder-input-bg border-builder-bar-border text-builder-bar-text hover:bg-white/5'

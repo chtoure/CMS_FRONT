@@ -11,7 +11,7 @@ import CommandEmpty from '../../../components/ui/command/CommandEmpty.vue';
 import CommandList from '../../../components/ui/command/CommandList.vue';
 import CommandGroup from '../../../components/ui/command/CommandGroup.vue';
 import CommandItem from '../../../components/ui/command/CommandItem.vue';
-import { X } from 'lucide-vue-next';
+import { X, Check } from 'lucide-vue-next';
 import { useElementSize } from '@vueuse/core';
 
 interface Props {
@@ -65,7 +65,7 @@ const selectIcon = (name: string | null) => {
     <Popover v-model:open="open">
       <PopoverTrigger as-child>
         <button
-          class="flex items-center gap-1.5 w-full h-8 px-2 rounded border border-builder-bar-border bg-builder-input-bg text-[10px] text-builder-bar-text hover:border-primary/60 transition-colors"
+          class="flex items-center gap-1.5 w-full h-7 px-2 rounded border border-builder-bar-border bg-builder-input-bg text-[10px] text-builder-bar-text hover:border-primary focus:outline-none focus:border-primary transition-colors"
         >
           <component
             v-if="selectedIcon"
@@ -97,7 +97,7 @@ const selectIcon = (name: string | null) => {
             placeholder="Rechercher une icône..."
             class="h-8 text-[10px] text-builder-bar-text"
           />
-          <CommandEmpty class="py-2 text-[10px] text-center text-builder-bar-text/40">
+          <CommandEmpty class="py-2 text-[10px] text-center text-builder-bar-text/40 italic">
             Aucune icône trouvée.
           </CommandEmpty>
           <CommandList class="custom-scrollbar max-h-[240px] overflow-y-auto p-1">
@@ -105,20 +105,21 @@ const selectIcon = (name: string | null) => {
             <CommandGroup>
               <CommandItem
                 value="__none__"
-                class="text-[10px] text-builder-bar-text/50 hover:bg-builder-bar-border/20 cursor-pointer px-2 py-1.5 flex items-center gap-2 rounded"
+                class="text-[10px] text-builder-bar-text/50 data-[highlighted]:bg-builder-bar-border/30 data-[highlighted]:text-builder-bar-text hover:bg-builder-bar-border/30 cursor-pointer px-2 py-1.5 flex items-center gap-2 rounded-none italic"
                 @select="() => selectIcon(null)"
               >
                 <X :size="12" class="opacity-40" />
-                <span class="italic">Aucune icône</span>
+                <span>Aucune icône</span>
+                <Check v-if="!modelValue" :size="10" class="ml-auto text-primary" />
               </CommandItem>
             </CommandGroup>
 
-            <CommandGroup heading="Icônes disponibles" class="text-[9px] text-primary uppercase font-bold px-1 py-1">
+            <CommandGroup heading="Icônes disponibles" class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">
               <CommandItem
                 v-for="name in filteredIcons"
                 :key="name"
                 :value="name"
-                class="text-[10px] text-builder-bar-text hover:bg-primary hover:text-white cursor-pointer px-2 py-1.5 flex items-center gap-2 rounded"
+                class="text-[10px] text-builder-bar-text data-[highlighted]:bg-primary/20 data-[highlighted]:text-primary hover:bg-primary hover:text-destructive-foreground cursor-pointer px-2 py-1.5 flex items-center gap-2 rounded-none transition-colors"
                 @select="() => selectIcon(name)"
               >
                 <component
@@ -126,7 +127,8 @@ const selectIcon = (name: string | null) => {
                   :size="13"
                   class="shrink-0"
                 />
-                <span class="truncate">{{ name }}</span>
+                <span class="truncate font-medium">{{ name }}</span>
+                <Check v-if="modelValue === name" :size="10" class="ml-auto text-primary" />
               </CommandItem>
             </CommandGroup>
           </CommandList>
