@@ -147,6 +147,7 @@ const api = async (endpoint: string, options: RequestInit = {}) => {
         body: refreshBody,
       });
 
+
       if (refreshResponse.ok) {
         // Si le backend renvoie un nouveau accessToken dans le JSON → le stocker
         try {
