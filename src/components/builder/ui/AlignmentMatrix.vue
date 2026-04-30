@@ -29,7 +29,7 @@ function select(j: string, a: string) {
 </script>
 
 <template>
-  <div class="grid grid-cols-3 gap-0.5 p-1 bg-builder-input-bg border border-builder-bar-border rounded w-[68px] h-[68px] shrink-0">
+  <div class="grid grid-cols-3 gap-0.5 p-1 bg-builder-input-bg border border-border rounded w-[68px] h-[68px] shrink-0">
     <button
       v-for="[j, a, icon] in matrix"
       :key="`${j}-${a}`"

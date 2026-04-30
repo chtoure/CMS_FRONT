@@ -38,10 +38,10 @@ function select(val: string | number | boolean) {
       @click="select(opt.value)"
       :title="opt.tooltip"
       :class="[
-        'w-7 h-7 flex items-center justify-center rounded border border-builder-bar-border transition-all',
+        'w-7 h-7 flex items-center justify-center rounded border border-border transition-all',
         isActive(opt.value)
           ? 'bg-primary text-white'
-          : 'bg-builder-input-bg border-builder-bar-border text-builder-bar-text/60 hover:border-builder-bar-border/80 hover:text-builder-bar-text'
+          : 'bg-builder-input-bg border-border text-builder-bar-text/60 hover:border-border/80 hover:text-builder-bar-text'
       ]"
     >
       <component :is="opt.icon" class="w-3.5 h-3.5" />

@@ -41,7 +41,7 @@ const handleClick = () => {
       size === 'sm' ? 'h-6 w-6 px-1' : 'h-8 w-8 px-1.5',
       isActive
         ? 'bg-primary/20 border-primary/50 text-primary shadow-sm shadow-primary/20'
-        : 'bg-builder-input-bg border-builder-bar-border text-builder-bar-text hover:bg-white/5 hover:border-white/20'
+        : 'bg-builder-input-bg border-border text-builder-bar-text hover:bg-white/5 hover:border-white/20'
     ]"
   >
     <component v-if="icon" :is="icon" :class="size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4'" />

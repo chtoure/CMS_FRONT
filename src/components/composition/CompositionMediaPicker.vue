@@ -126,27 +126,27 @@ const selectedMedia = computed(() => {
   <CompositionModal v-model:open="open" title="Médiathèque" description="Sélectionnez ou téléversez un média">
     <template #trigger>
       <slot name="trigger">
-         <Button variant="outline" class="justify-start text-left font-normal min-w-[200px] !border !border-border" @click="open = true">
+         <Button variant="outline" class="justify-start text-left font-normal w-full h-7 px-2 !bg-builder-input-bg !border-builder-bar-border !text-builder-bar-text hover:!border-primary transition-colors overflow-hidden" @click="open = true">
             <template v-if="!multiple && selectedMedia && !Array.isArray(selectedMedia)">
-                <img v-if="selectedMedia.type === 'image'" :src="selectedMedia.file_path" class="h-6 w-6 mr-2 object-cover rounded-sm" />
-                <FileVideo v-else-if="selectedMedia.type === 'video'" class="h-4 w-4 mr-2 text-primary" />
-                <FileText v-else-if="selectedMedia.type === 'document'" class="h-4 w-4 mr-2 text-blue-500" />
-                <Archive v-else-if="selectedMedia.type === 'archive'" class="h-4 w-4 mr-2 text-amber-500" />
-                <span class="truncate">{{ selectedMedia.alt }}</span>
+                <img v-if="selectedMedia.type === 'image'" :src="selectedMedia.file_path" class="h-5 w-5 mr-2 object-cover rounded-sm shrink-0" />
+                <FileVideo v-else-if="selectedMedia.type === 'video'" class="h-3 w-3 mr-2 text-primary shrink-0" />
+                <FileText v-else-if="selectedMedia.type === 'document'" class="h-3 w-3 mr-2 text-blue-500 shrink-0" />
+                <Archive v-else-if="selectedMedia.type === 'archive'" class="h-3 w-3 mr-2 text-amber-500 shrink-0" />
+                <span class="truncate text-[10px] flex-1">{{ selectedMedia.alt }}</span>
             </template>
             <template v-else-if="multiple && Array.isArray(selectedMedia) && selectedMedia.length > 0">
-                 <span class="flex items-center gap-2">
-                    <span v-for="media in selectedMedia.slice(0, 3)" :key="media.id" class="relative">
-                         <img v-if="media.type === 'image'" :src="media.file_path" class="h-6 w-6 object-cover rounded-sm border border-border" />
-                         <FileVideo v-else-if="media.type === 'video'" class="h-4 w-4 text-primary" />
-                         <FileText v-else-if="media.type === 'document'" class="h-4 w-4 text-blue-500" />
-                         <Archive v-else-if="media.type === 'archive'" class="h-4 w-4 text-amber-500" />
+                 <span class="flex items-center gap-2 overflow-hidden">
+                    <span v-for="media in selectedMedia.slice(0, 3)" :key="media.id" class="relative shrink-0">
+                         <img v-if="media.type === 'image'" :src="media.file_path" class="h-5 w-5 object-cover rounded-sm border border-builder-bar-border" />
+                         <FileVideo v-else-if="media.type === 'video'" class="h-3 w-3 text-primary" />
+                         <FileText v-else-if="media.type === 'document'" class="h-3 w-3 text-blue-500" />
+                         <Archive v-else-if="media.type === 'archive'" class="h-3 w-3 text-amber-500" />
                     </span>
-                    <span v-if="selectedMedia.length > 3" class="text-xs text-muted-foreground rounded-full px-2 py-1">+{{ selectedMedia.length - 3 }}</span>
-                    <span class="ml-2">{{ selectedMedia.length }} sélectionné(s)</span>
+                    <span v-if="selectedMedia.length > 3" class="text-[9px] text-muted-foreground bg-builder-bar-border/20 rounded-full px-1.5 py-0.5 shrink-0">+{{ selectedMedia.length - 3 }}</span>
+                    <span class="ml-2 text-[10px] truncate">{{ selectedMedia.length }} sélectionné(s)</span>
                  </span>
             </template>
-            <span v-else>{{ triggerText || 'Sélectionner...' }}</span>
+            <span v-else class="text-[10px] text-builder-bar-text/40">{{ triggerText || 'Sélectionner...' }}</span>
          </Button>
       </slot>
     </template>

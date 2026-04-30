@@ -82,24 +82,26 @@ const removeBg = () => {
         />
         <button
           @click="removeBg"
-          class="absolute top-1 right-1 bg-red-600/80 hover:bg-red-600 text-white rounded px-1.5 py-0.5 text-[10px] font-bold"
+          class="absolute top-1 right-1 bg-red-600/60 hover:bg-red-600 text-white rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-tighter transition-colors"
         >
           Retirer
         </button>
       </div>
 
       <!-- Picker -->
-      <CompositionMediaPicker
-        :model-value="undefined"
-        :allowed-types="['image', 'video']"
-        @media-selected="onMediaSelected"
-        :trigger-text="hasBg() ? 'Changer le média...' : 'Choisir un média...'"
-      />
+      <div class="w-full overflow-hidden">
+        <CompositionMediaPicker
+          :model-value="undefined"
+          :allowed-types="['image', 'video']"
+          @media-selected="onMediaSelected"
+          :trigger-text="hasBg() ? 'Changer le média...' : 'Choisir un média...'"
+        />
+      </div>
 
       <!-- Size / Position (si une image est présente) -->
       <div v-if="hasBg()" class="grid grid-cols-2 gap-2 pt-1 border-t border-builder-bar-border/30">
         <div class="space-y-1">
-          <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Taille</label>
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Taille</label>
           <select
             :value="getRawValue(styles()?.bgSize) || 'cover'"
             @input="(e: any) => updateStyle('bgSize', e.target.value)"
@@ -111,7 +113,7 @@ const removeBg = () => {
           </select>
         </div>
         <div class="space-y-1">
-          <label class="text-[9px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Position</label>
+          <label class="text-[10px] font-mono font-bold text-builder-bar-text/40 uppercase tracking-tighter ml-1">Position</label>
           <select
             :value="getRawValue(styles()?.bgPosition) || 'center'"
             @input="(e: any) => updateStyle('bgPosition', e.target.value)"
